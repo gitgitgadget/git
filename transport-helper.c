@@ -567,6 +567,7 @@ static int fetch_with_import(struct transport *transport,
 		}
 	}
 	strbuf_release(&buf);
+	run_auto_maintenance(transport->verbose < 0);
 	return 0;
 }
 
