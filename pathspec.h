@@ -3,6 +3,7 @@
 
 struct index_state;
 struct pathspec;
+struct string_list;
 
 /* Pathspec magic */
 #define PATHSPEC_FROMTOP	(1<<0)
@@ -152,6 +153,8 @@ void parse_pathspec_file(struct pathspec *pathspec,
 			 int nul_term_line);
 
 void copy_pathspec(struct pathspec *dst, const struct pathspec *src);
+void pathspec_setup(struct pathspec *ps, const struct string_list *paths);
+void pathspec_drop(struct pathspec *ps, const char *path);
 void clear_pathspec(struct pathspec *);
 
 /*

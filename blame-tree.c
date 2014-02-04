@@ -79,6 +79,18 @@ void blame_tree_init(struct repository *r, struct blame_tree *bt,
 
 	if (add_from_revs(bt) < 0)
 		die(_("unable to setup blame-tree"));
+
+	pathspec_setup(&bt->rev.prune_data, &bt->paths);
+	copy_pathspec(&bt->rev.pruning.pathspec, &bt->rev.prune_data);
+	copy_pathspec(&bt->rev.diffopt.pathspec, &bt->rev.prune_data);
+	bt->rev.prune = 1;
+
+	/*
+	 * Have the diff engine tell us about everything, including trees.
+	 * We may have used --max-depth to get our list of paths to blame,
+	 * in which case we would mention trees explicitly.
+	 */
+	bt->rev.diffopt.flags.tree_in_recursive = 1;
 }
 
 void blame_tree_release(struct blame_tree *bt)
@@ -91,6 +103,7 @@ struct blame_tree_callback_data {
 	struct commit *commit;
 	struct string_list *paths;
 	size_t num_interesting;
+	struct rev_info *rev;
 
 	blame_tree_fn callback;
 	void *callback_data;
@@ -122,6 +135,10 @@ static void mark_path(const char *path, const struct object_id *oid,
 	data->num_interesting--;
 	if (data->callback)
 		data->callback(path, data->commit, data->callback_data);
+
+	pathspec_drop(&data->rev->pruning.pathspec, path);
+	clear_pathspec(&data->rev->diffopt.pathspec);
+	copy_pathspec(&data->rev->diffopt.pathspec, &data->rev->pruning.pathspec);
 }
 
 static void blame_diff(struct diff_queue_struct *q,
@@ -172,6 +189,7 @@ int blame_tree_run(struct blame_tree *bt, blame_tree_fn cb, void *cbdata)
 	data.num_interesting = bt->paths.nr;
 	data.callback = cb;
 	data.callback_data = cbdata;
+	data.rev = &bt->rev;
 
 	bt->rev.diffopt.output_format = DIFF_FORMAT_CALLBACK;
 	bt->rev.diffopt.format_callback = blame_diff;

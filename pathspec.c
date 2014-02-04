@@ -117,6 +117,50 @@ struct pathspec_trie *pathspec_trie_build(const struct pathspec *pathspec)
 	return ret;
 }
 
+static void pathspec_drop_from_trie(struct pathspec *ps,
+				    const char *path)
+{
+	struct pathspec_trie *prev = NULL, *cur = ps->trie;
+	int pos = -1;
+
+	if (!cur)
+		return;
+
+	while (*path) {
+		const char *end = strchrnul(path, '/');
+		size_t len = end - path;
+		pos = pathspec_trie_lookup(cur, path, len);
+
+		if (pos < 0)
+			die("BUG: didn't find the pathspec trie we matched");
+
+		prev = cur;
+		cur = cur->entries[pos];
+		path = end;
+		while (*path == '/')
+			path++;
+	}
+
+	if (!cur->terminal)
+		die("BUG: pathspec trie we found isn't terminal?");
+
+	if (cur->nr) {
+		cur->terminal = 0;
+		cur->must_be_dir = 0;
+		return;
+	}
+
+	free(cur);
+	if (pos < 0)
+		ps->trie = NULL;
+	else if (prev) {
+		prev->nr--;
+		memmove(prev->entries + pos,
+			prev->entries + pos + 1,
+			sizeof(*prev->entries) * (prev->nr - pos));
+	}
+}
+
 static void pathspec_trie_clear(struct pathspec_trie *t)
 {
 	if (t) {
@@ -876,6 +920,40 @@ void copy_pathspec(struct pathspec *dst, const struct pathspec *src)
 	}
 
 	dst->trie = pathspec_trie_build(dst);
+}
+
+void pathspec_setup(struct pathspec *ps, const struct string_list *paths)
+{
+	struct strvec argv = STRVEC_INIT;
+	size_t i;
+
+	for (i = 0; i < paths->nr; i++)
+		strvec_push(&argv, paths->items[i].string);
+
+	clear_pathspec(ps);
+	parse_pathspec(ps, PATHSPEC_ALL_MAGIC & ~PATHSPEC_LITERAL,
+		       PATHSPEC_PREFER_FULL | PATHSPEC_LITERAL_PATH, "",
+		       argv.v);
+	strvec_clear(&argv);
+}
+
+void pathspec_drop(struct pathspec *ps, const char *path)
+{
+	int i;
+
+	/* We know these are literals, so we can just strcmp */
+	for (i = 0; i < ps->nr; i++)
+		if (!strcmp(ps->items[i].match, path))
+			break;
+
+	if (i == ps->nr)
+		die("BUG: didn't find the pathspec we just matched");
+
+	memmove(ps->items + i, ps->items + i + 1,
+		sizeof(*ps->items) * (ps->nr - i - 1));
+	ps->nr--;
+
+	pathspec_drop_from_trie(ps, path);
 }
 
 void clear_pathspec(struct pathspec *pathspec)
