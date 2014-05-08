@@ -1,0 +1,3 @@
+sendpack.sideband::
+	Allows to disable the side-band-64k capability for send-pack even
+	when it is advertised by the server. Defaults to true.
