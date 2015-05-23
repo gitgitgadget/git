@@ -301,6 +301,17 @@ int mingw_unlink(const char *pathname)
 	while ((ret = _wunlink(wpathname)) == -1 && tries < ARRAY_SIZE(delay)) {
 		if (!is_file_in_use_error(GetLastError()))
 			break;
+
+		/*
+		 * _wunlink() / DeleteFileW() fail for directory symlinks and
+		 * NTFS junctions. The error is the same as checked by the
+		 * `is_file_in_use_error()` function: ERROR_ACCESS_DENIED
+		 * (EACCES). Let's try _wrmdir() as well, which does work for
+		 * directory symlinks and NTFS junctions.
+		 */
+		if (!_wrmdir(wpathname))
+			return 0;
+
 		/*
 		 * We assume that some other process had the source or
 		 * destination file open at the wrong moment and retry.
