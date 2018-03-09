@@ -118,8 +118,8 @@ test_expect_success 'generate correct todo list' '
 
 	reset branch-point # C
 	pick $d D
-	merge -C $e E # E
-	merge -C $h H # H
+	merge -R -C $e E # E
+	merge -R -C $h H # H
 
 	EOF
 
@@ -532,6 +532,19 @@ test_expect_success '--rebase-merges with message matched with onto label' '
 	|/
 	* A
 	EOF
+'
+
+test_expect_success 'rebase amended merges' '
+	git checkout -b amended-merge A &&
+	test_commit common &&
+	test_commit file1 &&
+	git reset --hard HEAD^ &&
+	test_commit file2 &&
+	git merge -m merge file1 &&
+	echo extra >>file1.t &&
+	git commit --amend -m amended file1.t &&
+	git rebase -i -r -f common &&
+	grep extra file1.t
 '
 
 test_done

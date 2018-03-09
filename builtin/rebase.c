@@ -322,6 +322,13 @@ static int run_sequencer_rebase(struct rebase_options *opts)
 	flags |= opts->reapply_cherry_picks ? TODO_LIST_REAPPLY_CHERRY_PICKS : 0;
 	flags |= opts->flags & REBASE_NO_QUIET ? TODO_LIST_WARN_SKIPPED_CHERRY_PICKS : 0;
 
+	if (opts->rebase_merges &&
+	    !opts->strategy_opts &&
+	    (!opts->strategy ||
+	     !strcmp(opts->strategy, "recursive") ||
+	     !strcmp(opts->strategy, "ort")))
+		flags |= TODO_LIST_REPLAY_MERGE_COMMITS;
+
 	switch (opts->action) {
 	case ACTION_NONE: {
 		if (!opts->onto && !opts->upstream)
