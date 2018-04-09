@@ -4085,6 +4085,9 @@ static int replay_merge_commit(struct repository *r, struct commit *commit,
 			    &repo_get_commit_tree(r, j->item)->object.oid))
 			continue; /* no changes; skip merge */
 
+		if (unmerged_index(r->index))
+			repo_rerere(r, opts->allow_rerere_auto);
+
 		/*
 		 * We cannot have unmerged index entries when calling
 		 * merge_trees(). Therefore, we record the stages of unmerged
@@ -4155,6 +4158,7 @@ static int replay_merge_commit(struct repository *r, struct commit *commit,
 		rollback_lock_file(lock);
 
 	if (!result.clean) {
+		repo_rerere(r, opts->allow_rerere_auto);
 		make_patch(r, commit, opts);
 		return 1;
 	}
