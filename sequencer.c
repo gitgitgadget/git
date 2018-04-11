@@ -3988,6 +3988,12 @@ static int replay_unmerged_entries(struct index_state *istate, struct hashmap *u
 	return 0;
 }
 
+static const char *short_tree_name(struct tree *tree)
+{
+	return !tree ? "(null tree)" :
+		find_unique_abbrev(&tree->object.oid, DEFAULT_ABBREV);
+}
+
 static int replay_merge_commit(struct repository *r, struct commit *commit,
 			       struct commit *head_commit,
 			       struct commit_list *to_merge,
@@ -4055,7 +4061,70 @@ static int replay_merge_commit(struct repository *r, struct commit *commit,
 	merge_incore_nonrecursive(o, repo_get_commit_tree(r, p->item), repo_get_commit_tree(r, head_commit), repo_get_commit_tree(r, commit), &result);
 	tree = result.tree;
 
-	if (result.clean <= 0)
+	if (!result.clean && to_merge) {
+		/*
+		 * Okay, this already caused conflicts. If we now merge B3',
+		 * we may end up with nested merge conflicts. Ugly.
+		 *
+		 * If merging M and B3' does not cause merge conflicts, we can
+		 * avoid the nested merge conflicts by merging that clean merge
+		 * result into A3' (discarding the result of the merge between
+		 * A3' and M).
+		 */
+		struct strbuf buf3 = STRBUF_INIT;
+		struct merge_result result2 = { 0 };
+
+		if (!p->next)
+			BUG("mismatching number of parents");
+
+		o->branch1 = o->branch2;
+		strbuf_addf(&buf3, "%s... merge head #1",
+			    short_commit_name(to_merge->item));
+		o->branch2 = buf3.buf;
+		merge_incore_nonrecursive(o,
+					  repo_get_commit_tree(r, p->next->item),
+					  repo_get_commit_tree(r, commit),
+					  repo_get_commit_tree(r, to_merge->item),
+					  &result2);
+
+		if (result2.clean > 0) {
+			/*
+			 * No merge conflicts between M and B3', so let's merge
+			 * the result into A3' (i.e. HEAD).
+			 */
+			strbuf_reset(&o->obuf); /* clear messages of dismissed merge */
+			tree = result2.tree;
+
+			merge_finalize(o, &result);
+			memset(&result, 0, sizeof(result));
+			o->branch1 = "HEAD";
+			strbuf_reset(&buf);
+			strbuf_addf(&buf, "%s... intermediate merge",
+				    short_tree_name(tree));
+			o->branch2 = buf.buf;
+			merge_incore_nonrecursive(o,
+						  repo_get_commit_tree(r, p->item),
+						  repo_get_commit_tree(r, head_commit),
+						  tree, &result);
+
+			if (result.clean <= 0)
+				error(_("while merging %s into %s "
+					"with merge base %s:\n%s"),
+					short_tree_name(tree),
+					short_commit_name(head_commit),
+					short_commit_name(p->item), o->obuf.buf);
+			strbuf_reset(&o->obuf);
+
+			strbuf_addf(&merge_heads, "%s\n",
+					oid_to_hex(&to_merge->item->object.oid));
+			to_merge = to_merge->next;
+			p = p->next;
+		}
+		merge_finalize(o, &result2); /* we never updated the worktree to this */
+		strbuf_release(&buf3);
+	}
+
+	if (result.clean <= 0 && o->obuf.len)
 		error(_("while merging %s into %s "
 			"with merge base %s:\n%s"),
 		      short_commit_name(commit),
