@@ -60,6 +60,12 @@ static struct commit_graph *alloc_commit_graph(void)
 
 static int commit_graph_compatible(struct repository *r)
 {
+	prepare_commit_graft(r);
+	if (r->parsed_objects && r->parsed_objects->grafts_nr)
+		return 0;
+	if (is_repository_shallow(r))
+		return 0;
+
 	prepare_replace_object(r);
 	if (check_replace_refs &&
 	    hashmap_get_size(&r->objects->replace_map->map))
