@@ -403,6 +403,63 @@ test_expect_failure 'split hunk "add -p (no, yes, edit)"' '
 	! grep "^+31" actual
 '
 
+test_expect_success 'setup expected diff' '
+	cat >expected <<-\EOF
+	diff --git a/test b/test
+	index 0889435..341cc6b 100644
+	--- a/test
+	+++ b/test
+	@@ -1,6 +1,9 @@
+	+5
+	 10
+	 20
+	+21
+	 30
+	 40
+	 50
+	 60
+	+61
+	\ No newline at end of file
+	EOF
+'
+
+test_expect_success 'can stage individual lines of patch' '
+	git reset &&
+	printf 61 >>test &&
+	printf "%s\n" l "1,2 4-" |
+	EDITOR=: git add -p 2>error &&
+	test_must_be_empty error &&
+	git diff --cached HEAD >actual &&
+	diff_cmp expected actual
+'
+
+test_expect_success 'setup expected diff' '
+	cat >expected <<-\EOF
+	diff --git a/test b/test
+	index 0889435..cc6163b 100644
+	--- a/test
+	+++ b/test
+	@@ -1,6 +1,8 @@
+	+5
+	 10
+	 20
+	 30
+	 40
+	 50
+	 60
+	+61
+	\ No newline at end of file
+	EOF
+'
+
+test_expect_success 'can reset individual lines of patch' '
+	printf "%s\n" l -13 |
+	EDITOR=: git reset -p 2>error &&
+	test_must_be_empty error &&
+	git diff --cached HEAD >actual &&
+	diff_cmp expected actual
+'
+
 test_expect_success 'patch mode ignores unmerged entries' '
 	git reset --hard &&
 	test_commit conflict &&
@@ -635,6 +692,14 @@ test_expect_success 'add -p patch editing works with pathological context lines'
 	# n q q below is in case edit fails
 	printf "%s\n" e y    n q q |
 	git add -p &&
+	git cat-file blob :a >actual &&
+	test_cmp expected-2 actual
+'
+
+test_expect_success 'add -p selecting lines works with pathological context lines' '
+	git reset &&
+	printf "%s\n" l 2 y |
+	GIT_EDITOR=./editor git add -p &&
 	git cat-file blob :a >actual &&
 	test_cmp expected-2 actual
 '
