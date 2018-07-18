@@ -99,12 +99,12 @@ test_expect_success '--dry-run with stuff to commit returns ok' '
 	git commit -m next -a --dry-run
 '
 
-test_expect_failure '--short with stuff to commit returns ok' '
+test_expect_success '--short with stuff to commit returns ok' '
 	echo bongo bongo bongo >>file &&
 	git commit -m next -a --short
 '
 
-test_expect_failure '--porcelain with stuff to commit returns ok' '
+test_expect_success '--porcelain with stuff to commit returns ok' '
 	echo bongo bongo bongo >>file &&
 	git commit -m next -a --porcelain
 '
@@ -664,7 +664,8 @@ test_expect_success '--only works on to-be-born branch' '
 	test_cmp expected actual
 '
 
-test_expect_success '--dry-run with conflicts fixed from a merge' '
+# set up env for tests of --dry-run given fixed/unfixed merge conflicts
+test_expect_success 'setup env with unfixed merge conflicts' '
 	# setup two branches with conflicting information
 	# in the same file, resolve the conflict,
 	# call commit with --dry-run
@@ -677,11 +678,45 @@ test_expect_success '--dry-run with conflicts fixed from a merge' '
 	git checkout -b branch-2 HEAD^1 &&
 	echo "commit-2-state" >test-file &&
 	git commit -m "commit 2" -i test-file &&
-	! $(git merge --no-commit commit-1) &&
-	echo "commit-2-state" >test-file &&
+	test_expect_code 1 git merge --no-commit commit-1
+'
+
+test_expect_success '--dry-run with unfixed merge conflicts' '
+	test_expect_code 1 git commit --dry-run
+'
+
+test_expect_success '--short with unfixed merge conflicts' '
+	test_expect_code 1 git commit --short
+'
+
+test_expect_success '--porcelain with unfixed merge conflicts' '
+	test_expect_code 1 git commit --porcelain
+'
+
+test_expect_success '--long with unfixed merge conflicts' '
+	test_expect_code 1 git commit --long
+'
+
+test_expect_success '--dry-run with conflicts fixed from a merge' '
+	echo "merge-conflicts-fixed" >test-file &&
 	git add test-file &&
-	git commit --dry-run &&
-	git commit -m "conflicts fixed from merge."
+	git commit --dry-run
+'
+
+test_expect_success '--short with conflicts fixed from a merge' '
+	git commit --short
+'
+
+test_expect_success '--porcelain with conflicts fixed from a merge' '
+	git commit --porcelain
+'
+
+test_expect_success '--long with conflicts fixed from a merge' '
+	git commit --long
+'
+
+test_expect_success '--message with conflicts fixed from a merge' '
+	git commit --message "conflicts fixed from merge."
 '
 
 test_done

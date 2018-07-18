@@ -96,7 +96,7 @@ struct wt_status {
 	unsigned char sha1_commit[GIT_MAX_RAWSZ]; /* when not Initial */
 
 	/* These are computed during processing of the individual sections */
-	int commitable;
+	int committable;
 	int workdir_dirty;
 	const char *index_file;
 	FILE *fp;
@@ -128,18 +128,19 @@ struct wt_status_state {
 size_t wt_status_locate_end(const char *s, size_t len);
 void wt_status_add_cut_line(FILE *fp);
 void wt_status_prepare(struct wt_status *s);
-void wt_status_print(struct wt_status *s);
-void wt_status_collect(struct wt_status *s);
-void wt_status_get_state(struct wt_status_state *state, int get_detached_from);
+void wt_status_print(struct wt_status *s, const struct wt_status_state *state);
+void wt_status_collect(struct wt_status *s, const struct wt_status_state *state);
+void wt_status_get_state(const struct wt_status *s, struct wt_status_state *state);
+void wt_status_clear_state(struct wt_status_state *state);
 int wt_status_check_rebase(const struct worktree *wt,
 			   struct wt_status_state *state);
 int wt_status_check_bisect(const struct worktree *wt,
 			   struct wt_status_state *state);
 
 __attribute__((format (printf, 3, 4)))
-void status_printf_ln(struct wt_status *s, const char *color, const char *fmt, ...);
+void status_printf_ln(const struct wt_status *s, const char *color, const char *fmt, ...);
 __attribute__((format (printf, 3, 4)))
-void status_printf(struct wt_status *s, const char *color, const char *fmt, ...);
+void status_printf(const struct wt_status *s, const char *color, const char *fmt, ...);
 
 /* The following functions expect that the caller took care of reading the index. */
 int has_unstaged_changes(int ignore_submodules);
