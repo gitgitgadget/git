@@ -75,6 +75,21 @@ test_expect_success 'rebase --keep-empty' '
 	test_line_count = 6 actual
 '
 
+test_expect_success 'rebase -i writes out .git/rebase-merge/author-script in "edit" that sh(1) can parse' '
+	test_when_finished "git rebase --abort ||:" &&
+	git checkout master &&
+	set_fake_editor &&
+	FAKE_LINES="edit 1" git rebase -i HEAD^ &&
+	test -f .git/rebase-merge/author-script &&
+	(
+		sane_unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_AUTHOR_DATE &&
+		eval "$(cat .git/rebase-merge/author-script)" &&
+		test "$(git show --quiet --pretty=format:%an)" = "$GIT_AUTHOR_NAME" &&
+		test "$(git show --quiet --pretty=format:%ae)" = "$GIT_AUTHOR_EMAIL" &&
+		test "$(git show --quiet --date=raw --pretty=format:@%ad)" = "$GIT_AUTHOR_DATE"
+	)
+'
+
 test_expect_success 'rebase -i with the exec command' '
 	git checkout master &&
 	(

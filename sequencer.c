@@ -654,6 +654,7 @@ missing_author:
 			strbuf_addch(&buf, *(message++));
 		else
 			strbuf_addf(&buf, "'\\\\%c'", *(message++));
+	strbuf_addstr(&buf, "'\n");
 	res = write_message(buf.buf, buf.len, rebase_path_author_script(), 1);
 	strbuf_release(&buf);
 	return res;
