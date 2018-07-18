@@ -6,6 +6,24 @@
 #include "git-compat-util.h"
 #include "cache.h"
 
+void prefix_suffix_lines(FILE *f,
+			 const char *prefix,
+			 const char *message,
+			 const char *suffix)
+{
+	const char *cp, *np;
+
+	for (cp = message; *cp; cp = np) {
+		np = strchrnul(cp, '\n');
+		fprintf(f, "%s%.*s%s\n",
+			prefix,
+			(int)(np - cp), cp,
+			suffix);
+		if (*np)
+			np++;
+	}
+}
+
 void vreportf(const char *prefix, const char *err, va_list params)
 {
 	char msg[4096];
@@ -16,7 +34,7 @@ void vreportf(const char *prefix, const char *err, va_list params)
 		if (iscntrl(*p) && *p != '\t' && *p != '\n')
 			*p = '?';
 	}
-	fprintf(stderr, "%s%s\n", prefix, msg);
+	prefix_suffix_lines(stderr, prefix, msg, "");
 }
 
 static NORETURN void usage_builtin(const char *err, va_list params)

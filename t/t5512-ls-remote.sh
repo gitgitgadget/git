@@ -131,9 +131,9 @@ test_expect_success 'confuses pattern as remote when no remote specified' '
 	cat >exp <<-EOF &&
 	fatal: '\''$does_not_exist'\'' does not appear to be a git repository
 	fatal: Could not read from remote repository.
-
-	Please make sure you have the correct access rights
-	and the repository exists.
+	fatal: 
+	fatal: Please make sure you have the correct access rights
+	fatal: and the repository exists.
 	EOF
 	#
 	# Do not expect "git ls-remote <pattern>" to work; ls-remote needs

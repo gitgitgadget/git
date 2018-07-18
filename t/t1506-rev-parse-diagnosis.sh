@@ -11,7 +11,7 @@ test_did_you_mean ()
 	sq="'" &&
 	cat >expected <<-EOF &&
 	fatal: Path '$2$3' $4, but not ${5:-$sq$3$sq}.
-	Did you mean '$1:$2$3'${2:+ aka $sq$1:./$3$sq}?
+	fatal: Did you mean '$1:$2$3'${2:+ aka $sq$1:./$3$sq}?
 	EOF
 	test_cmp expected error
 }

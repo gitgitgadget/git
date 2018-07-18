@@ -415,6 +415,14 @@ static inline char *git_find_last_dir_sep(const char *path)
 struct strbuf;
 
 /* General helper functions */
+
+/*
+ * Write the message to the file, prefixing and suffixing
+ * each line with `prefix` resp. `suffix`.
+ */
+void prefix_suffix_lines(FILE *f, const char *prefix,
+			 const char *message, const char *suffix);
+
 extern void vreportf(const char *prefix, const char *err, va_list params);
 extern NORETURN void usage(const char *err);
 extern NORETURN void usagef(const char *err, ...) __attribute__((format (printf, 1, 2)));
