@@ -798,9 +798,9 @@ static int add_excludes_from_buffer(char *buf, size_t size,
  * an index if 'istate' is non-null), parse it and store the
  * exclude rules in "el".
  *
- * If "ss" is not NULL, compute SHA-1 of the exclude file and fill
+ * If sha1_stat is not NULL, compute SHA-1 of the exclude file and fill
  * stat data from disk (only valid if add_excludes returns zero). If
- * ss_valid is non-zero, "ss" must contain good value as input.
+ * sha1_stat.valid is non-zero, sha1_stat must contain good value as input.
  */
 static int add_excludes(const char *fname, const char *base, int baselen,
 			struct exclude_list *el, struct index_state *istate,

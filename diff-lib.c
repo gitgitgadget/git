@@ -96,6 +96,9 @@ int run_diff_files(struct rev_info *revs, unsigned int option)
 
 	diff_set_mnemonic_prefix(&revs->diffopt, "i/", "w/");
 
+	if (!(option & DIFF_SKIP_FSMONITOR))
+		refresh_fsmonitor(&the_index);
+
 	if (diff_unmerged_stage < 0)
 		diff_unmerged_stage = 2;
 	entries = active_nr;
@@ -196,6 +199,9 @@ int run_diff_files(struct rev_info *revs, unsigned int option)
 		}
 
 		if (ce_uptodate(ce) || ce_skip_worktree(ce))
+			continue;
+
+		if (ce->ce_flags & CE_FSMONITOR_VALID && !(option & DIFF_SKIP_FSMONITOR))
 			continue;
 
 		/* If CE_VALID is set, don't look at workdir for file removal */

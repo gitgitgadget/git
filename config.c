@@ -2274,8 +2274,13 @@ int git_config_get_fsmonitor(void)
 	if (core_fsmonitor && !*core_fsmonitor)
 		core_fsmonitor = NULL;
 
-	if (core_fsmonitor)
-		return 1;
+
+	if (core_fsmonitor) {
+		if (!strcasecmp(core_fsmonitor, "keep"))
+			return -1;
+		else
+			return 1;
+	}
 
 	return 0;
 }
