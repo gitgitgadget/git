@@ -60,8 +60,10 @@ OPTIONS[[OPTIONS]]
 	by a colon `:`, followed by the destination ref <dst>.
 +
 The <src> is often the name of the branch you would want to push, but
-it can be any arbitrary "SHA-1 expression", such as `master~4` or
-`HEAD` (see linkgit:gitrevisions[7]).
+it can be any arbitrary "SHA-1 expression" referring to a branch, such
+as `master~4` or `HEAD` (see linkgit:gitrevisions[7]). It can also
+refer to tag objects, trees or blobs if the <dst> is outside of
+`refs/heads/*`.
 +
 The <dst> tells which ref on the remote side is updated with this
 push. Arbitrary expressions cannot be used here, an actual ref must
@@ -74,12 +76,24 @@ without any `<refspec>` on the command line.  Otherwise, missing
 `:<dst>` means to update the same ref as the `<src>`.
 +
 The object referenced by <src> is used to update the <dst> reference
-on the remote side.  By default this is only allowed if <dst> is not
-a tag (annotated or lightweight), and then only if it can fast-forward
-<dst>.  By having the optional leading `+`, you can tell Git to update
-the <dst> ref even if it is not allowed by default (e.g., it is not a
-fast-forward.)  This does *not* attempt to merge <src> into <dst>.  See
-EXAMPLES below for details.
+on the remote side. Whether this is allowed depends on what where in
+`refs/*` the <dst> reference lives. The `refs/heads/*` namespace will
+only accept commit objects, and then only they can be
+fast-forwarded. The `refs/tags/*` namespace will accept any kind of
+object, but there commit objects are known as lightweight tags, and
+any changes to them and others types of objects will be
+rejected. Finally and most confusingly, it's possible to push any type
+of object to any namespace outside of `refs/{tags,heads}/*`, but these
+will be treated as branches, even in the case where a tag object is
+pushed. That tag object will be overwritten by another tag object (or
+commit!) without `--force` if the new tag happens to point to a commit
+that's a fast-forward of the commit it replaces.
++
+By having the optional leading `+`, you can tell Git to update the
+<dst> ref even if it is not allowed by its respective namespace
+clobbering rules (e.g., it is not a fast-forward. in the case of
+`refs/heads/*` updates) This does *not* attempt to merge <src> into
+<dst>.  See EXAMPLES below for details.
 +
 `tag <tag>` means the same as `refs/tags/<tag>:refs/tags/<tag>`.
 +

@@ -32,12 +32,22 @@ name.
 `tag <tag>` means the same as `refs/tags/<tag>:refs/tags/<tag>`;
 it requests fetching everything up to the given tag.
 +
-The remote ref that matches <src>
-is fetched, and if <dst> is not empty string, the local
-ref that matches it is fast-forwarded using <src>.
-If the optional plus `+` is used, the local ref
-is updated even if it does not result in a fast-forward
-update.
+The remote ref that matches <src> is fetched, and if <dst> is not
+empty string, an attempt is made to update the local ref that matches
+it.
++
+Whether that update is allowed is confusingly not the inverse of
+whether a server will accept a push as described in the `<refspec>...`
+section of linkgit:git-push[1]. If it's a commit under `refs/heads/*`
+only fast-forwards are allowed, but unlike what linkgit:git-push[1]
+will accept clobbering any ref pointing to blobs, trees etc. in any
+other namespace will be accepted, but commits in any ref
+namespace. Those apply the same fast-forward rule. An exception to
+this is that as of Git version 2.18 any object under `refs/tags/*` is
+protected from updates.
++
+If the optional plus `+` is used, the local ref is updated if the
+update would have otherwise been rejected.
 +
 [NOTE]
 When the remote branch you want to fetch is known to
