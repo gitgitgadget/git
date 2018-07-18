@@ -924,6 +924,11 @@ gc.commitGraph::
 	required. Default is false. See linkgit:git-commit-graph[1]
 	for details.
 
+core.multiPackIndex::
+	Use the multi-pack-index file to track multiple packfiles using a
+	single index. See link:technical/multi-pack-index.html[the
+	multi-pack-index design document].
+
 core.sparseCheckout::
 	Enable "sparse checkout" feature. See section "Sparse checkout" in
 	linkgit:git-read-tree[1] for more information.
