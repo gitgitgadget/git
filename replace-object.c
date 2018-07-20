@@ -14,6 +14,7 @@ static int register_replace_ref(const char *refname,
 	const char *slash = strrchr(refname, '/');
 	const char *hash = slash ? slash + 1 : refname;
 	struct replace_object *repl_obj = xmalloc(sizeof(*repl_obj));
+	struct repository *r = (struct repository *)cb_data;
 
 	if (get_oid_hex(hash, &repl_obj->original.oid)) {
 		free(repl_obj);
@@ -25,7 +26,7 @@ static int register_replace_ref(const char *refname,
 	oidcpy(&repl_obj->replacement, oid);
 
 	/* Register new object */
-	if (oidmap_put(the_repository->objects->replace_map, repl_obj))
+	if (oidmap_put(r->objects->replace_map, repl_obj))
 		die("duplicate replace ref: %s", refname);
 
 	return 0;
@@ -40,7 +41,7 @@ static void prepare_replace_object(struct repository *r)
 		xmalloc(sizeof(*r->objects->replace_map));
 	oidmap_init(r->objects->replace_map, 0);
 
-	for_each_replace_ref(r, register_replace_ref, NULL);
+	for_each_replace_ref(r, register_replace_ref, r);
 }
 
 /* We allow "recursive" replacement. Only within reason, though */
