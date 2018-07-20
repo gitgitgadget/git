@@ -32,6 +32,7 @@
 #include "alias.h"
 #include "rebase-interactive.h"
 #include "checkout.h"
+#include "commit-reach.h"
 
 #define GIT_REFLOG_ACTION "GIT_REFLOG_ACTION"
 
