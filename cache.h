@@ -15,6 +15,7 @@
 #include "path.h"
 #include "sha1-array.h"
 #include "repository.h"
+#include "mem-pool.h"
 
 #include <zlib.h>
 typedef struct git_zstream {
@@ -156,6 +157,7 @@ struct cache_entry {
 	struct stat_data ce_stat_data;
 	unsigned int ce_mode;
 	unsigned int ce_flags;
+	unsigned int mem_pool_allocated;
 	unsigned int ce_namelen;
 	unsigned int index;	/* for link extension */
 	struct object_id oid;
@@ -218,6 +220,7 @@ struct cache_entry {
 /* Forward structure decls */
 struct pathspec;
 struct child_process;
+struct tree;
 
 /*
  * Copy the sha1 and stat state of a cache entry from one to
@@ -227,6 +230,7 @@ static inline void copy_cache_entry(struct cache_entry *dst,
 				    const struct cache_entry *src)
 {
 	unsigned int state = dst->ce_flags & CE_HASHED;
+	int mem_pool_allocated = dst->mem_pool_allocated;
 
 	/* Don't copy hash chain and name */
 	memcpy(&dst->ce_stat_data, &src->ce_stat_data,
@@ -235,6 +239,9 @@ static inline void copy_cache_entry(struct cache_entry *dst,
 
 	/* Restore the hash state */
 	dst->ce_flags = (dst->ce_flags & ~CE_HASHED) | state;
+
+	/* Restore the mem_pool_allocated flag */
+	dst->mem_pool_allocated = mem_pool_allocated;
 }
 
 static inline unsigned create_ce_flags(unsigned stage)
@@ -328,6 +335,7 @@ struct index_state {
 	struct untracked_cache *untracked;
 	uint64_t fsmonitor_last_update;
 	struct ewah_bitmap *fsmonitor_dirty;
+	struct mem_pool *ce_mem_pool;
 };
 
 extern struct index_state the_index;
@@ -338,6 +346,60 @@ extern void add_name_hash(struct index_state *istate, struct cache_entry *ce);
 extern void remove_name_hash(struct index_state *istate, struct cache_entry *ce);
 extern void free_name_hash(struct index_state *istate);
 
+
+/* Cache entry creation and cleanup */
+
+/*
+ * Create cache_entry intended for use in the specified index. Caller
+ * is responsible for discarding the cache_entry with
+ * `discard_cache_entry`.
+ */
+struct cache_entry *make_cache_entry(struct index_state *istate,
+				     unsigned int mode,
+				     const struct object_id *oid,
+				     const char *path,
+				     int stage,
+				     unsigned int refresh_options);
+
+struct cache_entry *make_empty_cache_entry(struct index_state *istate,
+					   size_t name_len);
+
+/*
+ * Create a cache_entry that is not intended to be added to an index.
+ * Caller is responsible for discarding the cache_entry
+ * with `discard_cache_entry`.
+ */
+struct cache_entry *make_transient_cache_entry(unsigned int mode,
+					       const struct object_id *oid,
+					       const char *path,
+					       int stage);
+
+struct cache_entry *make_empty_transient_cache_entry(size_t name_len);
+
+/*
+ * Discard cache entry.
+ */
+void discard_cache_entry(struct cache_entry *ce);
+
+/*
+ * Check configuration if we should perform extra validation on cache
+ * entries.
+ */
+int should_validate_cache_entries(void);
+
+/*
+ * Duplicate a cache_entry. Allocate memory for the new entry from a
+ * memory_pool. Takes into account cache_entry fields that are meant
+ * for managing the underlying memory allocation of the cache_entry.
+ */
+struct cache_entry *dup_cache_entry(const struct cache_entry *ce, struct index_state *istate);
+
+/*
+ * Validate the cache entries in the index.  This is an internal
+ * consistency check that the cache_entry structs are allocated from
+ * the expected memory pool.
+ */
+void validate_cache_entries(const struct index_state *istate);
 
 #ifndef NO_THE_INDEX_COMPATIBILITY_MACROS
 #define active_cache (the_index.cache)
@@ -635,12 +697,15 @@ extern void move_index_extensions(struct index_state *dst, struct index_state *s
 extern int unmerged_index(const struct index_state *);
 
 /**
- * Returns 1 if the index differs from HEAD, 0 otherwise. When on an unborn
- * branch, returns 1 if there are entries in the index, 0 otherwise. If an
- * strbuf is provided, the space-separated list of files that differ will be
- * appended to it.
+ * Returns 1 if istate differs from tree, 0 otherwise.  If tree is NULL,
+ * compares istate to HEAD.  If tree is NULL and on an unborn branch,
+ * returns 1 if there are entries in istate, 0 otherwise.  If an strbuf is
+ * provided, the space-separated list of files that differ will be appended
+ * to it.
  */
-extern int index_has_changes(struct strbuf *sb);
+extern int index_has_changes(const struct index_state *istate,
+			     struct tree *tree,
+			     struct strbuf *sb);
 
 extern int verify_path(const char *path, unsigned mode);
 extern int strcmp_offset(const char *s1, const char *s2, size_t *first_change);
@@ -698,7 +763,6 @@ extern int remove_file_from_index(struct index_state *, const char *path);
 extern int add_to_index(struct index_state *, const char *path, struct stat *, int flags);
 extern int add_file_to_index(struct index_state *, const char *path, int flags);
 
-extern struct cache_entry *make_cache_entry(unsigned int mode, const unsigned char *sha1, const char *path, int stage, unsigned int refresh_options);
 extern int chmod_index_entry(struct index_state *, struct cache_entry *ce, char flip);
 extern int ce_same_name(const struct cache_entry *a, const struct cache_entry *b);
 extern void set_object_name_for_intent_to_add_entry(struct cache_entry *ce);
@@ -751,7 +815,7 @@ extern void fill_stat_cache_info(struct cache_entry *ce, struct stat *st);
 #define REFRESH_IGNORE_SUBMODULES	0x0010	/* ignore submodules */
 #define REFRESH_IN_PORCELAIN	0x0020	/* user friendly output, not "needs update" */
 extern int refresh_index(struct index_state *, unsigned int flags, const struct pathspec *pathspec, char *seen, const char *header_msg);
-extern struct cache_entry *refresh_cache_entry(struct cache_entry *, unsigned int);
+extern struct cache_entry *refresh_cache_entry(struct index_state *, struct cache_entry *, unsigned int);
 
 /*
  * Opportunistically update the index but do not complain if we can't.
@@ -804,11 +868,9 @@ void reset_shared_repository(void);
  * Do replace refs need to be checked this run?  This variable is
  * initialized to true unless --no-replace-object is used or
  * $GIT_NO_REPLACE_OBJECTS is set, but is set to false by some
- * commands that do not want replace references to be active.  As an
- * optimization it is also set to false if replace references have
- * been sought but there were none.
+ * commands that do not want replace references to be active.
  */
-extern int check_replace_refs;
+extern int read_replace_refs;
 extern char *git_replace_ref_base;
 
 extern int fsync_object_files;
@@ -903,13 +965,11 @@ extern int grafts_replace_parents;
 #define GIT_REPO_VERSION 0
 #define GIT_REPO_VERSION_READ 1
 extern int repository_format_precious_objects;
-extern char *repository_format_partial_clone;
 extern const char *core_partial_clone_filter_default;
 
 struct repository_format {
 	int version;
 	int precious_objects;
-	char *partial_clone; /* value of extensions.partialclone */
 	int is_bare;
 	int hash_algo;
 	char *work_tree;
@@ -971,7 +1031,7 @@ extern const struct object_id null_oid;
 
 static inline int hashcmp(const unsigned char *sha1, const unsigned char *sha2)
 {
-	return memcmp(sha1, sha2, GIT_SHA1_RAWSZ);
+	return memcmp(sha1, sha2, the_hash_algo->rawsz);
 }
 
 static inline int oidcmp(const struct object_id *oid1, const struct object_id *oid2)
@@ -991,7 +1051,7 @@ static inline int is_null_oid(const struct object_id *oid)
 
 static inline void hashcpy(unsigned char *sha_dst, const unsigned char *sha_src)
 {
-	memcpy(sha_dst, sha_src, GIT_SHA1_RAWSZ);
+	memcpy(sha_dst, sha_src, the_hash_algo->rawsz);
 }
 
 static inline void oidcpy(struct object_id *dst, const struct object_id *src)
@@ -1008,7 +1068,7 @@ static inline struct object_id *oiddup(const struct object_id *src)
 
 static inline void hashclr(unsigned char *hash)
 {
-	memset(hash, 0, GIT_SHA1_RAWSZ);
+	memset(hash, 0, the_hash_algo->rawsz);
 }
 
 static inline void oidclr(struct object_id *oid)
@@ -1364,6 +1424,7 @@ extern struct object *peel_to_type(const char *name, int namelen,
 struct date_mode {
 	enum date_mode_type {
 		DATE_NORMAL = 0,
+		DATE_HUMAN,
 		DATE_RELATIVE,
 		DATE_SHORT,
 		DATE_ISO8601,
@@ -1408,6 +1469,7 @@ extern const char *fmt_name(const char *name, const char *email);
 extern const char *ident_default_name(void);
 extern const char *ident_default_email(void);
 extern const char *git_editor(void);
+extern const char *git_sequence_editor(void);
 extern const char *git_pager(int stdout_is_tty);
 extern int is_terminal_dumb(void);
 extern int git_ident_config(const char *, const char *, void *);
@@ -1761,5 +1823,8 @@ void safe_create_dir(const char *dir, int share);
  * when doing diff-raw output or indicating a detached HEAD?
  */
 extern int print_sha1_ellipsis(void);
+
+/* Return 1 if the file is empty or does not exists, 0 otherwise. */
+extern int is_empty_or_missing_file(const char *filename);
 
 #endif /* CACHE_H */

@@ -18,6 +18,7 @@
 #include "fsmonitor.h"
 #include "object-store.h"
 #include "fetch-object.h"
+#include "remote-odb.h"
 
 /*
  * Error messages expected by scripts out of plumbing commands such as
@@ -204,20 +205,11 @@ static int do_add_entry(struct unpack_trees_options *o, struct cache_entry *ce,
 			       ADD_CACHE_OK_TO_ADD | ADD_CACHE_OK_TO_REPLACE);
 }
 
-static struct cache_entry *dup_entry(const struct cache_entry *ce)
-{
-	unsigned int size = ce_size(ce);
-	struct cache_entry *new_entry = xmalloc(size);
-
-	memcpy(new_entry, ce, size);
-	return new_entry;
-}
-
 static void add_entry(struct unpack_trees_options *o,
 		      const struct cache_entry *ce,
 		      unsigned int set, unsigned int clear)
 {
-	do_add_entry(o, dup_entry(ce), set, clear);
+	do_add_entry(o, dup_cache_entry(ce, &o->result), set, clear);
 }
 
 /*
@@ -383,7 +375,7 @@ static int check_updates(struct unpack_trees_options *o)
 		load_gitmodules_file(index, &state);
 
 	enable_delayed_checkout(&state);
-	if (repository_format_partial_clone && o->update && !o->dry_run) {
+	if (has_remote_odb() && o->update && !o->dry_run) {
 		/*
 		 * Prefetch the objects that are to be checked out in the loop
 		 * below.
@@ -400,8 +392,7 @@ static int check_updates(struct unpack_trees_options *o)
 			}
 		}
 		if (to_fetch.nr)
-			fetch_objects(repository_format_partial_clone,
-				      &to_fetch);
+			remote_odb_get_many_direct(&to_fetch);
 		fetch_if_missing = fetch_if_missing_store;
 		oid_array_clear(&to_fetch);
 	}
@@ -798,10 +789,17 @@ static int ce_in_traverse_path(const struct cache_entry *ce,
 	return (info->pathlen < ce_namelen(ce));
 }
 
-static struct cache_entry *create_ce_entry(const struct traverse_info *info, const struct name_entry *n, int stage)
+static struct cache_entry *create_ce_entry(const struct traverse_info *info,
+	const struct name_entry *n,
+	int stage,
+	struct index_state *istate,
+	int is_transient)
 {
 	int len = traverse_path_len(info, n);
-	struct cache_entry *ce = xcalloc(1, cache_entry_size(len));
+	struct cache_entry *ce =
+		is_transient ?
+		make_empty_transient_cache_entry(len) :
+		make_empty_cache_entry(istate, len);
 
 	ce->ce_mode = create_ce_mode(n->mode);
 	ce->ce_flags = create_ce_flags(stage);
@@ -847,7 +845,15 @@ static int unpack_nondirectories(int n, unsigned long mask,
 			stage = 3;
 		else
 			stage = 2;
-		src[i + o->merge] = create_ce_entry(info, names + i, stage);
+
+		/*
+		 * If the merge bit is set, then the cache entries are
+		 * discarded in the following block.  In this case,
+		 * construct "transient" cache_entries, as they are
+		 * not stored in the index.  otherwise construct the
+		 * cache entry from the index aware logic.
+		 */
+		src[i + o->merge] = create_ce_entry(info, names + i, stage, &o->result, o->merge);
 	}
 
 	if (o->merge) {
@@ -856,7 +862,7 @@ static int unpack_nondirectories(int n, unsigned long mask,
 		for (i = 0; i < n; i++) {
 			struct cache_entry *ce = src[i + o->merge];
 			if (ce != o->df_conflict_entry)
-				free(ce);
+				discard_cache_entry(ce);
 		}
 		return rc;
 	}
@@ -1247,7 +1253,7 @@ static void mark_new_skip_worktree(struct exclude_list *el,
 		if (select_flag && !(ce->ce_flags & select_flag))
 			continue;
 
-		if (!ce_stage(ce))
+		if (!ce_stage(ce) && !(ce->ce_flags & CE_CONFLICTED))
 			ce->ce_flags |= skip_wt_flag;
 		else
 			ce->ce_flags &= ~skip_wt_flag;
@@ -1788,7 +1794,7 @@ static int merged_entry(const struct cache_entry *ce,
 			struct unpack_trees_options *o)
 {
 	int update = CE_UPDATE;
-	struct cache_entry *merge = dup_entry(ce);
+	struct cache_entry *merge = dup_cache_entry(ce, &o->result);
 
 	if (!old) {
 		/*
@@ -1808,7 +1814,7 @@ static int merged_entry(const struct cache_entry *ce,
 
 		if (verify_absent(merge,
 				  ERROR_WOULD_LOSE_UNTRACKED_OVERWRITTEN, o)) {
-			free(merge);
+			discard_cache_entry(merge);
 			return -1;
 		}
 		invalidate_ce_path(merge, o);
@@ -1834,7 +1840,7 @@ static int merged_entry(const struct cache_entry *ce,
 			update = 0;
 		} else {
 			if (verify_uptodate(old, o)) {
-				free(merge);
+				discard_cache_entry(merge);
 				return -1;
 			}
 			/* Migrate old flags over */

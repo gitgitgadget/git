@@ -23,6 +23,7 @@ int advice_add_embedded_repo = 1;
 int advice_ignored_hook = 1;
 int advice_waiting_for_editor = 1;
 int advice_graft_file_deprecated = 1;
+int advice_checkout_ambiguous_remote_branch_name = 1;
 
 static int advice_use_color = -1;
 static char advice_colors[][COLOR_MAXLEN] = {
@@ -75,6 +76,7 @@ static struct {
 	{ "ignoredHook", &advice_ignored_hook },
 	{ "waitingForEditor", &advice_waiting_for_editor },
 	{ "graftFileDeprecated", &advice_graft_file_deprecated },
+	{ "checkoutAmbiguousRemoteBranchName", &advice_checkout_ambiguous_remote_branch_name },
 
 	/* make this an alias for backward compatibility */
 	{ "pushNonFastForward", &advice_push_update_rejected }
@@ -82,24 +84,22 @@ static struct {
 
 void advise(const char *advice, ...)
 {
+	struct strbuf prefix = STRBUF_INIT;
 	struct strbuf buf = STRBUF_INIT;
 	va_list params;
-	const char *cp, *np;
+
+	strbuf_addf(&prefix, _("%shint: "),
+		    advise_get_color(ADVICE_COLOR_HINT));
 
 	va_start(params, advice);
 	strbuf_vaddf(&buf, advice, params);
 	va_end(params);
 
-	for (cp = buf.buf; *cp; cp = np) {
-		np = strchrnul(cp, '\n');
-		fprintf(stderr,	_("%shint: %.*s%s\n"),
-			advise_get_color(ADVICE_COLOR_HINT),
-			(int)(np - cp), cp,
-			advise_get_color(ADVICE_COLOR_RESET));
-		if (*np)
-			np++;
-	}
+	prefix_suffix_lines(stderr, prefix.buf, buf.buf,
+			    advise_get_color(ADVICE_COLOR_RESET));
+
 	strbuf_release(&buf);
+	strbuf_release(&prefix);
 }
 
 int git_default_advice_config(const char *var, const char *value)

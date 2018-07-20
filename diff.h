@@ -94,6 +94,8 @@ struct diff_flags {
 	unsigned funccontext:1;
 	unsigned default_follow_renames:1;
 	unsigned stat_with_summary:1;
+	unsigned suppress_diff_headers:1;
+	unsigned dual_color_diffed_diffs:1;
 };
 
 static inline void diff_flags_or(struct diff_flags *a,
@@ -208,11 +210,16 @@ struct diff_options {
 	enum {
 		COLOR_MOVED_NO = 0,
 		COLOR_MOVED_PLAIN = 1,
-		COLOR_MOVED_ZEBRA = 2,
-		COLOR_MOVED_ZEBRA_DIM = 3,
+		COLOR_MOVED_BLOCKS = 2,
+		COLOR_MOVED_ZEBRA = 3,
+		COLOR_MOVED_ZEBRA_DIM = 4,
 	} color_moved;
 	#define COLOR_MOVED_DEFAULT COLOR_MOVED_ZEBRA
 	#define COLOR_MOVED_MIN_ALNUM_COUNT 20
+
+	/* XDF_WHITESPACE_FLAGS regarding block detection are set at 2, 3, 4 */
+	#define COLOR_MOVED_WS_ALLOW_INDENTATION_CHANGE (1<<5)
+	int color_moved_ws_handling;
 };
 
 void diff_emit_submodule_del(struct diff_options *o, const char *line);
@@ -403,6 +410,8 @@ extern const char *diff_aligned_abbrev(const struct object_id *sha1, int);
 #define DIFF_SILENT_ON_REMOVED 01
 /* report racily-clean paths as modified */
 #define DIFF_RACY_IS_MODIFIED 02
+/* skip loading the fsmonitor data */
+#define DIFF_SKIP_FSMONITOR 04
 extern int run_diff_files(struct rev_info *revs, unsigned int option);
 extern int run_diff_index(struct rev_info *revs, int cached);
 

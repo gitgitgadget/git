@@ -112,6 +112,35 @@ static int option_parse_message(const struct option *opt,
 	return 0;
 }
 
+static int option_read_message(struct parse_opt_ctx_t *ctx,
+			       const struct option *opt, int unset)
+{
+	struct strbuf *buf = opt->value;
+	const char *arg;
+
+	if (unset)
+		BUG("-F cannot be negated");
+
+	if (ctx->opt) {
+		arg = ctx->opt;
+		ctx->opt = NULL;
+	} else if (ctx->argc > 1) {
+		ctx->argc--;
+		arg = *++ctx->argv;
+	} else
+		return opterror(opt, "requires a value", 0);
+
+	if (buf->len)
+		strbuf_addch(buf, '\n');
+	if (ctx->prefix && !is_absolute_path(arg))
+		arg = prefix_filename(ctx->prefix, arg);
+	if (strbuf_read_file(buf, arg, 0) < 0)
+		return error(_("could not read file '%s'"), arg);
+	have_message = 1;
+
+	return 0;
+}
+
 static struct strategy *get_strategy(const char *name)
 {
 	int i;
@@ -229,6 +258,9 @@ static struct option builtin_merge_options[] = {
 	OPT_CALLBACK('m', "message", &merge_msg, N_("message"),
 		N_("merge commit message (for a non-fast-forward merge)"),
 		option_parse_message),
+	{ OPTION_LOWLEVEL_CALLBACK, 'F', "file", &merge_msg, N_("path"),
+		N_("read message from file"), PARSE_OPT_NONEG,
+		(parse_opt_cb *) option_read_message },
 	OPT__VERBOSITY(&verbosity),
 	OPT_BOOL(0, "abort", &abort_current_merge,
 		N_("abort the current in-progress merge")),
@@ -694,7 +726,7 @@ static int try_merge_strategy(const char *strategy, struct commit_list *common,
 			exit(128);
 		if (write_locked_index(&the_index, &lock,
 				       COMMIT_LOCK | SKIP_IF_UNCHANGED))
-			die (_("unable to write %s"), get_index_file());
+			die(_("unable to write %s"), get_index_file());
 		return clean ? 0 : 1;
 	} else {
 		return try_merge_command(strategy, xopts_nr, xopts,
@@ -1036,6 +1068,7 @@ static void handle_fetch_head(struct commit_list **remotes, struct strbuf *merge
 	const char *filename;
 	int fd, pos, npos;
 	struct strbuf fetch_head_file = STRBUF_INIT;
+	const unsigned hexsz = the_hash_algo->hexsz;
 
 	if (!merge_names)
 		merge_names = &fetch_head_file;
@@ -1061,16 +1094,16 @@ static void handle_fetch_head(struct commit_list **remotes, struct strbuf *merge
 		else
 			npos = merge_names->len;
 
-		if (npos - pos < GIT_SHA1_HEXSZ + 2 ||
+		if (npos - pos < hexsz + 2 ||
 		    get_oid_hex(merge_names->buf + pos, &oid))
 			commit = NULL; /* bad */
-		else if (memcmp(merge_names->buf + pos + GIT_SHA1_HEXSZ, "\t\t", 2))
+		else if (memcmp(merge_names->buf + pos + hexsz, "\t\t", 2))
 			continue; /* not-for-merge */
 		else {
-			char saved = merge_names->buf[pos + GIT_SHA1_HEXSZ];
-			merge_names->buf[pos + GIT_SHA1_HEXSZ] = '\0';
+			char saved = merge_names->buf[pos + hexsz];
+			merge_names->buf[pos + hexsz] = '\0';
 			commit = get_merge_parent(merge_names->buf + pos);
-			merge_names->buf[pos + GIT_SHA1_HEXSZ] = saved;
+			merge_names->buf[pos + hexsz] = saved;
 		}
 		if (!commit) {
 			if (ptr)

@@ -18,5 +18,6 @@ t[0-9][0-9][0-9][0-9]/* -whitespace
 /t5515/* eol=lf
 /t556x_common eol=lf
 /t7500/* eol=lf
+/t7910/* eol=lf
 /t8005/*.txt eol=lf
 /t9*/*.dump eol=lf

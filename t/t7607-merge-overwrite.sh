@@ -116,9 +116,9 @@ test_expect_success 'will not overwrite untracked subtree' '
 
 cat >expect <<\EOF
 error: The following untracked working tree files would be overwritten by merge:
-	sub
-	sub2
-Please move or remove them before you merge.
+error: 	sub
+error: 	sub2
+error: Please move or remove them before you merge.
 Aborting
 EOF
 

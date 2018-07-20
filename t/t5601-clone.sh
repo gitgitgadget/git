@@ -618,7 +618,7 @@ hex2oct () {
 test_expect_success 'clone on case-insensitive fs' '
 	git init icasefs &&
 	(
-		cd icasefs
+		cd icasefs &&
 		o=$(git hash-object -w --stdin </dev/null | hex2oct) &&
 		t=$(printf "100644 X\0${o}100644 x\0${o}" |
 			git hash-object -w -t tree --stdin) &&
@@ -647,7 +647,7 @@ partial_clone () {
 	git -C client fsck &&
 
 	# Ensure that unneeded blobs are not inadvertently fetched.
-	test_config -C client extensions.partialclone "not a remote" &&
+	test_config -C client odb.origin.promisorRemote "not a remote" &&
 	test_must_fail git -C client cat-file -e "$HASH1" &&
 
 	# But this blob was fetched, because clone performs an initial checkout

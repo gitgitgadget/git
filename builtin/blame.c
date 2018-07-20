@@ -410,7 +410,7 @@ static void parse_color_fields(const char *s)
 	}
 
 	if (next == EXPECT_COLOR)
-		die (_("must end with a color"));
+		die(_("must end with a color"));
 
 	colorfield[colorfield_nr].hop = TIME_MAX;
 	string_list_clear(&l, 0);
@@ -919,6 +919,10 @@ parse_done:
 		 */
 		blame_date_width = utf8_strwidth(_("4 years, 11 months ago")) + 1; /* add the null */
 		break;
+	case DATE_HUMAN:
+		/* If the year is shown, no time is shown */
+		blame_date_width = sizeof("Thu Oct 19 16:00");
+		break;
 	case DATE_NORMAL:
 		blame_date_width = sizeof("Thu Oct 19 16:00:04 2006 -0700");
 		break;
@@ -1002,13 +1006,13 @@ parse_done:
 				    nth_line_cb, &sb, lno, anchor,
 				    &bottom, &top, sb.path))
 			usage(blame_usage);
-		if (lno < top || ((lno || bottom) && lno < bottom))
+		if ((!lno && (top || bottom)) || lno < bottom)
 			die(Q_("file %s has only %lu line",
 			       "file %s has only %lu lines",
 			       lno), path, lno);
 		if (bottom < 1)
 			bottom = 1;
-		if (top < 1)
+		if (top < 1 || lno < top)
 			top = lno;
 		bottom--;
 		range_set_append_unsafe(&ranges, bottom, top);
@@ -1071,7 +1075,9 @@ parse_done:
 		find_alignment(&sb, &output_option);
 		if (!*repeated_meta_color &&
 		    (output_option & OUTPUT_COLOR_LINE))
-			strcpy(repeated_meta_color, GIT_COLOR_CYAN);
+			xsnprintf(repeated_meta_color,
+				  sizeof(repeated_meta_color),
+				  "%s", GIT_COLOR_CYAN);
 	}
 	if (output_option & OUTPUT_ANNOTATE_COMPAT)
 		output_option &= ~(OUTPUT_COLOR_LINE | OUTPUT_SHOW_AGE_WITH_COLOR);

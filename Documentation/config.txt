@@ -344,6 +344,16 @@ advice.*::
 		Advice shown when you used linkgit:git-checkout[1] to
 		move to the detach HEAD state, to instruct how to create
 		a local branch after the fact.
+	checkoutAmbiguousRemoteBranchName::
+		Advice shown when the argument to
+		linkgit:git-checkout[1] ambiguously resolves to a
+		remote tracking branch on more than one remote in
+		situations where an unambiguous argument would have
+		otherwise caused a remote-tracking branch to be
+		checked out. See the `checkout.defaultRemote`
+		configuration variable for how to set a given remote
+		to used by default in some situations where this
+		advice would be printed.
 	amWorkDir::
 		Advice that shows the location of the patch file when
 		linkgit:git-am[1] fails to apply it.
@@ -354,7 +364,7 @@ advice.*::
 		Advice on what to do when you've accidentally added one
 		git repo inside of another.
 	ignoredHook::
-		Advice shown if an hook is ignored because the hook is not
+		Advice shown if a hook is ignored because the hook is not
 		set as executable.
 	waitingForEditor::
 		Print a message to the terminal whenever Git is waiting for
@@ -390,16 +400,19 @@ core.hideDotFiles::
 	default mode is 'dotGitOnly'.
 
 core.ignoreCase::
-	If true, this option enables various workarounds to enable
+	Internal variable which enables various workarounds to enable
 	Git to work better on filesystems that are not case sensitive,
-	like FAT. For example, if a directory listing finds
-	"makefile" when Git expects "Makefile", Git will assume
+	like APFS, HFS+, FAT, NTFS, etc. For example, if a directory listing
+	finds "makefile" when Git expects "Makefile", Git will assume
 	it is really the same file, and continue to remember it as
 	"Makefile".
 +
 The default is false, except linkgit:git-clone[1] or linkgit:git-init[1]
 will probe and set core.ignoreCase true if appropriate when the repository
 is created.
++
+Git relies on the proper configuration of this variable for your operating
+and file system. Modifying this value may result in unexpected behavior.
 
 core.precomposeUnicode::
 	This option is only used by Mac OS implementation of Git.
@@ -911,6 +924,16 @@ gc.commitGraph::
 	required. Default is false. See linkgit:git-commit-graph[1]
 	for details.
 
+core.useReplaceRefs::
+	If set to `false`, behave as if the `--no-replace-objects`
+	option was given on the command line. See linkgit:git[1] and
+	linkgit:git-replace[1] for more information.
+
+core.multiPackIndex::
+	Use the multi-pack-index file to track multiple packfiles using a
+	single index. See link:technical/multi-pack-index.html[the
+	multi-pack-index design document].
+
 core.sparseCheckout::
 	Enable "sparse checkout" feature. See section "Sparse checkout" in
 	linkgit:git-read-tree[1] for more information.
@@ -1101,6 +1124,22 @@ browser.<tool>.path::
 	browse HTML help (see `-w` option in linkgit:git-help[1]) or a
 	working repository in gitweb (see linkgit:git-instaweb[1]).
 
+checkout.defaultRemote::
+	When you run 'git checkout <something>' and only have one
+	remote, it may implicitly fall back on checking out and
+	tracking e.g. 'origin/<something>'. This stops working as soon
+	as you have more than one remote with a '<something>'
+	reference. This setting allows for setting the name of a
+	preferred remote that should always win when it comes to
+	disambiguation. The typical use-case is to set this to
+	`origin`.
++
+Currently this is used by linkgit:git-checkout[1] when 'git checkout
+<something>' will checkout the '<something>' branch on another remote,
+and by linkgit:git-worktree[1] when 'git worktree add' refers to a
+remote branch. This setting might be used for other checkout-like
+commands or functionality in the future.
+
 clean.requireForce::
 	A boolean to make git-clean do nothing unless given -f,
 	-i or -n.   Defaults to true.
@@ -1149,6 +1188,11 @@ diff.colorMoved::
 	true the default color mode will be used. When set to false,
 	moved lines are not colored.
 
+diff.colorMovedWS::
+	When moved lines are colored using e.g. the `diff.colorMoved` setting,
+	this option controls the `<mode>` how spaces are treated
+	for details of valid modes see '--color-moved-ws' in linkgit:git-diff[1].
+
 color.diff.<slot>::
 	Use customized color for diff colorization.  `<slot>` specifies
 	which part of the patch to use the specified color, and is one
@@ -1185,8 +1229,10 @@ color.grep.<slot>::
 	filename prefix (when not using `-h`)
 `function`;;
 	function name lines (when using `-p`)
-`linenumber`;;
+`lineNumber`;;
 	line number prefix (when using `-n`)
+`column`;;
+	column number prefix (when using `--column`)
 `match`;;
 	matching text (same as setting `matchContext` and `matchSelected`)
 `matchContext`;;
@@ -1495,6 +1541,15 @@ fetch.output::
 	`full` and `compact`. Default value is `full`. See section
 	OUTPUT in linkgit:git-fetch[1] for detail.
 
+fetch.negotiationAlgorithm::
+	Control how information about the commits in the local repository is
+	sent when negotiating the contents of the packfile to be sent by the
+	server. Set to "skipping" to use an algorithm that skips commits in an
+	effort to converge faster, but may result in a larger-than-necessary
+	packfile; any other value instructs Git to use the default algorithm
+	that never skips commits (unless the server has acknowledged it or one
+	of its descendants).
+
 format.attach::
 	Enable multipart/mixed attachments as the default for
 	'format-patch'.  The value can also be a double quoted string
@@ -1652,7 +1707,8 @@ will be repacked. After this the number of packs should go below
 gc.autoPackLimit and gc.bigPackThreshold should be respected again.
 
 gc.logExpiry::
-	If the file gc.log exists, then `git gc --auto` won't run
+	If the file gc.log exists, then `git gc --auto` will print
+	its content and exit with status zero instead of running
 	unless that file is more than 'gc.logExpiry' old.  Default is
 	"1.day".  See `gc.pruneExpire` for more ways to specify its
 	value.
@@ -1801,6 +1857,9 @@ gitweb.snapshot::
 grep.lineNumber::
 	If set to true, enable `-n` option by default.
 
+grep.column::
+	If set to true, enable the `--column` option by default.
+
 grep.patternType::
 	Set the default matching behavior. Using a value of 'basic', 'extended',
 	'fixed', or 'perl' will enable the `--basic-regexp`, `--extended-regexp`,
@@ -1830,6 +1889,16 @@ gpg.program::
 	standard input of "`gpg -bsau $key`" is fed with the contents to be
 	signed, and the program is expected to send the result to its
 	standard output.
+
+gpg.format::
+	Specifies which key format to use when signing with `--gpg-sign`.
+	Default is "openpgp" and another possible value is "x509".
+
+gpg.<format>.program::
+	Use this to customize the program used for the signing format you
+	chose. (see `gpg.program` and `gpg.format`) `gpg.program` can still
+	be used as a legacy synonym for	`gpg.openpgp.program`. The default
+	value for `gpg.x509.program` is "gpgsm".
 
 gui.commitMsgWidth::
 	Defines how wide the commit message window is in the
@@ -2125,8 +2194,7 @@ http.maxRequests::
 http.minSessions::
 	The number of curl sessions (counted across slots) to be kept across
 	requests. They will not be ended with curl_easy_cleanup() until
-	http_cleanup() is invoked. If USE_CURL_MULTI is not defined, this
-	value will be capped at 1. Defaults to 1.
+	http_cleanup() is invoked. Defaults to 1.
 
 http.postBuffer::
 	Maximum size in bytes of the buffer used by smart HTTP
@@ -2507,6 +2575,11 @@ rewriting for the default commit notes.
 This setting can be overridden with the `GIT_NOTES_REWRITE_REF`
 environment variable, which must be a colon separated list of refs or
 globs.
+
+odb.<name>.promisorRemote::
+	The name of a promisor remote. For now promisor remotes are
+	the only kind of remote object database (odb) that is
+	supported.
 
 pack.window::
 	The size of the window used by linkgit:git-pack-objects[1] when no
@@ -3331,12 +3404,13 @@ submodule.<name>.ignore::
 submodule.<name>.active::
 	Boolean value indicating if the submodule is of interest to git
 	commands.  This config option takes precedence over the
-	submodule.active config option.
+	submodule.active config option. See linkgit:gitsubmodules[7] for
+	details.
 
 submodule.active::
 	A repeated field which contains a pathspec used to match against a
 	submodule's path to determine if the submodule is of interest to git
-	commands.
+	commands. See linkgit:gitsubmodules[7] for details.
 
 submodule.recurse::
 	Specifies if commands recurse into submodules by default. This
@@ -3482,6 +3556,13 @@ uploadpack.allowFilter::
 Note that this configuration variable is ignored if it is seen in the
 repository-level config (this is a safety measure against fetching from
 untrusted repositories).
+
+uploadpack.allowRefInWant::
+	If this option is set, `upload-pack` will support the `ref-in-want`
+	feature of the protocol version 2 `fetch` command.  This feature
+	is intended for the benefit of load-balanced servers which may
+	not have the same view of what OIDs their refs point to due to
+	replication delay.
 
 url.<base>.insteadOf::
 	Any URL that starts with this value will be rewritten to

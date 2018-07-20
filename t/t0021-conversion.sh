@@ -583,7 +583,7 @@ test_expect_success PERL 'process filter should restart after unexpected write f
 		git checkout --quiet --no-progress . 2>git-stderr.log &&
 
 		grep "smudge write error at" git-stderr.log &&
-		grep "error: external filter" git-stderr.log &&
+		test_i18ngrep "error: external filter" git-stderr.log &&
 
 		cat >expected.log <<-EOF &&
 			START
@@ -785,7 +785,7 @@ test_expect_success PERL 'missing file in delayed checkout' '
 		cd repo &&
 		git init &&
 		echo "*.a filter=bug" >.gitattributes &&
-		cp "$TEST_ROOT/test.o" missing-delay.a
+		cp "$TEST_ROOT/test.o" missing-delay.a &&
 		git add . &&
 		git commit -m "test commit"
 	) &&
@@ -807,7 +807,7 @@ test_expect_success PERL 'invalid file in delayed checkout' '
 		git init &&
 		echo "*.a filter=bug" >.gitattributes &&
 		cp "$TEST_ROOT/test.o" invalid-delay.a &&
-		cp "$TEST_ROOT/test.o" unfiltered
+		cp "$TEST_ROOT/test.o" unfiltered &&
 		git add . &&
 		git commit -m "test commit"
 	) &&

@@ -186,7 +186,7 @@ test_expect_success 'notice d/f conflict with existing directory' '
 
 test_expect_success 'existing directory reports concrete ref' '
 	test_must_fail git branch foo 2>stderr &&
-	grep refs/heads/foo/bar/baz stderr
+	test_i18ngrep refs/heads/foo/bar/baz stderr
 '
 
 test_expect_success 'notice d/f conflict with existing ref' '
@@ -231,9 +231,9 @@ test_expect_success 'timeout if packed-refs.lock exists' '
 test_expect_success 'retry acquiring packed-refs.lock' '
 	LOCK=.git/packed-refs.lock &&
 	>"$LOCK" &&
-	test_when_finished "wait; rm -f $LOCK" &&
+	test_when_finished "wait && rm -f $LOCK" &&
 	{
-		( sleep 1 ; rm -f $LOCK ) &
+		( sleep 1 && rm -f $LOCK ) &
 	} &&
 	git -c core.packedrefstimeout=3000 pack-refs --all --prune
 '

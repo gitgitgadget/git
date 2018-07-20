@@ -171,12 +171,13 @@ test_expect_success 'submodule add to .gitignored path with --force' '
 test_expect_success 'submodule add to reconfigure existing submodule with --force' '
 	(
 		cd addtest-ignore &&
-		git submodule add --force bogus-url submod &&
-		git submodule add -b initial "$submodurl" submod-branch &&
-		test "bogus-url" = "$(git config -f .gitmodules submodule.submod.url)" &&
-		test "bogus-url" = "$(git config submodule.submod.url)" &&
+		bogus_url="$(pwd)/bogus-url" &&
+		git submodule add --force "$bogus_url" submod &&
+		git submodule add --force -b initial "$submodurl" submod-branch &&
+		test "$bogus_url" = "$(git config -f .gitmodules submodule.submod.url)" &&
+		test "$bogus_url" = "$(git config submodule.submod.url)" &&
 		# Restore the url
-		git submodule add --force "$submodurl" submod
+		git submodule add --force "$submodurl" submod &&
 		test "$submodurl" = "$(git config -f .gitmodules submodule.submod.url)" &&
 		test "$submodurl" = "$(git config submodule.submod.url)"
 	)
@@ -377,7 +378,7 @@ test_expect_success 'init should register submodule url in .git/config' '
 
 test_failure_with_unknown_submodule () {
 	test_must_fail git submodule $1 no-such-submodule 2>output.err &&
-	grep "^error: .*no-such-submodule" output.err
+	test_i18ngrep "^error: .*no-such-submodule" output.err
 }
 
 test_expect_success 'init should fail with unknown submodule' '
@@ -818,7 +819,7 @@ test_expect_success '../bar/a/b/c works with relative local path - ../foo/bar.gi
 		cp pristine-.git-config .git/config &&
 		cp pristine-.gitmodules .gitmodules &&
 		mkdir -p a/b/c &&
-		(cd a/b/c; git init) &&
+		(cd a/b/c && git init) &&
 		git config remote.origin.url ../foo/bar.git &&
 		git submodule add ../bar/a/b/c ./a/b/c &&
 		git submodule init &&
@@ -991,6 +992,11 @@ test_expect_success 'submodule deinit should remove the whole submodule section 
 	test -n "$(git config --get-regexp "submodule\.example2\.")" &&
 	test -f example2/.git &&
 	rmdir init
+'
+
+test_expect_success 'submodule deinit should unset core.worktree' '
+	test_path_is_file .git/modules/example/config &&
+	test_must_fail git config -f .git/modules/example/config core.worktree
 '
 
 test_expect_success 'submodule deinit from subdirectory' '

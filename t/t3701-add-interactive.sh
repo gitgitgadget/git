@@ -46,13 +46,13 @@ test_expect_success 'setup expected' '
 '
 
 test_expect_success 'diff works (initial)' '
-	(echo d; echo 1) | git add -i >output &&
+	test_write_lines d 1 | git add -i >output &&
 	sed -ne "/new file/,/content/p" <output >diff &&
 	diff_cmp expected diff
 '
 test_expect_success 'revert works (initial)' '
 	git add file &&
-	(echo r; echo 1) | git add -i &&
+	test_write_lines r 1 | git add -i &&
 	git ls-files >output &&
 	! grep . output
 '
@@ -83,13 +83,13 @@ test_expect_success 'setup expected' '
 '
 
 test_expect_success 'diff works (commit)' '
-	(echo d; echo 1) | git add -i >output &&
+	test_write_lines d 1 | git add -i >output &&
 	sed -ne "/^index/,/content/p" <output >diff &&
 	diff_cmp expected diff
 '
 test_expect_success 'revert works (commit)' '
 	git add file &&
-	(echo r; echo 1) | git add -i &&
+	test_write_lines r 1 | git add -i &&
 	git add -i </dev/null >output &&
 	grep "unchanged *+3/-0 file" output
 '
@@ -102,7 +102,7 @@ test_expect_success 'setup expected' '
 
 test_expect_success 'dummy edit works' '
 	test_set_editor : &&
-	(echo e; echo a) | git add -p &&
+	test_write_lines e a | git add -p &&
 	git diff > diff &&
 	diff_cmp expected diff
 '
@@ -127,7 +127,7 @@ test_expect_success 'setup fake editor' '
 
 test_expect_success 'bad edit rejected' '
 	git reset &&
-	(echo e; echo n; echo d) | git add -p >output &&
+	test_write_lines e n d | git add -p >output &&
 	grep "hunk does not apply" output
 '
 
@@ -140,7 +140,7 @@ test_expect_success 'setup patch' '
 
 test_expect_success 'garbage edit rejected' '
 	git reset &&
-	(echo e; echo n; echo d) | git add -p >output &&
+	test_write_lines e n d | git add -p >output &&
 	grep "hunk does not apply" output
 '
 
@@ -170,7 +170,7 @@ test_expect_success 'setup expected' '
 '
 
 test_expect_success 'real edit works' '
-	(echo e; echo n; echo d) | git add -p &&
+	test_write_lines e n d | git add -p &&
 	git diff >output &&
 	diff_cmp expected output
 '
@@ -401,6 +401,63 @@ test_expect_failure 'split hunk "add -p (no, yes, edit)"' '
 	test_must_be_empty error &&
 	git diff >actual &&
 	! grep "^+31" actual
+'
+
+test_expect_success 'setup expected diff' '
+	cat >expected <<-\EOF
+	diff --git a/test b/test
+	index 0889435..341cc6b 100644
+	--- a/test
+	+++ b/test
+	@@ -1,6 +1,9 @@
+	+5
+	 10
+	 20
+	+21
+	 30
+	 40
+	 50
+	 60
+	+61
+	\ No newline at end of file
+	EOF
+'
+
+test_expect_success 'can stage individual lines of patch' '
+	git reset &&
+	printf 61 >>test &&
+	printf "%s\n" l "1,2 4-" |
+	EDITOR=: git add -p 2>error &&
+	test_must_be_empty error &&
+	git diff --cached HEAD >actual &&
+	diff_cmp expected actual
+'
+
+test_expect_success 'setup expected diff' '
+	cat >expected <<-\EOF
+	diff --git a/test b/test
+	index 0889435..cc6163b 100644
+	--- a/test
+	+++ b/test
+	@@ -1,6 +1,8 @@
+	+5
+	 10
+	 20
+	 30
+	 40
+	 50
+	 60
+	+61
+	\ No newline at end of file
+	EOF
+'
+
+test_expect_success 'can reset individual lines of patch' '
+	printf "%s\n" l -13 |
+	EDITOR=: git reset -p 2>error &&
+	test_must_be_empty error &&
+	git diff --cached HEAD >actual &&
+	diff_cmp expected actual
 '
 
 test_expect_success 'patch mode ignores unmerged entries' '
@@ -635,6 +692,14 @@ test_expect_success 'add -p patch editing works with pathological context lines'
 	# n q q below is in case edit fails
 	printf "%s\n" e y    n q q |
 	git add -p &&
+	git cat-file blob :a >actual &&
+	test_cmp expected-2 actual
+'
+
+test_expect_success 'add -p selecting lines works with pathological context lines' '
+	git reset &&
+	printf "%s\n" l 2 y |
+	GIT_EDITOR=./editor git add -p &&
 	git cat-file blob :a >actual &&
 	test_cmp expected-2 actual
 '

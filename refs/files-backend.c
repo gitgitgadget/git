@@ -1582,26 +1582,17 @@ static int log_ref_write_fd(int fd, const struct object_id *old_oid,
 			    const struct object_id *new_oid,
 			    const char *committer, const char *msg)
 {
-	int msglen, written;
-	unsigned maxlen, len;
-	char *logrec;
+	struct strbuf sb = STRBUF_INIT;
+	int ret = 0;
 
-	msglen = msg ? strlen(msg) : 0;
-	maxlen = strlen(committer) + msglen + 100;
-	logrec = xmalloc(maxlen);
-	len = xsnprintf(logrec, maxlen, "%s %s %s\n",
-			oid_to_hex(old_oid),
-			oid_to_hex(new_oid),
-			committer);
-	if (msglen)
-		len += copy_reflog_msg(logrec + len - 1, msg) - 1;
-
-	written = len <= maxlen ? write_in_full(fd, logrec, len) : -1;
-	free(logrec);
-	if (written < 0)
-		return -1;
-
-	return 0;
+	strbuf_addf(&sb, "%s %s %s", oid_to_hex(old_oid), oid_to_hex(new_oid), committer);
+	if (msg && *msg)
+		copy_reflog_msg(&sb, msg);
+	strbuf_addch(&sb, '\n');
+	if (write_in_full(fd, sb.buf, sb.len) < 0)
+		ret = -1;
+	strbuf_release(&sb);
+	return ret;
 }
 
 static int files_log_ref_write(struct files_ref_store *refs,
@@ -1676,7 +1667,7 @@ static int write_ref_to_lockfile(struct ref_lock *lock,
 		return -1;
 	}
 	fd = get_lock_file_fd(&lock->lk);
-	if (write_in_full(fd, oid_to_hex(oid), GIT_SHA1_HEXSZ) < 0 ||
+	if (write_in_full(fd, oid_to_hex(oid), the_hash_algo->hexsz) < 0 ||
 	    write_in_full(fd, &term, 1) < 0 ||
 	    close_ref_gently(lock) < 0) {
 		strbuf_addf(err,
@@ -3070,7 +3061,7 @@ static int files_reflog_expire(struct ref_store *ref_store,
 			rollback_lock_file(&reflog_lock);
 		} else if (update &&
 			   (write_in_full(get_lock_file_fd(&lock->lk),
-				oid_to_hex(&cb.last_kept_oid), GIT_SHA1_HEXSZ) < 0 ||
+				oid_to_hex(&cb.last_kept_oid), the_hash_algo->hexsz) < 0 ||
 			    write_str_in_full(get_lock_file_fd(&lock->lk), "\n") < 0 ||
 			    close_ref_gently(lock) < 0)) {
 			status |= error("couldn't write %s",

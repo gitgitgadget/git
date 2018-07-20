@@ -243,9 +243,9 @@ test_expect_success 'print errors when failed to update worktree' '
 	test_must_fail git checkout top 2>actual &&
 	cat >expected <<\EOF &&
 error: The following untracked working tree files would be overwritten by checkout:
-	sub/added
-	sub/addedtoo
-Please move or remove them before you switch branches.
+error: 	sub/added
+error: 	sub/addedtoo
+error: Please move or remove them before you switch branches.
 Aborting
 EOF
 	test_i18ncmp expected actual

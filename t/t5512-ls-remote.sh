@@ -15,7 +15,7 @@ test_expect_success setup '
 	git tag mark1.10 &&
 	git show-ref --tags -d | sed -e "s/ /	/" >expected.tag &&
 	(
-		echo "$(git rev-parse HEAD)	HEAD"
+		echo "$(git rev-parse HEAD)	HEAD" &&
 		git show-ref -d	| sed -e "s/ /	/"
 	) >expected.all &&
 
@@ -105,7 +105,7 @@ test_expect_success 'use branch.<name>.remote if possible' '
 	git clone . other.git &&
 	(
 		cd other.git &&
-		echo "$(git rev-parse HEAD)	HEAD"
+		echo "$(git rev-parse HEAD)	HEAD" &&
 		git show-ref	| sed -e "s/ /	/"
 	) >exp &&
 
@@ -131,9 +131,9 @@ test_expect_success 'confuses pattern as remote when no remote specified' '
 	cat >exp <<-EOF &&
 	fatal: '\''$does_not_exist'\'' does not appear to be a git repository
 	fatal: Could not read from remote repository.
-
-	Please make sure you have the correct access rights
-	and the repository exists.
+	fatal: 
+	fatal: Please make sure you have the correct access rights
+	fatal: and the repository exists.
 	EOF
 	#
 	# Do not expect "git ls-remote <pattern>" to work; ls-remote needs

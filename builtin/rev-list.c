@@ -17,6 +17,7 @@
 #include "reflog-walk.h"
 #include "oidset.h"
 #include "packfile.h"
+#include "object-store.h"
 
 static const char rev_list_usage[] =
 "git rev-list [OPTION] <commit-id>... [ -- paths... ]\n"
@@ -361,8 +362,8 @@ int cmd_rev_list(int argc, const char **argv, const char *prefix)
 	int i;
 	int bisect_list = 0;
 	int bisect_show_vars = 0;
-	int bisect_find_all = 0;
 	int use_bitmap_index = 0;
+	unsigned bisect_flags = 0;
 	const char *show_progress = NULL;
 
 	if (argc == 2 && !strcmp(argv[1], "-h"))
@@ -427,7 +428,7 @@ int cmd_rev_list(int argc, const char **argv, const char *prefix)
 		}
 		if (!strcmp(arg, "--bisect-all")) {
 			bisect_list = 1;
-			bisect_find_all = 1;
+			bisect_flags |= BISECT_FIND_ALL;
 			info.flags |= BISECT_SHOW_ALL;
 			revs.show_decorations = 1;
 			continue;
@@ -515,17 +516,21 @@ int cmd_rev_list(int argc, const char **argv, const char *prefix)
 		if (revs.count && !revs.left_right && !revs.cherry_mark) {
 			uint32_t commit_count;
 			int max_count = revs.max_count;
-			if (!prepare_bitmap_walk(&revs)) {
-				count_bitmap_commit_list(&commit_count, NULL, NULL, NULL);
+			struct bitmap_index *bitmap_git;
+			if ((bitmap_git = prepare_bitmap_walk(&revs))) {
+				count_bitmap_commit_list(bitmap_git, &commit_count, NULL, NULL, NULL);
 				if (max_count >= 0 && max_count < commit_count)
 					commit_count = max_count;
 				printf("%d\n", commit_count);
+				free_bitmap_index(bitmap_git);
 				return 0;
 			}
 		} else if (revs.max_count < 0 &&
 			   revs.tag_objects && revs.tree_objects && revs.blob_objects) {
-			if (!prepare_bitmap_walk(&revs)) {
-				traverse_bitmap_commit_list(&show_object_fast);
+			struct bitmap_index *bitmap_git;
+			if ((bitmap_git = prepare_bitmap_walk(&revs))) {
+				traverse_bitmap_commit_list(bitmap_git, &show_object_fast);
+				free_bitmap_index(bitmap_git);
 				return 0;
 			}
 		}
@@ -539,7 +544,7 @@ int cmd_rev_list(int argc, const char **argv, const char *prefix)
 	if (bisect_list) {
 		int reaches, all;
 
-		find_bisection(&revs.commits, &reaches, &all, bisect_find_all);
+		find_bisection(&revs.commits, &reaches, &all, bisect_flags);
 
 		if (bisect_show_vars)
 			return show_bisect_vars(&info, reaches, all);

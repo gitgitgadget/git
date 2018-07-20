@@ -91,7 +91,6 @@ OPTIONS
 -D::
 	Shortcut for `--delete --force`.
 
--l::
 --create-reflog::
 	Create the branch's reflog.  This activates recording of
 	all changes made to the branch ref, enabling use of date
@@ -155,6 +154,7 @@ This option is only applicable in non-verbose mode.
 --all::
 	List both remote-tracking branches and local branches.
 
+-l::
 --list::
 	List branches.  With optional `<pattern>...`, e.g. `git
 	branch --list 'maint-*'`, list only the branches that match

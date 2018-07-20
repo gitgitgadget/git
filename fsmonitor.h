@@ -46,13 +46,7 @@ extern void refresh_fsmonitor(struct index_state *istate);
  * called any time the cache entry has been updated to reflect the
  * current state of the file on disk.
  */
-static inline void mark_fsmonitor_valid(struct cache_entry *ce)
-{
-	if (core_fsmonitor) {
-		ce->ce_flags |= CE_FSMONITOR_VALID;
-		trace_printf_key(&trace_fsmonitor, "mark_fsmonitor_clean '%s'", ce->name);
-	}
-}
+extern void mark_fsmonitor_valid(struct cache_entry *ce);
 
 /*
  * Clear the given cache entry's CE_FSMONITOR_VALID bit and invalidate
@@ -61,13 +55,6 @@ static inline void mark_fsmonitor_valid(struct cache_entry *ce)
  * trigger an lstat() or invalidate the untracked cache for the
  * corresponding directory
  */
-static inline void mark_fsmonitor_invalid(struct index_state *istate, struct cache_entry *ce)
-{
-	if (core_fsmonitor) {
-		ce->ce_flags &= ~CE_FSMONITOR_VALID;
-		untracked_cache_invalidate_path(istate, ce->name, 1);
-		trace_printf_key(&trace_fsmonitor, "mark_fsmonitor_invalid '%s'", ce->name);
-	}
-}
+extern void mark_fsmonitor_invalid(struct index_state *istate, struct cache_entry *ce);
 
 #endif

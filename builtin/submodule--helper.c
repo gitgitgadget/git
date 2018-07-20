@@ -1124,6 +1124,8 @@ static void deinit_submodule(const char *path, const char *prefix,
 		if (!(flags & OPT_QUIET))
 			printf(format, displaypath);
 
+		submodule_unset_core_worktree(sub);
+
 		strbuf_release(&sb_rm);
 	}
 
@@ -1706,8 +1708,8 @@ static int update_clone_task_finished(int result,
 	return 0;
 }
 
-static int gitmodules_update_clone_config(const char *var, const char *value,
-					  void *cb)
+static int git_update_clone_config(const char *var, const char *value,
+				   void *cb)
 {
 	int *max_jobs = cb;
 	if (!strcmp(var, "submodule.fetchjobs"))
@@ -1757,8 +1759,8 @@ static int update_clone(int argc, const char **argv, const char *prefix)
 	};
 	suc.prefix = prefix;
 
-	config_from_gitmodules(gitmodules_update_clone_config, &max_jobs);
-	git_config(gitmodules_update_clone_config, &max_jobs);
+	update_clone_config_from_gitmodules(&max_jobs);
+	git_config(git_update_clone_config, &max_jobs);
 
 	argc = parse_options(argc, argv, prefix, module_update_clone_options,
 			     git_submodule_helper_usage, 0);
@@ -2004,6 +2006,29 @@ static int check_name(int argc, const char **argv, const char *prefix)
 	return 0;
 }
 
+static int connect_gitdir_workingtree(int argc, const char **argv, const char *prefix)
+{
+	struct strbuf sb = STRBUF_INIT;
+	const char *name, *path;
+	char *sm_gitdir;
+
+	if (argc != 3)
+		BUG("submodule--helper connect-gitdir-workingtree <name> <path>");
+
+	name = argv[1];
+	path = argv[2];
+
+	strbuf_addf(&sb, "%s/modules/%s", get_git_dir(), name);
+	sm_gitdir = absolute_pathdup(sb.buf);
+
+	connect_work_tree_and_git_dir(path, sm_gitdir, 0);
+
+	strbuf_release(&sb);
+	free(sm_gitdir);
+
+	return 0;
+}
+
 #define SUPPORT_SUPER_PREFIX (1<<0)
 
 struct cmd_struct {
@@ -2017,6 +2042,7 @@ static struct cmd_struct commands[] = {
 	{"name", module_name, 0},
 	{"clone", module_clone, 0},
 	{"update-clone", update_clone, 0},
+	{"connect-gitdir-workingtree", connect_gitdir_workingtree, 0},
 	{"relative-path", resolve_relative_path, 0},
 	{"resolve-relative-url", resolve_relative_url, 0},
 	{"resolve-relative-url-test", resolve_relative_url_test, 0},

@@ -75,6 +75,21 @@ test_expect_success 'rebase --keep-empty' '
 	test_line_count = 6 actual
 '
 
+test_expect_success 'rebase -i writes out .git/rebase-merge/author-script in "edit" that sh(1) can parse' '
+	test_when_finished "git rebase --abort ||:" &&
+	git checkout master &&
+	set_fake_editor &&
+	FAKE_LINES="edit 1" git rebase -i HEAD^ &&
+	test -f .git/rebase-merge/author-script &&
+	(
+		sane_unset GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_AUTHOR_DATE &&
+		eval "$(cat .git/rebase-merge/author-script)" &&
+		test "$(git show --quiet --pretty=format:%an)" = "$GIT_AUTHOR_NAME" &&
+		test "$(git show --quiet --pretty=format:%ae)" = "$GIT_AUTHOR_EMAIL" &&
+		test "$(git show --quiet --date=raw --pretty=format:@%ad)" = "$GIT_AUTHOR_DATE"
+	)
+'
+
 test_expect_success 'rebase -i with the exec command' '
 	git checkout master &&
 	(
@@ -117,6 +132,15 @@ test_expect_success 'rebase -i with exec allows git commands in subdirs' '
 	FAKE_LINES="1 exec_cd_subdir_&&_git_rev-parse_--is-inside-work-tree" \
 		git rebase -i HEAD^
 	)
+'
+
+test_expect_success 'rebase -i sets work tree properly' '
+	test_when_finished "rm -rf subdir" &&
+	test_when_finished "test_might_fail git rebase --abort" &&
+	mkdir subdir &&
+	git rebase -x "(cd subdir && git rev-parse --show-toplevel)" HEAD^ \
+		>actual &&
+	! grep "/subdir$" actual
 '
 
 test_expect_success 'rebase -i with the exec command checks tree cleanness' '
@@ -264,11 +288,18 @@ test_expect_success 'retain authorship' '
 '
 
 test_expect_success 'retain authorship w/ conflicts' '
+	oGIT_AUTHOR_NAME=$GIT_AUTHOR_NAME &&
+	test_when_finished "GIT_AUTHOR_NAME=\$oGIT_AUTHOR_NAME" &&
+
 	git reset --hard twerp &&
 	test_commit a conflict a conflict-a &&
 	git reset --hard twerp &&
-	GIT_AUTHOR_NAME=AttributeMe \
+
+	GIT_AUTHOR_NAME=AttributeMe &&
+	export GIT_AUTHOR_NAME &&
 	test_commit b conflict b conflict-b &&
+	GIT_AUTHOR_NAME=$oGIT_AUTHOR_NAME &&
+
 	set_fake_editor &&
 	test_must_fail git rebase -i conflict-a &&
 	echo resolved >conflict &&
@@ -509,7 +540,7 @@ test_expect_success 'interrupted squash works as expected' '
 	one=$(git rev-parse HEAD~3) &&
 	set_fake_editor &&
 	test_must_fail env FAKE_LINES="1 squash 3 2" git rebase -i HEAD~3 &&
-	(echo one; echo two; echo four) > conflict &&
+	test_write_lines one two four > conflict &&
 	git add conflict &&
 	test_must_fail git rebase --continue &&
 	echo resolved > conflict &&
@@ -523,10 +554,10 @@ test_expect_success 'interrupted squash works as expected (case 2)' '
 	one=$(git rev-parse HEAD~3) &&
 	set_fake_editor &&
 	test_must_fail env FAKE_LINES="3 squash 1 2" git rebase -i HEAD~3 &&
-	(echo one; echo four) > conflict &&
+	test_write_lines one four > conflict &&
 	git add conflict &&
 	test_must_fail git rebase --continue &&
-	(echo one; echo two; echo four) > conflict &&
+	test_write_lines one two four > conflict &&
 	git add conflict &&
 	test_must_fail git rebase --continue &&
 	echo resolved > conflict &&
@@ -553,15 +584,16 @@ test_expect_success '--continue tries to commit, even for "edit"' '
 '
 
 test_expect_success 'aborted --continue does not squash commits after "edit"' '
+	test_when_finished "git rebase --abort" &&
 	old=$(git rev-parse HEAD) &&
 	test_tick &&
 	set_fake_editor &&
 	FAKE_LINES="edit 1" git rebase -i HEAD^ &&
 	echo "edited again" > file7 &&
 	git add file7 &&
-	test_must_fail env FAKE_COMMIT_MESSAGE=" " git rebase --continue &&
-	test $old = $(git rev-parse HEAD) &&
-	git rebase --abort
+	echo all the things >>conflict &&
+	test_must_fail git rebase --continue &&
+	test $old = $(git rev-parse HEAD)
 '
 
 test_expect_success 'auto-amend only edited commits after "edit"' '
@@ -981,7 +1013,35 @@ test_expect_success 'rebase -i --root reword root commit' '
 	test -z "$(git show -s --format=%p HEAD^)"
 '
 
+test_expect_success 'rebase -i --root when root has untracked file confilct' '
+	test_when_finished "reset_rebase" &&
+	git checkout -b failing-root-pick A &&
+	echo x >file2 &&
+	git rm file1 &&
+	git commit -m "remove file 1 add file 2" &&
+	echo z >file1 &&
+	set_fake_editor &&
+	test_must_fail env FAKE_LINES="1 2" git rebase -i --root &&
+	rm file1 &&
+	git rebase --continue &&
+	test "$(git log -1 --format=%B)" = "remove file 1 add file 2" &&
+	test "$(git rev-list --count HEAD)" = 2
+'
+
+test_expect_success 'rebase -i --root reword root when root has untracked file conflict' '
+	test_when_finished "reset_rebase" &&
+	echo z>file1 &&
+	set_fake_editor &&
+	test_must_fail env FAKE_LINES="reword 1 2" \
+		FAKE_COMMIT_MESSAGE="Modified A" git rebase -i --root &&
+	rm file1 &&
+	FAKE_COMMIT_MESSAGE="Reworded A" git rebase --continue &&
+	test "$(git log -1 --format=%B HEAD^)" = "Reworded A" &&
+	test "$(git rev-list --count HEAD)" = 2
+'
+
 test_expect_success C_LOCALE_OUTPUT 'rebase --edit-todo does not work on non-interactive rebase' '
+	git checkout reword-root-branch &&
 	git reset --hard &&
 	git checkout conflict-branch &&
 	set_fake_editor &&

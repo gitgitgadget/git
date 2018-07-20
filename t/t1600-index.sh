@@ -16,7 +16,7 @@ test_expect_success 'bogus GIT_INDEX_VERSION issues warning' '
 		git add a 2>&1 | sed "s/[0-9]//" >actual.err &&
 		sed -e "s/ Z$/ /" <<-\EOF >expect.err &&
 			warning: GIT_INDEX_VERSION set, but the value is invalid.
-			Using version Z
+			warning: Using version Z
 		EOF
 		test_i18ncmp expect.err actual.err
 	)
@@ -30,7 +30,7 @@ test_expect_success 'out of bounds GIT_INDEX_VERSION issues warning' '
 		git add a 2>&1 | sed "s/[0-9]//" >actual.err &&
 		sed -e "s/ Z$/ /" <<-\EOF >expect.err &&
 			warning: GIT_INDEX_VERSION set, but the value is invalid.
-			Using version Z
+			warning: Using version Z
 		EOF
 		test_i18ncmp expect.err actual.err
 	)
@@ -54,7 +54,7 @@ test_expect_success 'out of bounds index.version issues warning' '
 		git add a 2>&1 | sed "s/[0-9]//" >actual.err &&
 		sed -e "s/ Z$/ /" <<-\EOF >expect.err &&
 			warning: index.version set, but the value is invalid.
-			Using version Z
+			warning: Using version Z
 		EOF
 		test_i18ncmp expect.err actual.err
 	)
