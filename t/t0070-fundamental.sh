@@ -34,4 +34,10 @@ test_expect_success 'check for a bug in the regex routines' '
 	test-tool regex --bug
 '
 
+test_expect_success 'multiple processes can GIT_TRACE to the same file' '
+	GIT_TRACE="$(pwd)/trace" test-tool trace lock &&
+	sed -n "/while-locked/,\$s/.*delayed$/YES/p" <trace >actual &&
+	test YES = "$(cat actual)"
+'
+
 test_done

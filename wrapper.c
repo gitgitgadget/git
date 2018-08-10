@@ -690,3 +690,19 @@ int xgethostname(char *buf, size_t len)
 		buf[len - 1] = 0;
 	return ret;
 }
+
+#ifndef GIT_WINDOWS_NATIVE
+int lock_or_unlock_fd_for_appending(int fd, int lock_it)
+{
+	struct flock flock;
+
+	flock.l_type = lock_it ? F_WRLCK : F_UNLCK;
+
+	/* (un-)lock the whole file */
+	flock.l_whence = SEEK_SET;
+	flock.l_start = 0;
+	flock.l_len = 0;
+
+	return fcntl(fd, F_SETLKW, &flock);
+}
+#endif

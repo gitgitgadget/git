@@ -397,6 +397,9 @@ HANDLE winansi_get_osfhandle(int fd);
  * git specific compatibility
  */
 
+int mingw_lock_or_unlock_fd_for_appending(int fd, int lock_it);
+#define lock_or_unlock_fd_for_appending mingw_lock_or_unlock_fd_for_appending
+
 #define has_dos_drive_prefix(path) \
 	(isalpha(*(path)) && (path)[1] == ':' ? 2 : 0)
 int mingw_skip_dos_drive_prefix(char **path);

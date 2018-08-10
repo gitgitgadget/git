@@ -114,11 +114,20 @@ static int prepare_trace_line(const char *file, int line,
 
 static void trace_write(struct trace_key *key, const void *buf, unsigned len)
 {
-	if (write_in_full(get_trace_fd(key), buf, len) < 0) {
+	int fd = get_trace_fd(key), locked;
+
+	locked = !lock_or_unlock_fd_for_appending(fd, 1);
+	if (!locked && errno != EBADF && errno != EINVAL)
+		warning("unable to lock file descriptor for %s: %s",
+			key->key, strerror(errno));
+	if (write_in_full(fd, buf, len) < 0) {
 		warning("unable to write trace for %s: %s",
 			key->key, strerror(errno));
 		trace_disable(key);
 	}
+	if (locked && lock_or_unlock_fd_for_appending(fd, 0) < 0)
+		warning("failed to remove lock on fd for %s: %s",
+			key->key, strerror(errno));
 }
 
 void trace_verbatim(struct trace_key *key, const void *buf, unsigned len)

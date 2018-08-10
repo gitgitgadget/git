@@ -514,6 +514,25 @@ int mingw_chmod(const char *filename, int mode)
 	return _wchmod(wfilename, mode);
 }
 
+int mingw_lock_or_unlock_fd_for_appending(int fd, int lock_it)
+{
+	HANDLE handle = (HANDLE)_get_osfhandle(fd);
+	OVERLAPPED overlapped = { 0 };
+	DWORD err;
+
+	if (!lock_it && UnlockFileEx(handle, 0, -1, 0, &overlapped))
+		return 0;
+	if (lock_it &&
+	    LockFileEx(handle, LOCKFILE_EXCLUSIVE_LOCK, 0, -1, 0, &overlapped))
+		return 0;
+
+	err = GetLastError();
+	/* LockFileEx() cannot lock pipes */
+	errno = err == ERROR_INVALID_FUNCTION ?
+		EBADF : err_win_to_posix(GetLastError());
+	return -1;
+}
+
 /*
  * The unit of FILETIME is 100-nanoseconds since January 1, 1601, UTC.
  * Returns the 100-nanoseconds ("hekto nanoseconds") since the epoch.
