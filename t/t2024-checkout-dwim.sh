@@ -76,7 +76,8 @@ test_expect_success 'checkout of branch from multiple remotes fails #1' '
 	test_branch master
 '
 
-test_expect_success 'checkout of branch from multiple remotes fails with advice' '
+test_expect_success NO_PERL \
+	'checkout of branch from multiple remotes fails with advice' '
 	git checkout -B master &&
 	test_might_fail git branch -D foo &&
 	test_must_fail git checkout foo 2>stderr &&
