@@ -5,6 +5,8 @@
 #include "repository.h"
 #include "string-list.h"
 
+#define GIT_TEST_COMMIT_GRAPH "GIT_TEST_COMMIT_GRAPH"
+
 struct commit;
 
 char *get_commit_graph_filename(const char *obj_dir);
