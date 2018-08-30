@@ -40,9 +40,13 @@ static void *preload_thread(void *_data)
 	struct cache_entry **cep = index->cache + p->offset;
 	struct cache_def cache = CACHE_DEF_INIT;
 
+	trace2_thread_start("preload_thread");
+
 	nr = p->nr;
 	if (nr + p->offset > index->cache_nr)
 		nr = index->cache_nr - p->offset;
+
+	trace2_printf("preload {offset %7d}{count %7d}", p->offset, nr);
 
 	do {
 		struct cache_entry *ce = *cep++;
@@ -70,6 +74,9 @@ static void *preload_thread(void *_data)
 		mark_fsmonitor_valid(ce);
 	} while (--nr > 0);
 	cache_def_clear(&cache);
+
+	trace2_thread_exit();
+
 	return NULL;
 }
 
@@ -118,6 +125,9 @@ int read_index_preload(struct index_state *index,
 {
 	int retval = read_index(index);
 
+	trace2_region_enter("preload_index");
 	preload_index(index, pathspec);
+	trace2_region_leave("preload_index");
+
 	return retval;
 }
