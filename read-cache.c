@@ -1867,6 +1867,8 @@ static void tweak_split_index(struct index_state *istate)
 
 static void post_read_index_from(struct index_state *istate)
 {
+	trace2_data_intmax("index", "cache_nr", istate->cache_nr);
+
 	check_ce_order(istate);
 	tweak_untracked_cache(istate);
 	tweak_split_index(istate);
@@ -2012,7 +2014,9 @@ int read_index_from(struct index_state *istate, const char *path,
 	if (istate->initialized)
 		return istate->cache_nr;
 
+	trace2_region_enter("do_read_index");
 	ret = do_read_index(istate, path, 0);
+	trace2_region_leave("do_read_index");
 	trace_performance_since(start, "read cache %s", path);
 
 	split_index = istate->split_index;
@@ -2028,7 +2032,9 @@ int read_index_from(struct index_state *istate, const char *path,
 
 	base_oid_hex = oid_to_hex(&split_index->base_oid);
 	base_path = xstrfmt("%s/sharedindex.%s", gitdir, base_oid_hex);
+	trace2_region_enter("do_read_index");
 	ret = do_read_index(split_index->base, base_path, 1);
+	trace2_region_leave("do_read_index");
 	if (oidcmp(&split_index->base_oid, &split_index->base->oid))
 		die("broken index, expect %s in %s, got %s",
 		    base_oid_hex, base_path,
