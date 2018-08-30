@@ -1951,6 +1951,8 @@ static enum path_treatment read_directory_recursive(struct dir_struct *dir,
 
 	strbuf_add(&path, base, baselen);
 
+	trace2_region_enter("read_directory_recursive:%.*s", baselen, base);
+
 	if (open_cached_dir(&cdir, dir, untracked, istate, &path, check_only))
 		goto out;
 
@@ -2042,6 +2044,7 @@ static enum path_treatment read_directory_recursive(struct dir_struct *dir,
 	close_cached_dir(&cdir);
  out:
 	strbuf_release(&path);
+	trace2_region_leave("read_directory_recursive:%.*s", baselen, base);
 
 	return dir_state;
 }
