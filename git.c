@@ -331,6 +331,8 @@ static int handle_alias(int *argcp, const char ***argv)
 			argv_array_push(&child.args, alias_string + 1);
 			argv_array_pushv(&child.args, (*argv) + 1);
 
+			trace2_alias(alias_command, child.args.argv);
+
 			ret = run_command(&child);
 			if (ret >= 0)   /* normal exit */
 				exit(ret);
@@ -364,6 +366,8 @@ static int handle_alias(int *argcp, const char ***argv)
 		REALLOC_ARRAY(new_argv, count + *argcp);
 		/* insert after command name */
 		memcpy(new_argv + count, *argv + 1, sizeof(char *) * *argcp);
+
+		trace2_alias(alias_command, new_argv);
 
 		*argv = new_argv;
 		*argcp += count - 1;
@@ -413,6 +417,7 @@ static int run_builtin(struct cmd_struct *p, int argc, const char **argv)
 		setup_work_tree();
 
 	trace_argv_printf(argv, "trace: built-in: git");
+	trace2_command(p->cmd);
 
 	validate_cache_entries(&the_index);
 	status = p->fn(argc, argv, prefix);
@@ -719,6 +724,8 @@ int cmd_main(int argc, const char **argv)
 			cmd = slash + 1;
 	}
 
+	trace2_start(argv);
+
 	trace_command_performance(argv);
 
 	/*
@@ -782,5 +789,5 @@ int cmd_main(int argc, const char **argv)
 	fprintf(stderr, _("failed to run command '%s': %s\n"),
 		cmd, strerror(errno));
 
-	return 1;
+	return trace2_exit(1);
 }
