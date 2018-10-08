@@ -1563,7 +1563,7 @@ struct cache_entry *refresh_cache_entry(struct index_state *istate,
  * Index File I/O
  *****************************************************************/
 
-#define INDEX_FORMAT_DEFAULT 3
+#define INDEX_FORMAT_DEFAULT 4
 
 static unsigned int get_index_format_default(void)
 {
