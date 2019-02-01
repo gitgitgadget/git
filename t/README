@@ -986,6 +986,8 @@ use these, and "test_set_prereq" for how to define your own.
 
    Git wasn't compiled with NO_PTHREADS=YesPlease.
 
+ FIXME Add SIZE_T_64BIT
+
 Tips for Writing Tests
 ----------------------
 

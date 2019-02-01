@@ -255,7 +255,7 @@ static uint64_t total_ram(void)
 
 static uint64_t estimate_repack_memory(struct packed_git *pack)
 {
-	unsigned long nr_objects = approximate_object_count();
+	size_t nr_objects = approximate_object_count();
 	size_t os_cache, heap;
 
 	if (!pack || !nr_objects)
