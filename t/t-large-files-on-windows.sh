@@ -12,7 +12,7 @@ test_expect_success EXPENSIVE,SIZE_T_IS_64BIT 'blah blubb' '
 	git commit -m msg file &&
 	git log --stat &&
 	git fsck --verbose --strict --full &&
-	git verify-pack .git/objects/pack/*.pack &&
+	git index-pack --verify .git/objects/pack/*.pack &&
 	git gc
 '
 

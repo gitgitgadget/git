@@ -361,6 +361,7 @@ static void start_put(struct transfer_request *request)
 	void *unpacked;
 	size_t len;
 	int hdrlen;
+	// FIXME
 	ssize_t size;
 	git_zstream stream;
 

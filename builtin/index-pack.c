@@ -456,6 +456,7 @@ static void *unpack_entry_data(off_t offset, size_t size,
 		}
 	} while (status == Z_OK);
 	if (stream.total_out != size || status != Z_STREAM_END)
+		// BUGS OUT HERE
 		bad_object(offset, _("inflate returned %d"), status);
 	git_inflate_end(&stream);
 	if (oid)
