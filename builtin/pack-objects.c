@@ -172,7 +172,7 @@ static unsigned long do_compress(void **pptr, unsigned long size)
 {
 	git_zstream stream;
 	void *in, *out;
-	unsigned long maxsize;
+	size_t maxsize;
 
 	git_deflate_init(&stream, pack_compression_level);
 	maxsize = git_deflate_bound(&stream, size);
@@ -190,7 +190,7 @@ static unsigned long do_compress(void **pptr, unsigned long size)
 	git_deflate_end(&stream);
 
 	free(in);
-	return stream.total_out;
+	return xulong(stream.total_out);
 }
 
 static unsigned long write_large_blob_data(struct git_istream *st, struct hashfile *f,
@@ -2009,7 +2009,7 @@ unsigned long oe_get_size_slow(struct packing_data *pack,
 	read_lock();
 	w_curs = NULL;
 	buf = use_pack(p, &w_curs, e->in_pack_offset, &avail);
-	used = unpack_object_header_buffer(buf, avail, &type, &size);
+	used = unpack_object_header_buffer(buf, xulong(avail), &type, &size);
 	if (used == 0)
 		die(_("unable to parse object header of %s"),
 		    oid_to_hex(&e->idx.oid));

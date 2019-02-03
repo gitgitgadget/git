@@ -361,7 +361,7 @@ static void start_put(struct transfer_request *request)
 	void *unpacked;
 	unsigned long len;
 	int hdrlen;
-	ssize_t size;
+	size_t size;
 	git_zstream stream;
 
 	unpacked = read_object_file(&request->obj->oid, &type, &len);

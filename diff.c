@@ -3247,7 +3247,7 @@ static unsigned char *deflate_it(char *data,
 				 unsigned long size,
 				 unsigned long *result_size)
 {
-	int bound;
+	size_t bound;
 	unsigned char *deflated;
 	git_zstream stream;
 
@@ -3262,7 +3262,7 @@ static unsigned char *deflate_it(char *data,
 	while (git_deflate(&stream, Z_FINISH) == Z_OK)
 		; /* nothing */
 	git_deflate_end(&stream);
-	*result_size = stream.total_out;
+	*result_size = xulong(stream.total_out);
 	return deflated;
 }
 

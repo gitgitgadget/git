@@ -577,7 +577,7 @@ static void *unpack_data(struct object_entry *obj,
 	} while (len && status == Z_OK && !stream.avail_in);
 
 	/* This has been inflated OK when first encountered, so... */
-	if (status != Z_STREAM_END || stream.total_out != obj->size)
+	if (status != Z_STREAM_END || xulong(stream.total_out) != obj->size)
 		die(_("serious inflate inconsistency"));
 
 	git_inflate_end(&stream);
@@ -1262,7 +1262,7 @@ static void conclude_pack(int fix_thin_pack, const char *curr_pack, unsigned cha
 		    nr_ofs_deltas + nr_ref_deltas - nr_resolved_deltas);
 }
 
-static int write_compressed(struct hashfile *f, void *in, unsigned int size)
+static unsigned long write_compressed(struct hashfile *f, void *in, unsigned long size)
 {
 	git_zstream stream;
 	int status;
@@ -1281,7 +1281,7 @@ static int write_compressed(struct hashfile *f, void *in, unsigned int size)
 
 	if (status != Z_STREAM_END)
 		die(_("unable to deflate appended object (%d)"), status);
-	size = stream.total_out;
+	size = xulong(stream.total_out);
 	git_deflate_end(&stream);
 	return size;
 }

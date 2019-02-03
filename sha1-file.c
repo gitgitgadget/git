@@ -2271,7 +2271,7 @@ static int check_stream_sha1(git_zstream *stream,
 	 * We already read some bytes into hdr, but the ones up to the NUL
 	 * do not count against the object's content size.
 	 */
-	total_read = stream->total_out - strlen(hdr) - 1;
+	total_read = xulong(stream->total_out) - strlen(hdr) - 1;
 
 	/*
 	 * This size comparison must be "<=" to read the final zlib packets;

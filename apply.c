@@ -1877,7 +1877,7 @@ static char *inflate_it(const void *data, unsigned long size,
 	git_inflate_init(&stream);
 	st = git_inflate(&stream, Z_FINISH);
 	git_inflate_end(&stream);
-	if ((st != Z_STREAM_END) || stream.total_out != inflated_size) {
+	if ((st != Z_STREAM_END) || xulong(stream.total_out) != inflated_size) {
 		free(out);
 		return NULL;
 	}

@@ -51,13 +51,9 @@ static void zlib_post_call(git_zstream *s)
 
 	bytes_consumed = s->z.next_in - s->next_in;
 	bytes_produced = s->z.next_out - s->next_out;
-	if (s->z.total_out != s->total_out + bytes_produced)
-		BUG("total_out mismatch");
-	if (s->z.total_in != s->total_in + bytes_consumed)
-		BUG("total_in mismatch");
 
-	s->total_out = s->z.total_out;
-	s->total_in = s->z.total_in;
+	s->total_out += bytes_produced;
+	s->total_in += bytes_consumed;
 	s->next_in = s->z.next_in;
 	s->next_out = s->z.next_out;
 	s->avail_in -= bytes_consumed;
@@ -116,7 +112,7 @@ int git_inflate(git_zstream *strm, int flush)
 		zlib_pre_call(strm);
 		/* Never say Z_FINISH unless we are feeding everything */
 		status = inflate(&strm->z,
-				 (strm->z.avail_in != strm->avail_in)
+				 (strm->z.avail_in != xulong(strm->avail_in))
 				 ? 0 : flush);
 		if (status == Z_MEM_ERROR)
 			die("inflate: out of memory");
@@ -152,7 +148,7 @@ int git_inflate(git_zstream *strm, int flush)
 
 size_t git_deflate_bound(git_zstream *strm, size_t size)
 {
-	return deflateBound(&strm->z, size);
+	return deflateBound(&strm->z, xulong(size));
 }
 
 void git_deflate_init(git_zstream *strm, int level)
@@ -242,7 +238,7 @@ int git_deflate(git_zstream *strm, int flush)
 
 		/* Never say Z_FINISH unless we are feeding everything */
 		status = deflate(&strm->z,
-				 (strm->z.avail_in != strm->avail_in)
+				 (strm->z.avail_in != xulong(strm->avail_in))
 				 ? 0 : flush);
 		if (status == Z_MEM_ERROR)
 			die("deflate: out of memory");

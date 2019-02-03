@@ -965,6 +965,15 @@ static inline size_t xsize_t(off_t len)
 	return size;
 }
 
+static inline unsigned long xulong(size_t len)
+{
+	unsigned long size = (unsigned long) len;
+
+	if (len != (size_t) size)
+		die("Cannot handle files this big due to unsigned long.");
+	return size;
+}
+
 __attribute__((format (printf, 3, 4)))
 extern int xsnprintf(char *dst, size_t max, const char *fmt, ...);
 
