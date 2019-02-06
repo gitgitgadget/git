@@ -445,6 +445,11 @@ test_expect_success 'add SP before non-empty (2)' '
 	test $(wc -w <actual) = 6
 '
 
+test_expect_success 'add LF after non-empty' '
+	git show -s --pretty=format:"%s%*sThanks" HEAD^^ >actual &&
+	test_line_count = 2 actual
+'
+
 test_expect_success '--abbrev' '
 	echo SHORT SHORT SHORT >expect2 &&
 	echo LONG LONG LONG >expect3 &&
