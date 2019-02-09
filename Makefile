@@ -716,6 +716,7 @@ PROGRAM_OBJS += imap-send.o
 PROGRAM_OBJS += sh-i18n--envsubst.o
 PROGRAM_OBJS += shell.o
 PROGRAM_OBJS += remote-testsvn.o
+PROGRAM_OBJS += diag.o
 
 # Binary suffix, set to .exe for Windows builds
 X =
@@ -2411,6 +2412,10 @@ git-http-push$X: http.o http-push.o GIT-LDFLAGS $(GITLIBS)
 git-remote-testsvn$X: remote-testsvn.o GIT-LDFLAGS $(GITLIBS) $(VCSSVN_LIB)
 	$(QUIET_LINK)$(CC) $(ALL_CFLAGS) -o $@ $(ALL_LDFLAGS) $(filter %.o,$^) $(LIBS) \
 	$(VCSSVN_LIB)
+
+git-diag$X: diag.o GIT-LDFLAGS $(GITLIBS)
+	$(QUIET_LINK)$(CC) $(ALL_CLFAGS) -o $@ $(ALL_LDFLAGS) $(filter %.o,$^) \
+		$(CURL_LIBCURL) $(EXPAT_LIBEXPAT) $(LIBS)
 
 $(REMOTE_CURL_ALIASES): $(REMOTE_CURL_PRIMARY)
 	$(QUIET_LNCP)$(RM) $@ && \
