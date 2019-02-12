@@ -7,6 +7,15 @@
 #include <curl/curl.h>
 #endif
 
+static void do_string_or_null(struct json_writer *jw, const char *key,
+			      const char *value)
+{
+	if (value && *value)
+		jw_object_string(jw, key, value);
+	else
+		jw_object_null(jw, key);
+}
+
 /*
  * Fixed details of the compiled architecture.
  */
@@ -60,18 +69,7 @@ static void cmd__version(struct json_writer *jw)
 {
 	jw_object_string(jw, "git", git_version_string);
 
-	jw_object_bool(jw, "built_from_commit", git_built_from_commit_string[0]);
-	if (git_built_from_commit_string[0])
-		jw_object_string(jw, "commit", git_built_from_commit_string);
-}
-
-static void do_string_or_null(struct json_writer *jw, const char *key,
-			      const char *value)
-{
-	if (value)
-		jw_object_string(jw, key, value);
-	else
-		jw_object_null(jw, key);
+	do_string_or_null(jw, "commit", git_built_from_commit_string);
 }
 
 /*
