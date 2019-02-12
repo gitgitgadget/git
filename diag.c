@@ -7,6 +7,19 @@
 #include <curl/curl.h>
 #endif
 
+/*
+ * TODO Notes:
+ *
+ * On Mac OS X, set "DYLD_PRINT_LIBRARIES=1" before running a git command
+ * to see all of the shared libraries as they are loaded.
+ *
+ * On Mac OS X, also see:
+ *     "otool -l" or "otool -L"
+ *     "vmmap $pid"
+ *     "lsof -p $pid"
+ *
+ */
+
 static void do_string_or_null(struct json_writer *jw, const char *key,
 			      const char *value)
 {
@@ -50,6 +63,48 @@ static void system_helper_windows(struct json_writer *jw)
 }
 #endif
 
+#ifdef HAVE_BSD_SYSCTL
+static void system_helper_bsd_sysctlbyname_string(struct json_writer *jw,
+						  const char *key)
+{
+	char buf[1024];
+	size_t len = sizeof(buf);
+
+	if (!sysctlbyname(key, buf, &len, NULL, 0))
+		do_string_or_null(jw, key, buf);
+	else
+		jw_object_null(jw, key);
+}
+
+static void system_helper_bsd_sysctlbyname_integer(struct json_writer *jw,
+						   const char *key)
+{
+	int value;
+	size_t len = sizeof(value);
+
+	if (!sysctlbyname(key, &value, &len, NULL, 0))
+		jw_object_intmax(jw, key, value);
+	else
+		jw_object_null(jw, key);
+}
+
+static void system_helper_bsd(struct json_writer *jw)
+{
+
+	jw_object_inline_begin_object(jw, "bsd");
+
+	system_helper_bsd_sysctlbyname_string(jw, "kern.osrelease");
+	system_helper_bsd_sysctlbyname_string(jw, "kern.ostype");
+	system_helper_bsd_sysctlbyname_string(jw, "kern.version");
+
+	system_helper_bsd_sysctlbyname_string(jw, "hw.model");
+	system_helper_bsd_sysctlbyname_string(jw, "hw.machine");
+	system_helper_bsd_sysctlbyname_integer(jw, "hw.ncpu");
+
+	jw_end(jw);
+}
+#endif
+
 /*
  * Details of the actual running system.
  */
@@ -59,6 +114,9 @@ static void cmd__system(struct json_writer *jw)
 
 #ifdef GIT_WINDOWS_NATIVE
 	system_helper_windows(jw);
+#endif
+#ifdef HAVE_BSD_SYSCTL
+	system_helper_bsd(jw);
 #endif
 }
 
