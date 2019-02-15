@@ -1557,7 +1557,7 @@ static inline char *copy_advance(char *dst, const char *src)
 	return dst;
 }
 
-static const char *lstrip_ref_components(const char *refname, int len)
+const char *lstrip_ref_components(const char *refname, int len)
 {
 	long remaining = len;
 	const char *start = xstrdup(refname);

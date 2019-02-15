@@ -145,4 +145,7 @@ struct ref_array_item *ref_array_push(struct ref_array *array,
 				      const char *refname,
 				      const struct object_id *oid);
 
+/* Strips `len` prefix components from the refname. */
+const char *lstrip_ref_components(const char *refname, int len);
+
 #endif /*  REF_FILTER_H  */
