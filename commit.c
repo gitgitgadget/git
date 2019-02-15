@@ -623,6 +623,19 @@ struct commit_list *reverse_commit_list(struct commit_list *list)
 	return next;
 }
 
+struct commit *get_commit_by_index(struct commit_list *to_search, int index)
+{
+	while (to_search && index) {
+		to_search = to_search->next;
+		index--;
+	}
+
+	if (!to_search)
+		return NULL;
+
+	return to_search->item;
+}
+
 void free_commit_list(struct commit_list *list)
 {
 	while (list)
