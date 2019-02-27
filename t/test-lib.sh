@@ -884,6 +884,33 @@ want_trace () {
 	}
 }
 
+disable_tracing () {
+	if test -n "$do_trace" && test -z "$GIT_TEST_TRACE_HELPERS"
+	then
+		set +x
+		x_counter=$(($x_counter + 1))
+	fi
+}
+
+restore_tracing_and_return_with () {
+	if test -n "$do_trace" && test -z "$GIT_TEST_TRACE_HELPERS"
+	then
+		case "$x_counter" in
+		0)
+			BUG "x_counter got messed up"
+			;;
+		1)
+			x_counter=0
+			set -x
+			;;
+		*)
+			x_counter=$(($x_counter - 1))
+			;;
+		esac
+	fi
+	return $1
+} 2>/dev/null 4>/dev/null
+
 # This is a separate function because some tests use
 # "return" to end a test_expect_success block early
 # (and we want to make sure we run any cleanup like
@@ -891,7 +918,7 @@ want_trace () {
 test_eval_inner_ () {
 	# Do not add anything extra (including LF) after '$*'
 	eval "
-		want_trace && set -x
+		want_trace && do_trace=t && x_counter=0 && set -x
 		$*"
 }
 
@@ -925,6 +952,7 @@ test_eval_ () {
 			set +x
 		fi
 	} 2>/dev/null 4>&2
+	do_trace=
 
 	if test "$test_eval_ret_" != 0 && want_trace
 	then
@@ -1314,6 +1342,16 @@ then
 		GIT_TEST_CMP="$DIFF -c"
 	else
 		GIT_TEST_CMP="$DIFF -u"
+	fi
+fi
+
+if test -n "$GIT_TEST_TRACE_HELPERS"
+then
+	if git env--helper --type=bool --default=0 --exit-code GIT_TEST_TRACE_HELPERS
+	then
+		GIT_TEST_TRACE_HELPERS=true
+	else
+		unset GIT_TEST_TRACE_HELPERS
 	fi
 fi
 
