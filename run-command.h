@@ -55,6 +55,7 @@ int start_command(struct child_process *);
 int finish_command(struct child_process *);
 int finish_command_in_signal(struct child_process *);
 int run_command(struct child_process *);
+int exists_in_PATH(const char *);
 
 /*
  * Returns the path to the hook file, or NULL if the hook is missing
