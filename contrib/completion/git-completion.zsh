@@ -116,8 +116,9 @@ __git_zsh_bash_func ()
 	emulate -L ksh
 
 	local command=$1
-
 	local completion_func="_git_${command//-/_}"
+
+	[[ "$command" =~ [^a-z-] ]] && return
 	declare -f $completion_func >/dev/null && $completion_func && return
 
 	local expansion=$(__git_aliased_command "$command")
