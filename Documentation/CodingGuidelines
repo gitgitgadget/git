@@ -198,6 +198,9 @@ For C programs:
    including old ones. That means that you should not use C99
    initializers, even if a lot of compilers grok it.
 
+ - the convention is to use -1 for unspecified values of command-line
+   options of config settings.
+
  - Variables have to be declared at the beginning of the block.
 
  - NULL pointers shall be written as NULL, not as 0.
