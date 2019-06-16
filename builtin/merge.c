@@ -53,8 +53,7 @@ struct strategy {
 
 static const char * const builtin_merge_usage[] = {
 	N_("git merge [<options>] [<commit>...]"),
-	N_("git merge --abort"),
-	N_("git merge --continue"),
+	N_("git merge (--continue | --skip | --abort | --quit)"),
 	NULL
 };
 

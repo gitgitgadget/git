@@ -2164,7 +2164,8 @@ int cmd_am(int argc, const char **argv, const char *prefix)
 
 	const char * const usage[] = {
 		N_("git am [<options>] [(<mbox> | <Maildir>)...]"),
-		N_("git am [<options>] (--continue | --skip | --abort)"),
+		N_("git am [<options>] (--continue | --skip | --abort | --quit"
+			" | --show-current-patch)"),
 		NULL
 	};
 
