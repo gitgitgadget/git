@@ -380,7 +380,7 @@ static void parse_treeish_arg(const char **argv,
 		int remote)
 {
 	const char *name = argv[0];
-	const unsigned char *commit_sha1;
+	const struct object_id *commit_oid;
 	time_t archive_time;
 	struct tree *tree;
 	const struct commit *commit;
@@ -402,10 +402,10 @@ static void parse_treeish_arg(const char **argv,
 
 	commit = lookup_commit_reference_gently(ar_args->repo, &oid, 1);
 	if (commit) {
-		commit_sha1 = commit->object.oid.hash;
+		commit_oid = &commit->object.oid;
 		archive_time = commit->date;
 	} else {
-		commit_sha1 = NULL;
+		commit_oid = NULL;
 		archive_time = time(NULL);
 	}
 
@@ -415,7 +415,7 @@ static void parse_treeish_arg(const char **argv,
 
 	if (prefix) {
 		struct object_id tree_oid;
-		unsigned int mode;
+		unsigned short mode;
 		int err;
 
 		err = get_tree_entry(&tree->object.oid, prefix, &tree_oid,
@@ -426,7 +426,7 @@ static void parse_treeish_arg(const char **argv,
 		tree = parse_tree_indirect(&tree_oid);
 	}
 	ar_args->tree = tree;
-	ar_args->commit_sha1 = commit_sha1;
+	ar_args->commit_oid = commit_oid;
 	ar_args->commit = commit;
 	ar_args->time = archive_time;
 }

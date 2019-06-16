@@ -18,7 +18,7 @@ A `gitattributes` file is a simple text file that gives
 
 Each line in `gitattributes` file is of form:
 
-	pattern	attr1 attr2 ...
+	pattern attr1 attr2 ...
 
 That is, a pattern followed by an attributes list,
 separated by whitespaces. Leading and trailing whitespaces are
@@ -314,8 +314,8 @@ stored as UTF-8 internally. A client without `working-tree-encoding`
 support will checkout `foo.ps1` as UTF-8 encoded file. This will
 typically cause trouble for the users of this file.
 +
-If a Git client, that does not support the `working-tree-encoding`
-attribute, adds a new file `bar.ps1`, then `bar.ps1` will be
+If a Git client that does not support the `working-tree-encoding`
+attribute adds a new file `bar.ps1`, then `bar.ps1` will be
 stored "as-is" internally (in this example probably as UTF-16).
 A client with `working-tree-encoding` support will interpret the
 internal contents as UTF-8 and try to convert it to UTF-16 on checkout.
@@ -346,7 +346,7 @@ automatic line ending conversion based on your platform.
 
 Use the following attributes if your '*.ps1' files are UTF-16 little
 endian encoded without BOM and you want Git to use Windows line endings
-in the working directory (use `UTF-16-LE-BOM` instead of `UTF-16LE` if
+in the working directory (use `UTF-16LE-BOM` instead of `UTF-16LE` if
 you want UTF-16 little endian with BOM).
 Please note, it is highly recommended to
 explicitly define the line endings with `eol` if the `working-tree-encoding`

@@ -57,6 +57,13 @@ fi
 . "$GIT_BUILD_DIR"/GIT-BUILD-OPTIONS
 export PERL_PATH SHELL_PATH
 
+# Disallow the use of abbreviated options in the test suite by default
+if test -z "${GIT_TEST_DISALLOW_ABBREVIATED_OPTIONS}"
+then
+	GIT_TEST_DISALLOW_ABBREVIATED_OPTIONS=true
+	export GIT_TEST_DISALLOW_ABBREVIATED_OPTIONS
+fi
+
 ################################################################
 # It appears that people try to run tests without building...
 "${GIT_TEST_INSTALLED:-$GIT_BUILD_DIR}/git$X" >/dev/null
@@ -147,10 +154,16 @@ do
 	--stress)
 		stress=t ;;
 	--stress=*)
+		echo "error: --stress does not accept an argument: '$opt'" >&2
+		echo "did you mean --stress-jobs=${opt#*=} or --stress-limit=${opt#*=}?" >&2
+		exit 1
+		;;
+	--stress-jobs=*)
+		stress=t;
 		stress=${opt#--*=}
 		case "$stress" in
 		*[!0-9]*|0*|"")
-			echo "error: --stress=<N> requires the number of jobs to run" >&2
+			echo "error: --stress-jobs=<N> requires the number of jobs to run" >&2
 			exit 1
 			;;
 		*)	# Good.
@@ -158,6 +171,7 @@ do
 		esac
 		;;
 	--stress-limit=*)
+		stress=t;
 		stress_limit=${opt#--*=}
 		case "$stress_limit" in
 		*[!0-9]*|0*|"")
@@ -372,6 +386,7 @@ unset VISUAL EMAIL LANGUAGE COLUMNS $("$PERL_PATH" -e '
 	my @env = keys %ENV;
 	my $ok = join("|", qw(
 		TRACE
+		TR2_
 		DEBUG
 		TEST
 		.*_TEST
@@ -620,6 +635,10 @@ test_external_has_tap=0
 
 die () {
 	code=$?
+	# This is responsible for running the atexit commands even when a
+	# test script run with '--immediate' fails, or when the user hits
+	# ctrl-C, i.e. when 'test_done' is not invoked at all.
+	test_atexit_handler || code=$?
 	if test -n "$GIT_EXIT_OK"
 	then
 		exit $code
@@ -631,7 +650,10 @@ die () {
 
 GIT_EXIT_OK=
 trap 'die' EXIT
-trap 'exit $?' INT TERM HUP
+# Disable '-x' tracing, because with some shells, notably dash, it
+# prevents running the cleanup commands when a test script run with
+# '--verbose-log -x' is interrupted.
+trap '{ code=$?; set +x; } 2>/dev/null; exit $code' INT TERM HUP
 
 # The user-facing functions are loaded from a separate file so that
 # test_perf subshells can have them too
@@ -1042,8 +1064,27 @@ write_junit_xml_testcase () {
 	junit_have_testcase=t
 }
 
+test_atexit_cleanup=:
+test_atexit_handler () {
+	# In a succeeding test script 'test_atexit_handler' is invoked
+	# twice: first from 'test_done', then from 'die' in the trap on
+	# EXIT.
+	# This condition and resetting 'test_atexit_cleanup' below makes
+	# sure that the registered cleanup commands are run only once.
+	test : != "$test_atexit_cleanup" || return 0
+
+	setup_malloc_check
+	test_eval_ "$test_atexit_cleanup"
+	test_atexit_cleanup=:
+	teardown_malloc_check
+}
+
 test_done () {
 	GIT_EXIT_OK=t
+
+	# Run the atexit commands _before_ the trash directory is
+	# removed, so the commands can access pidfiles and socket files.
+	test_atexit_handler
 
 	if test -n "$write_junit_xml" && test -n "$junit_xml_path"
 	then
@@ -1327,7 +1368,11 @@ then
 	fi
 fi
 
-# Provide an implementation of the 'yes' utility
+# Provide an implementation of the 'yes' utility; the upper bound
+# limit is there to help Windows that cannot stop this loop from
+# wasting cycles when the downstream stops reading, so do not be
+# tempted to turn it into an infinite loop. cf. 6129c930 ("test-lib:
+# limit the output of the yes utility", 2016-02-02)
 yes () {
 	if test $# = 0
 	then
@@ -1394,6 +1439,7 @@ test -z "$NO_GETTEXT" && test_set_prereq GETTEXT
 if test -n "$GIT_TEST_GETTEXT_POISON_ORIG"
 then
 	GIT_TEST_GETTEXT_POISON=$GIT_TEST_GETTEXT_POISON_ORIG
+	export GIT_TEST_GETTEXT_POISON
 	unset GIT_TEST_GETTEXT_POISON_ORIG
 fi
 
@@ -1476,7 +1522,7 @@ test_lazy_prereq NOT_ROOT '
 '
 
 test_lazy_prereq JGIT '
-	type jgit
+	jgit --version
 '
 
 # SANITY is about "can you correctly predict what the filesystem would

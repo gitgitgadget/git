@@ -24,6 +24,7 @@
 #include "lockfile.h"
 #include "wt-status.h"
 #include "commit-reach.h"
+#include "sequencer.h"
 
 enum rebase_type {
 	REBASE_INVALID = -1,
@@ -56,6 +57,10 @@ static enum rebase_type parse_config_rebase(const char *key, const char *value,
 		return REBASE_MERGES;
 	else if (!strcmp(value, "interactive") || !strcmp(value, "i"))
 		return REBASE_INTERACTIVE;
+	/*
+	 * Please update _git_config() in git-completion.bash when you
+	 * add new rebase modes.
+	 */
 
 	if (fatal)
 		die(_("Invalid value for %s: %s"), key, value);
@@ -97,6 +102,7 @@ static char *opt_signoff;
 static char *opt_squash;
 static char *opt_commit;
 static char *opt_edit;
+static char *cleanup_arg;
 static char *opt_ff;
 static char *opt_verify_signatures;
 static int opt_autostash = -1;
@@ -164,6 +170,7 @@ static struct option pull_options[] = {
 	OPT_PASSTHRU(0, "edit", &opt_edit, NULL,
 		N_("edit message before committing"),
 		PARSE_OPT_NOARG),
+	OPT_CLEANUP(&cleanup_arg),
 	OPT_PASSTHRU(0, "ff", &opt_ff, NULL,
 		N_("allow fast-forward"),
 		PARSE_OPT_NOARG),
@@ -365,9 +372,10 @@ static void get_merge_heads(struct oid_array *merge_heads)
 
 	fp = xfopen(filename, "r");
 	while (strbuf_getline_lf(&sb, fp) != EOF) {
-		if (get_oid_hex(sb.buf, &oid))
-			continue;  /* invalid line: does not start with SHA1 */
-		if (starts_with(sb.buf + GIT_SHA1_HEXSZ, "\tnot-for-merge\t"))
+		const char *p;
+		if (parse_oid_hex(sb.buf, &oid, &p))
+			continue;  /* invalid line: does not start with object ID */
+		if (starts_with(p, "\tnot-for-merge\t"))
 			continue;  /* ref is not-for-merge */
 		oid_array_append(merge_heads, &oid);
 	}
@@ -640,6 +648,8 @@ static int run_merge(void)
 		argv_array_push(&args, opt_commit);
 	if (opt_edit)
 		argv_array_push(&args, opt_edit);
+	if (cleanup_arg)
+		argv_array_pushf(&args, "--cleanup=%s", cleanup_arg);
 	if (opt_ff)
 		argv_array_push(&args, opt_ff);
 	if (opt_verify_signatures)
@@ -756,7 +766,7 @@ static int get_rebase_fork_point(struct object_id *fork_point, const char *repo,
 	cp.no_stderr = 1;
 	cp.git_cmd = 1;
 
-	ret = capture_command(&cp, &sb, GIT_SHA1_HEXSZ);
+	ret = capture_command(&cp, &sb, GIT_MAX_HEXSZ);
 	if (ret)
 		goto cleanup;
 
@@ -801,7 +811,7 @@ static int get_octopus_merge_base(struct object_id *merge_base,
 }
 
 /**
- * Given the current HEAD SHA1, the merge head returned from git-fetch and the
+ * Given the current HEAD oid, the merge head returned from git-fetch and the
  * fork point calculated by get_rebase_fork_point(), runs git-rebase with the
  * appropriate arguments and returns its exit status.
  */
@@ -870,6 +880,13 @@ int cmd_pull(int argc, const char **argv, const char *prefix)
 	git_config(git_pull_config, NULL);
 
 	argc = parse_options(argc, argv, prefix, pull_options, pull_usage, 0);
+
+	if (cleanup_arg)
+		/*
+		 * this only checks the validity of cleanup_arg; we don't need
+		 * a valid value for use_editor
+		 */
+		get_cleanup_mode(cleanup_arg, 0);
 
 	parse_repo_refspecs(argc, argv, &repo, &refspecs);
 

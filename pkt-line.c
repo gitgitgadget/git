@@ -88,13 +88,15 @@ static void packet_trace(const char *buf, unsigned int len, int write)
 void packet_flush(int fd)
 {
 	packet_trace("0000", 4, 1);
-	write_or_die(fd, "0000", 4);
+	if (write_in_full(fd, "0000", 4) < 0)
+		die_errno(_("unable to write flush packet"));
 }
 
 void packet_delim(int fd)
 {
 	packet_trace("0001", 4, 1);
-	write_or_die(fd, "0001", 4);
+	if (write_in_full(fd, "0001", 4) < 0)
+		die_errno(_("unable to write delim packet"));
 }
 
 int packet_flush_gently(int fd)
@@ -117,7 +119,7 @@ void packet_buf_delim(struct strbuf *buf)
 	strbuf_add(buf, "0001", 4);
 }
 
-static void set_packet_header(char *buf, const int size)
+void set_packet_header(char *buf, int size)
 {
 	static char hexchar[] = "0123456789abcdef";
 
@@ -348,16 +350,17 @@ enum packet_read_status packet_read_with_status(int fd, char **src_buffer,
 		return PACKET_READ_EOF;
 	}
 
-	if ((options & PACKET_READ_DIE_ON_ERR_PACKET) &&
-	    starts_with(buffer, "ERR "))
-		die(_("remote error: %s"), buffer + 4);
-
 	if ((options & PACKET_READ_CHOMP_NEWLINE) &&
 	    len && buffer[len-1] == '\n')
 		len--;
 
 	buffer[len] = 0;
 	packet_trace(buffer, len, 0);
+
+	if ((options & PACKET_READ_DIE_ON_ERR_PACKET) &&
+	    starts_with(buffer, "ERR "))
+		die(_("remote error: %s"), buffer + 4);
+
 	*pktlen = len;
 	return PACKET_READ_NORMAL;
 }

@@ -196,11 +196,10 @@ appropriately before running "make".
 	variable to "1" or "0", respectively.
 
 --stress::
---stress=<N>::
 	Run the test script repeatedly in multiple parallel jobs until
 	one of them fails.  Useful for reproducing rare failures in
 	flaky tests.  The number of parallel jobs is, in order of
-	precedence: <N>, or the value of the GIT_TEST_STRESS_LOAD
+	precedence: the value of the GIT_TEST_STRESS_LOAD
 	environment variable, or twice the number of available
 	processors (as shown by the 'getconf' utility),	or 8.
 	Implies `--verbose -x --immediate` to get the most information
@@ -211,10 +210,13 @@ appropriately before running "make".
 	'.stress-<nr>' suffix, and the trash directory of the failed
 	test job is renamed to end with a '.stress-failed' suffix.
 
+--stress-jobs=<N>::
+	Override the number of parallel jobs. Implies `--stress`.
+
 --stress-limit=<N>::
 	When combined with --stress run the test script repeatedly
 	this many times in each of the parallel jobs or until one of
-	them fails, whichever comes first.
+	them fails, whichever comes first. Implies `--stress`.
 
 You can also set the GIT_TEST_INSTALLED environment variable to
 the bindir of an existing git installation to test that installation.
@@ -341,6 +343,9 @@ marked strings" in po/README for details.
 GIT_TEST_SPLIT_INDEX=<boolean> forces split-index mode on the whole
 test suite. Accept any boolean values that are accepted by git-config.
 
+GIT_TEST_PROTOCOL_VERSION=<n>, when set, overrides the
+'protocol.version' setting to n if it is less than n.
+
 GIT_TEST_FULL_IN_PACK_ARRAY=<boolean> exercises the uncommon
 pack-objects code path where there are more than 1024 packs even if
 the actual number of packs in repository is below this limit. Accept
@@ -379,8 +384,8 @@ the --no-sparse command-line argument.
 GIT_TEST_PRELOAD_INDEX=<boolean> exercises the preload-index code path
 by overriding the minimum number of cache entries required per thread.
 
-GIT_TEST_REBASE_USE_BUILTIN=<boolean>, when false, disables the
-builtin version of git-rebase. See 'rebase.useBuiltin' in
+GIT_TEST_STASH_USE_BUILTIN=<boolean>, when false, disables the
+built-in version of git-stash. See 'stash.useBuiltin' in
 git-config(1).
 
 GIT_TEST_INDEX_THREADS=<n> enables exercising the multi-threaded loading
@@ -396,6 +401,10 @@ GIT_TEST_SIDEBAND_ALL=<boolean>, when true, overrides the
 'uploadpack.allowSidebandAll' setting to true, and when false, forces
 fetch-pack to not request sideband-all (even if the server advertises
 sideband-all).
+
+GIT_TEST_DISALLOW_ABBREVIATED_OPTIONS=<boolean>, when true (which is
+the default when running tests), errors out when an abbreviated option
+is used.
 
 Naming Tests
 ------------
@@ -862,6 +871,26 @@ library for your script to use.
 		...
 	'
 
+ - test_atexit <script>
+
+   Prepend <script> to a list of commands to run unconditionally to
+   clean up before the test script exits, e.g. to stop a daemon:
+
+	test_expect_success 'test git daemon' '
+		git daemon &
+		daemon_pid=$! &&
+		test_atexit 'kill $daemon_pid' &&
+		hello world
+	'
+
+   The commands will be executed before the trash directory is removed,
+   i.e. the atexit commands will still be able to access any pidfiles or
+   socket files.
+
+   Note that these commands will be run even when a test script run
+   with '--immediate' fails.  Be careful with your atexit commands to
+   minimize any changes to the failed state.
+
  - test_write_lines <lines>
 
    Write <lines> on standard output, one line per argument.
@@ -931,6 +960,15 @@ library for your script to use.
    on the key given.  The value must have been loaded using
    test_oid_init or test_oid_cache.  Providing an unknown key is an
    error.
+
+ - yes [<string>]
+
+   This is often seen in modern UNIX but some platforms lack it, so
+   the test harness overrides the platform implementation with a
+   more limited one.  Use this only when feeding a handful lines of
+   output to the downstream---unlike the real version, it generates
+   only up to 99 lines.
+
 
 Prerequisites
 -------------

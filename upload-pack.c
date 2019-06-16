@@ -592,7 +592,8 @@ error:
 	return 1;
 }
 
-static void check_non_tip(struct object_array *want_obj)
+static void check_non_tip(struct object_array *want_obj,
+			  struct packet_writer *writer)
 {
 	int i;
 
@@ -611,9 +612,13 @@ error:
 	/* Pick one of them (we know there at least is one) */
 	for (i = 0; i < want_obj->nr; i++) {
 		struct object *o = want_obj->objects[i].item;
-		if (!is_our_ref(o))
+		if (!is_our_ref(o)) {
+			packet_writer_error(writer,
+					    "upload-pack: not our ref %s",
+					    oid_to_hex(&o->oid));
 			die("git upload-pack: not our ref %s",
 			    oid_to_hex(&o->oid));
+		}
 	}
 }
 
@@ -834,7 +839,7 @@ static int process_deepen_not(const char *line, struct string_list *deepen_not, 
 	if (skip_prefix(line, "deepen-not ", &arg)) {
 		char *ref = NULL;
 		struct object_id oid;
-		if (expand_ref(arg, strlen(arg), &oid, &ref) != 1)
+		if (expand_ref(the_repository, arg, strlen(arg), &oid, &ref) != 1)
 			die("git upload-pack: ambiguous deepen-not: %s", line);
 		string_list_append(deepen_not, ref);
 		free(ref);
@@ -936,7 +941,7 @@ static void receive_needs(struct packet_reader *reader, struct object_array *wan
 	 * by another process that handled the initial request.
 	 */
 	if (has_non_tip)
-		check_non_tip(want_obj);
+		check_non_tip(want_obj, &writer);
 
 	if (!use_sideband && daemon_mode)
 		no_progress = 1;
@@ -1064,6 +1069,8 @@ static int upload_pack_config(const char *var, const char *value, void *unused)
 		allow_ref_in_want = git_config_bool(var, value);
 	} else if (!strcmp("uploadpack.allowsidebandall", var)) {
 		allow_sideband_all = git_config_bool(var, value);
+	} else if (!strcmp("core.precomposeunicode", var)) {
+		precomposed_unicode = git_config_bool(var, value);
 	}
 
 	if (current_config_scope() != CONFIG_SCOPE_REPO) {

@@ -238,7 +238,7 @@ static inline void finish_object__ma(struct object *obj)
 static int finish_object(struct object *obj, const char *name, void *cb_data)
 {
 	struct rev_list_info *info = cb_data;
-	if (!has_object_file(&obj->oid)) {
+	if (oid_object_info_extended(the_repository, &obj->oid, NULL, 0) < 0) {
 		finish_object__ma(obj);
 		return 1;
 	}
@@ -379,7 +379,6 @@ int cmd_rev_list(int argc, const char **argv, const char *prefix)
 	repo_init_revisions(the_repository, &revs, prefix);
 	revs.abbrev = DEFAULT_ABBREV;
 	revs.commit_format = CMIT_FMT_UNSPECIFIED;
-	revs.do_not_die_on_missing_tree = 1;
 
 	/*
 	 * Scan the argument list before invoking setup_revisions(), so that we
@@ -408,6 +407,9 @@ int cmd_rev_list(int argc, const char **argv, const char *prefix)
 				break;
 		}
 	}
+
+	if (arg_missing_action)
+		revs.do_not_die_on_missing_tree = 1;
 
 	argc = setup_revisions(argc, argv, &revs, &s_r_opt);
 

@@ -2,6 +2,7 @@
 #include "cache.h"
 #include "parse-options.h"
 #include "string-list.h"
+#include "trace2.h"
 
 static int boolean = 0;
 static int integer = 0;
@@ -131,7 +132,7 @@ int cmd__parse_options(int argc, const char **argv)
 		OPT_NOOP_NOARG(0, "obsolete"),
 		OPT_STRING_LIST(0, "list", &list, "str", "add str to list"),
 		OPT_GROUP("Magic arguments"),
-		OPT_ARGUMENT("quux", "means --quux"),
+		OPT_ARGUMENT("quux", NULL, "means --quux"),
 		OPT_NUMBER_CALLBACK(&integer, "set integer to NUM",
 			number_callback),
 		{ OPTION_COUNTUP, '+', NULL, &boolean, NULL, "same as -b",
@@ -148,10 +149,15 @@ int cmd__parse_options(int argc, const char **argv)
 		OPT_CALLBACK(0, "expect", &expect, "string",
 			     "expected output in the variable dump",
 			     collect_expect),
+		OPT_GROUP("Alias"),
+		OPT_STRING('A', "alias-source", &string, "string", "get a string"),
+		OPT_ALIAS('Z', "alias-target", "alias-source"),
 		OPT_END(),
 	};
 	int i;
 	int ret = 0;
+
+	trace2_cmd_name("_parse_");
 
 	argc = parse_options(argc, (const char **)argv, prefix, options, usage, 0);
 

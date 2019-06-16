@@ -242,6 +242,8 @@ should result in deletion of the path).
 +
 When checking out paths from the index, this option lets you recreate
 the conflicted merge in the specified paths.
++
+When switching branches with `--merge`, staged changes may be lost.
 
 --conflict=<style>::
 	The same as --merge option above, but changes the way the
@@ -260,6 +262,9 @@ the conflicted merge in the specified paths.
 This means that you can use `git checkout -p` to selectively discard
 edits from your current working tree. See the ``Interactive Mode''
 section of linkgit:git-add[1] to learn how to operate the `--patch` mode.
++
+Note that this option uses the no overlay mode by default (see also
+`--[no-]overlay`), and currently doesn't support overlay mode.
 
 --ignore-other-worktrees::
 	`git checkout` refuses when the wanted ref is already checked
@@ -279,6 +284,13 @@ section of linkgit:git-add[1] to learn how to operate the `--patch` mode.
 --no-guess::
 	Do not attempt to create a branch if a remote tracking branch
 	of the same name exists.
+
+--[no-]overlay::
+	In the default overlay mode, `git checkout` never
+	removes files from the index or the working tree.  When
+	specifying `--no-overlay`, files that appear in the index and
+	working tree, but not in <tree-ish> are removed, to make them
+	match <tree-ish> exactly.
 
 <branch>::
 	Branch to checkout; if it refers to a branch (i.e., a name that,
@@ -301,6 +313,10 @@ leave out at most one of `A` and `B`, in which case it defaults to `HEAD`.
 <start_point>::
 	The name of a commit at which to start the new branch; see
 	linkgit:git-branch[1] for details. Defaults to HEAD.
++
+As a special case, you may use `"A...B"` as a shortcut for the
+merge base of `A` and `B` if there is exactly one merge base. You can
+leave out at most one of `A` and `B`, in which case it defaults to `HEAD`.
 
 <tree-ish>::
 	Tree to checkout from (when paths are given). If not specified,

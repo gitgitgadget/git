@@ -189,6 +189,14 @@ int hash_algo_by_id(uint32_t format_id)
 	return GIT_HASH_UNKNOWN;
 }
 
+int hash_algo_by_length(int len)
+{
+	int i;
+	for (i = 1; i < GIT_HASH_NALGOS; i++)
+		if (len == hash_algos[i].rawsz)
+			return i;
+	return GIT_HASH_UNKNOWN;
+}
 
 /*
  * This is meant to hold a *small* number of objects that you would
@@ -1370,7 +1378,8 @@ int oid_object_info_extended(struct repository *r, const struct object_id *oid,
 
 		/* Check if it is a missing object */
 		if (fetch_if_missing && repository_format_partial_clone &&
-		    !already_retried && r == the_repository) {
+		    !already_retried && r == the_repository &&
+		    !(flags & OBJECT_INFO_FOR_PREFETCH)) {
 			/*
 			 * TODO Investigate having fetch_object() return
 			 * TODO error/success and stopping the music here.

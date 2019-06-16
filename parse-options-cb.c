@@ -16,14 +16,17 @@ int parse_opt_abbrev_cb(const struct option *opt, const char *arg, int unset)
 	if (!arg) {
 		v = unset ? 0 : DEFAULT_ABBREV;
 	} else {
+		if (!*arg)
+			return error(_("option `%s' expects a numerical value"),
+				     opt->long_name);
 		v = strtol(arg, (char **)&arg, 10);
 		if (*arg)
 			return error(_("option `%s' expects a numerical value"),
 				     opt->long_name);
 		if (v && v < MINIMUM_ABBREV)
 			v = MINIMUM_ABBREV;
-		else if (v > 40)
-			v = 40;
+		else if (v > the_hash_algo->hexsz)
+			v = the_hash_algo->hexsz;
 	}
 	*(int *)(opt->value) = v;
 	return 0;
@@ -96,6 +99,23 @@ int parse_opt_commits(const struct option *opt, const char *arg, int unset)
 	return 0;
 }
 
+int parse_opt_commit(const struct option *opt, const char *arg, int unset)
+{
+	struct object_id oid;
+	struct commit *commit;
+	struct commit **target = opt->value;
+
+	if (!arg)
+		return -1;
+	if (get_oid(arg, &oid))
+		return error("malformed object name %s", arg);
+	commit = lookup_commit_reference(the_repository, &oid);
+	if (!commit)
+		return error("no such commit %s", arg);
+	*target = commit;
+	return 0;
+}
+
 int parse_opt_object_name(const struct option *opt, const char *arg, int unset)
 {
 	struct object_id oid;
@@ -109,6 +129,23 @@ int parse_opt_object_name(const struct option *opt, const char *arg, int unset)
 	if (get_oid(arg, &oid))
 		return error(_("malformed object name '%s'"), arg);
 	oid_array_append(opt->value, &oid);
+	return 0;
+}
+
+int parse_opt_object_id(const struct option *opt, const char *arg, int unset)
+{
+	struct object_id oid;
+	struct object_id *target = opt->value;
+
+	if (unset) {
+		*target = null_oid;
+		return 0;
+	}
+	if (!arg)
+		return -1;
+	if (get_oid(arg, &oid))
+		return error(_("malformed object name '%s'"), arg);
+	*target = oid;
 	return 0;
 }
 
@@ -170,9 +207,12 @@ int parse_opt_noop_cb(const struct option *opt, const char *arg, int unset)
  * "-h" output even if it's not being handled directly by
  * parse_options().
  */
-int parse_opt_unknown_cb(const struct option *opt, const char *arg, int unset)
+enum parse_opt_result parse_opt_unknown_cb(struct parse_opt_ctx_t *ctx,
+					   const struct option *opt,
+					   const char *arg, int unset)
 {
-	return -2;
+	BUG_ON_OPT_ARG(arg);
+	return PARSE_OPT_UNKNOWN;
 }
 
 /**

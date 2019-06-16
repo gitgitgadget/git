@@ -27,6 +27,7 @@
 #include "object-store.h"
 #include "blame.h"
 #include "string-list.h"
+#include "refs.h"
 
 static char blame_usage[] = N_("git blame [<options>] [<rev-opts>] [<rev>] [--] <file>");
 
@@ -814,7 +815,7 @@ int cmd_blame(int argc, const char **argv, const char *prefix)
 		 * and are only included here to get included in the "-h"
 		 * output:
 		 */
-		{ OPTION_LOWLEVEL_CALLBACK, 0, "indent-heuristic", NULL, NULL, N_("Use an experimental heuristic to improve diffs"), PARSE_OPT_NOARG, parse_opt_unknown_cb },
+		{ OPTION_LOWLEVEL_CALLBACK, 0, "indent-heuristic", NULL, NULL, N_("Use an experimental heuristic to improve diffs"), PARSE_OPT_NOARG, NULL, 0, parse_opt_unknown_cb },
 
 		OPT_BIT(0, "minimal", &xdl_opts, N_("Spend extra cycles to find better match"), XDF_NEED_MINIMAL),
 		OPT_STRING('S', NULL, &revs_file, N_("file"), N_("Use revisions from <file> instead of calling git-rev-list")),
@@ -993,6 +994,18 @@ parse_done:
 
 	revs.disable_stdin = 1;
 	setup_revisions(argc, argv, &revs, NULL);
+	if (!revs.pending.nr && is_bare_repository()) {
+		struct commit *head_commit;
+		struct object_id head_oid;
+
+		if (!resolve_ref_unsafe("HEAD", RESOLVE_REF_READING,
+					&head_oid, NULL) ||
+		    !(head_commit = lookup_commit_reference_gently(revs.repo,
+							     &head_oid, 1)))
+			die("no such ref: HEAD");
+
+		add_pending_object(&revs, &head_commit->object, "HEAD");
+	}
 
 	init_scoreboard(&sb);
 	sb.revs = &revs;

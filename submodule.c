@@ -432,6 +432,10 @@ void handle_ignore_submodules_arg(struct diff_options *diffopt,
 		diffopt->flags.ignore_dirty_submodules = 1;
 	else if (strcmp(arg, "none"))
 		die("bad --ignore-submodules argument: %s", arg);
+	/*
+	 * Please update _git_status() in git-completion.bash when you
+	 * add new options
+	 */
 }
 
 static int prepare_submodule_summary(struct rev_info *rev, const char *path,
@@ -990,7 +994,7 @@ static int submodule_needs_pushing(struct repository *r,
 		if (start_command(&cp))
 			die("Could not run 'git rev-list <commits> --not --remotes -n 1' command in submodule %s",
 					path);
-		if (strbuf_read(&buf, cp.out, 41))
+		if (strbuf_read(&buf, cp.out, the_hash_algo->hexsz + 1))
 			needs_pushing = 1;
 		finish_command(&cp);
 		close(cp.out);
@@ -1544,6 +1548,13 @@ static int fetch_finish(int retvalue, struct strbuf *err,
 	struct oid_array *commits;
 
 	if (retvalue)
+		/*
+		 * NEEDSWORK: This indicates that the overall fetch
+		 * failed, even though there may be a subsequent fetch
+		 * by commit hash that might work. It may be a good
+		 * idea to not indicate failure in this case, and only
+		 * indicate failure if the subsequent fetch fails.
+		 */
 		spf->result = 1;
 
 	if (!task || !task->sub)
@@ -1609,11 +1620,12 @@ int fetch_populated_submodules(struct repository *r,
 
 	calculate_changed_submodule_paths(r, &spf.changed_submodule_names);
 	string_list_sort(&spf.changed_submodule_names);
-	run_processes_parallel(max_parallel_jobs,
-			       get_next_submodule,
-			       fetch_start_failure,
-			       fetch_finish,
-			       &spf);
+	run_processes_parallel_tr2(max_parallel_jobs,
+				   get_next_submodule,
+				   fetch_start_failure,
+				   fetch_finish,
+				   &spf,
+				   "submodule", "parallel/fetch");
 
 	argv_array_clear(&spf.args);
 out:

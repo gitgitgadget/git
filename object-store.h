@@ -76,8 +76,9 @@ struct packed_git {
 		 pack_keep_in_core:1,
 		 freshened:1,
 		 do_not_close:1,
-		 pack_promisor:1;
-	unsigned char sha1[20];
+		 pack_promisor:1,
+		 multi_pack_index:1;
+	unsigned char hash[GIT_MAX_RAWSZ];
 	struct revindex_entry *revindex;
 	/* something like ".git/objects/pack/xxxxx.pack" */
 	char pack_name[FLEX_ARRAY]; /* more */
@@ -129,12 +130,6 @@ struct raw_object_store {
 	struct list_head packed_git_mru;
 
 	/*
-	 * A linked list containing all packfiles, starting with those
-	 * contained in the multi_pack_index.
-	 */
-	struct packed_git *all_packs;
-
-	/*
 	 * A fast, rough count of the number of objects in the repository.
 	 * These two fields are not meant for direct access. Use
 	 * approximate_object_count() instead.
@@ -162,10 +157,10 @@ const char *loose_object_path(struct repository *r, struct strbuf *buf,
 void *map_loose_object(struct repository *r, const struct object_id *oid,
 		       unsigned long *size);
 
-extern void *read_object_file_extended(struct repository *r,
-				       const struct object_id *oid,
-				       enum object_type *type,
-				       unsigned long *size, int lookup_replace);
+void *read_object_file_extended(struct repository *r,
+				const struct object_id *oid,
+				enum object_type *type,
+				unsigned long *size, int lookup_replace);
 static inline void *repo_read_object_file(struct repository *r,
 					  const struct object_id *oid,
 					  enum object_type *type,
@@ -180,20 +175,20 @@ static inline void *repo_read_object_file(struct repository *r,
 /* Read and unpack an object file into memory, write memory to an object file */
 int oid_object_info(struct repository *r, const struct object_id *, unsigned long *);
 
-extern int hash_object_file(const void *buf, unsigned long len,
-			    const char *type, struct object_id *oid);
+int hash_object_file(const void *buf, unsigned long len,
+		     const char *type, struct object_id *oid);
 
-extern int write_object_file(const void *buf, unsigned long len,
-			     const char *type, struct object_id *oid);
+int write_object_file(const void *buf, unsigned long len,
+		      const char *type, struct object_id *oid);
 
-extern int hash_object_file_literally(const void *buf, unsigned long len,
-				      const char *type, struct object_id *oid,
-				      unsigned flags);
+int hash_object_file_literally(const void *buf, unsigned long len,
+			       const char *type, struct object_id *oid,
+			       unsigned flags);
 
-extern int pretend_object_file(void *, unsigned long, enum object_type,
-			       struct object_id *oid);
+int pretend_object_file(void *, unsigned long, enum object_type,
+			struct object_id *oid);
 
-extern int force_object_loose(const struct object_id *oid, time_t mtime);
+int force_object_loose(const struct object_id *oid, time_t mtime);
 
 /*
  * Open the loose object at path, check its hash, and return the contents,
@@ -227,9 +222,9 @@ int repo_has_object_file_with_flags(struct repository *r,
  * with the specified name.  This function does not respect replace
  * references.
  */
-extern int has_loose_object_nonlocal(const struct object_id *);
+int has_loose_object_nonlocal(const struct object_id *);
 
-extern void assert_oid_type(const struct object_id *oid, enum object_type expect);
+void assert_oid_type(const struct object_id *oid, enum object_type expect);
 
 struct object_info {
 	/* Request */
@@ -280,6 +275,12 @@ struct object_info {
 #define OBJECT_INFO_QUICK 8
 /* Do not check loose object */
 #define OBJECT_INFO_IGNORE_LOOSE 16
+/*
+ * Do not attempt to fetch the object if missing (even if fetch_is_missing is
+ * nonzero). This is meant for bulk prefetching of missing blobs in a partial
+ * clone. Implies OBJECT_INFO_QUICK.
+ */
+#define OBJECT_INFO_FOR_PREFETCH (32 + OBJECT_INFO_QUICK)
 
 int oid_object_info_extended(struct repository *r,
 			     const struct object_id *,

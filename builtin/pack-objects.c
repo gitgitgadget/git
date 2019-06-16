@@ -33,6 +33,7 @@
 #include "object-store.h"
 #include "dir.h"
 #include "midx.h"
+#include "trace2.h"
 
 #define IN_PACK(obj) oe_in_pack(&to_pack, obj)
 #define SIZE(obj) oe_size(&to_pack, obj)
@@ -96,7 +97,7 @@ static off_t reuse_packfile_offset;
 static int use_bitmap_index_default = 1;
 static int use_bitmap_index = -1;
 static int write_bitmap_index;
-static uint16_t write_bitmap_options;
+static uint16_t write_bitmap_options = BITMAP_OPT_HASH_CACHE;
 
 static int exclude_promisor_objects;
 
@@ -963,6 +964,8 @@ static void write_pack_file(void)
 	if (written != nr_result)
 		die(_("wrote %"PRIu32" objects while expecting %"PRIu32),
 		    written, nr_result);
+	trace2_data_intmax("pack-objects", the_repository,
+			   "write_pack_file/wrote", nr_result);
 }
 
 static int no_try_delta(const char *path)
@@ -1077,7 +1080,7 @@ static int want_object_in_pack(const struct object_id *oid,
 
 	for (m = get_multi_pack_index(the_repository); m; m = m->next) {
 		struct pack_entry e;
-		if (fill_midx_entry(oid, &e, m)) {
+		if (fill_midx_entry(the_repository, oid, &e, m)) {
 			struct packed_git *p = e.p;
 			off_t offset;
 
@@ -1486,6 +1489,7 @@ static int can_reuse_delta(const unsigned char *base_sha1,
 			   struct object_entry **base_out)
 {
 	struct object_entry *base;
+	struct object_id base_oid;
 
 	if (!base_sha1)
 		return 0;
@@ -1507,10 +1511,9 @@ static int can_reuse_delta(const unsigned char *base_sha1,
 	 * even if it was buried too deep in history to make it into the
 	 * packing list.
 	 */
-	if (thin && bitmap_has_sha1_in_uninteresting(bitmap_git, base_sha1)) {
+	oidread(&base_oid, base_sha1);
+	if (thin && bitmap_has_oid_in_uninteresting(bitmap_git, &base_oid)) {
 		if (use_delta_islands) {
-			struct object_id base_oid;
-			hashcpy(base_oid.hash, base_sha1);
 			if (!in_same_island(&delta->idx.oid, &base_oid))
 				return 0;
 		}
@@ -3473,6 +3476,8 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
 		}
 	}
 
+	trace2_region_enter("pack-objects", "enumerate-objects",
+			    the_repository);
 	prepare_packing_data(the_repository, &to_pack);
 
 	if (progress)
@@ -3487,12 +3492,23 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
 	if (include_tag && nr_result)
 		for_each_ref(add_ref_tag, NULL);
 	stop_progress(&progress_state);
+	trace2_region_leave("pack-objects", "enumerate-objects",
+			    the_repository);
 
 	if (non_empty && !nr_result)
 		return 0;
-	if (nr_result)
+	if (nr_result) {
+		trace2_region_enter("pack-objects", "prepare-pack",
+				    the_repository);
 		prepare_pack(window, depth);
+		trace2_region_leave("pack-objects", "prepare-pack",
+				    the_repository);
+	}
+
+	trace2_region_enter("pack-objects", "write-pack-file", the_repository);
 	write_pack_file();
+	trace2_region_leave("pack-objects", "write-pack-file", the_repository);
+
 	if (progress)
 		fprintf_ln(stderr,
 			   _("Total %"PRIu32" (delta %"PRIu32"),"
