@@ -2733,13 +2733,18 @@ static int rollback_is_safe(void)
 
 static int reset_merge(const struct object_id *oid)
 {
-	const char *argv[4];	/* reset --merge <arg> + NULL */
+	int ret;
+	struct argv_array argv = ARGV_ARRAY_INIT;
 
-	argv[0] = "reset";
-	argv[1] = "--merge";
-	argv[2] = oid_to_hex(oid);
-	argv[3] = NULL;
-	return run_command_v_opt(argv, RUN_GIT_CMD);
+	argv_array_pushl(&argv, "reset", "--merge", NULL);
+
+	if (!is_null_oid(oid))
+		argv_array_push(&argv, oid_to_hex(oid));
+
+	ret = run_command_v_opt(argv.argv, RUN_GIT_CMD);
+	argv_array_clear(&argv);
+
+	return ret;
 }
 
 static int rollback_single_pick(struct repository *r)
@@ -2754,6 +2759,15 @@ static int rollback_single_pick(struct repository *r)
 	if (is_null_oid(&head_oid))
 		return error(_("cannot abort from a branch yet to be born"));
 	return reset_merge(&head_oid);
+}
+
+static int skip_single_pick(void)
+{
+	struct object_id head;
+
+	if (read_ref_full("HEAD", 0, &head, NULL))
+		return error(_("cannot resolve HEAD"));
+	return reset_merge(&head);
 }
 
 int sequencer_rollback(struct repository *r, struct replay_opts *opts)
@@ -2803,6 +2817,74 @@ int sequencer_rollback(struct repository *r, struct replay_opts *opts)
 fail:
 	strbuf_release(&buf);
 	return -1;
+}
+
+int sequencer_skip(struct repository *r, struct replay_opts *opts)
+{
+	enum replay_action action = -1;
+	sequencer_get_last_command(r, &action);
+
+	/*
+	 * opts->action tells us which subcommand requested to skip
+	 * the commit.
+	 */
+	switch (opts->action) {
+	case REPLAY_REVERT:
+		/*
+		 * If .git/REVERT_HEAD exists then we are sure that we are in
+		 * the middle of a revert and we allow to skip the commit.
+		 */
+		if (!file_exists(git_path_revert_head(r))) {
+			/*
+			 * Check if the last instruction executed was related to
+			 * revert. If so, we are sure that a revert is in progress.
+			 *
+			 * NB: single commit revert is also counted in this
+			 * definition of "progress" (and was dealt with in the
+			 * previous check).
+			 */
+			if (action == REPLAY_REVERT) {
+				/*
+				 * Check if the user has moved the HEAD, i.e.,
+				 * already committed. In this case, we would like
+				 * to advise instead of skipping.
+				 */
+				if (!rollback_is_safe())
+					goto give_advice;
+				else
+					/* skip commit :) */
+					break;
+			}
+			return error(_("no revert in progress"));
+		}
+		break;
+	case REPLAY_PICK:
+		if (!file_exists(git_path_cherry_pick_head(r))) {
+			if (action == REPLAY_PICK) {
+				if (!rollback_is_safe())
+					goto give_advice;
+				else
+					break;
+			}
+			return error(_("no cherry-pick in progress"));
+		}
+		break;
+	default:
+		BUG("unexpected action in sequencer_skip");
+	}
+
+	if (skip_single_pick())
+		return error(_("failed to skip the commit"));
+	if (!is_directory(git_path_seq_dir()))
+		return 0;
+
+	return sequencer_continue(r, opts);
+
+give_advice:
+	advise(_("have you committed already?\n"
+		 "try \"git %s --continue\""),
+		 action == REPLAY_REVERT ? "revert" : "cherry-pick");
+	return error(_("there is nothing to skip"));
 }
 
 static int save_todo(struct todo_list *todo_list, struct replay_opts *opts)
