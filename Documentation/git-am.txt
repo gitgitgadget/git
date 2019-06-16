@@ -142,10 +142,6 @@ default.   You can use `--no-utf8` to override this.
 	user to lie about the author date by using the same
 	value as the committer date.
 
---skip::
-	Skip the current patch.  This is only meaningful when
-	restarting an aborted patch.
-
 -S[<keyid>]::
 --gpg-sign[=<keyid>]::
 	GPG-sign commits. The `keyid` argument is optional and
@@ -161,6 +157,10 @@ default.   You can use `--no-utf8` to override this.
 	Make a commit using the authorship and commit log
 	extracted from the e-mail message and the current index
 	file, and continue.
+
+--skip::
+	Skip the current patch.  This is only meaningful when
+	restarting an aborted patch.
 
 --resolvemsg=<msg>::
 	When a patch failure occurs, <msg> will be printed

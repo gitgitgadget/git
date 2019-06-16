@@ -228,6 +228,9 @@ leave out at most one of A and B, in which case it defaults to HEAD.
 --continue::
 	Restart the rebasing process after having resolved a merge conflict.
 
+--skip::
+	Restart the rebasing process by skipping the current patch.
+
 --abort::
 	Abort the rebase operation and reset HEAD to the original
 	branch. If <branch> was provided when the rebase operation was
@@ -239,6 +242,14 @@ leave out at most one of A and B, in which case it defaults to HEAD.
 	Abort the rebase operation but HEAD is not reset back to the
 	original branch. The index and working tree are also left
 	unchanged as a result.
+
+--edit-todo::
+	Edit the todo list during an interactive rebase.
+
+--show-current-patch::
+	Show the current patch in an interactive rebase or when rebase
+	is stopped because of conflicts. This is the equivalent of
+	`git show REBASE_HEAD`.
 
 --keep-empty::
 	Keep the commits that do not change anything from its
@@ -252,17 +263,6 @@ See also INCOMPATIBLE OPTIONS below.
 	messages to be rebased.
 +
 See also INCOMPATIBLE OPTIONS below.
-
---skip::
-	Restart the rebasing process by skipping the current patch.
-
---edit-todo::
-	Edit the todo list during an interactive rebase.
-
---show-current-patch::
-	Show the current patch in an interactive rebase or when rebase
-	is stopped because of conflicts. This is the equivalent of
-	`git show REBASE_HEAD`.
 
 -m::
 --merge::

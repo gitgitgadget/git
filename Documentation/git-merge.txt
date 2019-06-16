@@ -87,6 +87,11 @@ will be appended to the specified message.
 	Allow the rerere mechanism to update the index with the
 	result of auto-conflict resolution if possible.
 
+--continue::
+	After a 'git merge' stops due to conflicts you can conclude the
+	merge by running 'git merge --continue' (see "HOW TO RESOLVE
+	CONFLICTS" section below).
+
 --abort::
 	Abort the current conflict resolution process, and
 	try to reconstruct the pre-merge state.
@@ -102,11 +107,6 @@ commit or stash your changes before running 'git merge'.
 --quit::
 	Forget about the current merge in progress. Leave the index
 	and the working tree as-is.
-
---continue::
-	After a 'git merge' stops due to conflicts you can conclude the
-	merge by running 'git merge --continue' (see "HOW TO RESOLVE
-	CONFLICTS" section below).
 
 <commit>...::
 	Commits, usually other branch heads, to merge into our branch.
