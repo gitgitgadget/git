@@ -118,6 +118,7 @@
 /git-prune
 /git-prune-packed
 /git-pull
+/git-psuh
 /git-push
 /git-quiltimport
 /git-range-diff
