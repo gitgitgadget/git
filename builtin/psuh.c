@@ -3,6 +3,7 @@
 #include "wt-status.h"
 #include "commit.h"
 #include "pretty.h"
+#include "parse-options.h"
 
 int cmd_psuh(int argc, const char **argv, const char *prefix)
 {
@@ -13,7 +14,18 @@ int cmd_psuh(int argc, const char **argv, const char *prefix)
     struct commit *c = NULL;
     struct strbuf commitline = STRBUF_INIT;
     
-    printf(_("Pedro sopla una hoja.\n"));
+    static const char * const psuh_usage[] = {
+        N_("git psuh [<arg>...]"),
+        NULL,
+    };
+    
+    struct option options[] = {
+        OPT_END()
+    };
+    
+    argc = parse_options(argc, argv, prefix, options, psuh_usage, 0);
+    
+    printf(_("pedro eats an apple.\n"));
 
     printf(Q_("Your args (there is %d):\n",
           "Your args (there are %d):\n",
@@ -45,3 +57,4 @@ int cmd_psuh(int argc, const char **argv, const char *prefix)
     
     return 0;
 }
+
