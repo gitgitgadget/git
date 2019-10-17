@@ -355,15 +355,19 @@ static inline int needs_hiding(const char *path)
 	if (!*path)
 		return 0;
 
-	for (basename = path; *path; path++)
-		if (is_dir_sep(*path)) {
-			do {
-				path++;
-			} while (is_dir_sep(*path));
-			/* ignore trailing slashes */
-			if (*path)
-				basename = path;
-		}
+	/* find last non-empty path component */
+	for (basename = path; *path; path++) {
+   		if (!is_dir_sep(*path))
+			continue;
+
+		if (!path[1])
+			break;
+
+		if (is_dir_sep(path[1]))
+			continue;
+
+		basename = path + 1;
+	}
 
 	if (hide_dotfiles == HIDE_DOTFILES_TRUE)
 		return *basename == '.';
