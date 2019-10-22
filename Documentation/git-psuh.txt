@@ -1,0 +1,28 @@
+git-psuh(1)
+===========
+
+NAME
+----
+git-psuh - Delight users' typo with a shy horse
+
+
+SYNOPSIS
+--------
+[verse]
+'git-psuh [<arg>...]'
+
+DESCRIPTION
+-----------
+A Pony Saying, "Um Hello."
+
+OPTIONS[[OPTIONS]]
+------------------
+...
+
+OUTPUT
+------
+...
+
+GIT
+---
+Part of the git[1] suite
