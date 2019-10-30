@@ -6,17 +6,40 @@
 #include "git-compat-util.h"
 #include "cache.h"
 
+static void replace_control_chars(char *str, size_t size)
+{
+	size_t i;
+
+	for (i = 0; i < size; i++) {
+		if (iscntrl(str[i]) && str[i] != '\t' && str[i] != '\n')
+			str[i] = '?';
+	}
+}
+
+/* Atomically report (prefix + vsnprintf(err, params) + '\n') to stderr. */
 void vreportf(const char *prefix, const char *err, va_list params)
 {
 	char msg[4096];
-	char *p;
+	int ret;
+	size_t prefix_size, total_size;
 
-	vsnprintf(msg, sizeof(msg), err, params);
-	for (p = msg; *p; p++) {
-		if (iscntrl(*p) && *p != '\t' && *p != '\n')
-			*p = '?';
-	}
-	fprintf(stderr, "%s%s\n", prefix, msg);
+	prefix_size = strlen(prefix);
+	if (prefix_size >= sizeof(msg))
+		BUG("vreportf: prefix is too long");
+
+	memcpy(msg, prefix, prefix_size);
+
+	ret = vsnprintf(msg + prefix_size, sizeof(msg) - prefix_size, err, params);
+	if (ret < 0)
+		BUG("your vsnprintf is broken (returned %d)", ret);
+
+	total_size = strlen(msg);   /* vsnprintf() returns _desired_ size */
+	msg[total_size++] = '\n';   /* it's ok to overwrite terminating NULL */
+
+	replace_control_chars(msg, total_size);
+
+	fflush(stderr);             /* flush FILE* before writing lowlevel fd */
+	xwrite(2, msg, total_size); /* writing directly to fd is most atomic */
 }
 
 static NORETURN void usage_builtin(const char *err, va_list params)
