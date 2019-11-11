@@ -373,4 +373,27 @@ test_expect_success 'status succeeds after staging/unstaging' '
 	)
 '
 
+# Git will only split indices if we have a bunch of files created,
+# so that prep work of creating a few hundred files is required.
+# Note that this test doesn't fail determinstically without
+# its corresponding bugfix.
+test_expect_success 'update-index succeeds after staging with split index' '
+	test_create_repo fsmonitor-stage-split &&
+	(
+		cd fsmonitor-stage-split &&
+		test_commit initial &&
+		files=$(test_seq 1 100) &&
+		echo "hello world" > file &&
+		touch $files &&
+		git add -A &&
+		git commit -m "next" &&
+		git config core.fsmonitor "$TEST_DIRECTORY/t7519/fsmonitor-watchman" &&
+		echo "hello world" > file &&
+		git checkout -b new-branch &&
+		git checkout master &&
+		echo hello >> file &&
+		git update-index --split-index --untracked-cache --fsmonitor
+	)
+'
+
 test_done
