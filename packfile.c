@@ -16,6 +16,7 @@
 #include "tree.h"
 #include "object-store.h"
 #include "midx.h"
+#include "commit-graph.h"
 
 char *odb_pack_name(struct strbuf *buf,
 		    const unsigned char *sha1,
@@ -336,7 +337,7 @@ void close_pack(struct packed_git *p)
 	close_pack_index(p);
 }
 
-void close_all_packs(struct raw_object_store *o)
+void close_object_store(struct raw_object_store *o)
 {
 	struct packed_git *p;
 
@@ -350,6 +351,8 @@ void close_all_packs(struct raw_object_store *o)
 		close_midx(o->multi_pack_index);
 		o->multi_pack_index = NULL;
 	}
+
+	close_commit_graph(o);
 }
 
 /*
@@ -1269,7 +1272,7 @@ static enum object_type packed_to_object_type(struct repository *r,
 		if (poi_stack_nr >= poi_stack_alloc && poi_stack == small_poi_stack) {
 			poi_stack_alloc = alloc_nr(poi_stack_nr);
 			ALLOC_ARRAY(poi_stack, poi_stack_alloc);
-			memcpy(poi_stack, small_poi_stack, sizeof(off_t)*poi_stack_nr);
+			COPY_ARRAY(poi_stack, small_poi_stack, poi_stack_nr);
 		} else {
 			ALLOC_GROW(poi_stack, poi_stack_nr+1, poi_stack_alloc);
 		}
@@ -1679,8 +1682,8 @@ void *unpack_entry(struct repository *r, struct packed_git *p, off_t obj_offset,
 		    && delta_stack == small_delta_stack) {
 			delta_stack_alloc = alloc_nr(delta_stack_nr);
 			ALLOC_ARRAY(delta_stack, delta_stack_alloc);
-			memcpy(delta_stack, small_delta_stack,
-			       sizeof(*delta_stack)*delta_stack_nr);
+			COPY_ARRAY(delta_stack, small_delta_stack,
+				   delta_stack_nr);
 		} else {
 			ALLOC_GROW(delta_stack, delta_stack_nr+1, delta_stack_alloc);
 		}

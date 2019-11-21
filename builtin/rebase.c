@@ -738,20 +738,30 @@ static int finish_rebase(struct rebase_options *opts)
 {
 	struct strbuf dir = STRBUF_INIT;
 	const char *argv_gc_auto[] = { "gc", "--auto", NULL };
+	int ret = 0;
 
 	delete_ref(NULL, "REBASE_HEAD", NULL, REF_NO_DEREF);
 	apply_autostash(opts);
-	close_all_packs(the_repository->objects);
+	close_object_store(the_repository->objects);
 	/*
 	 * We ignore errors in 'gc --auto', since the
 	 * user should see them.
 	 */
 	run_command_v_opt(argv_gc_auto, RUN_GIT_CMD);
-	strbuf_addstr(&dir, opts->state_dir);
-	remove_dir_recursively(&dir, 0);
-	strbuf_release(&dir);
+	if (opts->type == REBASE_INTERACTIVE) {
+		struct replay_opts replay = REPLAY_OPTS_INIT;
 
-	return 0;
+		replay.action = REPLAY_INTERACTIVE_REBASE;
+		ret = sequencer_remove_state(&replay);
+	} else {
+		strbuf_addstr(&dir, opts->state_dir);
+		if (remove_dir_recursively(&dir, 0))
+			ret = error(_("could not remove '%s'"),
+				    opts->state_dir);
+		strbuf_release(&dir);
+	}
+
+	return ret;
 }
 
 static struct commit *peel_committish(const char *name)
@@ -1379,6 +1389,7 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 	struct string_list strategy_options = STRING_LIST_INIT_NODUP;
 	struct object_id squash_onto;
 	char *squash_onto_name = NULL;
+	int reschedule_failed_exec = -1;
 	struct option builtin_rebase_options[] = {
 		OPT_STRING(0, "onto", &options.onto_name,
 			   N_("revision"),
@@ -1471,7 +1482,7 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 		OPT_BOOL(0, "root", &options.root,
 			 N_("rebase all reachable commits up to the root(s)")),
 		OPT_BOOL(0, "reschedule-failed-exec",
-			 &options.reschedule_failed_exec,
+			 &reschedule_failed_exec,
 			 N_("automatically re-schedule any `exec` that fails")),
 		OPT_END(),
 	};
@@ -1621,15 +1632,23 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 			die(_("could not move back to %s"),
 			    oid_to_hex(&options.orig_head));
 		remove_branch_state(the_repository);
-		ret = finish_rebase(&options);
+		ret = !!finish_rebase(&options);
 		goto cleanup;
 	}
 	case ACTION_QUIT: {
-		strbuf_reset(&buf);
-		strbuf_addstr(&buf, options.state_dir);
-		ret = !!remove_dir_recursively(&buf, 0);
-		if (ret)
-			die(_("could not remove '%s'"), options.state_dir);
+		if (options.type == REBASE_INTERACTIVE) {
+			struct replay_opts replay = REPLAY_OPTS_INIT;
+
+			replay.action = REPLAY_INTERACTIVE_REBASE;
+			ret = !!sequencer_remove_state(&replay);
+		} else {
+			strbuf_reset(&buf);
+			strbuf_addstr(&buf, options.state_dir);
+			ret = !!remove_dir_recursively(&buf, 0);
+			if (ret)
+				error(_("could not remove '%s'"),
+				       options.state_dir);
+		}
 		goto cleanup;
 	}
 	case ACTION_EDIT_TODO:
@@ -1778,8 +1797,11 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 		break;
 	}
 
-	if (options.reschedule_failed_exec && !is_interactive(&options))
-		die(_("%s requires an interactive rebase"), "--reschedule-failed-exec");
+	if (reschedule_failed_exec > 0 && !is_interactive(&options))
+		die(_("--reschedule-failed-exec requires "
+		      "--exec or --interactive"));
+	if (reschedule_failed_exec >= 0)
+		options.reschedule_failed_exec = reschedule_failed_exec;
 
 	if (options.git_am_opts.argc) {
 		/* all am options except -q are compatible only with --am */
@@ -2141,6 +2163,7 @@ run_rebase:
 	ret = !!run_specific_rebase(&options, action);
 
 cleanup:
+	strbuf_release(&buf);
 	strbuf_release(&revisions);
 	free(options.head_name);
 	free(options.gpg_sign_opt);

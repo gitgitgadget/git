@@ -1446,28 +1446,6 @@ static int git_commit_config(const char *k, const char *v, void *cb)
 	return git_status_config(k, v, s);
 }
 
-int run_commit_hook(int editor_is_used, const char *index_file, const char *name, ...)
-{
-	struct argv_array hook_env = ARGV_ARRAY_INIT;
-	va_list args;
-	int ret;
-
-	argv_array_pushf(&hook_env, "GIT_INDEX_FILE=%s", index_file);
-
-	/*
-	 * Let the hook know that no editor will be launched.
-	 */
-	if (!editor_is_used)
-		argv_array_push(&hook_env, "GIT_EDITOR=:");
-
-	va_start(args, name);
-	ret = run_hook_ve(hook_env.argv,name, args);
-	va_end(args);
-	argv_array_clear(&hook_env);
-
-	return ret;
-}
-
 int cmd_commit(int argc, const char **argv, const char *prefix)
 {
 	const char *argv_gc_auto[] = {"gc", "--auto", NULL};
@@ -1672,8 +1650,9 @@ int cmd_commit(int argc, const char **argv, const char *prefix)
 		      "new_index file. Check that disk is not full and quota is\n"
 		      "not exceeded, and then \"git reset HEAD\" to recover."));
 
-	if (git_env_bool(GIT_TEST_COMMIT_GRAPH, 0))
-		write_commit_graph_reachable(get_object_directory(), 0, 0);
+	if (git_env_bool(GIT_TEST_COMMIT_GRAPH, 0) &&
+	    write_commit_graph_reachable(get_object_directory(), 0))
+		return 1;
 
 	repo_rerere(the_repository, 0);
 	run_command_v_opt(argv_gc_auto, RUN_GIT_CMD);
