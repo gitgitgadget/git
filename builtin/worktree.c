@@ -75,7 +75,7 @@ static int prune_worktree(const char *id, struct strbuf *reason)
 	size_t len;
 	ssize_t read_result;
 
-	if (!is_directory(git_path("worktrees/%s", id))) {
+	if (!dir_exists(git_path("worktrees/%s", id))) {
 		strbuf_addf(reason, _("Removing worktrees/%s: not a valid directory"), id);
 		return 1;
 	}
@@ -738,7 +738,7 @@ static void validate_no_submodules(const struct worktree *wt)
 	struct strbuf path = STRBUF_INIT;
 	int i, found_submodules = 0;
 
-	if (is_directory(worktree_git_path(wt, "modules"))) {
+	if (dir_exists(worktree_git_path(wt, "modules"))) {
 		/*
 		 * There could be false positives, e.g. the "modules"
 		 * directory exists but is empty. But it's a rare case and
@@ -799,7 +799,7 @@ static int move_worktree(int ac, const char **av, const char *prefix)
 		die(_("'%s' is not a working tree"), av[0]);
 	if (is_main_worktree(wt))
 		die(_("'%s' is a main working tree"), av[0]);
-	if (is_directory(dst.buf)) {
+	if (dir_exists(dst.buf)) {
 		const char *sep = find_last_dir_sep(wt->path);
 
 		if (!sep)

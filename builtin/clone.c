@@ -899,12 +899,6 @@ static void dissociate_from_references(void)
 	free(alternates);
 }
 
-static int dir_exists(const char *path)
-{
-	struct stat sb;
-	return !stat(path, &sb);
-}
-
 int cmd_clone(int argc, const char **argv, const char *prefix)
 {
 	int is_bundle = 0, is_local;

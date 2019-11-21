@@ -221,8 +221,8 @@ static void fixup_paths(const char **path, struct strbuf *replacement)
 	if (path[0] == file_from_standard_input ||
 	    path[1] == file_from_standard_input)
 		return;
-	isdir0 = is_directory(path[0]);
-	isdir1 = is_directory(path[1]);
+	isdir0 = dir_exists(path[0]);
+	isdir1 = dir_exists(path[1]);
 	if (isdir0 == isdir1)
 		return;
 	if (isdir0) {

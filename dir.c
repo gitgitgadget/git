@@ -2100,7 +2100,7 @@ static int treat_leading_path(struct dir_struct *dir,
 			baselen = cp - path;
 		strbuf_setlen(&sb, 0);
 		strbuf_add(&sb, path, baselen);
-		if (!is_directory(sb.buf))
+		if (!dir_exists(sb.buf))
 			break;
 		if (simplify_away(sb.buf, sb.len, pathspec))
 			break;

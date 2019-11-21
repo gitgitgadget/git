@@ -290,7 +290,7 @@ int validate_worktree(const struct worktree *wt, struct strbuf *errmsg,
 	strbuf_addf(&wt_path, "%s/.git", wt->path);
 
 	if (is_main_worktree(wt)) {
-		if (is_directory(wt_path.buf)) {
+		if (dir_exists(wt_path.buf)) {
 			ret = 0;
 			goto done;
 		}

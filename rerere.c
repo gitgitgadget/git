@@ -873,7 +873,7 @@ static int is_rerere_enabled(void)
 	if (!rerere_enabled)
 		return 0;
 
-	rr_cache_exists = is_directory(git_path_rr_cache());
+	rr_cache_exists = dir_exists(git_path_rr_cache());
 	if (rerere_enabled < 0)
 		return rr_cache_exists;
 

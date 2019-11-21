@@ -174,7 +174,7 @@ int add_submodule_odb(const char *path)
 	ret = strbuf_git_path_submodule(&objects_directory, path, "objects/");
 	if (ret)
 		goto done;
-	if (!is_directory(objects_directory.buf)) {
+	if (!dir_exists(objects_directory.buf)) {
 		ret = -1;
 		goto done;
 	}
@@ -1647,7 +1647,7 @@ unsigned is_submodule_modified(const char *path, int ignore_untracked)
 	if (!git_dir)
 		git_dir = buf.buf;
 	if (!is_git_directory(git_dir)) {
-		if (is_directory(git_dir))
+		if (dir_exists(git_dir))
 			die(_("'%s' not recognized as a git repository"), git_dir);
 		strbuf_release(&buf);
 		/* The submodule is not checked out, so it is not modified */

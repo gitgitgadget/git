@@ -448,7 +448,7 @@ static int alt_odb_usable(struct raw_object_store *o,
 	struct object_directory *odb;
 
 	/* Detect cases where alternate disappeared */
-	if (!is_directory(path->buf)) {
+	if (!dir_exists(path->buf)) {
 		error(_("object directory %s does not exist; "
 			"check .git/objects/info/alternates"),
 		      path->buf);
@@ -699,11 +699,11 @@ char *compute_alternate_path(const char *path, struct strbuf *err)
 		ref_git = xstrdup(repo);
 	}
 
-	if (!repo && is_directory(mkpath("%s/.git/objects", ref_git))) {
+	if (!repo && dir_exists(mkpath("%s/.git/objects", ref_git))) {
 		char *ref_git_git = mkpathdup("%s/.git", ref_git);
 		free(ref_git);
 		ref_git = ref_git_git;
-	} else if (!is_directory(mkpath("%s/objects", ref_git))) {
+	} else if (!dir_exists(mkpath("%s/objects", ref_git))) {
 		struct strbuf sb = STRBUF_INIT;
 		seen_error = 1;
 		if (get_common_dir(&sb, ref_git)) {

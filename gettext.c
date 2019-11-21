@@ -183,7 +183,7 @@ void git_setup_gettext(void)
 
 	use_gettext_poison(); /* getenv() reentrancy paranoia */
 
-	if (!is_directory(podir)) {
+	if (!dir_exists(podir)) {
 		free(p);
 		return;
 	}

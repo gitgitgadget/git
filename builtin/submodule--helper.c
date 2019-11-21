@@ -1096,7 +1096,7 @@ static void deinit_submodule(const char *path, const char *prefix,
 	displaypath = get_submodule_displaypath(path, prefix);
 
 	/* remove the submodule work tree (unless the user already did it) */
-	if (is_directory(path)) {
+	if (dir_exists(path)) {
 		struct strbuf sb_rm = STRBUF_INIT;
 		const char *format;
 
@@ -1105,7 +1105,7 @@ static void deinit_submodule(const char *path, const char *prefix,
 		 * NEEDSWORK: instead of dying, automatically call
 		 * absorbgitdirs and (possibly) warn.
 		 */
-		if (is_directory(sub_git_dir))
+		if (dir_exists(sub_git_dir))
 			die(_("Submodule work tree '%s' contains a .git "
 			      "directory (use 'rm -rf' if you really want "
 			      "to remove it including all of its history)"),

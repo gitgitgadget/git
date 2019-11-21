@@ -337,7 +337,7 @@ int tr2_dst_get_trace_fd(struct tr2_dst *dst)
 	}
 
 	if (is_absolute_path(tgt_value)) {
-		if (is_directory(tgt_value))
+		if (dir_exists(tgt_value))
 			return tr2_dst_try_auto_path(dst, tgt_value);
 		else
 			return tr2_dst_try_path(dst, tgt_value);

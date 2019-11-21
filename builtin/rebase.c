@@ -275,7 +275,7 @@ static int init_basic_state(struct replay_opts *opts, const char *head_name,
 {
 	FILE *interactive;
 
-	if (!is_directory(merge_dir()) && mkdir_in_gitdir(merge_dir()))
+	if (!dir_exists(merge_dir()) && mkdir_in_gitdir(merge_dir()))
 		return error_errno(_("could not create temporary %s"), merge_dir());
 
 	delete_reflog("REBASE_HEAD");
@@ -1068,7 +1068,7 @@ static int run_am(struct rebase_options *opts)
 		return move_to_original_branch(opts);
 	}
 
-	if (is_directory(opts->state_dir))
+	if (dir_exists(opts->state_dir))
 		rebase_write_basic_state(opts);
 
 	return status;
@@ -1530,13 +1530,13 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 	if(file_exists(buf.buf))
 		die(_("It looks like 'git am' is in progress. Cannot rebase."));
 
-	if (is_directory(apply_dir())) {
+	if (dir_exists(apply_dir())) {
 		options.type = REBASE_AM;
 		options.state_dir = apply_dir();
-	} else if (is_directory(merge_dir())) {
+	} else if (dir_exists(merge_dir())) {
 		strbuf_reset(&buf);
 		strbuf_addf(&buf, "%s/rewritten", merge_dir());
-		if (is_directory(buf.buf)) {
+		if (dir_exists(buf.buf)) {
 			options.type = REBASE_PRESERVE_MERGES;
 			options.flags |= REBASE_INTERACTIVE_EXPLICIT;
 		} else {

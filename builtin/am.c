@@ -576,7 +576,7 @@ static int detect_patch_format(const char **paths)
 	/*
 	 * We default to mbox format if input is from stdin and for directories
 	 */
-	if (!*paths || !strcmp(*paths, "-") || is_directory(*paths))
+	if (!*paths || !strcmp(*paths, "-") || dir_exists(*paths))
 		return PATCH_FORMAT_MBOX;
 
 	/*
