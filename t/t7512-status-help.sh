@@ -148,7 +148,6 @@ You are currently rebasing branch '\''rebase_i_conflicts_second'\'' on '\''$ONTO
   (use "git rebase --abort" to check out the original branch)
 
 Unmerged paths:
-  (use "git reset HEAD <file>..." to unstage)
   (use "git add <file>..." to mark resolution)
 
 	both modified:   main.txt
@@ -176,7 +175,6 @@ You are currently rebasing branch '\''rebase_i_conflicts_second'\'' on '\''$ONTO
   (all conflicts fixed: run "git rebase --continue")
 
 Changes to be committed:
-  (use "git reset HEAD <file>..." to unstage)
 
 	modified:   main.txt
 
