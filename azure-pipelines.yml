@@ -106,7 +106,6 @@ jobs:
       HOME: $(Build.SourcesDirectory)
       MSYSTEM: MINGW64
       NO_SVN_TESTS: 1
-      GIT_TEST_SKIP_REBASE_P: 1
   - powershell: |
       if ("$GITFILESHAREPWD" -ne "" -and "$GITFILESHAREPWD" -ne "`$`(gitfileshare.pwd)") {
         cmd /c rmdir "$(Build.SourcesDirectory)\test-cache"
@@ -265,7 +264,6 @@ jobs:
       HOME: $(Build.SourcesDirectory)
       MSYSTEM: MINGW64
       NO_SVN_TESTS: 1
-      GIT_TEST_SKIP_REBASE_P: 1
   - powershell: |
       if ("$GITFILESHAREPWD" -ne "" -and "$GITFILESHAREPWD" -ne "`$`(gitfileshare.pwd)") {
         cmd /c rmdir "$(Build.SourcesDirectory)\test-cache"

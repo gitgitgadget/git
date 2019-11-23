@@ -30,7 +30,6 @@ enum rebase_type {
 	REBASE_INVALID = -1,
 	REBASE_FALSE = 0,
 	REBASE_TRUE,
-	REBASE_PRESERVE,
 	REBASE_MERGES,
 	REBASE_INTERACTIVE
 };
@@ -38,9 +37,8 @@ enum rebase_type {
 /**
  * Parses the value of --rebase. If value is a false value, returns
  * REBASE_FALSE. If value is a true value, returns REBASE_TRUE. If value is
- * "merges", returns REBASE_MERGES. If value is "preserve", returns
- * REBASE_PRESERVE. If value is a invalid value, dies with a fatal error if
- * fatal is true, otherwise returns REBASE_INVALID.
+ * "merges", returns REBASE_MERGES. If value is a invalid value, dies with
+ * a fatal error if fatal is true, otherwise returns REBASE_INVALID.
  */
 static enum rebase_type parse_config_rebase(const char *key, const char *value,
 		int fatal)
@@ -51,8 +49,6 @@ static enum rebase_type parse_config_rebase(const char *key, const char *value,
 		return REBASE_FALSE;
 	else if (v > 0)
 		return REBASE_TRUE;
-	else if (!strcmp(value, "preserve") || !strcmp(value, "p"))
-		return REBASE_PRESERVE;
 	else if (!strcmp(value, "merges") || !strcmp(value, "m"))
 		return REBASE_MERGES;
 	else if (!strcmp(value, "interactive") || !strcmp(value, "i"))
@@ -145,7 +141,7 @@ static struct option pull_options[] = {
 	/* Options passed to git-merge or git-rebase */
 	OPT_GROUP(N_("Options related to merging")),
 	{ OPTION_CALLBACK, 'r', "rebase", &opt_rebase,
-	  "(false|true|merges|preserve|interactive)",
+	  "(false|true|merges|interactive)",
 	  N_("incorporate changes by rebasing rather than merging"),
 	  PARSE_OPT_OPTARG, parse_opt_rebase },
 	OPT_PASSTHRU('n', NULL, &opt_diffstat, NULL,
@@ -848,8 +844,6 @@ static int run_rebase(const struct object_id *curr_head,
 	/* Options passed to git-rebase */
 	if (opt_rebase == REBASE_MERGES)
 		argv_array_push(&args, "--rebase-merges");
-	else if (opt_rebase == REBASE_PRESERVE)
-		argv_array_push(&args, "--preserve-merges");
 	else if (opt_rebase == REBASE_INTERACTIVE)
 		argv_array_push(&args, "--interactive");
 	if (opt_diffstat)
