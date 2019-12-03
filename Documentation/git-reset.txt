@@ -10,6 +10,7 @@ SYNOPSIS
 [verse]
 'git reset' [-q] [<tree-ish>] [--] <paths>...
 'git reset' (--patch | -p) [<tree-ish>] [--] [<paths>...]
+'git reset' [-q] [--stdin [-z]] [<tree-ish>]
 'git reset' [--soft | --mixed [-N] | --hard | --merge | --keep] [-q] [<commit>]
 
 DESCRIPTION
@@ -101,6 +102,16 @@ OPTIONS
 	`reset.quiet` config option. `--quiet` and `--no-quiet` will
 	override the default behavior.
 
+--stdin::
+	Instead of taking the list of paths from the command line,
+	read the list of paths from the standard input. The paths are
+	read verbatim, i.e. without special pathspecs handling. Paths
+	are expected to be separated by LF or CR/LF, unless the `-z`
+	option is in effect.
+
+-z::
+	Only meaningful with `--stdin`; paths are separated with
+	NUL character instead of LF.
 
 EXAMPLES
 --------
