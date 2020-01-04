@@ -5,27 +5,23 @@
 
 . ${0%/*}/lib.sh
 
-P4WHENCE=http://filehost.perforce.com/perforce/r$LINUX_P4_VERSION
 LFSWHENCE=https://github.com/github/git-lfs/releases/download/v$LINUX_GIT_LFS_VERSION
 
 case "$jobname" in
 linux-clang|linux-gcc)
+	wget -qO - https://package.perforce.com/perforce.pubkey | sudo apt-key add -
+	echo "deb http://package.perforce.com/apt/ubuntu xenial release" >perforce.list
+	sudo mv perforce.list /etc/apt/sources.list.d/
 	sudo apt-add-repository -y "ppa:ubuntu-toolchain-r/test"
 	sudo apt-get -q update
-	sudo apt-get -q -y install language-pack-is libsvn-perl apache2
+	sudo apt-get -q -y install language-pack-is libsvn-perl apache2 \
+		helix-p4d
 	case "$jobname" in
 	linux-gcc)
 		sudo apt-get -q -y install gcc-8
 		;;
 	esac
 
-	mkdir --parents "$P4_PATH"
-	pushd "$P4_PATH"
-		wget --quiet "$P4WHENCE/bin.linux26x86_64/p4d"
-		wget --quiet "$P4WHENCE/bin.linux26x86_64/p4"
-		chmod u+x p4d
-		chmod u+x p4
-	popd
 	mkdir --parents "$GIT_LFS_PATH"
 	pushd "$GIT_LFS_PATH"
 		wget --quiet "$LFSWHENCE/git-lfs-linux-amd64-$LINUX_GIT_LFS_VERSION.tar.gz"
