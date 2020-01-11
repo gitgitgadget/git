@@ -112,6 +112,7 @@ sub handle_line {
 	# Since we can receive arbitrary input, there's no optimal
 	# place to flush. Flushing on a blank line is a heuristic that
 	# happens to match git-log output.
+	chomp;
 	if (!length) {
 		$flush_cb->();
 	}
