@@ -7,6 +7,8 @@ test_description='tests to ensure compatibility between am and interactive backe
 
 . ./test-lib.sh
 
+. "$TEST_DIRECTORY"/lib-rebase.sh
+
 GIT_AUTHOR_DATE="1999-04-02T08:03:20+05:30"
 export GIT_AUTHOR_DATE
 
@@ -67,6 +69,22 @@ test_expect_success '--ignore-whitespace works with interactive backend' '
 	test_must_fail git rebase --merge main side &&
 	git rebase --abort &&
 	git rebase --merge --ignore-whitespace main side &&
+	test_cmp expect file
+'
+
+test_expect_success '--ignore-whitespace is remembered when continuing' '
+	cat >expect <<-\EOF &&
+	line 1
+	new line 2
+	line 3
+	EOF
+	(
+		set_fake_editor &&
+		FAKE_LINES="break 1" &&
+		export FAKE_LINES &&
+		git rebase -i --ignore-whitespace main side
+	) &&
+	git rebase --continue &&
 	test_cmp expect file
 '
 
@@ -135,12 +153,49 @@ test_expect_success '--ignore-date works with interactive backend' '
 	grep "+0000" authortime
 '
 
+test_expect_success '--ignore-date works after conflict resolution' '
+	test_must_fail git rebase --ignore-date -i \
+		--onto commit2^^ commit2^ commit2 &&
+	echo resolved >foo &&
+	git add foo &&
+	git rebase --continue &&
+	git log --pretty=%ai >authortime &&
+	grep +0000 authortime
+'
+
 test_expect_success '--ignore-date works with rebase -r' '
 	git checkout side &&
 	git merge --no-ff commit3 &&
 	git rebase -r --root --ignore-date &&
 	git log --pretty=%ai >authortime &&
 	! grep -v "+0000" authortime
+'
+
+test_expect_success '--ignore-date with --committer-date-is-author-date works' '
+	test_must_fail git rebase -i --committer-date-is-author-date \
+		--ignore-date --onto commit2^^ commit2^ commit3 &&
+	git checkout --theirs foo &&
+	git add foo &&
+	git rebase --continue &&
+	git log -2 --pretty=%ai >authortime &&
+	git log -2 --pretty=%ci >committertime &&
+	test_cmp authortime committertime &&
+	! grep -v "+0000" authortime
+'
+
+test_expect_success '--ignore-date --committer-date-is-author-date works when forking merge' '
+	GIT_SEQUENCE_EDITOR="echo \"merge -C $(git rev-parse HEAD) commit3\">" \
+		git rebase -i --strategy=resolve --ignore-date \
+		--committer-date-is-author-date side side &&
+	git log -1 --pretty=%ai >authortime &&
+	git log -1 --pretty=%ci >committertime &&
+	test_cmp authortime committertime &&
+	grep "+0000" authortime
+ '
+
+# This must be the last test in this file
+test_expect_success '$EDITOR and friends are unchanged' '
+	test_editor_unchanged
 '
 
 test_done
