@@ -4,12 +4,14 @@
 # to additionally check that the TTY prereq is set here.  If the test declared
 # it and we are running the test, then it must have been set.
 test_terminal () {
+	{ disable_tracing ; } 2>/dev/null 4>&2
 	if ! test_declared_prereq TTY
 	then
 		echo >&4 "test_terminal: need to declare TTY prerequisite"
 		return 127
 	fi
 	perl "$TEST_DIRECTORY"/test-terminal.perl "$@" 2>&7
+	restore_tracing_and_return_with $?
 } 7>&2 2>&4
 
 test_lazy_prereq TTY '
