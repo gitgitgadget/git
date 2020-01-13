@@ -90,13 +90,9 @@ test_expect_success '--committer-date-is-author-date works with rebase -r' '
 	git checkout side &&
 	git merge --no-ff commit3 &&
 	git rebase -r --root --committer-date-is-author-date &&
-	git rev-list HEAD >rev_list &&
-	while read HASH
-	do
-		git show $HASH --pretty="format:%ai" >authortime
-		git show $HASH --pretty="format:%ci" >committertime
-		test_cmp authortime committertime
-	done <rev_list
+	git log --pretty="format:%ai" >authortime &&
+	git log --pretty="format:%ci" >committertime &&
+	test_cmp authortime committertime
 '
 
 # Checking for +0000 in author time is enough since default
@@ -120,12 +116,8 @@ test_expect_success '--ignore-date works with rebase -r' '
 	git checkout side &&
 	git merge --no-ff commit3 &&
 	git rebase -r --root --ignore-date &&
-	git rev-list HEAD >rev_list &&
-	while read HASH
-	do
-		git show $HASH --pretty="format:%ai" >authortime
-		grep "+0000" authortime
-	done <rev_list
+	git log --pretty=%ai >authortime &&
+	! grep -v "+0000" authortime
 '
 
 test_done
