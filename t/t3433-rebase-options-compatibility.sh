@@ -71,7 +71,7 @@ test_expect_success '--ignore-whitespace works with interactive backend' '
 '
 
 test_expect_success '--committer-date-is-author-date works with am backend' '
-	git commit --amend &&
+	GIT_AUTHOR_DATE="@1234 +0300" git commit --amend --reset-author &&
 	git rebase --committer-date-is-author-date HEAD^ &&
 	git log -1 --pretty="format:%ai" >authortime &&
 	git log -1 --pretty="format:%ci" >committertime &&
@@ -79,7 +79,7 @@ test_expect_success '--committer-date-is-author-date works with am backend' '
 '
 
 test_expect_success '--committer-date-is-author-date works with interactive backend' '
-	git commit --amend &&
+	GIT_AUTHOR_DATE="@1234 +0300" git commit --amend --reset-author &&
 	git rebase -i --committer-date-is-author-date HEAD^ &&
 	git log -1 --pretty="format:%ai" >authortime &&
 	git log -1 --pretty="format:%ci" >committertime &&
@@ -88,11 +88,34 @@ test_expect_success '--committer-date-is-author-date works with interactive back
 
 test_expect_success '--committer-date-is-author-date works with rebase -r' '
 	git checkout side &&
-	git merge --no-ff commit3 &&
+	GIT_AUTHOR_DATE="@1234 +0300" git merge --no-ff commit3 &&
 	git rebase -r --root --committer-date-is-author-date &&
 	git log --pretty="format:%ai" >authortime &&
 	git log --pretty="format:%ci" >committertime &&
 	test_cmp authortime committertime
+'
+
+test_expect_success '--committer-date-is-author-date works when forking merge' '
+	git checkout side &&
+	GIT_AUTHOR_DATE="@1234 +0300" git merge --no-ff commit3 &&
+	git rebase -r --root --strategy=resolve --committer-date-is-author-date &&
+	git log --pretty="format:%ai" >authortime &&
+	git log --pretty="format:%ci" >committertime &&
+	test_cmp authortime committertime
+
+'
+
+test_expect_success '--committer-date-is-author-date works when committing conflict resolution' '
+	git checkout commit2 &&
+	GIT_AUTHOR_DATE="@1980 +0000" git commit --amend --only --reset-author &&
+	git log -1 --format=%at HEAD >expect &&
+	test_must_fail git rebase -i --committer-date-is-author-date \
+		--onto HEAD^^ HEAD^ &&
+	echo resolved > foo &&
+	git add foo &&
+	git rebase --continue &&
+	git log -1 --format=%ct HEAD >actual &&
+	test_cmp expect actual
 '
 
 # Checking for +0000 in author time is enough since default
