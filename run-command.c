@@ -1425,7 +1425,13 @@ static int pump_io_round(struct io_pump *slots, int nr, struct pollfd *pfd)
 		if (io->fd < 0)
 			continue;
 
-		if (!(io->pfd->revents & (POLLOUT|POLLIN|POLLHUP|POLLERR|POLLNVAL)))
+		if (io->pfd->revents & POLLERR) {
+			io->error = ECONNRESET;  /* What should we report to the caller? */
+			close(io->fd);
+			io->fd = -1;
+			continue;
+		}
+		if (!(io->pfd->revents & (POLLOUT|POLLIN|POLLHUP|POLLNVAL)))
 			continue;
 
 		if (io->type == POLLOUT) {
