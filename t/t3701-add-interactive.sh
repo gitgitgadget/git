@@ -561,7 +561,7 @@ test_expect_success 'detect bogus diffFilter output' '
 	git reset --hard &&
 
 	echo content >test &&
-	test_config interactive.diffFilter "echo too-short" &&
+	test_config interactive.diffFilter "sleep 1 ; echo too-short" &&
 	printf y >y &&
 	test_must_fail force_color git add -p <y
 '

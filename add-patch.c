@@ -421,6 +421,7 @@ static int parse_diff(struct add_p_state *s, const struct pathspec *ps)
 			filter_cp.git_cmd = 0;
 			filter_cp.use_shell = 1;
 			strbuf_reset(&s->buf);
+			fprintf(stderr, "about to run diffFilter\n");
 			if (pipe_command(&filter_cp,
 					 colored->buf, colored->len,
 					 &s->buf, colored->len,

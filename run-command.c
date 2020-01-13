@@ -1419,6 +1419,7 @@ static int pump_io_round(struct io_pump *slots, int nr, struct pollfd *pfd)
 		die_errno("poll failed");
 	}
 
+	sleep(2);
 	for (i = 0; i < nr; i++) {
 		struct io_pump *io = &slots[i];
 
@@ -1435,8 +1436,11 @@ static int pump_io_round(struct io_pump *slots, int nr, struct pollfd *pfd)
 			continue;
 
 		if (io->type == POLLOUT) {
-			ssize_t len = xwrite(io->fd,
+			ssize_t len;
+			fprintf(stderr, "attempting to xwrite() %lu bytes to a fd with revents flags 0x%hx\n", io->u.out.len, io->pfd->revents);
+			len = xwrite(io->fd,
 					     io->u.out.buf, io->u.out.len);
+			fprintf(stderr, "after xwrite()\n");
 			if (len < 0) {
 				io->error = errno;
 				close(io->fd);
