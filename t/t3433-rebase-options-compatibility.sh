@@ -73,16 +73,16 @@ test_expect_success '--ignore-whitespace works with interactive backend' '
 test_expect_success '--committer-date-is-author-date works with am backend' '
 	git commit --amend &&
 	git rebase --committer-date-is-author-date HEAD^ &&
-	git show HEAD --pretty="format:%ai" >authortime &&
-	git show HEAD --pretty="format:%ci" >committertime &&
+	git log -1 --pretty="format:%ai" >authortime &&
+	git log -1 --pretty="format:%ci" >committertime &&
 	test_cmp authortime committertime
 '
 
 test_expect_success '--committer-date-is-author-date works with interactive backend' '
 	git commit --amend &&
 	git rebase -i --committer-date-is-author-date HEAD^ &&
-	git show HEAD --pretty="format:%ai" >authortime &&
-	git show HEAD --pretty="format:%ci" >committertime &&
+	git log -1 --pretty="format:%ai" >authortime &&
+	git log -1 --pretty="format:%ci" >committertime &&
 	test_cmp authortime committertime
 '
 
@@ -101,14 +101,14 @@ test_expect_success '--committer-date-is-author-date works with rebase -r' '
 test_expect_success '--ignore-date works with am backend' '
 	git commit --amend --date="$GIT_AUTHOR_DATE" &&
 	git rebase --ignore-date HEAD^ &&
-	git show HEAD --pretty="format:%ai" >authortime &&
+	git log -1 --pretty="format:%ai" >authortime &&
 	grep "+0000" authortime
 '
 
 test_expect_success '--ignore-date works with interactive backend' '
 	git commit --amend --date="$GIT_AUTHOR_DATE" &&
 	git rebase --ignore-date -i HEAD^ &&
-	git show HEAD --pretty="format:%ai" >authortime &&
+	git log -1 --pretty="format:%ai" >authortime &&
 	grep "+0000" authortime
 '
 
