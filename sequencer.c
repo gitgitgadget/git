@@ -880,17 +880,6 @@ static char *get_author(const char *message)
 	return NULL;
 }
 
-/* Returns a "date" string that needs to be free()'d by the caller */
-static char *read_author_date_or_null(void)
-{
-	char *date;
-
-	if (read_author_script(rebase_path_author_script(),
-			       NULL, NULL, &date, 0))
-		return NULL;
-	return date;
-}
-
 /* Construct a free()able author string with current time as the author date */
 static char *ignore_author_date(const char *author)
 {
@@ -909,16 +898,20 @@ static char *ignore_author_date(const char *author)
 	return strbuf_detach(&new_author, NULL);
 }
 
-static void push_dates(struct child_process *child, int change_committer_date)
+static const char *author_date_from_env_array(const struct argv_array *env)
 {
-	time_t now = time(NULL);
-	struct strbuf date = STRBUF_INIT;
+	int i;
+	const char *date;
 
-	strbuf_addf(&date, "@%"PRIuMAX, (uintmax_t)now);
-	argv_array_pushf(&child->env_array, "GIT_AUTHOR_DATE=%s", date.buf);
-	if (change_committer_date)
-		argv_array_pushf(&child->env_array, "GIT_COMMITTER_DATE=%s", date.buf);
-	strbuf_release(&date);
+	for (i = 0; i < env->argc; i++)
+		if (skip_prefix(env->argv[i],
+				"GIT_AUTHOR_DATE=", &date))
+			return date;
+	/*
+	 * If GIT_AUTHOR_DATE is missing we should have already errored out when
+	 * reading the script
+	 */
+	BUG("GIT_AUTHOR_DATE missing from author script");
 }
 
 static const char staged_changes_advice[] =
@@ -980,31 +973,19 @@ static int run_git_commit(struct repository *r,
 
 	cmd.git_cmd = 1;
 
-	if (opts->committer_date_is_author_date) {
-		int res = -1;
-		struct strbuf datebuf = STRBUF_INIT;
-		char *date = read_author_date_or_null();
-
-		if (!date)
-			return -1;
-
-		strbuf_addf(&datebuf, "@%s", date);
-		res = setenv("GIT_COMMITTER_DATE",
-			     opts->ignore_date ? "" : datebuf.buf, 1);
-
-		strbuf_release(&datebuf);
-		free(date);
-
-		if (res)
-			return -1;
-	}
-
 	if (is_rebase_i(opts) && read_env_script(&cmd.env_array)) {
 		const char *gpg_opt = gpg_sign_opt_quoted(opts);
 
 		return error(_(staged_changes_advice),
 			     gpg_opt, gpg_opt);
 	}
+	if (opts->committer_date_is_author_date)
+		argv_array_pushf(&cmd.env_array, "GIT_COMMITTER_DATE=%s",
+				 opts->ignore_date ?
+				 "" :
+				 author_date_from_env_array(&cmd.env_array));
+	if (opts->ignore_date)
+		argv_array_push(&cmd.env_array, "GIT_AUTHOR_DATE=");
 
 	argv_array_push(&cmd.args, "commit");
 
@@ -1014,8 +995,6 @@ static int run_git_commit(struct repository *r,
 		argv_array_push(&cmd.args, "--amend");
 	if (opts->gpg_sign)
 		argv_array_pushf(&cmd.args, "-S%s", opts->gpg_sign);
-	if (opts->ignore_date)
-		push_dates(&cmd, opts->committer_date_is_author_date);
 	if (defmsg)
 		argv_array_pushl(&cmd.args, "-F", defmsg, NULL);
 	else if (!(flags & EDIT_MSG))
@@ -3615,6 +3594,13 @@ static int do_merge(struct repository *r,
 			ret = error(_(staged_changes_advice), gpg_opt, gpg_opt);
 			goto leave_merge;
 		}
+		if (opts->committer_date_is_author_date)
+			argv_array_pushf(&cmd.env_array, "GIT_COMMITTER_DATE=%s",
+					 opts->ignore_date ?
+					 "" :
+					 author_date_from_env_array(&cmd.env_array));
+		if (opts->ignore_date)
+			argv_array_push(&cmd.env_array, "GIT_AUTHOR_DATE=");
 
 		cmd.git_cmd = 1;
 		argv_array_push(&cmd.args, "merge");
@@ -3635,8 +3621,6 @@ static int do_merge(struct repository *r,
 		argv_array_push(&cmd.args, git_path_merge_msg(r));
 		if (opts->gpg_sign)
 			argv_array_push(&cmd.args, opts->gpg_sign);
-		if (opts->ignore_date)
-			push_dates(&cmd, opts->committer_date_is_author_date);
 
 		/* Add the tips to be merged */
 		for (j = to_merge; j; j = j->next)
