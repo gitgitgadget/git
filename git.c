@@ -133,6 +133,8 @@ void setup_auto_pager(const char *cmd, int def)
 static int handle_options(const char ***argv, int *argc, int *envchanged)
 {
 	const char **orig_argv = *argv;
+	int git_dir_is_set = 0;
+	int work_tree_is_set = 0;
 
 	while (*argc > 0) {
 		const char *cmd = (*argv)[0];
@@ -187,12 +189,14 @@ static int handle_options(const char ***argv, int *argc, int *envchanged)
 				usage(git_usage_string);
 			}
 			setenv(GIT_DIR_ENVIRONMENT, (*argv)[1], 1);
+			git_dir_is_set = 1;
 			if (envchanged)
 				*envchanged = 1;
 			(*argv)++;
 			(*argc)--;
 		} else if (skip_prefix(cmd, "--git-dir=", &cmd)) {
 			setenv(GIT_DIR_ENVIRONMENT, cmd, 1);
+			git_dir_is_set = 1;
 			if (envchanged)
 				*envchanged = 1;
 		} else if (!strcmp(cmd, "--namespace")) {
@@ -215,12 +219,14 @@ static int handle_options(const char ***argv, int *argc, int *envchanged)
 				usage(git_usage_string);
 			}
 			setenv(GIT_WORK_TREE_ENVIRONMENT, (*argv)[1], 1);
+			work_tree_is_set = 1;
 			if (envchanged)
 				*envchanged = 1;
 			(*argv)++;
 			(*argc)--;
 		} else if (skip_prefix(cmd, "--work-tree=", &cmd)) {
 			setenv(GIT_WORK_TREE_ENVIRONMENT, cmd, 1);
+			work_tree_is_set = 1;
 			if (envchanged)
 				*envchanged = 1;
 		} else if (!strcmp(cmd, "--super-prefix")) {
@@ -318,6 +324,13 @@ static int handle_options(const char ***argv, int *argc, int *envchanged)
 		(*argv)++;
 		(*argc)--;
 	}
+	if (advice_set_git_dir_without_worktree && git_dir_is_set &&
+	    !work_tree_is_set && !is_bare_repository())
+		advise("Setting --git-dir without specifying a worktree "
+		       "doesn't guarantee that Git will run your command "
+		       "accross the correct work tree, did you mean "
+		       "git -C <path>?");
+	
 	return (*argv) - orig_argv;
 }
 

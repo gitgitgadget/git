@@ -52,4 +52,8 @@ git --git-dir .git --work-tree .. commit -m subcommit &&
 test -r "${COMMIT_FILE}"
 '
 
+test_expect_success 'setting --git-dir without -work-tree displays hint' '
+git --git-dir .git status 2>output.err &&
+test_i18ngrep "did you mean git -C <path>" output.err
+'
 test_done

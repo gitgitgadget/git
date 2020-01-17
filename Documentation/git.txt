@@ -110,9 +110,14 @@ foo.bar= ...`) sets `foo.bar` to the empty string which `git config
 	Do not pipe Git output into a pager.
 
 --git-dir=<path>::
-	Set the path to the repository. This can also be controlled by
-	setting the `GIT_DIR` environment variable. It can be an absolute
-	path or relative path to current working directory.
+	Set the path to the repository (i.e. the .git folder). This can also be
+	controlled by setting the `GIT_DIR` environment variable. It can be an
+	absolute path or relative path to current working directory.
+	
+	Note that --git-dir=<path> is not the same as -C=<path>.
+	It's preferrable to set --work-tree=<path> as well when setting
+	--git-dir to make sure Git will run your command across the correct
+	work tree.
 
 --work-tree=<path>::
 	Set the path to the working tree. It can be an absolute path

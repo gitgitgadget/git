@@ -118,6 +118,7 @@ test_expect_success 'send-pack produced no output' '
 '
 
 cat <<EOF >expect
+remote: hint: Setting --git-dir without specifying a worktree doesn't guarantee that Git will run your command accross the correct work tree, did you mean git -C <path>?
 remote: STDOUT pre-receive
 remote: STDERR pre-receive
 remote: STDOUT update refs/heads/master
