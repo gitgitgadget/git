@@ -772,7 +772,7 @@ static int parse_key_value_squoted(char *buf, struct string_list *list)
  *	GIT_AUTHOR_DATE='$author_date'
  *
  * where $author_name, $author_email and $author_date are quoted. We are strict
- * with our parsing, as the file was meant to be eval'd in the old
+ * with our parsing, as the file was meant to be eval'd in the now-removed
  * git-am.sh/git-rebase--interactive.sh scripts, and thus if the file differs
  * from what this function expects, it is better to bail out than to do
  * something that the user does not expect.
@@ -3319,6 +3319,9 @@ static int do_merge(struct repository *r,
 	struct commit *head_commit, *merge_commit, *i;
 	struct commit_list *bases, *j, *reversed = NULL;
 	struct commit_list *to_merge = NULL, **tail = &to_merge;
+	const char *strategy = !opts->xopts_nr &&
+		(!opts->strategy || !strcmp(opts->strategy, "recursive")) ?
+		NULL : opts->strategy;
 	struct merge_options o;
 	int merge_arg_len, oneline_offset, can_fast_forward, ret, k;
 	static struct lock_file lock;
@@ -3467,7 +3470,7 @@ static int do_merge(struct repository *r,
 		goto leave_merge;
 	}
 
-	if (to_merge->next) {
+	if (strategy || to_merge->next) {
 		/* Octopus merge */
 		struct child_process cmd = CHILD_PROCESS_INIT;
 
@@ -3481,7 +3484,14 @@ static int do_merge(struct repository *r,
 		cmd.git_cmd = 1;
 		argv_array_push(&cmd.args, "merge");
 		argv_array_push(&cmd.args, "-s");
-		argv_array_push(&cmd.args, "octopus");
+		if (!strategy)
+			argv_array_push(&cmd.args, "octopus");
+		else {
+			argv_array_push(&cmd.args, strategy);
+			for (k = 0; k < opts->xopts_nr; k++)
+				argv_array_pushf(&cmd.args,
+						 "-X%s", opts->xopts[k]);
+		}
 		argv_array_push(&cmd.args, "--no-edit");
 		argv_array_push(&cmd.args, "--no-ff");
 		argv_array_push(&cmd.args, "--no-log");
@@ -4517,6 +4527,7 @@ static int make_script_with_merges(struct pretty_print_context *pp,
 {
 	int keep_empty = flags & TODO_LIST_KEEP_EMPTY;
 	int rebase_cousins = flags & TODO_LIST_REBASE_COUSINS;
+	int root_with_onto = flags & TODO_LIST_ROOT_WITH_ONTO;
 	struct strbuf buf = STRBUF_INIT, oneline = STRBUF_INIT;
 	struct strbuf label = STRBUF_INIT;
 	struct commit_list *commits = NULL, **tail = &commits, *iter;
@@ -4683,7 +4694,8 @@ static int make_script_with_merges(struct pretty_print_context *pp,
 
 		if (!commit)
 			strbuf_addf(out, "%s %s\n", cmd_reset,
-				    rebase_cousins ? "onto" : "[new root]");
+				    rebase_cousins || root_with_onto ?
+				    "onto" : "[new root]");
 		else {
 			const char *to = NULL;
 
