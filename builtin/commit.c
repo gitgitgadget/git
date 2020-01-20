@@ -814,12 +814,6 @@ static int prepare_to_commit(const char *index_file, const char *prefix,
 	old_display_comment_prefix = s->display_comment_prefix;
 	s->display_comment_prefix = 1;
 
-	/*
-	 * Most hints are counter-productive when the commit has
-	 * already started.
-	 */
-	s->hints = 0;
-
 	if (clean_message_contents)
 		strbuf_stripspace(&sb, 0);
 
@@ -839,6 +833,12 @@ static int prepare_to_commit(const char *index_file, const char *prefix,
 		int ident_shown = 0;
 		int saved_color_setting;
 		struct ident_split ci, ai;
+
+		/*
+		 * Most hints are counter-productive when displayed in
+		 * the commit message editor.
+		 */
+		s->hints = 0;
 
 		if (whence != FROM_COMMIT) {
 			if (cleanup_mode == COMMIT_MSG_CLEANUP_SCISSORS &&
@@ -915,6 +915,12 @@ static int prepare_to_commit(const char *index_file, const char *prefix,
 		saved_color_setting = s->use_color;
 		s->use_color = 0;
 		committable = run_status(s->fp, index_file, prefix, 1, s);
+		if(!committable)
+			/*
+			 Status is to be printed to stdout, so hints will be useful to the
+			 user. Reset s->hints to what the user configured
+			 */
+			s->hints = advice_status_hints;
 		s->use_color = saved_color_setting;
 		string_list_clear(&s->change, 1);
 	} else {
