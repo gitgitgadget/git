@@ -144,6 +144,12 @@ int sequencer_remove_state(struct replay_opts *opts);
  */
 #define TODO_LIST_REBASE_COUSINS (1U << 4)
 #define TODO_LIST_APPEND_TODO_HELP (1U << 5)
+/*
+ * When generating a script that rebases merges with `--root` *and* with
+ * `--onto`, we do not want to re-generate the root commits.
+ */
+#define TODO_LIST_ROOT_WITH_ONTO (1U << 6)
+
 
 int sequencer_make_script(struct repository *r, struct strbuf *out, int argc,
 			  const char **argv, unsigned flags);
@@ -197,11 +203,10 @@ void print_commit_summary(struct repository *repo,
 
 int read_author_script(const char *path, char **name, char **email, char **date,
 		       int allow_missing);
-#endif
-
 void parse_strategy_opts(struct replay_opts *opts, char *raw_opts);
 int write_basic_state(struct replay_opts *opts, const char *head_name,
 		      struct commit *onto, const char *orig_head);
 void sequencer_post_commit_cleanup(struct repository *r);
 int sequencer_get_last_command(struct repository* r,
 			       enum replay_action *action);
+#endif /* SEQUENCER_H */

@@ -558,8 +558,6 @@ In addition, the following pairs of options are incompatible:
  * --preserve-merges and --ignore-whitespace
  * --preserve-merges and --committer-date-is-author-date
  * --preserve-merges and --ignore-date
- * --rebase-merges and --strategy
- * --rebase-merges and --strategy-option
 
 BEHAVIORAL DIFFERENCES
 -----------------------
