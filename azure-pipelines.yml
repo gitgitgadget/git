@@ -331,18 +331,7 @@ jobs:
   displayName: linux-gcc
   condition: succeeded()
   pool: Hosted Ubuntu 1604
-  strategy:
-    matrix:
-      python27:
-        python.version: '2.7'
-      python35:
-        python.version: '3.5'
   steps:
-  - task: UsePythonVersion@0
-    inputs:
-      versionSpec: '$(python.version)'
-  - bash: |
-      echo "##vso[task.setvariable variable=python_path]$(which python)"
   - bash: |
        test "$GITFILESHAREPWD" = '$(gitfileshare.pwd)' || ci/mount-fileshare.sh //gitfileshare.file.core.windows.net/test-cache gitfileshare "$GITFILESHAREPWD" "$HOME/test-cache" || exit 1
 
