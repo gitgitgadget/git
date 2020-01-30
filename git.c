@@ -607,7 +607,8 @@ static struct cmd_struct commands[] = {
 static struct cmd_struct *get_builtin(const char *s)
 {
 	int i;
-	for (i = 0; i < ARRAY_SIZE(commands); i++) {
+	int get_array_size = ARRAY_SIZE(commands);
+	for (i = 0; i < get_array_size; i++) {
 		struct cmd_struct *p = commands + i;
 		if (!strcmp(s, p->cmd))
 			return p;
@@ -623,7 +624,8 @@ int is_builtin(const char *s)
 static void list_builtins(struct string_list *out, unsigned int exclude_option)
 {
 	int i;
-	for (i = 0; i < ARRAY_SIZE(commands); i++) {
+	int get_array_size = ARRAY_SIZE(commands);
+	for (i = 0; i < get_array_size; i++) {
 		if (exclude_option &&
 		    (commands[i].option & exclude_option))
 			continue;
