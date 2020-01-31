@@ -106,7 +106,6 @@ then
 		echo "https://travis-ci.org/$CI_REPO_SLUG/jobs/$1"
 	}
 
-	BREW_INSTALL_PACKAGES="git-lfs gettext"
 	export GIT_PROVE_OPTS="--timer --jobs 3 --state=failed,slow,save"
 	export GIT_TEST_OPTS="--verbose-log -x --immediate"
 	MAKEFLAGS="$MAKEFLAGS --jobs=2"
@@ -183,6 +182,11 @@ osx-clang|osx-gcc)
 	then
 		export CC=gcc-9
 	fi
+
+	MAKEFLAGS="$MAKEFLAGS CPPFLAGS+=-I/usr/local/opt/gettext/include"
+	MAKEFLAGS="$MAKEFLAGS LDFLAGS+=-L/usr/local/opt/gettext/lib"
+
+	PATH=/usr/local/opt/gettext/bin:$PATH
 
 	# t9810 occasionally fails on Travis CI OS X
 	# t9816 occasionally fails with "TAP out of sequence errors" on
