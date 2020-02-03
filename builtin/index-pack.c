@@ -218,14 +218,15 @@ static unsigned check_object(struct object *obj)
 static unsigned check_objects(void)
 {
 	unsigned i, max, foreign_nr = 0;
+	struct repository *repo = NULL;
 
-	max = get_max_object_index();
+	max = get_max_object_index(repo);
 
 	if (verbose)
 		progress = start_delayed_progress(_("Checking objects"), max);
 
 	for (i = 0; i < max; i++) {
-		foreign_nr += check_object(get_indexed_object(i));
+		foreign_nr += check_object(get_indexed_object(repo, i));
 		display_progress(progress, i + 1);
 	}
 
