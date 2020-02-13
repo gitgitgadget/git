@@ -1649,6 +1649,7 @@ static int update_squash_messages(struct repository *r,
 		strbuf_addf(&buf, _("This is the commit message #%d:"),
 			    ++opts->current_fixup_count + 1);
 		strbuf_addstr(&buf, "\n\n");
+		strbuf_addf(&buf, "%c ", comment_line_char);
 		strbuf_addstr(&buf, body);
 	} else if (command == TODO_FIXUP) {
 		strbuf_addf(&buf, "\n%c ", comment_line_char);

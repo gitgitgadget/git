@@ -59,7 +59,6 @@ test_auto_squash () {
 	git add -u &&
 	test_tick &&
 	git commit -m "squash! first" &&
-
 	git tag $1 &&
 	test_tick &&
 	git rebase $2 -i HEAD^^^ &&
@@ -67,7 +66,7 @@ test_auto_squash () {
 	test_line_count = 3 actual &&
 	git diff --exit-code $1 &&
 	test 1 = "$(git cat-file blob HEAD^:file1)" &&
-	test 2 = $(git cat-file commit HEAD^ | grep first | wc -l)
+	test 1 = $(git cat-file commit HEAD^ | grep first | wc -l)
 }
 
 test_expect_success 'auto squash (option)' '
@@ -80,6 +79,27 @@ test_expect_success 'auto squash (config)' '
 	test_must_fail test_auto_squash squash-config-true-no --no-autosquash &&
 	git config rebase.autosquash false &&
 	test_must_fail test_auto_squash final-squash-config-false
+'
+
+test_expect_success 'auto squash includes squash body but not squash directive' '
+	git reset --hard base &&
+	echo 1 >file1 &&
+	git add -u &&
+	test_tick &&
+	git commit -m "squash! first
+
+Additional Body" &&
+	git tag squash-with-body &&
+	test_tick &&
+	git rebase --autosquash -i HEAD^^^ &&
+	git log --oneline >actual &&
+	git log --oneline --format="%s%n%b" >actual-full &&
+	test_line_count = 3 actual &&
+	git diff --exit-code squash-with-body &&
+	test 1 = "$(git cat-file blob HEAD^:file1)" &&
+	test 1 = $(git cat-file commit HEAD^ | grep first | wc -l) &&
+	test 0 = $(grep squash actual-full | wc -l) &&
+	test 1 = $(grep Additional actual-full | wc -l)
 '
 
 test_expect_success 'misspelled auto squash' '
@@ -114,7 +134,7 @@ test_expect_success 'auto squash that matches 2 commits' '
 	test_line_count = 4 actual &&
 	git diff --exit-code final-multisquash &&
 	test 1 = "$(git cat-file blob HEAD^^:file1)" &&
-	test 2 = $(git cat-file commit HEAD^^ | grep first | wc -l) &&
+	test 1 = $(git cat-file commit HEAD^^ | grep first | wc -l) &&
 	test 1 = $(git cat-file commit HEAD | grep first | wc -l)
 '
 
@@ -152,7 +172,7 @@ test_expect_success 'auto squash that matches a sha1' '
 	test_line_count = 3 actual &&
 	git diff --exit-code final-shasquash &&
 	test 1 = "$(git cat-file blob HEAD^:file1)" &&
-	test 1 = $(git cat-file commit HEAD^ | grep squash | wc -l)
+	test 0 = $(git cat-file commit HEAD^ | grep squash | wc -l)
 '
 
 test_expect_success 'auto squash that matches longer sha1' '
@@ -168,7 +188,7 @@ test_expect_success 'auto squash that matches longer sha1' '
 	test_line_count = 3 actual &&
 	git diff --exit-code final-longshasquash &&
 	test 1 = "$(git cat-file blob HEAD^:file1)" &&
-	test 1 = $(git cat-file commit HEAD^ | grep squash | wc -l)
+	test 0 = $(git cat-file commit HEAD^ | grep squash | wc -l)
 '
 
 test_auto_commit_flags () {
@@ -192,7 +212,7 @@ test_expect_success 'use commit --fixup' '
 '
 
 test_expect_success 'use commit --squash' '
-	test_auto_commit_flags squash 2
+	test_auto_commit_flags squash 1
 '
 
 test_auto_fixup_fixup () {
@@ -228,7 +248,7 @@ test_auto_fixup_fixup () {
 		test 1 = $(git cat-file commit HEAD^ | grep first | wc -l)
 	elif test "$1" = "squash"
 	then
-		test 3 = $(git cat-file commit HEAD^ | grep first | wc -l)
+		test 1 = $(git cat-file commit HEAD^ | grep first | wc -l)
 	else
 		false
 	fi
@@ -268,7 +288,7 @@ test_expect_success C_LOCALE_OUTPUT 'autosquash with custom inst format' '
 	test_line_count = 3 actual &&
 	git diff --exit-code final-squash-instFmt &&
 	test 1 = "$(git cat-file blob HEAD^:file1)" &&
-	test 2 = $(git cat-file commit HEAD^ | grep squash | wc -l)
+	test 0 = $(git cat-file commit HEAD^ | grep squash | wc -l)
 '
 
 test_expect_success 'autosquash with empty custom instructionFormat' '

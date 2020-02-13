@@ -513,8 +513,6 @@ test_expect_success C_LOCALE_OUTPUT 'squash and fixup generate correct log messa
 	cat >expect-squash-fixup <<-\EOF &&
 	B
 
-	D
-
 	ONCE
 	EOF
 	git checkout -b squash-fixup E &&
@@ -1325,7 +1323,7 @@ test_expect_success 'rebase -i commits that overwrite untracked files (squash)' 
 	test_cmp_rev HEAD F &&
 	rm file6 &&
 	git rebase --continue &&
-	test $(git cat-file commit HEAD | sed -ne \$p) = I &&
+	test $(git cat-file commit HEAD | sed -ne \$p) = F &&
 	git reset --hard original-branch2
 '
 
