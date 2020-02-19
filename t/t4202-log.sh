@@ -637,17 +637,16 @@ test_expect_success 'set up more tangled history' '
 cat > expect <<\EOF
 *   Merge tag 'reach'
 |\
-| \
+| * reach
+| |
 |  \
 *-. \   Merge tags 'octopus-a' and 'octopus-b'
 |\ \ \
-* | | | seventh
 | | * | octopus-b
-| |/ /
-|/| |
-| * | octopus-a
-|/ /
-| * reach
+| | |/
+| * / octopus-a
+| |/
+* / seventh
 |/
 *   Merge branch 'tangle'
 |\
@@ -675,7 +674,7 @@ cat > expect <<\EOF
 * initial
 EOF
 
-test_expect_success 'log --graph with merge' '
+test_expect_success 'log --graph with merge tag reach' '
 	git log --graph --date-order --pretty=tformat:%s |
 		sed "s/ *\$//" >actual &&
 	test_cmp expect actual

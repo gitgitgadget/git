@@ -235,27 +235,28 @@ test_expect_success '--graph ^C3' '
 # I don't think the ordering of the boundary commits is really
 # that important, but this test depends on it.  If the ordering ever changes
 # in the code, we'll need to update this test.
-test_expect_success '--graph --boundary ^C3' '
+test_expect_success '--graph --boundary --all ^C3' '
 	rm -f expected &&
-	echo "* $A7" >> expected &&
-	echo "*   $A6" >> expected &&
-	echo "|\\  " >> expected &&
-	echo "| * $C4" >> expected &&
-	echo "* | $A5" >> expected &&
-	echo "| |     " >> expected &&
-	echo "|  \\    " >> expected &&
-	echo "*-. \\   $A4" >> expected &&
-	echo "|\\ \\ \\  " >> expected &&
-	echo "| * | | $B2" >> expected &&
-	echo "| * | | $B1" >> expected &&
-	echo "* | | | $A3" >> expected &&
-	echo "o | | | $A2" >> expected &&
-	echo "|/ / /  " >> expected &&
-	echo "o / / $A1" >> expected &&
-	echo " / /  " >> expected &&
-	echo "| o $C3" >> expected &&
-	echo "|/  " >> expected &&
-	echo "o $C2" >> expected &&
+	cat >> expected <<-TESTDATA &&
+	* $A7
+	*   $A6
+	|\  
+	| * $C4
+	* | $A5
+	| |     
+	|  \    
+	*-. \   $A4
+	|\ \ \  
+	| * | | $B2
+	| * | | $B1
+	* | | | $A3
+	| | | o $C3
+	| | |/  
+	| | o $C2
+	o | $A2
+	|/  
+	o $A1
+	TESTDATA
 	git rev-list --graph --boundary --all ^C3 > actual &&
 	test_cmp expected actual
 	'

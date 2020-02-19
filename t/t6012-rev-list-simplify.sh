@@ -122,16 +122,16 @@ check_result () {
 
 check_result 'L K J I H F E D C G B A' --full-history --topo-order
 check_result 'L K I H G F E D C B J A' --full-history
-check_result 'L K I H G F E D C B J A' --full-history --date-order
-check_result 'L K I H G F E D B C J A' --full-history --author-date-order
+check_result 'L K J I H F E D C G B A' --full-history --date-order
+check_result 'L K J I H F E D C G B A' --full-history --author-date-order
 check_result 'K I H E C B A' --full-history -- file
 check_result 'K I H E C B A' --full-history --topo-order -- file
 check_result 'K I H E C B A' --full-history --date-order -- file
-check_result 'K I H E B C A' --full-history --author-date-order -- file
+check_result 'K I H E C B A' --full-history --author-date-order -- file
 check_result 'I E C B A' --simplify-merges -- file
 check_result 'I E C B A' --simplify-merges --topo-order -- file
 check_result 'I E C B A' --simplify-merges --date-order -- file
-check_result 'I E B C A' --simplify-merges --author-date-order -- file
+check_result 'I E C B A' --simplify-merges --author-date-order -- file
 check_result 'I B A' -- file
 check_result 'I B A' --topo-order -- file
 check_result 'I B A' --date-order -- file

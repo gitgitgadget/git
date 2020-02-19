@@ -209,7 +209,7 @@ struct commit *pop_commit(struct commit_list **stack);
 void clear_commit_marks(struct commit *commit, unsigned int mark);
 void clear_commit_marks_many(int nr, struct commit **commit, unsigned int mark);
 
-
+/* TODO get rid of rev_sort_order in a favour of positional parameters */
 enum rev_sort_order {
 	REV_SORT_IN_GRAPH_ORDER = 0,
 	REV_SORT_BY_COMMIT_DATE,
@@ -222,8 +222,6 @@ enum rev_sort_order {
  *   invariant of resulting list is:
  *      a reachable from b => ord(b) < ord(a)
  *   sort_order further specifies:
- *   REV_SORT_IN_GRAPH_ORDER: try to show a commit on a single-parent
- *                            chain together.
  *   REV_SORT_BY_COMMIT_DATE: show eligible commits in committer-date order.
  */
 void sort_in_topological_order(struct commit_list **, enum rev_sort_order);

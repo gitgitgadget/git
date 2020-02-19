@@ -3,7 +3,7 @@ git-rev-list(1)
 
 NAME
 ----
-git-rev-list - Lists commit objects in reverse chronological order
+git-rev-list - Lists commit objects in reverse topological order
 
 
 SYNOPSIS
@@ -17,7 +17,7 @@ DESCRIPTION
 List commits that are reachable by following the `parent` links from the
 given commit(s), but exclude commits that are reachable from the one(s)
 given with a '{caret}' in front of them.  The output is given in reverse
-chronological order by default.
+topological order by default.
 
 You can think of this as a set operation.  Commits given on the command
 line form a set of commits that are reachable from any of them, and then

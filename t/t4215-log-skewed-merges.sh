@@ -5,7 +5,7 @@ test_description='git log --graph of skewed merges'
 . ./test-lib.sh
 
 check_graph () {
-	cat >expect &&
+	sed "s/ *$//" >expect &&
 	git log --graph --pretty=tformat:%s "$@" >actual.raw &&
 	sed "s/ *$//" actual.raw >actual &&
 	test_cmp expect actual
@@ -185,20 +185,21 @@ test_expect_success 'log --graph with right-skewed merge following a left-skewed
 
 	check_graph --date-order <<-\EOF
 	*   4_H
-	|\
+	|\  
 	| *   4_G
-	| |\
-	| * | 4_F
-	|/| |
-	| * |   4_E
-	| |\ \
-	| | * | 4_D
-	| |/ /
-	|/| |
+	| |\  
 	| | * 4_C
-	| |/
+	| * | 4_F
+	|/| | 
+	| * |   4_E
+	| |\ \  
+	| | |/  
+	| |/|   
+	| | * 4_D
+	| |/  
+	|/|   
 	| * 4_B
-	|/
+	|/  
 	* 4_A
 	EOF
 '
@@ -221,21 +222,20 @@ test_expect_success 'log --graph with octopus merge with column joining its penu
 
 	check_graph <<-\EOF
 	*   5_H
-	|\
+	|\  
 	| *-.   5_G
-	| |\ \
+	| |\ \  
 	| | | * 5_F
 	| | * |   5_E
-	| |/|\ \
-	| |_|/ /
-	|/| | /
-	| | |/
-	* | | 5_D
+	| |/|\ \  
+	| |_|/ /  
+	|/| | /   
+	| | |/    
 	| | * 5_C
-	| |/
-	|/|
-	| * 5_B
-	|/
+	| * | 5_B
+	| |/  
+	* / 5_D
+	|/  
 	* 5_A
 	EOF
 '

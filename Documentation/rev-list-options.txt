@@ -643,39 +643,42 @@ ifndef::git-shortlog[]
 Commit Ordering
 ~~~~~~~~~~~~~~~
 
-By default, the commits are shown in reverse chronological order.
+By default, the commits are shown in reverse topological order.
++
+Meaning that no parents are shown before all of its children and
+merges do not change the previous order.
++
+E.g., if commit M0 produces topologically ordered list of 
+commits L0 then commit M1 created by merging any commit into M0
+produces list L1 which starts with L0
++
+In case if multiple commits are given via the command line
+the following parameters determine the order among them:
 
 --date-order::
-	Show no parents before all of its children are shown, but
-	otherwise show commits in the commit timestamp order.
+	show commits in the commit timestamp order.
 
 --author-date-order::
-	Show no parents before all of its children are shown, but
-	otherwise show commits in the author timestamp order.
+	show commits in the author timestamp order.
 
 --topo-order::
-	Show no parents before all of its children are shown, and
-	avoid showing commits on multiple lines of history
-	intermixed.
+	show commits in the commit timestamp order.
+	this is deprecated and will be
+	removed in the future.
 +
 For example, in a commit history like this:
 +
 ----------------------------------------------------------------
-
-    ---1----2----4----7
-	\	       \
-	 3----5----6----8---
-
+   1----2-----------5
+    \    \         /
+     -----\---3---4---6
+           \     /
+            ----
 ----------------------------------------------------------------
 +
 where the numbers denote the order of commit timestamps, `git
 rev-list` and friends with `--date-order` show the commits in the
-timestamp order: 8 7 6 5 4 3 2 1.
-+
-With `--topo-order`, they would show 8 6 5 3 7 4 2 1 (or 8 7 4 2 6 5
-3 1); some older commits are shown before newer ones in order to
-avoid showing the commits from two parallel development track mixed
-together.
+following order: 1 2 3 4 5 6.
 
 --reverse::
 	Output the commits chosen to be shown (see Commit Limiting

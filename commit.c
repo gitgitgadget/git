@@ -738,6 +738,12 @@ int compare_commits_by_author_date(const void *a_, const void *b_,
 	return 0;
 }
 
+static int compare_commits_by_author_date_rev(const void *a_, const void *b_,
+				   void *cb_data)
+{
+	return compare_commits_by_author_date(b_, a_, cb_data);
+}
+
 int compare_commits_by_gen_then_commit_date(const void *a_, const void *b_, void *unused)
 {
 	const struct commit *a = a_, *b = b_;
@@ -767,36 +773,83 @@ int compare_commits_by_commit_date(const void *a_, const void *b_, void *unused)
 	return 0;
 }
 
+static int compare_commits_by_commit_date_rev(const void *a_, const void *b_, void *unused)
+{
+	return compare_commits_by_commit_date (b_, a_, unused);
+}
+
+struct maze {
+	struct commit *ret;
+	struct commit *out;
+};
+
+define_commit_slab(maze_slab, struct maze *);
+
+/*
+ * returns the next commit while exploring the maze
+ * current commit has the information:
+ * 	- what was the last commit we went for (OUT)
+ * 	- from which commit we came in (RET)
+ * trying to find a parent next to OUT
+ * if it does not exists returns RET
+ * otherwise returns the found parent
+ */
+static struct commit *get_next(struct commit *commit, struct maze *mz, struct indegree_slab *indegree)
+{
+	struct commit_list *parents = commit->parents;
+	struct commit *next = NULL;
+	int found = 0;
+
+	while (parents) {
+		struct commit *parent = parents->item;
+
+		if (*indegree_slab_at(indegree, parent)) {
+
+			if (!mz->out || found) {
+				next = parent;
+				break;
+			} else if  (mz->out == parent) {
+				found = 1;
+			}
+		}
+		parents = parents->next;
+	}
+
+	if (!next) next = mz->ret;
+
+	return next;
+}
+
 /*
  * Performs an in-place topological sort on the list supplied.
  */
 void sort_in_topological_order(struct commit_list **list, enum rev_sort_order sort_order)
 {
 	struct commit_list *next, *orig = *list;
-	struct commit_list **pptr;
+	struct commit_list **pptr = list;
 	struct indegree_slab indegree;
-	struct prio_queue queue;
+	struct prio_queue queue_tips;
 	struct commit *commit;
 	struct author_date_slab author_date;
+	struct maze_slab maze;
+	struct maze *mz;
 
 	if (!orig)
 		return;
 	*list = NULL;
 
 	init_indegree_slab(&indegree);
-	memset(&queue, '\0', sizeof(queue));
+	init_maze_slab(&maze);
+	memset(&queue_tips, '\0', sizeof(queue_tips));
 
 	switch (sort_order) {
-	default: /* REV_SORT_IN_GRAPH_ORDER */
-		queue.compare = NULL;
-		break;
-	case REV_SORT_BY_COMMIT_DATE:
-		queue.compare = compare_commits_by_commit_date;
+	default: 
+		queue_tips.compare = compare_commits_by_commit_date_rev;
 		break;
 	case REV_SORT_BY_AUTHOR_DATE:
 		init_author_date_slab(&author_date);
-		queue.compare = compare_commits_by_author_date;
-		queue.cb_data = &author_date;
+		queue_tips.compare = compare_commits_by_author_date_rev;
+		queue_tips.cb_data = &author_date;
 		break;
 	}
 
@@ -804,9 +857,10 @@ void sort_in_topological_order(struct commit_list **list, enum rev_sort_order so
 	for (next = orig; next; next = next->next) {
 		struct commit *commit = next->item;
 		*(indegree_slab_at(&indegree, commit)) = 1;
-		/* also record the author dates, if needed */
-		if (sort_order == REV_SORT_BY_AUTHOR_DATE)
-			record_author_date(&author_date, commit);
+		mz = xmalloc(sizeof(struct maze));
+		mz->ret = NULL;
+		mz->out = NULL;
+		*(maze_slab_at(&maze, commit)) = mz;
 	}
 
 	/* update the indegree */
@@ -832,51 +886,56 @@ void sort_in_topological_order(struct commit_list **list, enum rev_sort_order so
 	for (next = orig; next; next = next->next) {
 		struct commit *commit = next->item;
 
-		if (*(indegree_slab_at(&indegree, commit)) == 1)
-			prio_queue_put(&queue, commit);
+		if (*(indegree_slab_at(&indegree, commit)) == 1) {
+			/* also record the author dates, if needed */
+			if (sort_order == REV_SORT_BY_AUTHOR_DATE)
+				record_author_date(&author_date, commit);
+			prio_queue_put(&queue_tips, commit);
+		}
 	}
-
-	/*
-	 * This is unfortunate; the initial tips need to be shown
-	 * in the order given from the revision traversal machinery.
-	 */
-	if (sort_order == REV_SORT_IN_GRAPH_ORDER)
-		prio_queue_reverse(&queue);
 
 	/* We no longer need the commit list */
 	free_commit_list(orig);
 
 	pptr = list;
 	*list = NULL;
-	while ((commit = prio_queue_get(&queue)) != NULL) {
-		struct commit_list *parents;
 
-		for (parents = commit->parents; parents ; parents = parents->next) {
-			struct commit *parent = parents->item;
-			int *pi = indegree_slab_at(&indegree, parent);
-
-			if (!*pi)
+	while ((commit = prio_queue_get(&queue_tips)) != NULL) {
+		struct commit *prev_commit = NULL;
+		while (commit) {
+			mz = *(maze_slab_at(&maze, commit));
+			if (!prev_commit) {
+				/* either a new tip or 
+				 * after entering an already visited commit
+				 */
+			}
+			else if (!mz->out) {
+				/* happens only once for every commit
+				 * note that for tips RET is set to NULL
+				 */
+				mz->ret = prev_commit;
+			} 
+			else if (prev_commit != mz->out) {
+				/* entered an already visited commit
+				 * step back
+				 */
+				commit = prev_commit;
+				prev_commit = NULL;
 				continue;
-
-			/*
-			 * parents are only enqueued for emission
-			 * when all their children have been emitted thereby
-			 * guaranteeing topological order.
-			 */
-			if (--(*pi) == 1)
-				prio_queue_put(&queue, parent);
+			}
+			mz->out = get_next(commit, mz, &indegree);
+			if (mz->out == mz->ret) {
+				/* upon leaving a commit emit it */
+				*pptr = commit_list_insert(commit, pptr);
+			}
+			prev_commit = commit;
+			commit = mz->out;
 		}
-		/*
-		 * all children of commit have already been
-		 * emitted. we can emit it now.
-		 */
-		*(indegree_slab_at(&indegree, commit)) = 0;
-
-		pptr = &commit_list_insert(commit, pptr)->next;
 	}
 
 	clear_indegree_slab(&indegree);
-	clear_prio_queue(&queue);
+	clear_maze_slab(&maze);
+	clear_prio_queue(&queue_tips);
 	if (sort_order == REV_SORT_BY_AUTHOR_DATE)
 		clear_author_date_slab(&author_date);
 }

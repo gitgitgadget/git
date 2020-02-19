@@ -87,12 +87,12 @@ c3
 c2
 c1
 b4
-a3
-a2
-a1
 b3
 b2
 b1
+a3
+a2
+a1
 a0
 l2
 l1
@@ -105,15 +105,15 @@ l5
 l4
 l3
 a4
-b4
-a3
-a2
 c3
 c2
+c1
+b4
 b3
 b2
-c1
 b1
+a3
+a2
 a1
 a0
 l2
@@ -127,12 +127,12 @@ l5
 l4
 l3
 a4
-b4
 c3
 c2
+c1
+b4
 b3
 b2
-c1
 b1
 a3
 a2
@@ -205,12 +205,12 @@ c3
 c2
 c1
 b4
-a3
-a2
-a1
 b3
 b2
 b1
+a3
+a2
+a1
 a0
 l2
 EOF
@@ -224,12 +224,12 @@ c3
 c2
 c1
 b4
-a3
-a2
-a1
 b3
 b2
 b1
+a3
+a2
+a1
 a0
 l2
 EOF
@@ -237,10 +237,10 @@ EOF
 test_output_expect_success 'prune near topo' 'git rev-list --topo-order a4 ^c3' <<EOF
 a4
 b4
+b3
 a3
 a2
 a1
-b3
 EOF
 
 test_output_expect_success "head has no parent" 'git rev-list --topo-order  root' <<EOF
@@ -297,8 +297,8 @@ c3
 c2
 c1
 b4
-a3
-a2
+b3
+b2
 EOF
 
 test_output_expect_success "max-count 10 - non topo order" 'git rev-list --max-count=10 l5' <<EOF
@@ -376,12 +376,12 @@ c3
 c2
 c1
 b4
-a3
-a2
-a1
 b3
 b2
 b1
+a3
+a2
+a1
 a0
 l2
 l1
@@ -399,12 +399,12 @@ c3
 c2
 c1
 b4
-a3
-a2
-a1
 b3
 b2
 b1
+a3
+a2
+a1
 a0
 l2
 l1
@@ -428,12 +428,12 @@ c3
 c2
 c1
 b4
-a3
-a2
-a1
 b3
 b2
 b1
+a3
+a2
+a1
 a0
 l2
 l1
