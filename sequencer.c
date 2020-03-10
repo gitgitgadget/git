@@ -66,6 +66,16 @@ GIT_PATH_FUNC(rebase_path_dropped, "rebase-merge/dropped")
  */
 static GIT_PATH_FUNC(rebase_path_done, "rebase-merge/done")
 /*
+ * This file stores info of the commit at a pick before a pick-fixup/squash
+ * chain eg. for this series of commands
+ *               p1---p---f1---s---f....
+ * The commit info for HEAD corresponding to pick p1 will be stored in file
+ * here. Although the name suggests bad_fixup it is actually pick p that
+ * has merge conflicts with the base here and we want to avoid amending
+ * f1 onto p1 if p is skipped.
+ */
+static GIT_PATH_FUNC(rebase_path_avoid_bad_fixup, "rebase-merge/avoid-bad-fixup")
+/*
  * The file to keep track of how many commands were already processed (e.g.
  * for the prompt).
  */
