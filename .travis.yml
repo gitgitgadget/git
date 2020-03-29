@@ -32,15 +32,15 @@ matrix:
       services:
         - docker
       before_install:
-      script: ci/run-docker.sh linux32
-    - env: jobname=linux-musl-busybox
+      script: ci/run-docker.sh
+    - env: jobname=linux-musl
       os: linux
       compiler:
       addons:
       services:
         - docker
       before_install:
-      script: ci/run-docker.sh alpine
+      script: ci/run-docker.sh
     - env: jobname=StaticAnalysis
       os: linux
       compiler:

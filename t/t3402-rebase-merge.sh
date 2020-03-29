@@ -228,15 +228,15 @@ test_expect_success '--skip-cherry-pick-detection refrains from reading unneeded
 	git -C client rev-list --objects --all --missing=print >missing_list &&
 	MERGE_BASE_BLOB=$(git -C server rev-parse master^^:file.txt) &&
 	ADD_11_BLOB=$(git -C server rev-parse master^:file.txt) &&
-	grep "\\?$MERGE_BASE_BLOB" missing_list &&
-	grep "\\?$ADD_11_BLOB" missing_list &&
+	grep "[?]$MERGE_BASE_BLOB" missing_list &&
+	grep "[?]$ADD_11_BLOB" missing_list &&
 
 	git -C client rebase --merge --skip-cherry-pick-detection origin/master &&
 
 	# The blob from the merge base had to be fetched, but not "add 11"
 	git -C client rev-list --objects --all --missing=print >missing_list &&
-	! grep "\\?$MERGE_BASE_BLOB" missing_list &&
-	grep "\\?$ADD_11_BLOB" missing_list
+	! grep "[?]$MERGE_BASE_BLOB" missing_list &&
+	grep "[?]$ADD_11_BLOB" missing_list
 '
 
 test_done
