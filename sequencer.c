@@ -66,6 +66,16 @@ GIT_PATH_FUNC(rebase_path_dropped, "rebase-merge/dropped")
  */
 static GIT_PATH_FUNC(rebase_path_done, "rebase-merge/done")
 /*
+ * This file stores info of the commit at a pick before a pick-fixup/squash
+ * chain eg. for this series of commands
+ *               p1---p---f1---s---f....
+ * The commit info for HEAD corresponding to pick p1 will be stored in file
+ * here. Although the name suggests bad_fixup it is actually pick p that
+ * has merge conflicts with the base here and we want to avoid amending
+ * f1 onto p1 if p is skipped.
+ */
+static GIT_PATH_FUNC(rebase_path_avoid_bad_fixup, "rebase-merge/avoid-bad-fixup")
+/*
  * The file to keep track of how many commands were already processed (e.g.
  * for the prompt).
  */
@@ -3860,13 +3870,44 @@ static int pick_commits(struct repository *r,
 			}
 		}
 		if (item->command <= TODO_SQUASH) {
+			struct object_id head, previous_head;
+
+			res = 0;
+
 			if (is_rebase_i(opts))
 				setenv("GIT_REFLOG_ACTION", reflog_message(opts,
 					command_to_string(item->command), NULL),
 					1);
-			res = do_pick_commit(r, item->command, item->commit,
-					     opts, is_final_fixup(todo_list),
-					     &check_todo);
+
+			if (is_fixup(item->command)) {
+				struct strbuf buf = STRBUF_INIT;
+
+				if (read_oneliner(&buf, rebase_path_avoid_bad_fixup(), 1)) {
+					if (get_oid(buf.buf, &previous_head)) {
+						error(_("invalid file contents '%s' of '%s'"),
+							buf.buf, rebase_path_avoid_bad_fixup());
+						strbuf_release(&buf);
+					}
+					strbuf_release(&buf);
+					if (get_oid("HEAD", &head))
+						return error(_("could not read HEAD"));
+					if (oideq(&head, &previous_head))
+						res = error(_("commit to fix up was skipped")); /* reschedule */
+				}
+			} else if ((is_pick_or_similar(item->command)) &&
+				is_fixup(peek_command(todo_list, 1))) {
+				char hex[GIT_MAX_HEXSZ + 1];
+
+				if (get_oid("HEAD", &head))
+					return error(_("cannot read HEAD"));
+				oid_to_hex_r(hex, &head);
+				write_message(hex, the_hash_algo->hexsz, rebase_path_avoid_bad_fixup(), 0);
+			}
+
+			if (!res)
+				res = do_pick_commit(r, item->command, item->commit,
+						opts, is_final_fixup(todo_list),
+						&check_todo);
 			if (is_rebase_i(opts) && res < 0) {
 				/* Reschedule */
 				advise(_(rescheduled_advice),
