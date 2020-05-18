@@ -158,6 +158,7 @@ if {[tk windowingsystem] eq "aqua"} {
 
 set _appname {Git Gui}
 set _gitdir {}
+array set _gitdir_cache {}
 set _gitworktree {}
 set _isbare {}
 set _gitexec {}
@@ -197,12 +198,59 @@ proc appname {} {
 	return $_appname
 }
 
+proc prime_gitdir_cache {} {
+	global _gitdir _gitdir_cache
+
+	set gitdir_cmd [list git rev-parse --git-dir]
+
+	# `--git-path` is only supported since Git v2.5.0
+	if {[package vcompare $::_git_version 2.5.0] >= 0} {
+		# This list was generated from a typical startup as well as from
+		# grepping through Git GUI's source code.
+		set gitdir_keys [list \
+			CHERRY_PICK_HEAD FETCH_HEAD GITGUI_BCK GITGUI_EDITMSG \
+			GITGUI_MSG HEAD hooks hooks/prepare-commit-msg \
+			index.lock info info/exclude logs MERGE_HEAD MERGE_MSG \
+			MERGE_RR objects "objects/4\[0-1\]/*" \
+			"objects/4\[0-3\]/*" objects/info \
+			objects/info/alternates objects/pack packed-refs \
+			PREPARE_COMMIT_MSG rebase-merge/head-name remotes \
+			rr-cache rr-cache/MERGE_RR SQUASH_MSG \
+		]
+
+		foreach key $gitdir_keys {
+			lappend gitdir_cmd --git-path $key
+		}
+	}
+
+	set i -1
+	foreach path [split [eval $gitdir_cmd] "\n"] {
+		if {$i eq -1} {
+			set _gitdir $path
+		} else {
+			set _gitdir_cache([lindex $gitdir_keys $i]) $path
+		}
+		incr i
+	}
+}
+
 proc gitdir {args} {
-	global _gitdir
+	global _gitdir _gitdir_cache
+
 	if {$args eq {}} {
 		return $_gitdir
 	}
-	return [eval [list file join $_gitdir] $args]
+
+	set args [eval [list file join] $args]
+	if {![info exists _gitdir_cache($args)]} {
+		if {[package vcompare $::_git_version 2.5.0] >= 0} {
+			set _gitdir_cache($args) [git rev-parse --git-path $args]
+		} else {
+			set _gitdir_cache($args) [file join $_gitdir $args]
+		}
+	}
+
+	return $_gitdir_cache($args)
 }
 
 proc gitexec {args} {
@@ -1243,7 +1291,7 @@ if {[catch {
 	&& [catch {
 		# beware that from the .git dir this sets _gitdir to .
 		# and _prefix to the empty string
-		set _gitdir [git rev-parse --git-dir]
+		prime_gitdir_cache
 		set _prefix [git rev-parse --show-prefix]
 	} err]} {
 	load_config 1
@@ -1454,9 +1502,15 @@ proc rescan {after {honor_trustmtime 1}} {
 	global HEAD PARENT MERGE_HEAD commit_type
 	global ui_index ui_workdir ui_comm
 	global rescan_active file_states
-	global repo_config
+	global repo_config _gitdir_cache
 
 	if {$rescan_active > 0 || ![lock_index read]} return
+
+	# Only re-prime gitdir cache on a full rescan
+	if {$after ne "ui_ready"} {
+		array unset _gitdir_cache
+		prime_gitdir_cache
+	}
 
 	repository_state newType newHEAD newMERGE_HEAD
 	if {[string match amend* $commit_type]
