@@ -1908,24 +1908,24 @@ int peel_ref(const char *refname, struct object_id *oid)
 
 int refs_create_symref(struct ref_store *refs,
 		       const char *ref_target,
-		       const char *refs_heads_master,
+		       const char *refs_heads_main,
 		       const char *logmsg)
 {
 	char *msg;
 	int retval;
 
 	msg = normalize_reflog_message(logmsg);
-	retval = refs->be->create_symref(refs, ref_target, refs_heads_master,
+	retval = refs->be->create_symref(refs, ref_target, refs_heads_main,
 					 msg);
 	free(msg);
 	return retval;
 }
 
-int create_symref(const char *ref_target, const char *refs_heads_master,
+int create_symref(const char *ref_target, const char *refs_heads_main,
 		  const char *logmsg)
 {
 	return refs_create_symref(get_main_ref_store(the_repository), ref_target,
-				  refs_heads_master, logmsg);
+				  refs_heads_main, logmsg);
 }
 
 int ref_update_reject_duplicates(struct string_list *refnames,
