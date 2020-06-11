@@ -1205,12 +1205,12 @@ int refs_update_ref(struct ref_store *refs, const char *msg,
 	return 0;
 }
 
-int update_ref(const char *msg, const char *refname,
+int update_ref(struct repository *r, const char *msg, const char *refname,
 	       const struct object_id *new_oid,
 	       const struct object_id *old_oid,
 	       unsigned int flags, enum action_on_err onerr)
 {
-	return refs_update_ref(get_main_ref_store(the_repository), msg, refname, new_oid,
+	return refs_update_ref(get_main_ref_store(r), msg, refname, new_oid,
 			       old_oid, flags, onerr);
 }
 

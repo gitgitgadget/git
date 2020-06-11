@@ -6870,7 +6870,7 @@ size_t fill_textconv(struct repository *r,
 		 * Since generating a cache entry is the slow path anyway,
 		 * this extra overhead probably isn't a big deal.
 		 */
-		notes_cache_write(driver->textconv_cache);
+		notes_cache_write(r, driver->textconv_cache);
 	}
 
 	return size;

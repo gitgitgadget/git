@@ -48,7 +48,7 @@ void notes_cache_init(struct repository *r, struct notes_cache *c,
 	strbuf_release(&ref);
 }
 
-int notes_cache_write(struct notes_cache *c)
+int notes_cache_write(struct repository *r, struct notes_cache *c)
 {
 	struct object_id tree_oid, commit_oid;
 
@@ -63,7 +63,7 @@ int notes_cache_write(struct notes_cache *c)
 	if (commit_tree(c->validity, strlen(c->validity), &tree_oid, NULL,
 			&commit_oid, NULL, NULL) < 0)
 		return -1;
-	if (update_ref("update notes cache", c->tree.update_ref, &commit_oid,
+	if (update_ref(r, "update notes cache", c->tree.update_ref, &commit_oid,
 		       NULL, 0, UPDATE_REFS_QUIET_ON_ERR) < 0)
 		return -1;
 

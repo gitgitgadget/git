@@ -1426,9 +1426,9 @@ out:
 	return res;
 }
 
-static int write_rebase_head(struct object_id *oid)
+static int write_rebase_head(struct repository *r, struct object_id *oid)
 {
-	if (update_ref("rebase", "REBASE_HEAD", oid,
+	if (update_ref(r, "rebase", "REBASE_HEAD", oid,
 		       NULL, REF_NO_DEREF, UPDATE_REFS_MSG_ON_ERR))
 		return error(_("could not update %s"), "REBASE_HEAD");
 
@@ -1465,7 +1465,7 @@ static int do_commit(struct repository *r,
 	}
 	if (res == 1) {
 		if (is_rebase_i(opts) && oid)
-			if (write_rebase_head(oid))
+			if (write_rebase_head(r, oid))
 			    return -1;
 		return run_git_commit(r, msg_file, opts, flags);
 	}
@@ -1939,11 +1939,11 @@ static int do_pick_commit(struct repository *r,
 	if ((command == TODO_PICK || command == TODO_REWORD ||
 	     command == TODO_EDIT) && !opts->no_commit &&
 	    (res == 0 || res == 1) &&
-	    update_ref(NULL, "CHERRY_PICK_HEAD", &commit->object.oid, NULL,
+	    update_ref(r, NULL, "CHERRY_PICK_HEAD", &commit->object.oid, NULL,
 		       REF_NO_DEREF, UPDATE_REFS_MSG_ON_ERR))
 		res = -1;
 	if (command == TODO_REVERT && ((opts->no_commit && res == 0) || res == 1) &&
-	    update_ref(NULL, "REVERT_HEAD", &commit->object.oid, NULL,
+	    update_ref(r, NULL, "REVERT_HEAD", &commit->object.oid, NULL,
 		       REF_NO_DEREF, UPDATE_REFS_MSG_ON_ERR))
 		res = -1;
 
@@ -3018,7 +3018,7 @@ static int make_patch(struct repository *r,
 	p = short_commit_name(commit);
 	if (write_message(p, strlen(p), rebase_path_stopped_sha(), 1) < 0)
 		return -1;
-	res |= write_rebase_head(&commit->object.oid);
+	res |= write_rebase_head(r, &commit->object.oid);
 
 	strbuf_addf(&buf, "%s/patch", get_dir(opts));
 	memset(&log_tree_opt, 0, sizeof(log_tree_opt));
@@ -3337,8 +3337,8 @@ static int do_reset(struct repository *r,
 	free((void *)desc.buffer);
 
 	if (!ret)
-		ret = update_ref(reflog_message(opts, "reset", "'%.*s'",
-						len, name), "HEAD", &oid,
+		ret = update_ref(r, reflog_message(opts, "reset", "'%.*s'",
+						   len, name), "HEAD", &oid,
 				 NULL, 0, UPDATE_REFS_MSG_ON_ERR);
 
 	strbuf_release(&ref_name);
@@ -3862,7 +3862,8 @@ static int checkout_onto(struct repository *r, struct replay_opts *opts,
 		return error(_("could not detach HEAD"));
 	}
 
-	return update_ref(NULL, "ORIG_HEAD", &oid, NULL, 0, UPDATE_REFS_MSG_ON_ERR);
+	return update_ref(r, NULL, "ORIG_HEAD", &oid, NULL, 0,
+			  UPDATE_REFS_MSG_ON_ERR);
 }
 
 static int stopped_at_head(struct repository *r)
@@ -4113,7 +4114,7 @@ cleanup_head_ref:
 			}
 			msg = reflog_message(opts, "finish", "%s onto %s",
 				head_ref.buf, buf.buf);
-			if (update_ref(msg, head_ref.buf, &head, &orig,
+			if (update_ref(r, msg, head_ref.buf, &head, &orig,
 				       REF_NO_DEREF, UPDATE_REFS_MSG_ON_ERR)) {
 				res = error(_("could not update %s"),
 					head_ref.buf);

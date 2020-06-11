@@ -554,7 +554,8 @@ int cmd_update_ref(int argc, const char **argv, const char *prefix)
 				  (oldval && !is_null_oid(&oldoid)) ? &oldoid : NULL,
 				  default_flags);
 	else
-		return update_ref(msg, refname, &oid, oldval ? &oldoid : NULL,
+		return update_ref(the_repository, msg, refname, &oid,
+				  oldval ? &oldoid : NULL,
 				  default_flags | create_reflog_flag,
 				  UPDATE_REFS_DIE_ON_ERR);
 }

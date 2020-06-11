@@ -222,7 +222,7 @@ static int bisect_write(const char *state, const char *rev,
 		goto finish;
 	}
 
-	if (update_ref(NULL, tag.buf, &oid, NULL, 0,
+	if (update_ref(the_repository, NULL, tag.buf, &oid, NULL, 0,
 		       UPDATE_REFS_MSG_ON_ERR)) {
 		res = -1;
 		goto finish;
@@ -582,8 +582,8 @@ static int bisect_start(struct bisect_terms *terms, int no_checkout,
 			res = error(_("invalid ref: '%s'"), start_head.buf);
 			goto finish;
 		}
-		if (update_ref(NULL, "BISECT_HEAD", &oid, NULL, 0,
-			       UPDATE_REFS_MSG_ON_ERR)) {
+		if (update_ref(the_repository, NULL, "BISECT_HEAD", &oid, NULL,
+			       0, UPDATE_REFS_MSG_ON_ERR)) {
 			res = -1;
 			goto finish;
 		}

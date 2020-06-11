@@ -792,7 +792,7 @@ static int do_store_stash(const struct object_id *w_commit, const char *stash_ms
 	if (!stash_msg)
 		stash_msg = "Created via \"git stash store\".";
 
-	if (update_ref(stash_msg, ref_stash, w_commit, NULL,
+	if (update_ref(the_repository, stash_msg, ref_stash, w_commit, NULL,
 		       REF_FORCE_CREATE_REFLOG,
 		       quiet ? UPDATE_REFS_QUIET_ON_ERR :
 		       UPDATE_REFS_MSG_ON_ERR)) {

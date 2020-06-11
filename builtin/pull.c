@@ -625,7 +625,8 @@ static int pull_into_void(const struct object_id *merge_head,
 				  merge_head, 0))
 		return 1;
 
-	if (update_ref("initial pull", "HEAD", merge_head, curr_head, 0, UPDATE_REFS_DIE_ON_ERR))
+	if (update_ref(the_repository, "initial pull", "HEAD", merge_head,
+		       curr_head, 0, UPDATE_REFS_DIE_ON_ERR))
 		return 1;
 
 	return 0;

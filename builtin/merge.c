@@ -450,8 +450,8 @@ static void finish(struct commit *head_commit,
 		if (verbosity >= 0 && !merge_msg.len)
 			printf(_("No merge message -- not updating HEAD\n"));
 		else {
-			update_ref(reflog_message.buf, "HEAD", new_head, head,
-				   0, UPDATE_REFS_DIE_ON_ERR);
+			update_ref(the_repository, reflog_message.buf, "HEAD",
+				   new_head, head, 0, UPDATE_REFS_DIE_ON_ERR);
 			/*
 			 * We ignore errors in 'gc --auto', since the
 			 * user should see them.
@@ -1423,8 +1423,8 @@ int cmd_merge(int argc, const char **argv, const char *prefix)
 
 		remote_head_oid = &remoteheads->item->object.oid;
 		read_empty(remote_head_oid, 0);
-		update_ref("initial pull", "HEAD", remote_head_oid, NULL, 0,
-			   UPDATE_REFS_DIE_ON_ERR);
+		update_ref(the_repository, "initial pull", "HEAD",
+			   remote_head_oid, NULL, 0, UPDATE_REFS_DIE_ON_ERR);
 		goto done;
 	}
 
@@ -1490,7 +1490,7 @@ int cmd_merge(int argc, const char **argv, const char *prefix)
 		free(list);
 	}
 
-	update_ref("updating ORIG_HEAD", "ORIG_HEAD",
+	update_ref(the_repository, "updating ORIG_HEAD", "ORIG_HEAD",
 		   &head_commit->object.oid, NULL, 0, UPDATE_REFS_DIE_ON_ERR);
 
 	if (remoteheads && !common) {
