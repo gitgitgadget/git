@@ -276,7 +276,8 @@ struct branch {
 struct branch *branch_get(const char *name);
 const char *remote_for_branch(struct branch *branch, int *explicit);
 const char *pushremote_for_branch(struct branch *branch, int *explicit);
-const char *remote_ref_for_branch(struct branch *branch, int for_push);
+const char *remote_ref_for_branch(struct repository *r, struct branch *branch,
+				  int for_push);
 
 /* returns true if the given branch has merge configuration given. */
 int branch_has_merge_config(struct branch *branch);
@@ -292,7 +293,8 @@ int branch_merge_matches(struct branch *, int n, const char *);
  * message is recorded there (if the function does not return NULL, then
  * `err` is not touched).
  */
-const char *branch_get_upstream(struct branch *branch, struct strbuf *err);
+const char *branch_get_upstream(struct repository *r, struct branch *branch,
+				struct strbuf *err);
 
 /**
  * Return the tracking branch that corresponds to the ref we would push to
@@ -300,7 +302,8 @@ const char *branch_get_upstream(struct branch *branch, struct strbuf *err);
  *
  * The return value and `err` conventions match those of `branch_get_upstream`.
  */
-const char *branch_get_push(struct branch *branch, struct strbuf *err);
+const char *branch_get_push(struct repository *r, struct branch *branch,
+			    struct strbuf *err);
 
 /* Flags to match_refs. */
 enum match_refs_flags {
@@ -319,11 +322,12 @@ enum ahead_behind_flags {
 };
 
 /* Reporting of tracking info */
-int stat_tracking_info(struct branch *branch, int *num_ours, int *num_theirs,
+int stat_tracking_info(struct repository *r, struct branch *branch,
+		       int *num_ours, int *num_theirs,
 		       const char **upstream_name, int for_push,
 		       enum ahead_behind_flags abf);
-int format_tracking_info(struct branch *branch, struct strbuf *sb,
-			 enum ahead_behind_flags abf);
+int format_tracking_info(struct repository *r, struct branch *branch,
+			 struct strbuf *sb, enum ahead_behind_flags abf);
 
 struct ref *get_local_heads(void);
 /*

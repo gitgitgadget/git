@@ -336,7 +336,7 @@ static int bisect_next_check(const struct bisect_terms *terms,
 	char *bad_ref = xstrfmt("refs/bisect/%s", terms->term_bad);
 	char *good_glob = xstrfmt("%s-*", terms->term_good);
 
-	if (ref_exists(bad_ref))
+	if (ref_exists(the_repository, bad_ref))
 		missing_bad = 0;
 
 	for_each_glob_ref_in(mark_good, good_glob, "refs/bisect/",

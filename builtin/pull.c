@@ -736,7 +736,7 @@ static const char *get_upstream_branch(const char *remote)
 	if (strcmp(curr_branch_remote, rm->name))
 		return NULL;
 
-	return branch_get_upstream(curr_branch, NULL);
+	return branch_get_upstream(the_repository, curr_branch, NULL);
 }
 
 /**

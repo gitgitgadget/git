@@ -113,16 +113,18 @@ void ref_array_clear(struct ref_array *array);
 /*  Used to verify if the given format is correct and to parse out the used atoms */
 int verify_ref_format(struct ref_format *format);
 /*  Sort the given ref_array as per the ref_sorting provided */
-void ref_array_sort(struct ref_sorting *sort, struct ref_array *array);
+void ref_array_sort(struct repository *r, struct ref_sorting *sort,
+		    struct ref_array *array);
 /*  Set the ignore_case flag for all elements of a sorting list */
 void ref_sorting_icase_all(struct ref_sorting *sorting, int flag);
 /*  Based on the given format and quote_style, fill the strbuf */
-int format_ref_array_item(struct ref_array_item *info,
+int format_ref_array_item(struct repository *r, struct ref_array_item *info,
 			  const struct ref_format *format,
 			  struct strbuf *final_buf,
 			  struct strbuf *error_buf);
 /*  Print the ref using the given format and quote_style */
-void show_ref_array_item(struct ref_array_item *info, const struct ref_format *format);
+void show_ref_array_item(struct repository *r, struct ref_array_item *info,
+			 const struct ref_format *format);
 /*  Parse a single sort specifier and add it to the list */
 void parse_ref_sorting(struct ref_sorting **sorting_tail, const char *atom);
 /*  Callback function for parsing the sort option */
@@ -140,7 +142,8 @@ void setup_ref_filter_porcelain_msg(void);
  * Print a single ref, outside of any ref-filter. Note that the
  * name must be a fully qualified refname.
  */
-void pretty_print_ref(const char *name, const struct object_id *oid,
+void pretty_print_ref(struct repository *r, const char *name,
+		      const struct object_id *oid,
 		      const struct ref_format *format);
 
 /*

@@ -1800,8 +1800,8 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 			struct branch *branch;
 
 			branch = branch_get(NULL);
-			options.upstream_name = branch_get_upstream(branch,
-								    NULL);
+			options.upstream_name = branch_get_upstream(
+				the_repository, branch, NULL);
 			if (!options.upstream_name)
 				error_on_missing_default_upstream();
 			if (fork_point < 0)

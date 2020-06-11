@@ -1453,7 +1453,7 @@ static const char *update(struct command *cmd, struct shallow_info *si)
 		struct strbuf err = STRBUF_INIT;
 		if (!parse_object(the_repository, old_oid)) {
 			old_oid = NULL;
-			if (ref_exists(name)) {
+			if (ref_exists(the_repository, name)) {
 				rp_warning("Allowing deletion of corrupt ref.");
 			} else {
 				rp_warning("Deleting a non-existent ref.");

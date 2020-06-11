@@ -832,7 +832,8 @@ static void report_tracking(struct branch_info *new_branch_info)
 	struct strbuf sb = STRBUF_INIT;
 	struct branch *branch = branch_get(new_branch_info->name);
 
-	if (!format_tracking_info(branch, &sb, AHEAD_BEHIND_FULL))
+	if (!format_tracking_info(the_repository, branch, &sb,
+				  AHEAD_BEHIND_FULL))
 		return;
 	fputs(sb.buf, stdout);
 	strbuf_release(&sb);
@@ -923,7 +924,9 @@ static void update_refs_for_switch(const struct checkout_opts *opts,
 			}
 		}
 		if (old_branch_info->path && old_branch_info->name) {
-			if (!ref_exists(old_branch_info->path) && reflog_exists(old_branch_info->path))
+			if (!ref_exists(the_repository,
+					old_branch_info->path) &&
+			    reflog_exists(old_branch_info->path))
 				delete_reflog(old_branch_info->path);
 		}
 	}
@@ -1728,10 +1731,11 @@ static int checkout_main(int argc, const char **argv, const char *prefix,
 		struct strbuf buf = STRBUF_INIT;
 
 		if (opts->new_branch_force)
-			opts->branch_exists = validate_branchname(opts->new_branch, &buf);
+			opts->branch_exists = validate_branchname(
+				the_repository, opts->new_branch, &buf);
 		else
-			opts->branch_exists =
-				validate_new_branchname(opts->new_branch, &buf, 0);
+			opts->branch_exists = validate_new_branchname(
+				the_repository, opts->new_branch, &buf, 0);
 		strbuf_release(&buf);
 	}
 

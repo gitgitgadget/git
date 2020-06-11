@@ -1469,7 +1469,8 @@ static int interpret_branch_mark(struct repository *r,
 				 const char *name, int namelen,
 				 int at, struct strbuf *buf,
 				 int (*get_mark)(const char *, int),
-				 const char *(*get_data)(struct branch *,
+				 const char *(*get_data)(struct repository *,
+							 struct branch *,
 							 struct strbuf *),
 				 unsigned allowed)
 {
@@ -1492,7 +1493,7 @@ static int interpret_branch_mark(struct repository *r,
 	} else
 		branch = branch_get(NULL);
 
-	value = get_data(branch, &err);
+	value = get_data(r, branch, &err);
 	if (!value)
 		die("%s", err.buf);
 

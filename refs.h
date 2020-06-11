@@ -105,7 +105,7 @@ int refs_verify_refname_available(struct ref_store *refs,
 				  const struct string_list *skip,
 				  struct strbuf *err);
 
-int ref_exists(const char *refname);
+int ref_exists(struct repository *r, const char *refname);
 
 int should_autocreate_reflog(const char *refname);
 

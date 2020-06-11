@@ -183,12 +183,13 @@ int read_branch_desc(struct strbuf *buf, const char *branch_name)
  * Return 1 if the named branch already exists; return 0 otherwise.
  * Fill ref with the full refname for the branch.
  */
-int validate_branchname(const char *name, struct strbuf *ref)
+int validate_branchname(struct repository *r, const char *name,
+			struct strbuf *ref)
 {
 	if (strbuf_check_branch_ref(ref, name))
 		die(_("'%s' is not a valid branch name."), name);
 
-	return ref_exists(ref->buf);
+	return ref_exists(r, ref->buf);
 }
 
 /*
@@ -197,11 +198,12 @@ int validate_branchname(const char *name, struct strbuf *ref)
  * Return 1 if the named branch already exists; return 0 otherwise.
  * Fill ref with the full refname for the branch.
  */
-int validate_new_branchname(const char *name, struct strbuf *ref, int force)
+int validate_new_branchname(struct repository *r, const char *name,
+			    struct strbuf *ref, int force)
 {
 	const char *head;
 
-	if (!validate_branchname(name, ref))
+	if (!validate_branchname(r, name, ref))
 		return 0;
 
 	if (!force)
@@ -260,8 +262,8 @@ void create_branch(struct repository *r,
 		explicit_tracking = 1;
 
 	if ((track == BRANCH_TRACK_OVERRIDE || clobber_head_ok)
-	    ? validate_branchname(name, &ref)
-	    : validate_new_branchname(name, &ref, force)) {
+	    ? validate_branchname(r, name, &ref)
+	    : validate_new_branchname(r, name, &ref, force)) {
 		if (!force)
 			dont_change_ref = 1;
 		else

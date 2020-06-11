@@ -316,9 +316,9 @@ static int refs_ref_exists(struct ref_store *refs, const char *refname)
 	return !!refs_resolve_ref_unsafe(refs, refname, RESOLVE_REF_READING, NULL, NULL);
 }
 
-int ref_exists(const char *refname)
+int ref_exists(struct repository *r, const char *refname)
 {
-	return refs_ref_exists(get_main_ref_store(the_repository), refname);
+	return refs_ref_exists(get_main_ref_store(r), refname);
 }
 
 static int filter_refs(const char *refname, const struct object_id *oid,

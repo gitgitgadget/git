@@ -157,7 +157,7 @@ static int get_stash_info(struct stash_info *info, int argc, const char **argv)
 
 	strbuf_init(&info->revision, 0);
 	if (!commit) {
-		if (!ref_exists(ref_stash)) {
+		if (!ref_exists(the_repository, ref_stash)) {
 			free_stash_info(info);
 			fprintf_ln(stderr, _("No stash entries found."));
 			return -1;
@@ -688,7 +688,7 @@ static int list_stash(int argc, const char **argv, const char *prefix)
 			     git_stash_list_usage,
 			     PARSE_OPT_KEEP_UNKNOWN);
 
-	if (!ref_exists(ref_stash))
+	if (!ref_exists(the_repository, ref_stash))
 		return 0;
 
 	cp.git_cmd = 1;
