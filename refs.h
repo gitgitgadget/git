@@ -414,7 +414,7 @@ int refs_delete_ref(struct ref_store *refs, const char *msg,
 		    const char *refname,
 		    const struct object_id *old_oid,
 		    unsigned int flags);
-int delete_ref(const char *msg, const char *refname,
+int delete_ref(struct repository *r, const char *msg, const char *refname,
 	       const struct object_id *old_oid, unsigned int flags);
 
 /*

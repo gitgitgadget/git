@@ -429,9 +429,9 @@ int transport_refs_pushed(struct ref *ref)
 	return 0;
 }
 
-static void update_tracking_ref(struct remote *remote, char *refname,
-				struct object_id *new_oid, int deletion,
-				int verbose)
+static void update_tracking_ref(struct repository *r, struct remote *remote,
+				char *refname, struct object_id *new_oid,
+				int deletion, int verbose)
 {
 	struct refspec_item rs;
 
@@ -440,11 +440,11 @@ static void update_tracking_ref(struct remote *remote, char *refname,
 	if (!remote_find_tracking(remote, &rs)) {
 		if (verbose)
 			fprintf(stderr, "updating local tracking ref '%s'\n", rs.dst);
-		if (deletion)
-			delete_ref(NULL, rs.dst, NULL, 0);
+		if (ref->deletion)
+			delete_ref(r, NULL, rs.dst, NULL, 0);
 		else
-			update_ref("update by push", rs.dst, new_oid,
-				NULL, 0, 0);
+			update_ref("update by push", rs.dst, &ref->new_oid,
+				   NULL, 0, 0);
 		free(rs.dst);
 	}
 }
@@ -1335,7 +1335,7 @@ int transport_push(struct repository *r,
 			       TRANSPORT_RECURSE_SUBMODULES_ONLY))) {
 			struct ref *ref;
 			for (ref = remote_refs; ref; ref = ref->next)
-				transport_update_tracking_ref(transport->remote, ref, verbose);
+				transport_update_tracking_ref(r, transport->remote, ref, verbose);
 		}
 
 		if (porcelain && !push_ret)

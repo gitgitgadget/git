@@ -762,7 +762,8 @@ static int mv(int argc, const char **argv)
 		read_ref_full(item->string, RESOLVE_REF_READING, NULL, &flag);
 		if (!(flag & REF_ISSYMREF))
 			continue;
-		if (delete_ref(NULL, item->string, NULL, REF_NO_DEREF))
+		if (delete_ref(the_repository, NULL, item->string, NULL,
+			       REF_NO_DEREF))
 			die(_("deleting '%s' failed"), item->string);
 	}
 	for (i = 0; i < remote_branches.nr; i++) {
@@ -1343,7 +1344,8 @@ static int set_head(int argc, const char **argv)
 			head_name = xstrdup(states.heads.items[0].string);
 		free_remote_ref_states(&states);
 	} else if (opt_d && !opt_a && argc == 1) {
-		if (delete_ref(NULL, buf.buf, NULL, REF_NO_DEREF))
+		if (delete_ref(the_repository, NULL, buf.buf, NULL,
+			       REF_NO_DEREF))
 			result |= error(_("Could not delete %s"), buf.buf);
 	} else
 		usage_with_options(builtin_remote_sethead_usage, options);

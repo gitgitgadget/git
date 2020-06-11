@@ -208,7 +208,7 @@ static int do_clear_stash(void)
 	if (get_oid(ref_stash, &obj))
 		return 0;
 
-	return delete_ref(NULL, ref_stash, &obj, 0);
+	return delete_ref(the_repository, NULL, ref_stash, &obj, 0);
 }
 
 static int clear_stash(int argc, const char **argv, const char *prefix)

@@ -100,7 +100,7 @@ static int for_each_tag_name(const char **argv, each_tag_name_fn fn,
 static int delete_tag(const char *name, const char *ref,
 		      const struct object_id *oid, const void *cb_data)
 {
-	if (delete_ref(NULL, ref, oid, 0))
+	if (delete_ref(the_repository, NULL, ref, oid, 0))
 		return 1;
 	printf(_("Deleted tag '%s' (was %s)\n"), name,
 	       find_unique_abbrev(oid, DEFAULT_ABBREV));

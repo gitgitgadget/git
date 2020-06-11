@@ -550,7 +550,7 @@ int cmd_update_ref(int argc, const char **argv, const char *prefix)
 		 * For purposes of backwards compatibility, we treat
 		 * NULL_SHA1 as "don't care" here:
 		 */
-		return delete_ref(msg, refname,
+		return delete_ref(the_repository, msg, refname,
 				  (oldval && !is_null_oid(&oldoid)) ? &oldoid : NULL,
 				  default_flags);
 	else

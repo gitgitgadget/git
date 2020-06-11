@@ -281,7 +281,7 @@ static const char *gpg_sign_opt_quoted(struct replay_opts *opts)
 	return buf.buf;
 }
 
-int sequencer_remove_state(struct replay_opts *opts)
+int sequencer_remove_state(struct repository *r, struct replay_opts *opts)
 {
 	struct strbuf buf = STRBUF_INIT;
 	int i, ret = 0;
@@ -293,7 +293,7 @@ int sequencer_remove_state(struct replay_opts *opts)
 			char *eol = strchr(p, '\n');
 			if (eol)
 				*eol = '\0';
-			if (delete_ref("(rebase) cleanup", p, NULL, 0) < 0) {
+			if (delete_ref(r, "(rebase) cleanup", p, NULL, 0) < 0) {
 				warning(_("could not delete '%s'"), p);
 				ret = -1;
 			}
@@ -2325,7 +2325,7 @@ void sequencer_post_commit_cleanup(struct repository *r, int verbose)
 	if (!have_finished_the_last_pick())
 		return;
 
-	sequencer_remove_state(&opts);
+	sequencer_remove_state(r, &opts);
 }
 
 static void todo_list_write_total_nr(struct todo_list *todo_list)
@@ -2833,7 +2833,7 @@ int sequencer_rollback(struct repository *r, struct replay_opts *opts)
 	if (reset_merge(&oid))
 		goto fail;
 	strbuf_release(&buf);
-	return sequencer_remove_state(opts);
+	return sequencer_remove_state(r, opts);
 fail:
 	strbuf_release(&buf);
 	return -1;
@@ -3858,7 +3858,7 @@ static int checkout_onto(struct repository *r, struct replay_opts *opts,
 
 	if (run_git_checkout(r, opts, oid_to_hex(onto), action)) {
 		apply_autostash(rebase_path_autostash());
-		sequencer_remove_state(opts);
+		sequencer_remove_state(r, opts);
 		return error(_("could not detach HEAD"));
 	}
 
@@ -3938,7 +3938,7 @@ static int pick_commits(struct repository *r,
 			unlink(rebase_path_stopped_sha());
 			unlink(rebase_path_amend());
 			unlink(git_path_merge_head(r));
-			delete_ref(NULL, "REBASE_HEAD", NULL, REF_NO_DEREF);
+			delete_ref(r, NULL, "REBASE_HEAD", NULL, REF_NO_DEREF);
 
 			if (item->command == TODO_BREAK) {
 				if (!opts->verbose)
@@ -4194,7 +4194,7 @@ cleanup_head_ref:
 	 * Sequence of picks finished successfully; cleanup by
 	 * removing the .git/sequencer directory
 	 */
-	return sequencer_remove_state(opts);
+	return sequencer_remove_state(r, opts);
 }
 
 static int continue_single_pick(struct repository *r)
@@ -5201,7 +5201,7 @@ int complete_action(struct repository *r, struct replay_opts *opts, unsigned fla
 
 	if (count_commands(todo_list) == 0) {
 		apply_autostash(rebase_path_autostash());
-		sequencer_remove_state(opts);
+		sequencer_remove_state(r, opts);
 
 		return error(_("nothing to do"));
 	}
@@ -5212,12 +5212,12 @@ int complete_action(struct repository *r, struct replay_opts *opts, unsigned fla
 		return -1;
 	else if (res == -2) {
 		apply_autostash(rebase_path_autostash());
-		sequencer_remove_state(opts);
+		sequencer_remove_state(r, opts);
 
 		return -1;
 	} else if (res == -3) {
 		apply_autostash(rebase_path_autostash());
-		sequencer_remove_state(opts);
+		sequencer_remove_state(r, opts);
 		todo_list_release(&new_todo);
 
 		return error(_("nothing to do"));

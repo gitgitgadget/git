@@ -316,7 +316,8 @@ int cmd_send_pack(int argc, const char **argv, const char *prefix)
 	if (!args.dry_run && remote) {
 		struct ref *ref;
 		for (ref = remote_refs; ref; ref = ref->next)
-			transport_update_tracking_ref(remote, ref, args.verbose);
+			transport_update_tracking_ref(the_repository, remote,
+						      ref, args.verbose);
 	}
 
 	if (!ret && !transport_refs_pushed(remote_refs))

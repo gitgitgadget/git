@@ -107,7 +107,7 @@ reset_head_refs:
 			update_ref(reflog_orig_head, "ORIG_HEAD", orig,
 				   old_orig, 0, UPDATE_REFS_MSG_ON_ERR);
 		} else if (old_orig)
-			delete_ref(NULL, "ORIG_HEAD", old_orig, 0);
+			delete_ref(r, NULL, "ORIG_HEAD", old_orig, 0);
 	}
 
 	if (!reflog_head) {

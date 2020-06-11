@@ -1613,7 +1613,7 @@ static int update_branch(struct branch *b)
 
 	if (is_null_oid(&b->oid)) {
 		if (b->delete)
-			delete_ref(NULL, b->name, NULL, 0);
+			delete_ref(the_repository, NULL, b->name, NULL, 0);
 		return 0;
 	}
 	if (read_ref(b->name, &old_oid))

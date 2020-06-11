@@ -136,7 +136,7 @@ static int for_each_replace_name(const char **argv, each_replace_name_fn fn)
 static int delete_replace_ref(const char *name, const char *ref,
 			      const struct object_id *oid)
 {
-	if (delete_ref(NULL, ref, oid, 0))
+	if (delete_ref(the_repository, NULL, ref, oid, 0))
 		return 1;
 	printf_ln(_("Deleted replace ref '%s'"), name);
 	return 0;

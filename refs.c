@@ -863,11 +863,11 @@ int refs_delete_ref(struct ref_store *refs, const char *msg,
 	return 0;
 }
 
-int delete_ref(const char *msg, const char *refname,
+int delete_ref(struct repository *r, const char *msg, const char *refname,
 	       const struct object_id *old_oid, unsigned int flags)
 {
-	return refs_delete_ref(get_main_ref_store(the_repository), msg, refname,
-			       old_oid, flags);
+	return refs_delete_ref(get_main_ref_store(r), msg, refname, old_oid,
+			       flags);
 }
 
 void copy_reflog_msg(struct strbuf *sb, const char *msg)

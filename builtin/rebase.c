@@ -724,7 +724,7 @@ static int finish_rebase(struct rebase_options *opts)
 	struct strbuf dir = STRBUF_INIT;
 	int ret = 0;
 
-	delete_ref(NULL, "REBASE_HEAD", NULL, REF_NO_DEREF);
+	delete_ref(the_repository, NULL, "REBASE_HEAD", NULL, REF_NO_DEREF);
 	apply_autostash(state_dir_path("autostash", opts));
 	close_object_store(the_repository->objects);
 	/*
@@ -736,7 +736,7 @@ static int finish_rebase(struct rebase_options *opts)
 		struct replay_opts replay = REPLAY_OPTS_INIT;
 
 		replay.action = REPLAY_INTERACTIVE_REBASE;
-		ret = sequencer_remove_state(&replay);
+		ret = sequencer_remove_state(the_repository, &replay);
 	} else {
 		strbuf_addstr(&dir, opts->state_dir);
 		if (remove_dir_recursively(&dir, 0))
@@ -1573,7 +1573,7 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 			struct replay_opts replay = REPLAY_OPTS_INIT;
 
 			replay.action = REPLAY_INTERACTIVE_REBASE;
-			ret = !!sequencer_remove_state(&replay);
+			ret = !!sequencer_remove_state(the_repository, &replay);
 		} else {
 			strbuf_reset(&buf);
 			strbuf_addstr(&buf, options.state_dir);
