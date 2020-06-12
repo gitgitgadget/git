@@ -575,7 +575,7 @@ char *repo_default_branch_name(struct repository *r)
 		die(_("could not retrieve `%s`"), config_display_key);
 
 	if (!ret)
-		ret = xstrdup("master");
+		ret = xstrdup("main");
 
 	full_ref = xstrfmt("refs/heads/%s", ret);
 	if (check_refname_format(full_ref, 0))
