@@ -82,9 +82,9 @@ test_expect_success 'bisect fails if given any junk instead of revs' '
 	git bisect bad $HASH4
 '
 
-test_expect_success 'bisect reset: back in the master branch' '
+test_expect_success 'bisect reset: back in the main branch' '
 	git bisect reset &&
-	echo "* master" > branch.expect &&
+	echo "* main" > branch.expect &&
 	git branch > branch.output &&
 	cmp branch.expect branch.output
 '
@@ -95,7 +95,7 @@ test_expect_success 'bisect reset: back in another branch' '
 	git bisect good $HASH1 &&
 	git bisect bad $HASH3 &&
 	git bisect reset &&
-	echo "  master" > branch.expect &&
+	echo "  main" > branch.expect &&
 	echo "* other" >> branch.expect &&
 	git branch > branch.output &&
 	cmp branch.expect branch.output
@@ -351,7 +351,7 @@ test_expect_success 'bisect skip many ranges' '
 
 test_expect_success 'bisect starting with a detached HEAD' '
 	git bisect reset &&
-	git checkout master^ &&
+	git checkout main^ &&
 	HEAD=$(git rev-parse --verify HEAD) &&
 	git bisect start &&
 	test $HEAD = $(cat .git/BISECT_START) &&
@@ -701,7 +701,7 @@ test_expect_success 'bisect: --no-checkout - target after breakage' '
 test_expect_success 'bisect: demonstrate identification of damage boundary' "
 	git bisect reset &&
 	git checkout broken &&
-	git bisect start broken master --no-checkout &&
+	git bisect start broken main --no-checkout &&
 	test_must_fail git bisect run \"\$SHELL_PATH\" -c '
 		GOOD=\$(git for-each-ref \"--format=%(objectname)\" refs/bisect/good-*) &&
 		git rev-list --objects BISECT_HEAD --not \$GOOD >tmp.\$\$ &&

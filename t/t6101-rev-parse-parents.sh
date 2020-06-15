@@ -18,7 +18,7 @@ test_expect_success 'setup' '
 	test_commit second &&
 	git checkout --orphan tmp &&
 	test_commit start2 &&
-	git checkout master &&
+	git checkout main &&
 	git merge -m next --allow-unrelated-histories start2 &&
 	test_commit final &&
 
@@ -34,7 +34,7 @@ test_expect_success 'setup' '
 '
 
 test_expect_success 'start is valid' '
-	git rev-parse start | grep "^[0-9a-f]\{40\}$"
+	git rev-parse start | grep "^$OID_REGEX$"
 '
 
 test_expect_success 'start^0' '

@@ -14,7 +14,7 @@ test_expect_success 'set up rev-list --graph test' '
 	test_commit A1 foo.txt &&
 	test_commit A2 bar.txt &&
 	test_commit A3 bar.txt &&
-	git branch -m master A &&
+	git branch -m main A &&
 
 	# 2 commits on branch B, started from A1
 	git checkout -b B A1 &&

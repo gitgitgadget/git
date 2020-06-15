@@ -40,7 +40,7 @@ test_expect_success "setup: create $number_of_commits commits" '
 			nr=$(($nr+1)) &&
 			test_tick &&
 			cat <<INPUT_END
-commit refs/heads/master
+commit refs/heads/main
 committer $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL> $GIT_COMMITTER_DATE
 data <<COMMIT
 commit #$nr
@@ -75,7 +75,7 @@ test_sha1_based () {
 	(
 		start_note_commit &&
 		nr=$number_of_commits &&
-		git rev-list refs/heads/master |
+		git rev-list refs/heads/main |
 		while read sha1; do
 			note_path=$(echo "$sha1" | sed "$1")
 			cat <<INPUT_END &&
@@ -105,7 +105,7 @@ test_same_notes () {
 	(
 		start_note_commit &&
 		nr=$number_of_commits &&
-		git rev-list refs/heads/master |
+		git rev-list refs/heads/main |
 		while read sha1; do
 			first_note_path=$(echo "$sha1" | sed "$1")
 			second_note_path=$(echo "$sha1" | sed "$2")
@@ -144,7 +144,7 @@ test_concatenated_notes () {
 	(
 		start_note_commit &&
 		nr=$number_of_commits &&
-		git rev-list refs/heads/master |
+		git rev-list refs/heads/main |
 		while read sha1; do
 			first_note_path=$(echo "$sha1" | sed "$1")
 			second_note_path=$(echo "$sha1" | sed "$2")

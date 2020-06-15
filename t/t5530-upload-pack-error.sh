@@ -14,7 +14,6 @@ corrupt_repo () {
 }
 
 test_expect_success 'setup and corrupt repository' '
-	test_oid_init &&
 	echo file >file &&
 	git add file &&
 	git rev-parse :file &&
@@ -99,7 +98,7 @@ test_expect_success 'create empty repository' '
 
 test_expect_success 'fetch fails' '
 
-	test_must_fail git fetch .. master
+	test_must_fail git fetch .. main
 
 '
 

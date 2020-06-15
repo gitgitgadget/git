@@ -441,6 +441,29 @@ test_expect_success 're-init from a linked worktree' '
 	)
 '
 
+test_expect_success 'init honors GIT_DEFAULT_HASH' '
+	GIT_DEFAULT_HASH=sha1 git init sha1 &&
+	git -C sha1 rev-parse --show-object-format >actual &&
+	echo sha1 >expected &&
+	test_cmp expected actual &&
+	GIT_DEFAULT_HASH=sha256 git init sha256 &&
+	git -C sha256 rev-parse --show-object-format >actual &&
+	echo sha256 >expected &&
+	test_cmp expected actual
+'
+
+test_expect_success 'init honors --object-format' '
+	env -u GIT_DEFAULT_HASH git init --object-format=sha256 explicit &&
+	git -C explicit rev-parse --show-object-format >actual &&
+	echo sha256 >expected &&
+	test_cmp expected actual
+'
+
+test_expect_success 'init rejects attempts to initialize with different hash' '
+	test_must_fail git -C sha1 init --object-format=sha256 &&
+	test_must_fail git -C sha256 init --object-format=sha1
+'
+
 test_expect_success MINGW 'core.hidedotfiles = false' '
 	git config --global core.hidedotfiles false &&
 	rm -rf newdir &&
@@ -462,6 +485,48 @@ test_expect_success MINGW 'redirect std handles' '
 		git rev-parse --git-dir --verify refs/invalid &&
 	grep "^\\.git\$" output.txt &&
 	grep "Needed a single revision" output.txt
+'
+
+test_expect_success '--main-branch' '
+	GIT_TEST_DEFAULT_MAIN_BRANCH_NAME= \
+	git init --main-branch=hello main-branch-option &&
+	git -C main-branch-option symbolic-ref HEAD >actual &&
+	echo refs/heads/hello >expect &&
+	test_cmp expect actual &&
+
+	: re-initializing should not change the main branch name &&
+	git init --main-branch=ignore main-branch-option 2>err &&
+	test_i18ngrep "ignoring --main-branch" err &&
+	git -C main-branch-option symbolic-ref HEAD >actual &&
+	grep hello actual &&
+	git -C main-branch-option config core.mainBranch >actual &&
+	grep hello actual
+'
+
+test_expect_success 'overridden default main branch name (config)' '
+	test_config_global init.defaultBranch nmb &&
+	GIT_TEST_DEFAULT_MAIN_BRANCH_NAME= git init main-branch-config &&
+	git -C main-branch-config symbolic-ref HEAD >actual &&
+	grep nmb actual &&
+	git -C main-branch-config config core.mainBranch >actual &&
+	echo nmb >expect &&
+	test_cmp expect actual
+'
+
+test_expect_success 'overridden default main branch name (env)' '
+	test_config_global init.defaultBranch nmb &&
+	GIT_TEST_DEFAULT_MAIN_BRANCH_NAME=env git init main-branch-env &&
+	git -C main-branch-env symbolic-ref HEAD >actual &&
+	grep env actual &&
+	git -C main-branch-env config core.mainBranch >actual &&
+	echo env >expect &&
+	test_cmp expect actual
+'
+
+test_expect_success 'invalid default branch name' '
+	test_must_fail env GIT_TEST_DEFAULT_MAIN_BRANCH_NAME="with space" \
+		git init main-branch-invalid 2>err &&
+	test_i18ngrep "invalid branch name" err
 '
 
 test_done

@@ -25,11 +25,11 @@ test_expect_success 'push to update (protected)' '
 	(
 		cd dst &&
 		test_commit D &&
-		test_must_fail git push --force-with-lease=master:master origin master 2>err &&
+		test_must_fail git push --force-with-lease=main:main origin main 2>err &&
 		grep "stale info" err
 	) &&
-	git ls-remote . refs/heads/master >expect &&
-	git ls-remote src refs/heads/master >actual &&
+	git ls-remote . refs/heads/main >expect &&
+	git ls-remote src refs/heads/main >actual &&
 	test_cmp expect actual
 '
 
@@ -38,11 +38,11 @@ test_expect_success 'push to update (protected, forced)' '
 	(
 		cd dst &&
 		test_commit D &&
-		git push --force --force-with-lease=master:master origin master 2>err &&
+		git push --force --force-with-lease=main:main origin main 2>err &&
 		grep "forced update" err
 	) &&
-	git ls-remote dst refs/heads/master >expect &&
-	git ls-remote src refs/heads/master >actual &&
+	git ls-remote dst refs/heads/main >expect &&
+	git ls-remote src refs/heads/main >actual &&
 	test_cmp expect actual
 '
 
@@ -50,20 +50,20 @@ test_expect_success 'push to update (protected, tracking)' '
 	setup_srcdst_basic &&
 	(
 		cd src &&
-		git checkout master &&
+		git checkout main &&
 		test_commit D &&
 		git checkout HEAD^0
 	) &&
-	git ls-remote src refs/heads/master >expect &&
+	git ls-remote src refs/heads/main >expect &&
 	(
 		cd dst &&
 		test_commit E &&
-		git ls-remote . refs/remotes/origin/master >expect &&
-		test_must_fail git push --force-with-lease=master origin master &&
-		git ls-remote . refs/remotes/origin/master >actual &&
+		git ls-remote . refs/remotes/origin/main >expect &&
+		test_must_fail git push --force-with-lease=main origin main &&
+		git ls-remote . refs/remotes/origin/main >actual &&
 		test_cmp expect actual
 	) &&
-	git ls-remote src refs/heads/master >actual &&
+	git ls-remote src refs/heads/main >actual &&
 	test_cmp expect actual
 '
 
@@ -71,18 +71,18 @@ test_expect_success 'push to update (protected, tracking, forced)' '
 	setup_srcdst_basic &&
 	(
 		cd src &&
-		git checkout master &&
+		git checkout main &&
 		test_commit D &&
 		git checkout HEAD^0
 	) &&
 	(
 		cd dst &&
 		test_commit E &&
-		git ls-remote . refs/remotes/origin/master >expect &&
-		git push --force --force-with-lease=master origin master
+		git ls-remote . refs/remotes/origin/main >expect &&
+		git push --force --force-with-lease=main origin main
 	) &&
-	git ls-remote dst refs/heads/master >expect &&
-	git ls-remote src refs/heads/master >actual &&
+	git ls-remote dst refs/heads/main >expect &&
+	git ls-remote src refs/heads/main >actual &&
 	test_cmp expect actual
 '
 
@@ -91,10 +91,10 @@ test_expect_success 'push to update (allowed)' '
 	(
 		cd dst &&
 		test_commit D &&
-		git push --force-with-lease=master:master^ origin master
+		git push --force-with-lease=main:main^ origin main
 	) &&
-	git ls-remote dst refs/heads/master >expect &&
-	git ls-remote src refs/heads/master >actual &&
+	git ls-remote dst refs/heads/main >expect &&
+	git ls-remote src refs/heads/main >actual &&
 	test_cmp expect actual
 '
 
@@ -103,11 +103,11 @@ test_expect_success 'push to update (allowed, tracking)' '
 	(
 		cd dst &&
 		test_commit D &&
-		git push --force-with-lease=master origin master 2>err &&
+		git push --force-with-lease=main origin main 2>err &&
 		! grep "forced update" err
 	) &&
-	git ls-remote dst refs/heads/master >expect &&
-	git ls-remote src refs/heads/master >actual &&
+	git ls-remote dst refs/heads/main >expect &&
+	git ls-remote src refs/heads/main >actual &&
 	test_cmp expect actual
 '
 
@@ -117,22 +117,22 @@ test_expect_success 'push to update (allowed even though no-ff)' '
 		cd dst &&
 		git reset --hard HEAD^ &&
 		test_commit D &&
-		git push --force-with-lease=master origin master 2>err &&
+		git push --force-with-lease=main origin main 2>err &&
 		grep "forced update" err
 	) &&
-	git ls-remote dst refs/heads/master >expect &&
-	git ls-remote src refs/heads/master >actual &&
+	git ls-remote dst refs/heads/main >expect &&
+	git ls-remote src refs/heads/main >actual &&
 	test_cmp expect actual
 '
 
 test_expect_success 'push to delete (protected)' '
 	setup_srcdst_basic &&
-	git ls-remote src refs/heads/master >expect &&
+	git ls-remote src refs/heads/main >expect &&
 	(
 		cd dst &&
-		test_must_fail git push --force-with-lease=master:master^ origin :master
+		test_must_fail git push --force-with-lease=main:main^ origin :main
 	) &&
-	git ls-remote src refs/heads/master >actual &&
+	git ls-remote src refs/heads/main >actual &&
 	test_cmp expect actual
 '
 
@@ -140,9 +140,9 @@ test_expect_success 'push to delete (protected, forced)' '
 	setup_srcdst_basic &&
 	(
 		cd dst &&
-		git push --force --force-with-lease=master:master^ origin :master
+		git push --force --force-with-lease=main:main^ origin :main
 	) &&
-	git ls-remote src refs/heads/master >actual &&
+	git ls-remote src refs/heads/main >actual &&
 	test_must_be_empty actual
 '
 
@@ -150,10 +150,10 @@ test_expect_success 'push to delete (allowed)' '
 	setup_srcdst_basic &&
 	(
 		cd dst &&
-		git push --force-with-lease=master origin :master 2>err &&
+		git push --force-with-lease=main origin :main 2>err &&
 		grep deleted err
 	) &&
-	git ls-remote src refs/heads/master >actual &&
+	git ls-remote src refs/heads/main >actual &&
 	test_must_be_empty actual
 '
 
@@ -161,12 +161,12 @@ test_expect_success 'cover everything with default force-with-lease (protected)'
 	setup_srcdst_basic &&
 	(
 		cd src &&
-		git branch naster master^
+		git branch naster main^
 	) &&
 	git ls-remote src refs/heads/\* >expect &&
 	(
 		cd dst &&
-		test_must_fail git push --force-with-lease origin master master:naster
+		test_must_fail git push --force-with-lease origin main main:naster
 	) &&
 	git ls-remote src refs/heads/\* >actual &&
 	test_cmp expect actual
@@ -176,15 +176,15 @@ test_expect_success 'cover everything with default force-with-lease (allowed)' '
 	setup_srcdst_basic &&
 	(
 		cd src &&
-		git branch naster master^
+		git branch naster main^
 	) &&
 	(
 		cd dst &&
 		git fetch &&
-		git push --force-with-lease origin master master:naster
+		git push --force-with-lease origin main main:naster
 	) &&
-	git ls-remote dst refs/heads/master |
-	sed -e "s/master/naster/" >expect &&
+	git ls-remote dst refs/heads/main |
+	sed -e "s/main/naster/" >expect &&
 	git ls-remote src refs/heads/naster >actual &&
 	test_cmp expect actual
 '
@@ -193,7 +193,7 @@ test_expect_success 'new branch covered by force-with-lease' '
 	setup_srcdst_basic &&
 	(
 		cd dst &&
-		git branch branch master &&
+		git branch branch main &&
 		git push --force-with-lease=branch origin branch
 	) &&
 	git ls-remote dst refs/heads/branch >expect &&
@@ -205,7 +205,7 @@ test_expect_success 'new branch covered by force-with-lease (explicit)' '
 	setup_srcdst_basic &&
 	(
 		cd dst &&
-		git branch branch master &&
+		git branch branch main &&
 		git push --force-with-lease=branch: origin branch
 	) &&
 	git ls-remote dst refs/heads/branch >expect &&
@@ -217,12 +217,12 @@ test_expect_success 'new branch already exists' '
 	setup_srcdst_basic &&
 	(
 		cd src &&
-		git checkout -b branch master &&
+		git checkout -b branch main &&
 		test_commit F
 	) &&
 	(
 		cd dst &&
-		git branch branch master &&
+		git branch branch main &&
 		test_must_fail git push --force-with-lease=branch: origin branch
 	)
 '
@@ -237,7 +237,7 @@ test_expect_success 'background updates of REMOTE can be mitigated with a non-up
 		cd dst &&
 		test_commit G &&
 		git remote add origin-push ../src.bare &&
-		git push origin-push master:master
+		git push origin-push main:main
 	) &&
 	git clone --no-local src.bare dst2 &&
 	test_when_finished "rm -rf dst2" &&

@@ -14,10 +14,10 @@ submodule and "git submodule update --rebase/--merge" does not detach the HEAD.
 
 compare_head()
 {
-    sha_master=$(git rev-list --max-count=1 master)
+    sha_main=$(git rev-list --max-count=1 main)
     sha_head=$(git rev-list --max-count=1 HEAD)
 
-    test "$sha_master" = "$sha_head"
+    test "$sha_main" = "$sha_head"
 }
 
 
@@ -68,6 +68,14 @@ test_expect_success 'setup a submodule tree' '
 	( cd recursivesuper &&
 	 git submodule add ../super super
 	)
+'
+
+test_expect_success 'update --remote uses configured default main branch' '
+	git clone super main-branch &&
+	GIT_TEST_DEFAULT_MAIN_BRANCH_NAME= \
+	test_must_fail git -C main-branch -c init.defaultBranch=hello \
+		submodule update --init --remote submodule 2>err &&
+	test_i18ngrep origin/hello err
 '
 
 test_expect_success 'submodule update detaching the HEAD ' '
@@ -246,14 +254,14 @@ test_expect_success 'submodule update --remote should fetch upstream changes wit
 		cd super &&
 		git submodule update --remote --force submodule &&
 		git -C submodule log -1 --oneline >actual &&
-		git -C ../submodule log -1 --oneline master >expect &&
+		git -C ../submodule log -1 --oneline main >expect &&
 		test_cmp expect actual &&
 		git checkout -b test-branch &&
 		git submodule update --remote --force submodule &&
 		git -C submodule log -1 --oneline >actual &&
 		git -C ../submodule log -1 --oneline test-branch >expect &&
 		test_cmp expect actual &&
-		git checkout master &&
+		git checkout main &&
 		git branch -d test-branch &&
 		git reset --hard HEAD^
 	)
@@ -266,7 +274,7 @@ test_expect_success 'local config should override .gitmodules branch' '
 	 git add file &&
 	 test_tick &&
 	 git commit -m "upstream line5" &&
-	 git checkout master
+	 git checkout main
 	) &&
 	(cd super &&
 	 git config submodule.submodule.branch test-branch &&
@@ -276,9 +284,9 @@ test_expect_success 'local config should override .gitmodules branch' '
 	)
 '
 
-test_expect_success 'submodule update --rebase staying on master' '
+test_expect_success 'submodule update --rebase staying on main' '
 	(cd super/submodule &&
-	  git checkout master
+	  git checkout main
 	) &&
 	(cd super &&
 	 (cd submodule &&
@@ -290,7 +298,7 @@ test_expect_success 'submodule update --rebase staying on master' '
 	)
 '
 
-test_expect_success 'submodule update --merge staying on master' '
+test_expect_success 'submodule update --merge staying on main' '
 	(cd super/submodule &&
 	  git reset --hard HEAD~1
 	) &&
@@ -593,7 +601,7 @@ test_expect_success 'submodule update - update=none in .git/config' '
 	(cd super &&
 	 git config submodule.submodule.update none &&
 	 (cd submodule &&
-	  git checkout master &&
+	  git checkout main &&
 	  compare_head
 	 ) &&
 	 git diff --name-only >out &&
@@ -613,7 +621,7 @@ test_expect_success 'submodule update - update=none in .git/config but --checkou
 	(cd super &&
 	 git config submodule.submodule.update none &&
 	 (cd submodule &&
-	  git checkout master &&
+	  git checkout main &&
 	  compare_head
 	 ) &&
 	 git diff --name-only >out &&
@@ -673,7 +681,7 @@ test_expect_success 'submodule update continues after checkout error' '
 test_expect_success 'submodule update continues after recursive checkout error' '
 	(cd super &&
 	 git reset --hard HEAD &&
-	 git checkout master &&
+	 git checkout main &&
 	 git submodule update &&
 	 (cd submodule &&
 	  git submodule add ../submodule subsubmodule &&
@@ -717,7 +725,7 @@ test_expect_success 'submodule update continues after recursive checkout error' 
 
 test_expect_success 'submodule update exit immediately in case of merge conflict' '
 	(cd super &&
-	 git checkout master &&
+	 git checkout main &&
 	 git reset --hard HEAD &&
 	 (cd submodule &&
 	  (cd subsubmodule &&
@@ -735,7 +743,7 @@ test_expect_success 'submodule update exit immediately in case of merge conflict
 	 git add submodule2 &&
 	 git commit -m "two_new_submodule_commits" &&
 	 (cd submodule &&
-	  git checkout master &&
+	  git checkout main &&
 	  test_commit "conflict" file &&
 	  echo "conflict" > file
 	 ) &&
@@ -754,7 +762,7 @@ test_expect_success 'submodule update exit immediately in case of merge conflict
 
 test_expect_success 'submodule update exit immediately after recursive rebase error' '
 	(cd super &&
-	 git checkout master &&
+	 git checkout main &&
 	 git reset --hard HEAD &&
 	 (cd submodule &&
 	  git reset --hard HEAD &&
@@ -770,7 +778,7 @@ test_expect_success 'submodule update exit immediately after recursive rebase er
 	 git add submodule2 &&
 	 git commit -m "two_new_submodule_commits" &&
 	 (cd submodule &&
-	  git checkout master &&
+	  git checkout main &&
 	  test_commit "conflict2" file &&
 	  echo "conflict" > file
 	 ) &&
@@ -862,21 +870,21 @@ test_expect_success 'submodule update places git-dir in superprojects git-dir re
 	git clone subsubsuper_update_r subsubsuper_update_r2 &&
 	(cd subsubsuper_update_r2 &&
 	 test_commit "update_subsubsuper" file &&
-	 git push origin master
+	 git push origin main
 	) &&
 	git clone subsuper_update_r subsuper_update_r2 &&
 	(cd subsuper_update_r2 &&
 	 test_commit "update_subsuper" file &&
 	 git submodule add ../subsubsuper_update_r subsubmodule &&
 	 git commit -am "subsubmodule" &&
-	 git push origin master
+	 git push origin main
 	) &&
 	git clone super_update_r super_update_r2 &&
 	(cd super_update_r2 &&
 	 test_commit "update_super" file &&
 	 git submodule add ../subsuper_update_r submodule &&
 	 git commit -am "submodule" &&
-	 git push origin master
+	 git push origin main
 	) &&
 	rm -rf super_update_r2 &&
 	git clone super_update_r super_update_r2 &&
@@ -895,7 +903,7 @@ test_expect_success 'submodule update places git-dir in superprojects git-dir re
 
 test_expect_success 'submodule add properly re-creates deeper level submodules' '
 	(cd super &&
-	 git reset --hard master &&
+	 git reset --hard main &&
 	 rm -rf deeper/ &&
 	 git submodule add --force ../submodule deeper/submodule
 	)

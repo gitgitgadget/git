@@ -24,12 +24,12 @@ test_expect_success 'prepare repository' '
 '
 
 test_expect_success 'Merge with d/f conflicts' '
-	test_expect_code 1 git merge -m "merge msg" master
+	test_expect_code 1 git merge -m "merge msg" main
 '
 
 test_expect_success 'F/D conflict' '
 	git reset --hard &&
-	git checkout master &&
+	git checkout main &&
 	rm .git/index &&
 
 	mkdir before &&
@@ -47,7 +47,7 @@ test_expect_success 'F/D conflict' '
 	git add . &&
 	git commit -m para &&
 
-	git merge master
+	git merge main
 '
 
 test_expect_success 'setup modify/delete + directory/file conflict' '
@@ -124,7 +124,7 @@ test_expect_success 'Simple merge in repo with interesting pathnames' '
 		git add . &&
 		git commit -m initial &&
 
-		git branch main &&
+		git branch primary &&
 		git branch other &&
 
 		git checkout other &&
@@ -132,10 +132,10 @@ test_expect_success 'Simple merge in repo with interesting pathnames' '
 		git add -u &&
 		git commit -m other &&
 
-		git checkout main &&
-		echo main >foo/bar/baz &&
+		git checkout primary &&
+		echo primary >foo/bar/baz &&
 		git add -u &&
-		git commit -m main &&
+		git commit -m primary &&
 
 		git merge other &&
 		git ls-files -s >out &&

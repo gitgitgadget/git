@@ -538,7 +538,7 @@ test_expect_success 'diff --submodule with objects referenced by alternates' '
 	(cd super &&
 		(cd sub &&
 			git fetch &&
-			git checkout origin/master
+			git checkout origin/main
 		) &&
 		git diff --submodule > ../actual
 	) &&

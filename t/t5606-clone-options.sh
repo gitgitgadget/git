@@ -15,7 +15,7 @@ test_expect_success 'setup' '
 test_expect_success 'clone -o' '
 
 	git clone -o foo parent clone-o &&
-	(cd clone-o && git rev-parse --verify refs/remotes/foo/master)
+	(cd clone-o && git rev-parse --verify refs/remotes/foo/main)
 
 '
 
@@ -33,6 +33,36 @@ test_expect_success 'redirected clone -v does show progress' '
 		>out 2>err &&
 	grep % err
 
+'
+
+test_expect_success 'chooses correct default main branch name' '
+	git init --bare empty &&
+	GIT_TEST_DEFAULT_MAIN_BRANCH_NAME= \
+	git -c init.defaultBranch=up clone empty whats-up &&
+	test_write_lines refs/heads/up refs/heads/up >expect &&
+	test refs/heads/up = $(git -C whats-up symbolic-ref HEAD) &&
+	test up = $(git -C whats-up config core.mainBranch) &&
+	test refs/heads/up = $(git -C whats-up config branch.up.merge)
+'
+
+test_expect_success 'guesses main branch name correctly' '
+	git init --main-branch=guess main-branch &&
+	test_commit -C main-branch no-spoilers &&
+	git -C main-branch branch abc guess &&
+	git clone main-branch is-it &&
+	test guess = $(git -C is-it config core.mainBranch) &&
+	test refs/heads/guess = $(git -C is-it symbolic-ref HEAD) &&
+
+	git -c init.defaultBranch=none init --bare no-head &&
+	git -C main-branch push ../no-head guess abc &&
+	GIT_TEST_DEFAULT_MAIN_BRANCH_NAME= \
+	git clone no-head is-it2 &&
+	test_must_fail git -C is-it2 symbolic-ref refs/remotes/origin/HEAD &&
+	git -C no-head update-ref --no-deref HEAD refs/heads/guess &&
+	GIT_TEST_DEFAULT_MAIN_BRANCH_NAME= \
+	git -c init.defaultBranch=guess clone no-head is-it3 &&
+	test refs/remotes/origin/guess = \
+		$(git -C is-it3 symbolic-ref refs/remotes/origin/HEAD)
 '
 
 test_done

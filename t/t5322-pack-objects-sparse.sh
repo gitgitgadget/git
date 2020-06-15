@@ -18,7 +18,7 @@ test_expect_success 'setup repo' '
 	git commit -m "Initialized trees" &&
 	for i in $(test_seq 1 3)
 	do
-		git checkout -b topic$i master &&
+		git checkout -b topic$i main &&
 		echo change-$i >f$i/f$i/data.txt &&
 		git commit -a -m "Changed f$i/f$i/data.txt"
 	done &&

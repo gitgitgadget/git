@@ -12,13 +12,13 @@ test_expect_success setup '
 
 test_expect_success 'non-existent index file' '
 	rm -f new-index &&
-	GIT_INDEX_FILE=new-index git read-tree master
+	GIT_INDEX_FILE=new-index git read-tree main
 '
 
 test_expect_success 'empty index file' '
 	rm -f new-index &&
 	> new-index &&
-	GIT_INDEX_FILE=new-index git read-tree master
+	GIT_INDEX_FILE=new-index git read-tree main
 '
 
 test_done

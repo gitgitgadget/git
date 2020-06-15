@@ -12,7 +12,7 @@ test_expect_success 'rename/delete' '
 	git mv A B &&
 	git commit -m "rename" &&
 
-	git checkout master &&
+	git checkout main &&
 	git rm A &&
 	git commit -m "delete" &&
 

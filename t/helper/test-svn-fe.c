@@ -40,7 +40,7 @@ int cmd_main(int argc, const char **argv)
 	if (argc == 2) {
 		if (svndump_init(argv[1]))
 			return 1;
-		svndump_read(NULL, "refs/heads/master", "refs/notes/svn/revs");
+		svndump_read(NULL, "refs/heads/main", "refs/notes/svn/revs");
 		svndump_deinit();
 		svndump_reset();
 		return 0;

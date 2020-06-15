@@ -603,7 +603,7 @@ test_expect_success 'same tree (merge and amend merge)' '
 	echo zero >zero &&
 	git add zero &&
 	git commit -m "add zero" &&
-	git checkout master &&
+	git checkout main &&
 
 	git merge -s ours side -m "empty ok" &&
 	git diff HEAD^ HEAD >actual &&

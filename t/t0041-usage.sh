@@ -41,8 +41,8 @@ test_expect_success 'tag usage error' '
 '
 
 test_expect_success 'branch --contains <existent_commit>' '
-	git branch --contains "master" >actual 2>actual.err &&
-	test_i18ngrep "master" actual &&
+	git branch --contains "main" >actual 2>actual.err &&
+	test_i18ngrep "main" actual &&
 	test_line_count = 0 actual.err
 '
 
@@ -54,7 +54,7 @@ test_expect_success 'branch --contains <inexistent_commit>' '
 '
 
 test_expect_success 'branch --no-contains <existent_commit>' '
-	git branch --no-contains "master" >actual 2>actual.err &&
+	git branch --no-contains "main" >actual 2>actual.err &&
 	test_line_count = 0 actual &&
 	test_line_count = 0 actual.err
 '
@@ -73,7 +73,7 @@ test_expect_success 'branch usage error' '
 '
 
 test_expect_success 'for-each-ref --contains <existent_object>' '
-	git for-each-ref --contains "master" >actual 2>actual.err &&
+	git for-each-ref --contains "main" >actual 2>actual.err &&
 	test_line_count = 2 actual &&
 	test_line_count = 0 actual.err
 '
@@ -86,7 +86,7 @@ test_expect_success 'for-each-ref --contains <inexistent_object>' '
 '
 
 test_expect_success 'for-each-ref --no-contains <existent_object>' '
-	git for-each-ref --no-contains "master" >actual 2>actual.err &&
+	git for-each-ref --no-contains "main" >actual 2>actual.err &&
 	test_line_count = 0 actual &&
 	test_line_count = 0 actual.err
 '

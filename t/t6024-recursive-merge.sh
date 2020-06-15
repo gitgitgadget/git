@@ -19,11 +19,11 @@ test_expect_success 'setup tests' '
 	git add a1 &&
 	GIT_AUTHOR_DATE="2006-12-12 23:00:00" git commit -m 1 a1 &&
 
-	git checkout -b A master &&
+	git checkout -b A main &&
 	echo A >a1 &&
 	GIT_AUTHOR_DATE="2006-12-12 23:00:01" git commit -m A a1 &&
 
-	git checkout -b B master &&
+	git checkout -b B main &&
 	echo B >a1 &&
 	GIT_AUTHOR_DATE="2006-12-12 23:00:02" git commit -m B a1 &&
 

@@ -452,9 +452,15 @@ export GIT_AUTHOR_EMAIL GIT_AUTHOR_NAME
 export GIT_COMMITTER_EMAIL GIT_COMMITTER_NAME
 export EDITOR
 
+GIT_DEFAULT_HASH="${GIT_TEST_DEFAULT_HASH:-sha1}"
+export GIT_DEFAULT_HASH
+
 # Tests using GIT_TRACE typically don't want <timestamp> <file>:<line> output
 GIT_TRACE_BARE=1
 export GIT_TRACE_BARE
+
+GIT_TEST_DEFAULT_MAIN_BRANCH_NAME=main
+export GIT_TEST_DEFAULT_MAIN_BRANCH_NAME
 
 check_var_migration () {
 	# the warnings and hints given from this helper depends
@@ -1414,6 +1420,7 @@ test_oid_init
 
 ZERO_OID=$(test_oid zero)
 OID_REGEX=$(echo $ZERO_OID | sed -e 's/0/[0-9a-f]/g')
+OIDPATH_REGEX=$(test_oid_to_path $ZERO_OID | sed -e 's/0/[0-9a-f]/g')
 EMPTY_TREE=$(test_oid empty_tree)
 EMPTY_BLOB=$(test_oid empty_blob)
 _z40=$ZERO_OID
@@ -1685,7 +1692,8 @@ test_lazy_prereq CURL '
 # which will not work with other hash algorithms and tests that work but don't
 # test anything meaningful (e.g. special values which cause short collisions).
 test_lazy_prereq SHA1 '
-	test $(git hash-object /dev/null) = e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+	test $(git hash-object /dev/null) = e69de29bb2d1d6434b8b29ae775ad8c2e48c5391 &&
+	([ -z "$GIT_DEFAULT_HASH" ] || [ "$GIT_DEFAULT_HASH" = "sha1" ])
 '
 
 test_lazy_prereq REBASE_P '

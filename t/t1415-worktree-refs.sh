@@ -87,6 +87,7 @@ test_expect_success 'for-each-ref from main repo' '
 	git -C fer1/repo for-each-ref --format="%(refname)" | grep main >actual &&
 	cat >expected <<-\EOF &&
 	refs/bisect/main
+	refs/heads/main
 	refs/rewritten/main
 	refs/worktree/main
 	EOF

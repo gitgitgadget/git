@@ -5,12 +5,17 @@ test_description='test protocol v2 server commands'
 . ./test-lib.sh
 
 test_expect_success 'test capability advertisement' '
+	test_oid_cache <<-EOF &&
+	wrong_algo sha1:sha256
+	wrong_algo sha256:sha1
+	EOF
 	cat >expect <<-EOF &&
 	version 2
 	agent=git/$(git version | cut -d" " -f3)
 	ls-refs
 	fetch=shallow
 	server-option
+	object-format=$(test_oid algo)
 	0000
 	EOF
 
@@ -45,6 +50,7 @@ test_expect_success 'request invalid capability' '
 test_expect_success 'request with no command' '
 	test-tool pkt-line pack >in <<-EOF &&
 	agent=git/test
+	object-format=$(test_oid algo)
 	0000
 	EOF
 	test_must_fail test-tool serve-v2 --stateless-rpc 2>err <in &&
@@ -54,6 +60,7 @@ test_expect_success 'request with no command' '
 test_expect_success 'request invalid command' '
 	test-tool pkt-line pack >in <<-EOF &&
 	command=foo
+	object-format=$(test_oid algo)
 	agent=git/test
 	0000
 	EOF
@@ -61,26 +68,38 @@ test_expect_success 'request invalid command' '
 	test_i18ngrep "invalid command" err
 '
 
+test_expect_success 'wrong object-format' '
+	test-tool pkt-line pack >in <<-EOF &&
+	command=fetch
+	agent=git/test
+	object-format=$(test_oid wrong_algo)
+	0000
+	EOF
+	test_must_fail test-tool serve-v2 --stateless-rpc 2>err <in &&
+	test_i18ngrep "mismatched object format" err
+'
+
 # Test the basics of ls-refs
 #
 test_expect_success 'setup some refs and tags' '
 	test_commit one &&
-	git branch dev master &&
+	git branch dev main &&
 	test_commit two &&
-	git symbolic-ref refs/heads/release refs/heads/master &&
+	git symbolic-ref refs/heads/release refs/heads/main &&
 	git tag -a -m "annotated tag" annotated-tag
 '
 
 test_expect_success 'basics of ls-refs' '
 	test-tool pkt-line pack >in <<-EOF &&
 	command=ls-refs
+	object-format=$(test_oid algo)
 	0000
 	EOF
 
 	cat >expect <<-EOF &&
 	$(git rev-parse HEAD) HEAD
 	$(git rev-parse refs/heads/dev) refs/heads/dev
-	$(git rev-parse refs/heads/master) refs/heads/master
+	$(git rev-parse refs/heads/main) refs/heads/main
 	$(git rev-parse refs/heads/release) refs/heads/release
 	$(git rev-parse refs/tags/annotated-tag) refs/tags/annotated-tag
 	$(git rev-parse refs/tags/one) refs/tags/one
@@ -96,14 +115,15 @@ test_expect_success 'basics of ls-refs' '
 test_expect_success 'basic ref-prefixes' '
 	test-tool pkt-line pack >in <<-EOF &&
 	command=ls-refs
+	object-format=$(test_oid algo)
 	0001
-	ref-prefix refs/heads/master
+	ref-prefix refs/heads/main
 	ref-prefix refs/tags/one
 	0000
 	EOF
 
 	cat >expect <<-EOF &&
-	$(git rev-parse refs/heads/master) refs/heads/master
+	$(git rev-parse refs/heads/main) refs/heads/main
 	$(git rev-parse refs/tags/one) refs/tags/one
 	0000
 	EOF
@@ -116,6 +136,7 @@ test_expect_success 'basic ref-prefixes' '
 test_expect_success 'refs/heads prefix' '
 	test-tool pkt-line pack >in <<-EOF &&
 	command=ls-refs
+	object-format=$(test_oid algo)
 	0001
 	ref-prefix refs/heads/
 	0000
@@ -123,7 +144,7 @@ test_expect_success 'refs/heads prefix' '
 
 	cat >expect <<-EOF &&
 	$(git rev-parse refs/heads/dev) refs/heads/dev
-	$(git rev-parse refs/heads/master) refs/heads/master
+	$(git rev-parse refs/heads/main) refs/heads/main
 	$(git rev-parse refs/heads/release) refs/heads/release
 	0000
 	EOF
@@ -136,6 +157,7 @@ test_expect_success 'refs/heads prefix' '
 test_expect_success 'peel parameter' '
 	test-tool pkt-line pack >in <<-EOF &&
 	command=ls-refs
+	object-format=$(test_oid algo)
 	0001
 	peel
 	ref-prefix refs/tags/
@@ -157,6 +179,7 @@ test_expect_success 'peel parameter' '
 test_expect_success 'symrefs parameter' '
 	test-tool pkt-line pack >in <<-EOF &&
 	command=ls-refs
+	object-format=$(test_oid algo)
 	0001
 	symrefs
 	ref-prefix refs/heads/
@@ -165,8 +188,8 @@ test_expect_success 'symrefs parameter' '
 
 	cat >expect <<-EOF &&
 	$(git rev-parse refs/heads/dev) refs/heads/dev
-	$(git rev-parse refs/heads/master) refs/heads/master
-	$(git rev-parse refs/heads/release) refs/heads/release symref-target:refs/heads/master
+	$(git rev-parse refs/heads/main) refs/heads/main
+	$(git rev-parse refs/heads/release) refs/heads/release symref-target:refs/heads/main
 	0000
 	EOF
 
@@ -178,6 +201,7 @@ test_expect_success 'symrefs parameter' '
 test_expect_success 'sending server-options' '
 	test-tool pkt-line pack >in <<-EOF &&
 	command=ls-refs
+	object-format=$(test_oid algo)
 	server-option=hello
 	server-option=world
 	0001
@@ -200,6 +224,7 @@ test_expect_success 'unexpected lines are not allowed in fetch request' '
 
 	test-tool pkt-line pack >in <<-EOF &&
 	command=fetch
+	object-format=$(test_oid algo)
 	0001
 	this-is-not-a-command
 	0000

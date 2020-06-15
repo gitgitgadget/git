@@ -122,9 +122,9 @@ EOF
 # match git-p4's idea of the base revision
 #
 # We will attempt to unshelve a change that is based on a change one commit
-# ahead of p4/master
+# ahead of p4/main
 
-test_expect_success 'create shelved changelist based on p4 change ahead of p4/master' '
+test_expect_success 'create shelved changelist based on p4 change ahead of p4/main' '
 	git p4 clone --dest="$git" //depot/@all &&
 	(
 		cd "$cli" &&

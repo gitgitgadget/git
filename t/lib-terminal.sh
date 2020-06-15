@@ -15,7 +15,7 @@ test_terminal () {
 test_lazy_prereq TTY '
 	test_have_prereq PERL &&
 
-	# Reading from the pty master seems to get stuck _sometimes_
+	# Reading from the pty main seems to get stuck _sometimes_
 	# on Mac OS X 10.5.0, using Perl 5.10.0 or 5.8.9.
 	#
 	# Reproduction recipe: run

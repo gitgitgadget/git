@@ -46,7 +46,7 @@ But otherwise with a sane description." side2 &&
 test_expect_success rebase '
 
 	git checkout side &&
-	git rebase master &&
+	git rebase main &&
 	git cat-file commit HEAD | sed -e "1,/^\$/d" >actual &&
 	git cat-file commit side@{1} | sed -e "1,/^\$/d" >expect &&
 	test_cmp expect actual

@@ -43,18 +43,18 @@ test_debug '
 test_expect_success REMOTE_SVN 'simple fetch' '
 	init_git &&
 	git fetch svnsim &&
-	test_cmp .git/refs/svn/svnsim/master .git/refs/remotes/svnsim/master  &&
-	cp .git/refs/remotes/svnsim/master master.good
+	test_cmp .git/refs/svn/svnsim/main .git/refs/remotes/svnsim/main  &&
+	cp .git/refs/remotes/svnsim/main main.good
 '
 
 test_debug '
-	git show-ref -s refs/svn/svnsim/master
-	git show-ref -s refs/remotes/svnsim/master
+	cat .git/refs/svn/svnsim/main
+	cat .git/refs/remotes/svnsim/main
 '
 
 test_expect_success REMOTE_SVN 'repeated fetch, nothing shall change' '
 	git fetch svnsim &&
-	test_cmp master.good .git/refs/remotes/svnsim/master
+	test_cmp main.good .git/refs/remotes/svnsim/main
 '
 
 test_expect_success REMOTE_SVN 'fetch from a file:// url gives the same result' '
@@ -62,7 +62,7 @@ test_expect_success REMOTE_SVN 'fetch from a file:// url gives the same result' 
 '
 
 test_expect_failure REMOTE_SVN 'the sha1 differ because the git-svn-id line in the commit msg contains the url' '
-	test_cmp .git/refs/remotes/svnfile/master .git/refs/remotes/svnsim/master
+	test_cmp .git/refs/remotes/svnfile/main .git/refs/remotes/svnsim/main
 '
 
 test_expect_success REMOTE_SVN 'mark-file regeneration' '
@@ -78,10 +78,17 @@ test_expect_success REMOTE_SVN 'incremental imports must lead to the same head' 
 	export SVNRMAX &&
 	init_git &&
 	git fetch svnsim &&
-	test_cmp .git/refs/svn/svnsim/master .git/refs/remotes/svnsim/master  &&
+	test_cmp .git/refs/svn/svnsim/main .git/refs/remotes/svnsim/main  &&
 	unset SVNRMAX &&
 	git fetch svnsim &&
-	test_cmp master.good .git/refs/remotes/svnsim/master
+	test_cmp main.good .git/refs/remotes/svnsim/main
+'
+
+test_expect_success REMOTE_SVN 'respects configured default main branch' '
+	GIT_TEST_DEFAULT_MAIN_BRANCH_NAME= \
+	git -c init.defaultBranch=trunk remote add -f trunk \
+		"testsvn::file://$TEST_DIRECTORY/t9154/svn.dump" &&
+	git rev-parse --verify refs/remotes/trunk/trunk
 '
 
 test_debug 'git branch -a'

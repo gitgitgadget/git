@@ -421,6 +421,10 @@ GIT_TEST_DISALLOW_ABBREVIATED_OPTIONS=<boolean>, when true (which is
 the default when running tests), errors out when an abbreviated option
 is used.
 
+GIT_TEST_DEFAULT_MAIN_BRANCH_NAME allows overriding the default branch name
+that is used for example when initializing new repositories, or when
+cloning a repository that has no branches yet.
+
 Naming Tests
 ------------
 
@@ -858,7 +862,7 @@ library for your script to use.
    For example:
 
 	test_expect_success 'Merge with d/f conflicts' '
-		test_expect_code 1 git merge "merge msg" B master
+		test_expect_code 1 git merge "merge msg" B main
 	'
 
  - test_must_fail [<options>] <git-command>

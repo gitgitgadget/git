@@ -4,7 +4,7 @@ test_description='compression setting of fast-import utility'
 . ./test-lib.sh
 
 # This should be moved to test-lib.sh together with the
-# copy in t0021 after both topics have graduated to 'master'.
+# copy in t0021 after both topics have graduated to 'main'.
 file_size () {
 	test-tool path-utils file-size "$1"
 }

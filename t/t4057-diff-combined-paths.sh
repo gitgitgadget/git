@@ -24,9 +24,9 @@ test_expect_success 'trivial merge - combine-diff empty' '
 		echo $i/2 >>$i.txt
 	done &&
 	git commit -a -m "side 2-9" &&
-	git checkout master &&
+	git checkout main &&
 	echo 1/2 >1.txt &&
-	git commit -a -m "master 1" &&
+	git commit -a -m "main 1" &&
 	git merge side &&
 	>diffc.expect &&
 	diffc_verify
@@ -41,19 +41,19 @@ test_expect_success 'only one truly conflicting path' '
 	done &&
 	echo "4side" >>4.txt &&
 	git commit -a -m "side 2-9 +4" &&
-	git checkout master &&
+	git checkout main &&
 	for i in $(test_seq 1 9)
 	do
 		echo $i/3 >>$i.txt
 	done &&
-	echo "4master" >>4.txt &&
-	git commit -a -m "master 1-9 +4" &&
+	echo "4main" >>4.txt &&
+	git commit -a -m "main 1-9 +4" &&
 	test_must_fail git merge side &&
 	cat <<-\EOF >4.txt &&
 	4
 	4/2
 	4/3
-	4master
+	4main
 	4side
 	EOF
 	git add 4.txt &&
@@ -69,12 +69,12 @@ test_expect_success 'merge introduces new file' '
 		echo $i/4 >>$i.txt
 	done &&
 	git commit -a -m "side 5-9" &&
-	git checkout master &&
+	git checkout main &&
 	for i in $(test_seq 1 3)
 	do
 		echo $i/4 >>$i.txt
 	done &&
-	git commit -a -m "master 1-3 +4hello" &&
+	git commit -a -m "main 1-3 +4hello" &&
 	git merge side &&
 	echo "Hello World" >4hello.txt &&
 	git add 4hello.txt &&
@@ -90,12 +90,12 @@ test_expect_success 'merge removed a file' '
 		echo $i/5 >>$i.txt
 	done &&
 	git commit -a -m "side 5-9" &&
-	git checkout master &&
+	git checkout main &&
 	for i in $(test_seq 1 3)
 	do
 		echo $i/4 >>$i.txt
 	done &&
-	git commit -a -m "master 1-3" &&
+	git commit -a -m "main 1-3" &&
 	git merge side &&
 	git rm 4.txt &&
 	git commit --amend &&

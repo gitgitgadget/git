@@ -41,7 +41,7 @@ test_expect_success 'fetch with git:// using protocol v1' '
 	GIT_TRACE_PACKET=1 git -C daemon_child -c protocol.version=1 \
 		fetch 2>log &&
 
-	git -C daemon_child log -1 --format=%s origin/master >actual &&
+	git -C daemon_child log -1 --format=%s origin/main >actual &&
 	git -C "$daemon_parent" log -1 --format=%s >expect &&
 	test_cmp expect actual &&
 
@@ -69,7 +69,7 @@ test_expect_success 'push with git:// using protocol v1' '
 	test_commit -C daemon_child three &&
 
 	# Push to another branch, as the target repository has the
-	# master branch checked out and we cannot push into it.
+	# main branch checked out and we cannot push into it.
 	GIT_TRACE_PACKET=1 git -C daemon_child -c protocol.version=1 \
 		push origin HEAD:client_branch 2>log &&
 
@@ -110,7 +110,7 @@ test_expect_success 'fetch with file:// using protocol v1' '
 	GIT_TRACE_PACKET=1 git -C file_child -c protocol.version=1 \
 		fetch 2>log &&
 
-	git -C file_child log -1 --format=%s origin/master >actual &&
+	git -C file_child log -1 --format=%s origin/main >actual &&
 	git -C file_parent log -1 --format=%s >expect &&
 	test_cmp expect actual &&
 
@@ -134,7 +134,7 @@ test_expect_success 'push with file:// using protocol v1' '
 	test_commit -C file_child three &&
 
 	# Push to another branch, as the target repository has the
-	# master branch checked out and we cannot push into it.
+	# main branch checked out and we cannot push into it.
 	GIT_TRACE_PACKET=1 git -C file_child -c protocol.version=1 \
 		push origin HEAD:client_branch 2>log &&
 
@@ -188,7 +188,7 @@ test_expect_success 'fetch with ssh:// using protocol v1' '
 		fetch 2>log &&
 	expect_ssh git-upload-pack &&
 
-	git -C ssh_child log -1 --format=%s origin/master >actual &&
+	git -C ssh_child log -1 --format=%s origin/main >actual &&
 	git -C ssh_parent log -1 --format=%s >expect &&
 	test_cmp expect actual &&
 
@@ -213,7 +213,7 @@ test_expect_success 'push with ssh:// using protocol v1' '
 	test_commit -C ssh_child three &&
 
 	# Push to another branch, as the target repository has the
-	# master branch checked out and we cannot push into it.
+	# main branch checked out and we cannot push into it.
 	GIT_TRACE_PACKET=1 git -C ssh_child -c protocol.version=1 \
 		push origin HEAD:client_branch 2>log &&
 	expect_ssh git-receive-pack &&
@@ -257,7 +257,7 @@ test_expect_success 'fetch with http:// using protocol v1' '
 	GIT_TRACE_PACKET=1 git -C http_child -c protocol.version=1 \
 		fetch 2>log &&
 
-	git -C http_child log -1 --format=%s origin/master >actual &&
+	git -C http_child log -1 --format=%s origin/main >actual &&
 	git -C "$HTTPD_DOCUMENT_ROOT_PATH/http_parent" log -1 --format=%s >expect &&
 	test_cmp expect actual &&
 
@@ -281,7 +281,7 @@ test_expect_success 'push with http:// using protocol v1' '
 	test_commit -C http_child three &&
 
 	# Push to another branch, as the target repository has the
-	# master branch checked out and we cannot push into it.
+	# main branch checked out and we cannot push into it.
 	GIT_TRACE_PACKET=1 git -C http_child -c protocol.version=1 \
 		push origin HEAD:client_branch && #2>log &&
 

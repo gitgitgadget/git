@@ -183,7 +183,7 @@ test_expect_success 'p4 deleted a wildcard file' '
 	(
 		cd "$git" &&
 		git p4 sync &&
-		git merge --ff-only p4/master &&
+		git merge --ff-only p4/main &&
 		test_path_is_missing wild@delete
 	)
 '

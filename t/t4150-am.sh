@@ -179,8 +179,8 @@ test_expect_success setup '
 	test_tick &&
 	git commit -m "added another file" &&
 
-	git format-patch --stdout master >lorem-move.patch &&
-	git format-patch --no-prefix --stdout master >lorem-zero.patch &&
+	git format-patch --stdout main >lorem-move.patch &&
+	git format-patch --no-prefix --stdout main >lorem-zero.patch &&
 
 	git checkout -b rename &&
 	git mv file renamed &&
@@ -453,11 +453,11 @@ test_expect_success 'am changes committer and keeps author' '
 	git checkout first &&
 	git am patch2 &&
 	test_path_is_missing .git/rebase-apply &&
-	test "$(git rev-parse master^^)" = "$(git rev-parse HEAD^^)" &&
-	git diff --exit-code master..HEAD &&
-	git diff --exit-code master^..HEAD^ &&
-	compare author master HEAD &&
-	compare author master^ HEAD^ &&
+	test "$(git rev-parse main^^)" = "$(git rev-parse HEAD^^)" &&
+	git diff --exit-code main..HEAD &&
+	git diff --exit-code main^..HEAD^ &&
+	compare author main HEAD &&
+	compare author main^ HEAD^ &&
 	test "$GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL>" = \
 	     "$(git log -1 --pretty=format:"%cn <%ce>" HEAD)"
 '
@@ -465,7 +465,7 @@ test_expect_success 'am changes committer and keeps author' '
 test_expect_success 'am --signoff adds Signed-off-by: line' '
 	rm -fr .git/rebase-apply &&
 	git reset --hard &&
-	git checkout -b master2 first &&
+	git checkout -b main2 first &&
 	git am --signoff <patch2 &&
 	{
 		printf "third\n\nSigned-off-by: %s <%s>\n\n" \
@@ -479,7 +479,7 @@ test_expect_success 'am --signoff adds Signed-off-by: line' '
 '
 
 test_expect_success 'am stays in branch' '
-	echo refs/heads/master2 >expected &&
+	echo refs/heads/main2 >expected &&
 	git symbolic-ref HEAD >actual &&
 	test_cmp expected actual
 '
@@ -540,7 +540,7 @@ test_expect_success 'am without --keep removes Re: and [PATCH] stuff' '
 	git reset --hard HEAD^ &&
 	git am <patch4 &&
 	git rev-parse HEAD >expected &&
-	git rev-parse master2 >actual &&
+	git rev-parse main2 >actual &&
 	test_cmp expected actual
 '
 
@@ -567,7 +567,7 @@ test_expect_success 'am --keep-non-patch really keeps the non-patch part' '
 test_expect_success 'setup am -3' '
 	rm -fr .git/rebase-apply &&
 	git reset --hard &&
-	git checkout -b base3way master2 &&
+	git checkout -b base3way main2 &&
 	sed -n -e "3,\$p" msg >file &&
 	head -n 9 msg >>file &&
 	git add file &&
@@ -759,7 +759,7 @@ test_expect_success 'am takes patches from a Pine mailbox' '
 	git checkout first &&
 	cat pine patch1 | git am &&
 	test_path_is_missing .git/rebase-apply &&
-	git diff --exit-code master^..HEAD
+	git diff --exit-code main^..HEAD
 '
 
 test_expect_success 'am fails on mail without patch' '
@@ -1112,21 +1112,21 @@ test_expect_success 'am and .gitattibutes' '
 		test_commit sixth &&
 
 		git checkout test &&
-		git format-patch --stdout master..HEAD >patches &&
-		git reset --hard master &&
+		git format-patch --stdout main..HEAD >patches &&
+		git reset --hard main &&
 		git am patches &&
 		grep "smudged" a.txt &&
 
 		git checkout removal &&
 		git reset --hard &&
-		git format-patch --stdout master..HEAD >patches &&
-		git reset --hard master &&
+		git format-patch --stdout main..HEAD >patches &&
+		git reset --hard main &&
 		git am patches &&
 		grep "clean" a.txt &&
 
 		git checkout conflict &&
 		git reset --hard &&
-		git format-patch --stdout master..HEAD >patches &&
+		git format-patch --stdout main..HEAD >patches &&
 		git reset --hard fourth &&
 		test_must_fail git am -3 patches &&
 		grep "<<<<<<<<<<" a.txt

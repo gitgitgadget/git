@@ -1097,7 +1097,7 @@ test_expect_success SVNREPO 't9135/svn.dump' '
 		cd simple-svnco &&
 		git init &&
 		git add . &&
-		git fetch ../simple-git master &&
+		git fetch ../simple-git main &&
 		git diff --exit-code FETCH_HEAD
 	)
 '

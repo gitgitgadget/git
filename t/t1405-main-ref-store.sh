@@ -21,9 +21,9 @@ test_expect_success 'peel_ref(new-tag)' '
 	test_cmp expected actual
 '
 
-test_expect_success 'create_symref(FOO, refs/heads/master)' '
-	$RUN create-symref FOO refs/heads/master nothing &&
-	echo refs/heads/master >expected &&
+test_expect_success 'create_symref(FOO, refs/heads/main)' '
+	$RUN create-symref FOO refs/heads/main nothing &&
+	echo refs/heads/main >expected &&
 	git symbolic-ref FOO >actual &&
 	test_cmp expected actual
 '
@@ -36,19 +36,19 @@ test_expect_success 'delete_refs(FOO, refs/tags/new-tag)' '
 	test_must_fail git rev-parse refs/tags/new-tag --
 '
 
-test_expect_success 'rename_refs(master, new-master)' '
-	git rev-parse master >expected &&
-	$RUN rename-ref refs/heads/master refs/heads/new-master &&
-	git rev-parse new-master >actual &&
+test_expect_success 'rename_refs(main, new-main)' '
+	git rev-parse main >expected &&
+	$RUN rename-ref refs/heads/main refs/heads/new-main &&
+	git rev-parse new-main >actual &&
 	test_cmp expected actual &&
-	test_commit recreate-master
+	test_commit recreate-main
 '
 
 test_expect_success 'for_each_ref(refs/heads/)' '
 	$RUN for-each-ref refs/heads/ | cut -d" " -f 2- >actual &&
 	cat >expected <<-\EOF &&
-	master 0x0
-	new-master 0x0
+	main 0x0
+	new-main 0x0
 	EOF
 	test_cmp expected actual
 '
@@ -59,23 +59,23 @@ test_expect_success 'for_each_ref() is sorted' '
 	test_cmp expected actual
 '
 
-test_expect_success 'resolve_ref(new-master)' '
-	SHA1=`git rev-parse new-master` &&
-	echo "$SHA1 refs/heads/new-master 0x0" >expected &&
-	$RUN resolve-ref refs/heads/new-master 0 >actual &&
+test_expect_success 'resolve_ref(new-main)' '
+	SHA1=`git rev-parse new-main` &&
+	echo "$SHA1 refs/heads/new-main 0x0" >expected &&
+	$RUN resolve-ref refs/heads/new-main 0 >actual &&
 	test_cmp expected actual
 '
 
-test_expect_success 'verify_ref(new-master)' '
-	$RUN verify-ref refs/heads/new-master
+test_expect_success 'verify_ref(new-main)' '
+	$RUN verify-ref refs/heads/new-main
 '
 
 test_expect_success 'for_each_reflog()' '
 	$RUN for-each-reflog | sort -k2 | cut -d" " -f 2- >actual &&
 	cat >expected <<-\EOF &&
 	HEAD 0x1
-	refs/heads/master 0x0
-	refs/heads/new-master 0x0
+	refs/heads/main 0x0
+	refs/heads/new-main 0x0
 	EOF
 	test_cmp expected actual
 '
@@ -83,12 +83,12 @@ test_expect_success 'for_each_reflog()' '
 test_expect_success 'for_each_reflog_ent()' '
 	$RUN for-each-reflog-ent HEAD >actual &&
 	head -n1 actual | grep one &&
-	tail -n2 actual | head -n1 | grep recreate-master
+	tail -n2 actual | head -n1 | grep recreate-main
 '
 
 test_expect_success 'for_each_reflog_ent_reverse()' '
 	$RUN for-each-reflog-ent-reverse HEAD >actual &&
-	head -n1 actual | grep recreate-master &&
+	head -n1 actual | grep recreate-main &&
 	tail -n2 actual | head -n1 | grep one
 '
 

@@ -20,7 +20,7 @@ test_expect_success 'setup' '
 	 echo one >file && git add file && git commit -m one &&
 	 git checkout -b two &&
 	 echo two >file && git add file && git commit -m two &&
-	 git checkout master) &&
+	 git checkout main) &&
 	mkdir empty &&
 	(cd empty && git init)
 '
@@ -28,7 +28,7 @@ test_expect_success 'setup' '
 test_expect_success 'vanilla clone chooses HEAD' '
 	git clone parent clone &&
 	(cd clone &&
-	 check_HEAD master &&
+	 check_HEAD main &&
 	 check_file one
 	)
 '
@@ -53,7 +53,7 @@ test_expect_success 'clone -b sets up tracking' '
 
 test_expect_success 'clone -b does not munge remotes/origin/HEAD' '
 	(cd clone-two &&
-	 echo refs/remotes/origin/master >expect &&
+	 echo refs/remotes/origin/main >expect &&
 	 git symbolic-ref refs/remotes/origin/HEAD >actual &&
 	 test_cmp expect actual
 	)
@@ -65,6 +65,15 @@ test_expect_success 'clone -b with bogus branch' '
 
 test_expect_success 'clone -b not allowed with empty repos' '
 	test_must_fail git clone -b branch empty clone-branch-empty
+'
+
+test_expect_success 'chooses correct default branch name' '
+	GIT_TEST_DEFAULT_MAIN_BRANCH_NAME= \
+		git -c init.defaultBranch=up clone empty whats-up &&
+	test_write_lines refs/heads/up refs/heads/up >expect &&
+	git -C whats-up symbolic-ref HEAD >actual &&
+	git -C whats-up config branch.up.merge >>actual &&
+	test_cmp expect actual
 '
 
 test_done

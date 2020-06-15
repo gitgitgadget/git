@@ -14,10 +14,10 @@ test_expect_success setup '
 	echo >>hello world &&
 	git add hello &&
 	git commit -m second &&
-	git checkout master &&
+	git checkout main &&
 	for i in mundo $s; do echo $i; done >hello &&
 	git add hello &&
-	git commit -m master
+	git commit -m main
 
 '
 
@@ -36,10 +36,10 @@ test_expect_success 'setup branch sub' '
 '
 
 test_expect_success 'setup branch main' '
-	git checkout -b main master &&
+	git checkout -b primary main &&
 	git merge -s ours --no-commit --allow-unrelated-histories sub &&
 	git read-tree --prefix=dir/ -u sub &&
-	git commit -m "initial merge of sub into main" &&
+	git commit -m "initial merge of sub into primary" &&
 	test_path_is_file dir/foo.t &&
 	test_path_is_file hello
 '
@@ -49,9 +49,9 @@ test_expect_success 'update branch sub' '
 	test_commit bar
 '
 
-test_expect_success 'update branch main' '
-	git checkout main &&
-	git merge -s subtree sub -m "second merge of sub into main" &&
+test_expect_success 'update branch primary' '
+	git checkout primary &&
+	git merge -s subtree sub -m "second merge of sub into primary" &&
 	test_path_is_file dir/bar.t &&
 	test_path_is_file dir/foo.t &&
 	test_path_is_file hello
@@ -77,8 +77,8 @@ test_expect_success 'setup' '
 
 test_expect_success 'initial merge' '
 	git remote add -f gui ../git-gui &&
-	git merge -s ours --no-commit --allow-unrelated-histories gui/master &&
-	git read-tree --prefix=git-gui/ -u gui/master &&
+	git merge -s ours --no-commit --allow-unrelated-histories gui/main &&
+	git read-tree --prefix=git-gui/ -u gui/main &&
 	git commit -m "Merge git-gui as our subdirectory" &&
 	git checkout -b work &&
 	git ls-files -s >actual &&
@@ -94,10 +94,10 @@ test_expect_success 'merge update' '
 	echo git-gui2 > git-gui.sh &&
 	o3=$(git hash-object git-gui.sh) &&
 	git add git-gui.sh &&
-	git checkout -b master2 &&
+	git checkout -b main2 &&
 	git commit -m "update git-gui" &&
 	cd ../git &&
-	git pull -s subtree gui master2 &&
+	git pull -s subtree gui main2 &&
 	git ls-files -s >actual &&
 	(
 		echo "100644 $o3 0	git-gui/git-gui.sh" &&
@@ -108,10 +108,10 @@ test_expect_success 'merge update' '
 
 test_expect_success 'initial ambiguous subtree' '
 	cd ../git &&
-	git reset --hard master &&
-	git checkout -b master2 &&
-	git merge -s ours --no-commit gui/master &&
-	git read-tree --prefix=git-gui2/ -u gui/master &&
+	git reset --hard main &&
+	git checkout -b main2 &&
+	git merge -s ours --no-commit gui/main &&
+	git read-tree --prefix=git-gui2/ -u gui/main &&
 	git commit -m "Merge git-gui2 as our subdirectory" &&
 	git checkout -b work2 &&
 	git ls-files -s >actual &&
@@ -125,8 +125,8 @@ test_expect_success 'initial ambiguous subtree' '
 
 test_expect_success 'merge using explicit' '
 	cd ../git &&
-	git reset --hard master2 &&
-	git pull -Xsubtree=git-gui gui master2 &&
+	git reset --hard main2 &&
+	git pull -Xsubtree=git-gui gui main2 &&
 	git ls-files -s >actual &&
 	(
 		echo "100644 $o3 0	git-gui/git-gui.sh" &&
@@ -138,8 +138,8 @@ test_expect_success 'merge using explicit' '
 
 test_expect_success 'merge2 using explicit' '
 	cd ../git &&
-	git reset --hard master2 &&
-	git pull -Xsubtree=git-gui2 gui master2 &&
+	git reset --hard main2 &&
+	git pull -Xsubtree=git-gui2 gui main2 &&
 	git ls-files -s >actual &&
 	(
 		echo "100644 $o1 0	git-gui/git-gui.sh" &&

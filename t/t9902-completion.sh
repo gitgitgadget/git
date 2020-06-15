@@ -494,9 +494,9 @@ test_expect_success '__gitcomp - prefix' '
 '
 
 test_expect_success '__gitcomp - suffix' '
-	test_gitcomp "branch.me" "master maint next pu" "branch." \
+	test_gitcomp "branch.me" "main maint next pu" "branch." \
 		"ma" "." <<-\EOF
-	branch.master.Z
+	branch.main.Z
 	branch.maint.Z
 	EOF
 '
@@ -542,37 +542,37 @@ test_expect_success '__gitcomp - doesnt fail because of invalid variable name' '
 '
 
 read -r -d "" refs <<-\EOF
+main
 maint
-master
 next
 pu
 EOF
 
 test_expect_success '__gitcomp_nl - trailing space' '
 	test_gitcomp_nl "m" "$refs" <<-EOF
+	main Z
 	maint Z
-	master Z
 	EOF
 '
 
 test_expect_success '__gitcomp_nl - prefix' '
 	test_gitcomp_nl "--fixup=m" "$refs" "--fixup=" "m" <<-EOF
+	--fixup=main Z
 	--fixup=maint Z
-	--fixup=master Z
 	EOF
 '
 
 test_expect_success '__gitcomp_nl - suffix' '
 	test_gitcomp_nl "branch.ma" "$refs" "branch." "ma" "." <<-\EOF
+	branch.main.Z
 	branch.maint.Z
-	branch.master.Z
 	EOF
 '
 
 test_expect_success '__gitcomp_nl - no suffix' '
 	test_gitcomp_nl "ma" "$refs" "" "ma" "" <<-\EOF
+	mainZ
 	maintZ
-	masterZ
 	EOF
 '
 
@@ -619,7 +619,7 @@ test_expect_success 'setup for ref completion' '
 	(
 		cd otherrepo &&
 		git commit --allow-empty -m initial &&
-		git branch -m master master-in-other &&
+		git branch -m main main-in-other &&
 		git branch branch-in-other &&
 		git tag tag-in-other
 	) &&
@@ -632,10 +632,10 @@ test_expect_success 'setup for ref completion' '
 test_expect_success '__git_refs - simple' '
 	cat >expected <<-EOF &&
 	HEAD
-	master
+	main
 	matching-branch
 	other/branch-in-other
-	other/master-in-other
+	other/main-in-other
 	matching-tag
 	EOF
 	(
@@ -647,10 +647,10 @@ test_expect_success '__git_refs - simple' '
 
 test_expect_success '__git_refs - full refs' '
 	cat >expected <<-EOF &&
-	refs/heads/master
+	refs/heads/main
 	refs/heads/matching-branch
 	refs/remotes/other/branch-in-other
-	refs/remotes/other/master-in-other
+	refs/remotes/other/main-in-other
 	refs/tags/matching-tag
 	EOF
 	(
@@ -664,7 +664,7 @@ test_expect_success '__git_refs - repo given on the command line' '
 	cat >expected <<-EOF &&
 	HEAD
 	branch-in-other
-	master-in-other
+	main-in-other
 	tag-in-other
 	EOF
 	(
@@ -679,7 +679,7 @@ test_expect_success '__git_refs - remote on local file system' '
 	cat >expected <<-EOF &&
 	HEAD
 	branch-in-other
-	master-in-other
+	main-in-other
 	tag-in-other
 	EOF
 	(
@@ -692,7 +692,7 @@ test_expect_success '__git_refs - remote on local file system' '
 test_expect_success '__git_refs - remote on local file system - full refs' '
 	cat >expected <<-EOF &&
 	refs/heads/branch-in-other
-	refs/heads/master-in-other
+	refs/heads/main-in-other
 	refs/tags/tag-in-other
 	EOF
 	(
@@ -706,7 +706,7 @@ test_expect_success '__git_refs - configured remote' '
 	cat >expected <<-EOF &&
 	HEAD
 	branch-in-other
-	master-in-other
+	main-in-other
 	EOF
 	(
 		cur= &&
@@ -719,7 +719,7 @@ test_expect_success '__git_refs - configured remote - full refs' '
 	cat >expected <<-EOF &&
 	HEAD
 	refs/heads/branch-in-other
-	refs/heads/master-in-other
+	refs/heads/main-in-other
 	refs/tags/tag-in-other
 	EOF
 	(
@@ -733,7 +733,7 @@ test_expect_success '__git_refs - configured remote - repo given on the command 
 	cat >expected <<-EOF &&
 	HEAD
 	branch-in-other
-	master-in-other
+	main-in-other
 	EOF
 	(
 		cd thirdrepo &&
@@ -748,7 +748,7 @@ test_expect_success '__git_refs - configured remote - full refs - repo given on 
 	cat >expected <<-EOF &&
 	HEAD
 	refs/heads/branch-in-other
-	refs/heads/master-in-other
+	refs/heads/main-in-other
 	refs/tags/tag-in-other
 	EOF
 	(
@@ -764,7 +764,7 @@ test_expect_success '__git_refs - configured remote - remote name matches a dire
 	cat >expected <<-EOF &&
 	HEAD
 	branch-in-other
-	master-in-other
+	main-in-other
 	EOF
 	mkdir other &&
 	test_when_finished "rm -rf other" &&
@@ -779,7 +779,7 @@ test_expect_success '__git_refs - URL remote' '
 	cat >expected <<-EOF &&
 	HEAD
 	branch-in-other
-	master-in-other
+	main-in-other
 	tag-in-other
 	EOF
 	(
@@ -793,7 +793,7 @@ test_expect_success '__git_refs - URL remote - full refs' '
 	cat >expected <<-EOF &&
 	HEAD
 	refs/heads/branch-in-other
-	refs/heads/master-in-other
+	refs/heads/main-in-other
 	refs/tags/tag-in-other
 	EOF
 	(
@@ -849,23 +849,23 @@ test_expect_success '__git_refs - not in a git repository' '
 test_expect_success '__git_refs - unique remote branches for git checkout DWIMery' '
 	cat >expected <<-EOF &&
 	HEAD
-	master
+	main
 	matching-branch
 	other/ambiguous
 	other/branch-in-other
-	other/master-in-other
+	other/main-in-other
 	remote/ambiguous
 	remote/branch-in-remote
 	matching-tag
 	branch-in-other
 	branch-in-remote
-	master-in-other
+	main-in-other
 	EOF
 	for remote_ref in refs/remotes/other/ambiguous \
 		refs/remotes/remote/ambiguous \
 		refs/remotes/remote/branch-in-remote
 	do
-		git update-ref $remote_ref master &&
+		git update-ref $remote_ref main &&
 		test_when_finished "git update-ref -d $remote_ref"
 	done &&
 	(
@@ -878,10 +878,10 @@ test_expect_success '__git_refs - unique remote branches for git checkout DWIMer
 test_expect_success '__git_refs - after --opt=' '
 	cat >expected <<-EOF &&
 	HEAD
-	master
+	main
 	matching-branch
 	other/branch-in-other
-	other/master-in-other
+	other/main-in-other
 	matching-tag
 	EOF
 	(
@@ -893,10 +893,10 @@ test_expect_success '__git_refs - after --opt=' '
 
 test_expect_success '__git_refs - after --opt= - full refs' '
 	cat >expected <<-EOF &&
-	refs/heads/master
+	refs/heads/main
 	refs/heads/matching-branch
 	refs/remotes/other/branch-in-other
-	refs/remotes/other/master-in-other
+	refs/remotes/other/main-in-other
 	refs/tags/matching-tag
 	EOF
 	(
@@ -909,10 +909,10 @@ test_expect_success '__git_refs - after --opt= - full refs' '
 test_expect_success '__git refs - exluding refs' '
 	cat >expected <<-EOF &&
 	^HEAD
-	^master
+	^main
 	^matching-branch
 	^other/branch-in-other
-	^other/master-in-other
+	^other/main-in-other
 	^matching-tag
 	EOF
 	(
@@ -924,10 +924,10 @@ test_expect_success '__git refs - exluding refs' '
 
 test_expect_success '__git refs - exluding full refs' '
 	cat >expected <<-EOF &&
-	^refs/heads/master
+	^refs/heads/main
 	^refs/heads/matching-branch
 	^refs/remotes/other/branch-in-other
-	^refs/remotes/other/master-in-other
+	^refs/remotes/other/main-in-other
 	^refs/tags/matching-tag
 	EOF
 	(
@@ -948,17 +948,17 @@ test_expect_success 'setup for filtering matching refs' '
 test_expect_success '__git_refs - do not filter refs unless told so' '
 	cat >expected <<-EOF &&
 	HEAD
-	master
+	main
 	matching-branch
 	matching/branch
 	other/branch-in-other
-	other/master-in-other
+	other/main-in-other
 	other/matching/branch-in-other
 	matching-tag
 	matching/tag
 	EOF
 	(
-		cur=master &&
+		cur=main &&
 		__git_refs >"$actual"
 	) &&
 	test_cmp expected "$actual"
@@ -992,7 +992,7 @@ test_expect_success '__git_refs - only matching refs - full refs' '
 
 test_expect_success '__git_refs - only matching refs - remote on local file system' '
 	cat >expected <<-EOF &&
-	master-in-other
+	main-in-other
 	matching/branch-in-other
 	EOF
 	(
@@ -1004,7 +1004,7 @@ test_expect_success '__git_refs - only matching refs - remote on local file syst
 
 test_expect_success '__git_refs - only matching refs - configured remote' '
 	cat >expected <<-EOF &&
-	master-in-other
+	main-in-other
 	matching/branch-in-other
 	EOF
 	(
@@ -1016,7 +1016,7 @@ test_expect_success '__git_refs - only matching refs - configured remote' '
 
 test_expect_success '__git_refs - only matching refs - remote - full refs' '
 	cat >expected <<-EOF &&
-	refs/heads/master-in-other
+	refs/heads/main-in-other
 	refs/heads/matching/branch-in-other
 	EOF
 	(
@@ -1038,7 +1038,7 @@ test_expect_success '__git_refs - only matching refs - checkout DWIMery' '
 		refs/remotes/remote/ambiguous \
 		refs/remotes/remote/branch-in-remote
 	do
-		git update-ref $remote_ref master &&
+		git update-ref $remote_ref main &&
 		test_when_finished "git update-ref -d $remote_ref"
 	done &&
 	(
@@ -1057,11 +1057,11 @@ test_expect_success 'teardown after filtering matching refs' '
 
 test_expect_success '__git_refs - for-each-ref format specifiers in prefix' '
 	cat >expected <<-EOF &&
-	evil-%%-%42-%(refname)..master
+	evil-%%-%42-%(refname)..main
 	EOF
 	(
-		cur="evil-%%-%42-%(refname)..mas" &&
-		__git_refs "" "" "evil-%%-%42-%(refname).." mas >"$actual"
+		cur="evil-%%-%42-%(refname)..mai" &&
+		__git_refs "" "" "evil-%%-%42-%(refname).." mai >"$actual"
 	) &&
 	test_cmp expected "$actual"
 '
@@ -1069,10 +1069,10 @@ test_expect_success '__git_refs - for-each-ref format specifiers in prefix' '
 test_expect_success '__git_complete_refs - simple' '
 	sed -e "s/Z$//" >expected <<-EOF &&
 	HEAD Z
-	master Z
+	main Z
 	matching-branch Z
 	other/branch-in-other Z
-	other/master-in-other Z
+	other/main-in-other Z
 	matching-tag Z
 	EOF
 	(
@@ -1100,7 +1100,7 @@ test_expect_success '__git_complete_refs - remote' '
 	sed -e "s/Z$//" >expected <<-EOF &&
 	HEAD Z
 	branch-in-other Z
-	master-in-other Z
+	main-in-other Z
 	EOF
 	(
 		cur= &&
@@ -1113,13 +1113,13 @@ test_expect_success '__git_complete_refs - remote' '
 test_expect_success '__git_complete_refs - track' '
 	sed -e "s/Z$//" >expected <<-EOF &&
 	HEAD Z
-	master Z
+	main Z
 	matching-branch Z
 	other/branch-in-other Z
-	other/master-in-other Z
+	other/main-in-other Z
 	matching-tag Z
 	branch-in-other Z
-	master-in-other Z
+	main-in-other Z
 	EOF
 	(
 		cur= &&
@@ -1158,10 +1158,10 @@ test_expect_success '__git_complete_refs - prefix' '
 test_expect_success '__git_complete_refs - suffix' '
 	cat >expected <<-EOF &&
 	HEAD.
-	master.
+	main.
 	matching-branch.
 	other/branch-in-other.
-	other/master-in-other.
+	other/main-in-other.
 	matching-tag.
 	EOF
 	(
@@ -1176,7 +1176,7 @@ test_expect_success '__git_complete_fetch_refspecs - simple' '
 	sed -e "s/Z$//" >expected <<-EOF &&
 	HEAD:HEAD Z
 	branch-in-other:branch-in-other Z
-	master-in-other:master-in-other Z
+	main-in-other:main-in-other Z
 	EOF
 	(
 		cur= &&
@@ -1202,7 +1202,7 @@ test_expect_success '__git_complete_fetch_refspecs - prefix' '
 	sed -e "s/Z$//" >expected <<-EOF &&
 	+HEAD:HEAD Z
 	+branch-in-other:branch-in-other Z
-	+master-in-other:master-in-other Z
+	+main-in-other:main-in-other Z
 	EOF
 	(
 		cur="+" &&
@@ -1215,7 +1215,7 @@ test_expect_success '__git_complete_fetch_refspecs - prefix' '
 test_expect_success '__git_complete_fetch_refspecs - fully qualified' '
 	sed -e "s/Z$//" >expected <<-EOF &&
 	refs/heads/branch-in-other:refs/heads/branch-in-other Z
-	refs/heads/master-in-other:refs/heads/master-in-other Z
+	refs/heads/main-in-other:refs/heads/main-in-other Z
 	refs/tags/tag-in-other:refs/tags/tag-in-other Z
 	EOF
 	(
@@ -1229,7 +1229,7 @@ test_expect_success '__git_complete_fetch_refspecs - fully qualified' '
 test_expect_success '__git_complete_fetch_refspecs - fully qualified & prefix' '
 	sed -e "s/Z$//" >expected <<-EOF &&
 	+refs/heads/branch-in-other:refs/heads/branch-in-other Z
-	+refs/heads/master-in-other:refs/heads/master-in-other Z
+	+refs/heads/main-in-other:refs/heads/main-in-other Z
 	+refs/tags/tag-in-other:refs/tags/tag-in-other Z
 	EOF
 	(
@@ -1560,7 +1560,7 @@ test_expect_success 'setup for integration tests' '
 
 test_expect_success 'checkout completes ref names' '
 	test_completion "git checkout m" <<-\EOF
-	master Z
+	main Z
 	mybranch Z
 	mytag Z
 	EOF
@@ -1574,7 +1574,7 @@ test_expect_success 'git -C <path> checkout uses the right repo' '
 
 test_expect_success 'show completes all refs' '
 	test_completion "git show m" <<-\EOF
-	master Z
+	main Z
 	mybranch Z
 	mytag Z
 	EOF
@@ -1611,7 +1611,7 @@ test_expect_success PERL 'send-email' '
 	--cover-from-description=Z
 	--cover-letter Z
 	EOF
-	test_completion "git send-email ma" "master "
+	test_completion "git send-email ma" "main "
 '
 
 test_expect_success 'complete files' '
@@ -1691,7 +1691,7 @@ test_expect_success 'complete files' '
 test_expect_success "completion uses <cmd> completion for alias: !sh -c 'git <cmd> ...'" '
 	test_config alias.co "!sh -c '"'"'git checkout ...'"'"'" &&
 	test_completion "git co m" <<-\EOF
-	master Z
+	main Z
 	mybranch Z
 	mytag Z
 	EOF
@@ -1700,7 +1700,7 @@ test_expect_success "completion uses <cmd> completion for alias: !sh -c 'git <cm
 test_expect_success 'completion uses <cmd> completion for alias: !f () { VAR=val git <cmd> ... }' '
 	test_config alias.co "!f () { VAR=val git checkout ... ; } f" &&
 	test_completion "git co m" <<-\EOF
-	master Z
+	main Z
 	mybranch Z
 	mytag Z
 	EOF
@@ -1709,7 +1709,7 @@ test_expect_success 'completion uses <cmd> completion for alias: !f () { VAR=val
 test_expect_success 'completion used <cmd> completion for alias: !f() { : git <cmd> ; ... }' '
 	test_config alias.co "!f() { : git checkout ; if ... } f" &&
 	test_completion "git co m" <<-\EOF
-	master Z
+	main Z
 	mybranch Z
 	mytag Z
 	EOF
@@ -1740,7 +1740,7 @@ for flag in -d --delete
 do
 	test_expect_success "__git_complete_remote_or_refspec - push $flag other" '
 		sed -e "s/Z$//" >expected <<-EOF &&
-		master-in-other Z
+		main-in-other Z
 		EOF
 		(
 			words=(git push '$flag' other ma) &&
@@ -1753,7 +1753,7 @@ do
 
 	test_expect_failure "__git_complete_remote_or_refspec - push other $flag" '
 		sed -e "s/Z$//" >expected <<-EOF &&
-		master-in-other Z
+		main-in-other Z
 		EOF
 		(
 			words=(git push other '$flag' ma) &&

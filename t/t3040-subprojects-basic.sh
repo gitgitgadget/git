@@ -80,6 +80,6 @@ test_expect_success 'checkout in superproject' '
 '
 
 # just interesting what happened...
-# git diff --name-status -M save master
+# git diff --name-status -M save main
 
 test_done

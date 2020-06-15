@@ -14,47 +14,47 @@ test_expect_success setup '
 
 	echo 1 >file &&
 	test_tick &&
-	git commit -a -m "second on master" &&
+	git commit -a -m "second on main" &&
 
 	git checkout side &&
 	echo 1 >file &&
 	test_tick &&
 	git commit -a -m "second on side" &&
 
-	git merge master
+	git merge main
 
 '
 
-test_expect_success 'branch --contains=master' '
+test_expect_success 'branch --contains=main' '
 
-	git branch --contains=master >actual &&
+	git branch --contains=main >actual &&
 	{
-		echo "  master" && echo "* side"
+		echo "  main" && echo "* side"
 	} >expect &&
 	test_cmp expect actual
 
 '
 
-test_expect_success 'branch --contains master' '
+test_expect_success 'branch --contains main' '
 
-	git branch --contains master >actual &&
+	git branch --contains main >actual &&
 	{
-		echo "  master" && echo "* side"
+		echo "  main" && echo "* side"
 	} >expect &&
 	test_cmp expect actual
 
 '
 
-test_expect_success 'branch --no-contains=master' '
+test_expect_success 'branch --no-contains=main' '
 
-	git branch --no-contains=master >actual &&
+	git branch --no-contains=main >actual &&
 	test_must_be_empty actual
 
 '
 
-test_expect_success 'branch --no-contains master' '
+test_expect_success 'branch --no-contains main' '
 
-	git branch --no-contains master >actual &&
+	git branch --no-contains main >actual &&
 	test_must_be_empty actual
 
 '
@@ -73,7 +73,7 @@ test_expect_success 'branch --no-contains=side' '
 
 	git branch --no-contains=side >actual &&
 	{
-		echo "  master"
+		echo "  main"
 	} >expect &&
 	test_cmp expect actual
 
@@ -81,9 +81,9 @@ test_expect_success 'branch --no-contains=side' '
 
 test_expect_success 'branch --contains with pattern implies --list' '
 
-	git branch --contains=master master >actual &&
+	git branch --contains=main main >actual &&
 	{
-		echo "  master"
+		echo "  main"
 	} >expect &&
 	test_cmp expect actual
 
@@ -91,7 +91,7 @@ test_expect_success 'branch --contains with pattern implies --list' '
 
 test_expect_success 'branch --no-contains with pattern implies --list' '
 
-	git branch --no-contains=master master >actual &&
+	git branch --no-contains=main main >actual &&
 	test_must_be_empty actual
 
 '
@@ -100,7 +100,7 @@ test_expect_success 'side: branch --merged' '
 
 	git branch --merged >actual &&
 	{
-		echo "  master" &&
+		echo "  main" &&
 		echo "* side"
 	} >expect &&
 	test_cmp expect actual
@@ -109,9 +109,9 @@ test_expect_success 'side: branch --merged' '
 
 test_expect_success 'branch --merged with pattern implies --list' '
 
-	git branch --merged=side master >actual &&
+	git branch --merged=side main >actual &&
 	{
-		echo "  master"
+		echo "  main"
 	} >expect &&
 	test_cmp expect actual
 
@@ -124,18 +124,18 @@ test_expect_success 'side: branch --no-merged' '
 
 '
 
-test_expect_success 'master: branch --merged' '
+test_expect_success 'main: branch --merged' '
 
-	git checkout master &&
+	git checkout main &&
 	git branch --merged >actual &&
 	{
-		echo "* master"
+		echo "* main"
 	} >expect &&
 	test_cmp expect actual
 
 '
 
-test_expect_success 'master: branch --no-merged' '
+test_expect_success 'main: branch --no-merged' '
 
 	git branch --no-merged >actual &&
 	{
@@ -147,22 +147,22 @@ test_expect_success 'master: branch --no-merged' '
 
 test_expect_success 'branch --no-merged with pattern implies --list' '
 
-	git branch --no-merged=master master >actual &&
+	git branch --no-merged=main main >actual &&
 	test_must_be_empty actual
 
 '
 
 test_expect_success 'implicit --list conflicts with modification options' '
 
-	test_must_fail git branch --contains=master -d &&
-	test_must_fail git branch --contains=master -m foo &&
-	test_must_fail git branch --no-contains=master -d &&
-	test_must_fail git branch --no-contains=master -m foo
+	test_must_fail git branch --contains=main -d &&
+	test_must_fail git branch --contains=main -m foo &&
+	test_must_fail git branch --no-contains=main -d &&
+	test_must_fail git branch --no-contains=main -m foo
 
 '
 
 test_expect_success 'Assert that --contains only works on commits, not trees & blobs' '
-	test_must_fail git branch --contains master^{tree} &&
+	test_must_fail git branch --contains main^{tree} &&
 	blob=$(git hash-object -w --stdin <<-\EOF
 	Some blob
 	EOF
@@ -176,26 +176,26 @@ test_expect_success 'Assert that --contains only works on commits, not trees & b
 # that the latter walk does not mess up our flag to see if it was
 # merged).
 #
-# Here "topic" tracks "master" with one extra commit, and "zzz" points to the
-# same tip as master The name "zzz" must come alphabetically after "topic"
+# Here "topic" tracks "main" with one extra commit, and "zzz" points to the
+# same tip as main The name "zzz" must come alphabetically after "topic"
 # as we process them in that order.
 test_expect_success 'branch --merged with --verbose' '
-	git branch --track topic master &&
+	git branch --track topic main &&
 	git branch zzz topic &&
 	git checkout topic &&
 	test_commit foo &&
 	git branch --merged topic >actual &&
 	cat >expect <<-\EOF &&
-	  master
+	  main
 	* topic
 	  zzz
 	EOF
 	test_cmp expect actual &&
 	git branch --verbose --merged topic >actual &&
 	cat >expect <<-EOF &&
-	  master $(git rev-parse --short master) second on master
-	* topic  $(git rev-parse --short topic ) [ahead 1] foo
-	  zzz    $(git rev-parse --short zzz   ) second on master
+	  main  $(git rev-parse --short main) second on main
+	* topic $(git rev-parse --short topic ) [ahead 1] foo
+	  zzz   $(git rev-parse --short zzz   ) second on main
 	EOF
 	test_i18ncmp expect actual
 '
@@ -203,7 +203,7 @@ test_expect_success 'branch --merged with --verbose' '
 test_expect_success 'branch --contains combined with --no-contains' '
 	git branch --contains zzz --no-contains topic >actual &&
 	cat >expect <<-\EOF &&
-	  master
+	  main
 	  side
 	  zzz
 	EOF

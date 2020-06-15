@@ -54,9 +54,9 @@ test_expect_success 'setup' '
 	git branch change &&
 	git branch change+rename &&
 
-	sed -e "/^g /s/.*/g : master changes a line/" <A >A+ &&
+	sed -e "/^g /s/.*/g : main changes a line/" <A >A+ &&
 	mv A+ A &&
-	git commit -a -m "master updates A" &&
+	git commit -a -m "main updates A" &&
 
 	git checkout yellow &&
 	rm -f M &&
@@ -94,7 +94,7 @@ test_expect_success 'setup' '
 	git update-index --add B &&
 	git commit -q -a -m "changed and renamed" &&
 
-	git checkout master
+	git checkout main
 '
 
 test_expect_success 'pull renaming branch into unrenaming one' \
@@ -109,7 +109,7 @@ test_expect_success 'pull renaming branch into unrenaming one' \
 	sed -ne "/^g/{
 	p
 	q
-	}" B | grep master &&
+	}" B | grep main &&
 	git diff --exit-code white N
 '
 
@@ -134,7 +134,7 @@ test_expect_success 'pull unrenaming branch into renaming one' \
 '
 	git reset --hard &&
 	git show-branch &&
-	test_expect_code 1 git pull . master &&
+	test_expect_code 1 git pull . main &&
 	git ls-files -u B >b.stages &&
 	test_line_count = 3 b.stages &&
 	git ls-files -s N >n.stages &&
@@ -187,7 +187,7 @@ test_expect_success 'interference with untracked working tree file' '
 test_expect_success 'interference with untracked working tree file' '
 	git reset --hard &&
 	rm -f A M &&
-	git checkout -f master &&
+	git checkout -f main &&
 	git tag -f anchor &&
 	git show-branch &&
 	git pull . yellow &&
@@ -198,7 +198,7 @@ test_expect_success 'interference with untracked working tree file' '
 test_expect_success 'updated working tree file should prevent the merge' '
 	git reset --hard &&
 	rm -f A M &&
-	git checkout -f master &&
+	git checkout -f main &&
 	git tag -f anchor &&
 	git show-branch &&
 	echo >>M one line addition &&
@@ -211,7 +211,7 @@ test_expect_success 'updated working tree file should prevent the merge' '
 test_expect_success 'updated working tree file should prevent the merge' '
 	git reset --hard &&
 	rm -f A M &&
-	git checkout -f master &&
+	git checkout -f main &&
 	git tag -f anchor &&
 	git show-branch &&
 	echo >>M one line addition &&
@@ -229,7 +229,7 @@ test_expect_success 'interference with untracked working tree file' '
 	git tag -f anchor &&
 	git show-branch &&
 	echo >M this file should not matter &&
-	git pull . master &&
+	git pull . main &&
 	test_path_is_file M &&
 	! {
 		git ls-files -s |
@@ -700,7 +700,7 @@ test_expect_success 'setup avoid unnecessary update, dir->(file,nothing)' '
 	git rm -rf df &&
 	git commit -mB &&
 
-	git checkout master &&
+	git checkout main &&
 	git rm -rf df &&
 	echo bla >df &&
 	git add -A &&
@@ -708,7 +708,7 @@ test_expect_success 'setup avoid unnecessary update, dir->(file,nothing)' '
 '
 
 test_expect_success 'avoid unnecessary update, dir->(file,nothing)' '
-	git checkout -q master^0 &&
+	git checkout -q main^0 &&
 	test-tool chmtime --get -3600 df >expect &&
 	git merge side &&
 	test-tool chmtime --get df >actual &&
@@ -730,14 +730,14 @@ test_expect_success 'setup avoid unnecessary update, modify/delete' '
 	git rm -f file &&
 	git commit -m "Delete file" &&
 
-	git checkout master &&
+	git checkout main &&
 	echo bla >file &&
 	git add -A &&
 	git commit -m "Modify file"
 '
 
 test_expect_success 'avoid unnecessary update, modify/delete' '
-	git checkout -q master^0 &&
+	git checkout -q main^0 &&
 	test-tool chmtime --get -3600 file >expect &&
 	test_must_fail git merge side &&
 	test-tool chmtime --get file >actual &&
@@ -759,13 +759,13 @@ test_expect_success 'setup avoid unnecessary update, rename/add-dest' '
 	git add -A &&
 	git commit -m "Add file copy" &&
 
-	git checkout master &&
+	git checkout main &&
 	git mv file newfile &&
 	git commit -m "Rename file"
 '
 
 test_expect_success 'avoid unnecessary update, rename/add-dest' '
-	git checkout -q master^0 &&
+	git checkout -q main^0 &&
 	test-tool chmtime --get -3600 newfile >expect &&
 	git merge side &&
 	test-tool chmtime --get newfile >actual &&
@@ -815,15 +815,15 @@ test_expect_success 'setup for use of extended merge markers' '
 	git mv original_file renamed_file &&
 	git commit -mB &&
 
-	git checkout master &&
+	git checkout main &&
 	echo 8.5 >>original_file &&
 	git add original_file &&
 	git commit -mC
 '
 
-test_expect_success 'merge master into rename has correct extended markers' '
+test_expect_success 'merge main into rename has correct extended markers' '
 	git checkout rename^0 &&
-	test_must_fail git merge -s recursive master^0 &&
+	test_must_fail git merge -s recursive main^0 &&
 
 	cat >expected <<-\EOF &&
 	1
@@ -838,14 +838,14 @@ test_expect_success 'merge master into rename has correct extended markers' '
 	9
 	=======
 	8.5
-	>>>>>>> master^0:original_file
+	>>>>>>> main^0:original_file
 	EOF
 	test_cmp expected renamed_file
 '
 
-test_expect_success 'merge rename into master has correct extended markers' '
+test_expect_success 'merge rename into main has correct extended markers' '
 	git reset --hard &&
-	git checkout master^0 &&
+	git checkout main^0 &&
 	test_must_fail git merge -s recursive rename^0 &&
 
 	cat >expected <<-\EOF &&
@@ -881,13 +881,13 @@ test_expect_success 'setup spurious "refusing to lose untracked" message' '
 	git mv original_file renamed_file &&
 	git commit -mB &&
 
-	git checkout master &&
+	git checkout main &&
 	git rm original_file &&
 	git commit -mC
 '
 
 test_expect_success 'no spurious "refusing to lose untracked" message' '
-	git checkout master^0 &&
+	git checkout main^0 &&
 	test_must_fail git merge rename^0 2>errors.txt &&
 	! grep "refusing to lose untracked file" errors.txt
 '
