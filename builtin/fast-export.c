@@ -497,7 +497,7 @@ static void *anonymize_ref_component(const void *old, size_t *len)
 {
 	static int counter;
 	struct strbuf out = STRBUF_INIT;
-	strbuf_addf(&out, "ref%d", counter++);
+	strbuf_addf(&out, "ref%d", ++counter);
 	return strbuf_detach(&out, len);
 }
 
@@ -515,14 +515,24 @@ static const char *anonymize_refname(const char *refname)
 	};
 	static struct hashmap refs;
 	static struct strbuf anon = STRBUF_INIT;
+	static char *main_branch;
 	int i;
 
 	/*
-	 * We also leave "master" as a special case, since it does not reveal
-	 * anything interesting.
+	 * In certain circumstances, it might be interesting to be able to
+	 * identify the main branch. For that reason, let's force its name to
+	 * be anonymized to `ref0`.
+	 *
+	 * While the main branch name might often be `main` for new
+	 * repositories (and `master` for aged ones), and such well-known names
+	 * may not necessarily need anonymizing, it could be configured to use
+	 * a secret word that the user may not want to reveal.
 	 */
-	if (!strcmp(refname, "refs/heads/master"))
-		return refname;
+	if (!main_branch)
+		main_branch = git_main_branch_name(MAIN_BRANCH_FULL_NAME);
+
+	if (!strcmp(refname, main_branch))
+		return "refs/heads/ref0";
 
 	strbuf_reset(&anon);
 	for (i = 0; i < ARRAY_SIZE(prefixes); i++) {
@@ -1011,7 +1021,7 @@ static void handle_tags_and_duplicates(struct string_list *extras)
 				/*
 				 * Getting here means we have a commit which
 				 * was excluded by a negative refspec (e.g.
-				 * fast-export ^master master).  If we are
+				 * fast-export ^HEAD HEAD).  If we are
 				 * referencing excluded commits, set the ref
 				 * to the exact commit.  Otherwise, the user
 				 * wants the branch exported but every commit

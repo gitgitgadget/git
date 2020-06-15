@@ -556,6 +556,15 @@ static void copy_or_rename_branch(const char *oldname, const char *newname, int 
 	    replace_each_worktree_head_symref(oldref.buf, newref.buf, logmsg.buf))
 		die(_("Branch renamed to %s, but HEAD is not updated!"), newname);
 
+	if (!copy) {
+		char *main_branch = git_main_branch_name(0);
+
+		if (!strcmp(interpreted_oldname, main_branch))
+		    git_config_set("core.mainbranch", interpreted_newname);
+
+		free(main_branch);
+	}
+
 	strbuf_release(&logmsg);
 
 	strbuf_addf(&oldsection, "branch.%s", interpreted_oldname);

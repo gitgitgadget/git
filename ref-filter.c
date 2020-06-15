@@ -1799,7 +1799,7 @@ static int get_ref_atom_value(struct ref_array_item *ref, int atom,
 
 /*
  * Return 1 if the refname matches one of the patterns, otherwise 0.
- * A pattern can be a literal prefix (e.g. a refname "refs/heads/master"
+ * A pattern can be a literal prefix (e.g. a refname "refs/heads/main"
  * matches a pattern "refs/heads/mas") or a wildcard (e.g. the same ref
  * matches "refs/heads/mas*", too).
  */
@@ -1829,7 +1829,7 @@ static int match_pattern(const struct ref_filter *filter, const char *refname)
 
 /*
  * Return 1 if the refname matches one of the patterns, otherwise 0.
- * A pattern can be path prefix (e.g. a refname "refs/heads/master"
+ * A pattern can be path prefix (e.g. a refname "refs/heads/main"
  * matches a pattern "refs/heads/" but not "refs/heads/m") or a
  * wildcard (e.g. the same ref matches "refs/heads/m*", too).
  */

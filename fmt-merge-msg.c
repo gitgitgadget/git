@@ -407,7 +407,7 @@ static void fmt_merge_msg_title(struct strbuf *out,
 				const char *current_branch)
 {
 	int i = 0;
-	char *sep = "";
+	char *sep = "", *main_branch;
 
 	strbuf_addstr(out, "Merge ");
 	for (i = 0; i < srcs.nr; i++) {
@@ -451,10 +451,12 @@ static void fmt_merge_msg_title(struct strbuf *out,
 			strbuf_addf(out, " of %s", srcs.items[i].string);
 	}
 
-	if (!strcmp("master", current_branch))
+	main_branch = git_main_branch_name(0);
+	if (!strcmp(main_branch, current_branch))
 		strbuf_addch(out, '\n');
 	else
 		strbuf_addf(out, " into %s\n", current_branch);
+	free(main_branch);
 }
 
 static void fmt_tag_signature(struct strbuf *tagbuf,

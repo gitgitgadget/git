@@ -155,6 +155,21 @@ int dwim_ref(const char *str, int len, struct object_id *oid, char **ref);
 int dwim_log(const char *str, int len, struct object_id *oid, char **ref);
 
 /*
+ * Retrieves the name of the main (or: primary) branch of the given
+ * repository.
+ *
+ * To obtain the default for newly-initialized repositories, pass the flag
+ * `MAIN_BRANCH_FOR_INIT`.
+ *
+ * The result is an allocated string. Unless the flags ask for a short name, it
+ * will be prefixed with "refs/heads/".
+ */
+#define MAIN_BRANCH_FULL_NAME (1<<0)
+#define MAIN_BRANCH_FOR_INIT   (1<<1)
+char *git_main_branch_name(int flags);
+char *repo_main_branch_name(struct repository *r, int flags);
+
+/*
  * A ref_transaction represents a collection of reference updates that
  * should succeed or fail together.
  *
@@ -432,35 +447,19 @@ int delete_refs(const char *msg, struct string_list *refnames,
 int refs_delete_reflog(struct ref_store *refs, const char *refname);
 int delete_reflog(const char *refname);
 
-/*
- * Callback to process a reflog entry found by the iteration functions (see
- * below)
- */
+/* iterate over reflog entries */
 typedef int each_reflog_ent_fn(
 		struct object_id *old_oid, struct object_id *new_oid,
 		const char *committer, timestamp_t timestamp,
 		int tz, const char *msg, void *cb_data);
 
-/* Iterate over reflog entries in the log for `refname`. */
-
-/* oldest entry first */
 int refs_for_each_reflog_ent(struct ref_store *refs, const char *refname,
 			     each_reflog_ent_fn fn, void *cb_data);
-
-/* youngest entry first */
 int refs_for_each_reflog_ent_reverse(struct ref_store *refs,
 				     const char *refname,
 				     each_reflog_ent_fn fn,
 				     void *cb_data);
-
-/*
- * Iterate over reflog entries in the log for `refname` in the main ref store.
- */
-
-/* oldest entry first */
 int for_each_reflog_ent(const char *refname, each_reflog_ent_fn fn, void *cb_data);
-
-/* youngest entry first */
 int for_each_reflog_ent_reverse(const char *refname, each_reflog_ent_fn fn, void *cb_data);
 
 /*

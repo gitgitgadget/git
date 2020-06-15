@@ -560,6 +560,47 @@ void expand_ref_prefix(struct argv_array *prefixes, const char *prefix)
 		argv_array_pushf(prefixes, *p, len, prefix);
 }
 
+char *repo_main_branch_name(struct repository *r, int flags)
+{
+	int full_name = flags & MAIN_BRANCH_FULL_NAME;
+	int for_init = flags & MAIN_BRANCH_FOR_INIT;
+	const char *config_key = for_init ?
+		 "init.defaultbranch" : "core.mainbranch";
+	const char *config_display_key = for_init ?
+		 "init.defaultBranch" : "core.mainBranch";
+	const char *fall_back = for_init ? "main" : "master";
+	char *name = NULL, *ret;
+
+	if (for_init) {
+		const char *env = getenv("GIT_TEST_DEFAULT_MAIN_BRANCH_NAME");
+
+		if (env && *env)
+			name = xstrdup(env);
+	}
+
+	if (!name && repo_config_get_string(r, config_key, &name) < 0)
+		die(_("could not retrieve `%s`"), config_display_key);
+
+	if (full_name)
+		ret = xstrfmt("refs/heads/%s", name ? name : fall_back);
+	else
+		ret = name ? name : xstrdup(fall_back);
+
+	if (check_refname_format(ret, REFNAME_ALLOW_ONELEVEL))
+		die(_("invalid branch name: %s = %s"),
+		    config_display_key, name);
+
+	if (name != ret)
+		free(name);
+
+	return ret;
+}
+
+char *git_main_branch_name(int flags)
+{
+	return repo_main_branch_name(the_repository, flags);
+}
+
 /*
  * *string and *len will only be substituted, and *string returned (for
  * later free()ing) if the string passed in is a magic short-hand form
@@ -1948,19 +1989,19 @@ int peel_ref(const char *refname, struct object_id *oid)
 
 int refs_create_symref(struct ref_store *refs,
 		       const char *ref_target,
-		       const char *refs_heads_master,
+		       const char *refs_heads_main,
 		       const char *logmsg)
 {
 	return refs->be->create_symref(refs, ref_target,
-				       refs_heads_master,
+				       refs_heads_main,
 				       logmsg);
 }
 
-int create_symref(const char *ref_target, const char *refs_heads_master,
+int create_symref(const char *ref_target, const char *refs_heads_main,
 		  const char *logmsg)
 {
 	return refs_create_symref(get_main_ref_store(the_repository), ref_target,
-				  refs_heads_master, logmsg);
+				  refs_heads_main, logmsg);
 }
 
 int ref_update_reject_duplicates(struct string_list *refnames,

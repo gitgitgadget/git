@@ -15,7 +15,7 @@
 
 static const char * const builtin_remote_usage[] = {
 	N_("git remote [-v | --verbose]"),
-	N_("git remote add [-t <branch>] [-m <master>] [-f] [--tags | --no-tags] [--mirror=<fetch|push>] <name> <url>"),
+	N_("git remote add [-t <branch>] [-m <main>] [-f] [--tags | --no-tags] [--mirror=<fetch|push>] <name> <url>"),
 	N_("git remote rename <old> <new>"),
 	N_("git remote remove <name>"),
 	N_("git remote set-head <name> (-a | --auto | -d | --delete | <branch>)"),
@@ -154,7 +154,7 @@ static int add(int argc, const char **argv)
 	int fetch = 0, fetch_tags = TAGS_DEFAULT;
 	unsigned mirror = MIRROR_NONE;
 	struct string_list track = STRING_LIST_INIT_NODUP;
-	const char *master = NULL;
+	const char *main_branch = NULL;
 	struct remote *remote;
 	struct strbuf buf = STRBUF_INIT, buf2 = STRBUF_INIT;
 	const char *name, *url;
@@ -169,7 +169,7 @@ static int add(int argc, const char **argv)
 			    N_("or do not fetch any tag at all (--no-tags)"), TAGS_UNSET),
 		OPT_STRING_LIST('t', "track", &track, N_("branch"),
 				N_("branch(es) to track")),
-		OPT_STRING('m', "master", &master, N_("branch"), N_("master branch")),
+		OPT_STRING('m', "main", &main_branch, N_("branch"), N_("main branch")),
 		OPT_CALLBACK_F(0, "mirror", &mirror, "(push|fetch)",
 			N_("set up remote as a mirror to push to or fetch from"),
 			PARSE_OPT_OPTARG | PARSE_OPT_COMP_ARG, parse_mirror_opt),
@@ -182,8 +182,8 @@ static int add(int argc, const char **argv)
 	if (argc != 2)
 		usage_with_options(builtin_remote_add_usage, options);
 
-	if (mirror && master)
-		die(_("specifying a master branch makes no sense with --mirror"));
+	if (mirror && main_branch)
+		die(_("specifying a main branch makes no sense with --mirror"));
 	if (mirror && !(mirror & MIRROR_FETCH) && track.nr)
 		die(_("specifying branches to track makes sense only with fetch mirrors"));
 
@@ -228,15 +228,15 @@ static int add(int argc, const char **argv)
 	if (fetch && fetch_remote(name))
 		return 1;
 
-	if (master) {
+	if (main_branch) {
 		strbuf_reset(&buf);
 		strbuf_addf(&buf, "refs/remotes/%s/HEAD", name);
 
 		strbuf_reset(&buf2);
-		strbuf_addf(&buf2, "refs/remotes/%s/%s", name, master);
+		strbuf_addf(&buf2, "refs/remotes/%s/%s", name, main_branch);
 
 		if (create_symref(buf.buf, buf2.buf, "remote add"))
-			return error(_("Could not setup master '%s'"), master);
+			return error(_("Could not setup main '%s'"), main_branch);
 	}
 
 	strbuf_release(&buf);

@@ -256,7 +256,7 @@ static void read_remotes_file(struct remote *remote)
 
 static void read_branches_file(struct remote *remote)
 {
-	char *frag;
+	char *frag, *main_branch = NULL;
 	struct strbuf buf = STRBUF_INIT;
 	FILE *f = fopen_or_warn(git_path("branches/%s", remote->name), "r");
 
@@ -276,7 +276,7 @@ static void read_branches_file(struct remote *remote)
 
 	/*
 	 * The branches file would have URL and optionally
-	 * #branch specified.  The "master" (or specified) branch is
+	 * #branch specified.  The default (or specified) branch is
 	 * fetched and stored in the local branch matching the
 	 * remote name.
 	 */
@@ -284,7 +284,7 @@ static void read_branches_file(struct remote *remote)
 	if (frag)
 		*(frag++) = '\0';
 	else
-		frag = "master";
+		frag = main_branch = git_main_branch_name(MAIN_BRANCH_FOR_INIT);
 
 	add_url_alias(remote, strbuf_detach(&buf, NULL));
 	strbuf_addf(&buf, "refs/heads/%s:refs/heads/%s",
@@ -293,12 +293,13 @@ static void read_branches_file(struct remote *remote)
 
 	/*
 	 * Cogito compatible push: push current HEAD to remote #branch
-	 * (master if missing)
+	 * (main if missing)
 	 */
 	strbuf_reset(&buf);
 	strbuf_addf(&buf, "HEAD:refs/heads/%s", frag);
 	refspec_append(&remote->push, buf.buf);
 	remote->fetch_tags = 1; /* always auto-follow */
+	free(main_branch);
 	strbuf_release(&buf);
 }
 
@@ -866,10 +867,10 @@ int count_refspec_match(const char *pattern,
 
 		/* A match is "weak" if it is with refs outside
 		 * heads or tags, and did not specify the pattern
-		 * in full (e.g. "refs/remotes/origin/master") or at
-		 * least from the toplevel (e.g. "remotes/origin/master");
-		 * otherwise "git push $URL master" would result in
-		 * ambiguity between remotes/origin/master and heads/master
+		 * in full (e.g. "refs/remotes/origin/main") or at
+		 * least from the toplevel (e.g. "remotes/origin/main");
+		 * otherwise "git push $URL main" would result in
+		 * ambiguity between remotes/origin/main and heads/main
 		 * at the remote site.
 		 */
 		if (namelen != patlen &&
@@ -2097,9 +2098,13 @@ struct ref *guess_remote_head(const struct ref *head,
 	if (head->symref)
 		return copy_ref(find_ref_by_name(refs, head->symref));
 
-	/* If refs/heads/master could be right, it is. */
+	/* If a remote branch exists with the main branch name, let's use it. */
 	if (!all) {
-		r = find_ref_by_name(refs, "refs/heads/master");
+		char *name = git_main_branch_name(MAIN_BRANCH_FULL_NAME |
+						  MAIN_BRANCH_FOR_INIT);
+
+		r = find_ref_by_name(refs, name);
+		free(name);
 		if (r && oideq(&r->old_oid, &head->old_oid))
 			return copy_ref(r);
 	}
