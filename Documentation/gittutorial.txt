@@ -107,9 +107,9 @@ summary of the situation with 'git status':
 
 ------------------------------------------------
 $ git status
-On branch master
+On branch main
 Changes to be committed:
-Your branch is up to date with 'origin/master'.
+Your branch is up to date with 'origin/main'.
   (use "git restore --staged <file>..." to unstage)
 
 	modified:   file1
@@ -198,11 +198,11 @@ you'll get a list of all existing branches:
 
 ------------------------------------------------
   experimental
-* master
+* main
 ------------------------------------------------
 
 The "experimental" branch is the one you just created, and the
-"master" branch is a default branch that was created for you
+"main" branch is a main branch that was created for you
 automatically.  The asterisk marks the branch you are currently on;
 type
 
@@ -211,18 +211,18 @@ $ git switch experimental
 ------------------------------------------------
 
 to switch to the experimental branch.  Now edit a file, commit the
-change, and switch back to the master branch:
+change, and switch back to the main branch:
 
 ------------------------------------------------
 (edit file)
 $ git commit -a
-$ git switch master
+$ git switch main
 ------------------------------------------------
 
 Check that the change you made is no longer visible, since it was
-made on the experimental branch and you're back on the master branch.
+made on the experimental branch and you're back on the main branch.
 
-You can make a different change on the master branch:
+You can make a different change on the main branch:
 
 ------------------------------------------------
 (edit file)
@@ -230,7 +230,7 @@ $ git commit -a
 ------------------------------------------------
 
 at this point the two branches have diverged, with different changes
-made in each.  To merge the changes made in experimental into master, run
+made in each.  To merge the changes made in experimental into main, run
 
 ------------------------------------------------
 $ git merge experimental
@@ -307,10 +307,10 @@ at /home/bob/myrepo.  She does this with:
 
 ------------------------------------------------
 alice$ cd /home/alice/project
-alice$ git pull /home/bob/myrepo master
+alice$ git pull /home/bob/myrepo main
 ------------------------------------------------
 
-This merges the changes from Bob's "master" branch into Alice's
+This merges the changes from Bob's "main" branch into Alice's
 current branch.  If Alice has made her own changes in the meantime,
 then she may need to manually fix any conflicts.
 
@@ -331,7 +331,7 @@ symbol "FETCH_HEAD", in order to determine if he has anything worth
 pulling, like this:
 
 ------------------------------------------------
-alice$ git fetch /home/bob/myrepo master
+alice$ git fetch /home/bob/myrepo main
 alice$ git log -p HEAD..FETCH_HEAD
 ------------------------------------------------
 
@@ -390,27 +390,27 @@ alice$ git fetch bob
 Unlike the longhand form, when Alice fetches from Bob using a
 remote repository shorthand set up with 'git remote', what was
 fetched is stored in a remote-tracking branch, in this case
-`bob/master`.  So after this:
+`bob/main`.  So after this:
 
 -------------------------------------
-alice$ git log -p master..bob/master
+alice$ git log -p main..bob/main
 -------------------------------------
 
 shows a list of all the changes that Bob made since he branched from
-Alice's master branch.
+Alice's main branch.
 
 After examining those changes, Alice
-could merge the changes into her master branch:
+could merge the changes into her main branch:
 
 -------------------------------------
-alice$ git merge bob/master
+alice$ git merge bob/main
 -------------------------------------
 
 This `merge` can also be done by 'pulling from her own remote-tracking
 branch', like this:
 
 -------------------------------------
-alice$ git pull . remotes/bob/master
+alice$ git pull . remotes/bob/main
 -------------------------------------
 
 Note that git pull always merges into the current branch,
@@ -436,12 +436,12 @@ bob$ git config --get remote.origin.url
 `git config -l`, and the linkgit:git-config[1] man page
 explains the meaning of each option.)
 
-Git also keeps a pristine copy of Alice's master branch under the
-name "origin/master":
+Git also keeps a pristine copy of Alice's main branch under the
+name "origin/main":
 
 -------------------------------------
 bob$ git branch -r
-  origin/master
+  origin/main
 -------------------------------------
 
 If Bob later decides to work from a different host, he can still
@@ -570,22 +570,22 @@ $ git log v2.5.. Makefile       # commits since v2.5 which modify
 
 You can also give 'git log' a "range" of commits where the first is not
 necessarily an ancestor of the second; for example, if the tips of
-the branches "stable" and "master" diverged from a common
+the branches "stable" and "main" diverged from a common
 commit some time ago, then
 
 -------------------------------------
-$ git log stable..master
+$ git log stable..main
 -------------------------------------
 
-will list commits made in the master branch but not in the
+will list commits made in the main branch but not in the
 stable branch, while
 
 -------------------------------------
-$ git log master..stable
+$ git log main..stable
 -------------------------------------
 
 will show the list of commits made on the stable branch but not
-the master branch.
+the main branch.
 
 The 'git log' command has a weakness: it must present commits in a
 list.  When the history has lines of development that diverged and

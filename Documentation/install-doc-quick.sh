@@ -3,7 +3,7 @@
 
 repository=${1?repository}
 destdir=${2?destination}
-GIT_MAN_REF=${3?master}
+GIT_MAN_REF=${3?main}
 
 GIT_DIR=
 for d in "$repository/.git" "$repository"

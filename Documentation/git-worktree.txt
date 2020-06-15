@@ -285,8 +285,8 @@ $GIT_DIR or $GIT_COMMON_DIR depending on the path. For example, in the
 linked working tree `git rev-parse --git-path HEAD` returns
 `/path/main/.git/worktrees/test-next/HEAD` (not
 `/path/other/test-next/.git/HEAD` or `/path/main/.git/HEAD`) while `git
-rev-parse --git-path refs/heads/master` uses
-$GIT_COMMON_DIR and returns `/path/main/.git/refs/heads/master`,
+rev-parse --git-path refs/heads/main` uses
+$GIT_COMMON_DIR and returns `/path/main/.git/refs/heads/main`,
 since refs are shared across all working trees, except refs/bisect and
 refs/worktree.
 
@@ -324,7 +324,7 @@ details on a single line with columns.  For example:
 ------------
 $ git worktree list
 /path/to/bare-source            (bare)
-/path/to/linked-worktree        abcd1234 [master]
+/path/to/linked-worktree        abcd1234 [main]
 /path/to/other-linked-worktree  1234abc  (detached HEAD)
 ------------
 
@@ -343,7 +343,7 @@ bare
 
 worktree /path/to/linked-worktree
 HEAD abcd1234abcd1234abcd1234abcd1234abcd1234
-branch refs/heads/master
+branch refs/heads/main
 
 worktree /path/to/other-linked-worktree
 HEAD 1234abc1234abc1234abc1234abc1234abc1234a
@@ -363,7 +363,7 @@ make the emergency fix, remove it when done, and then resume your earlier
 refactoring session.
 
 ------------
-$ git worktree add -b emergency-fix ../temp master
+$ git worktree add -b emergency-fix ../temp main
 $ pushd ../temp
 # ... hack hack hack ...
 $ git commit -a -m 'emergency fix for boss'

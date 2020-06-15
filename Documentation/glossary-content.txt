@@ -224,10 +224,10 @@ for a more flexible and robust system to do the same thing.
 	<<def_merge,merge>> was started, but not yet finished (i.e. if
 	the index contains multiple versions of that file).
 
-[[def_master]]master::
+[[def_main]]main::
 	The default development <<def_branch,branch>>. Whenever you
 	create a Git <<def_repository,repository>>, a branch named
-	"master" is created, and becomes the active branch. In most
+	"main" is created, and becomes the active branch. In most
 	cases, this contains the local development, though that is
 	purely by convention and is not required.
 
@@ -499,7 +499,7 @@ exclude;;
 	to the result.
 
 [[def_ref]]ref::
-	A name that begins with `refs/` (e.g. `refs/heads/master`)
+	A name that begins with `refs/` (e.g. `refs/heads/main`)
 	that points to an <<def_object_name,object name>> or another
 	ref (the latter is called a <<def_symref,symbolic ref>>).
 	For convenience, a ref can sometimes be abbreviated when used

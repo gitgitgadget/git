@@ -12,7 +12,7 @@ SYNOPSIS
 'git p4 clone' [<sync options>] [<clone options>] <p4 depot path>...
 'git p4 sync' [<sync options>] [<p4 depot path>...]
 'git p4 rebase'
-'git p4 submit' [<submit options>] [<master branch name>]
+'git p4 submit' [<submit options>] [<main branch name>]
 
 
 DESCRIPTION
@@ -74,9 +74,9 @@ This:
 1. Creates an empty Git repository in a subdirectory called 'project'.
 +
 2. Imports the full contents of the head revision from the given p4
-   depot path into a single commit in the Git branch 'refs/remotes/p4/master'.
+   depot path into a single commit in the Git branch 'refs/remotes/p4/main'.
 +
-3. Creates a local branch, 'master' from this remote and checks it out.
+3. Creates a local branch, 'main' from this remote and checks it out.
 
 To reproduce the entire p4 history in Git, use the '@all' modifier on
 the depot path:
@@ -103,7 +103,7 @@ $ git init
 $ git p4 sync //path/in/your/perforce/depot
 ------------
 This imports the specified depot into
-'refs/remotes/p4/master' in an existing Git repository.  The
+'refs/remotes/p4/main' in an existing Git repository.  The
 `--branch` option can be used to specify a different branch to
 be used for the p4 content.
 
@@ -139,7 +139,7 @@ variable 'git-p4.client'.  The p4 client must exist, but the client root
 will be created and populated if it does not already exist.
 
 To submit all changes that are in the current Git branch but not in
-the 'p4/master' branch, use:
+the 'p4/main' branch, use:
 ------------
 $ git p4 submit
 ------------
@@ -155,7 +155,7 @@ $ git p4 submit --commit <sha1>
 $ git p4 submit --commit <sha1..sha1>
 ------------
 
-The upstream reference is generally 'refs/remotes/p4/master', but can
+The upstream reference is generally 'refs/remotes/p4/main', but can
 be overridden using the `--origin=` command-line option.
 
 The p4 changes will be created as the user invoking 'git p4 submit'. The
@@ -215,7 +215,7 @@ These options can be used in the initial 'clone' as well as in
 subsequent 'sync' operations.
 
 --branch <ref>::
-	Import changes into <ref> instead of refs/remotes/p4/master.
+	Import changes into <ref> instead of refs/remotes/p4/main.
 	If <ref> starts with refs/, it is used as is.  Otherwise, if
 	it does not start with p4/, that prefix is added.
 +
@@ -223,7 +223,7 @@ By default a <ref> not starting with refs/ is treated as the
 name of a remote-tracking branch (under refs/remotes/).  This
 behavior can be modified using the --import-local option.
 +
-The default <ref> is "master".
+The main <ref> is "main".
 +
 This example imports a new remote "p4/proj2" into an existing
 Git repository:
@@ -358,7 +358,7 @@ These options can be used to modify 'git p4 submit' behavior.
 
 --branch <branch>::
 	After submitting, sync this named branch instead of the default
-	p4/master.  See the "Sync options" section above for more
+	p4/main.  See the "Sync options" section above for more
 	information.
 
 --commit <sha1>|<sha1..sha1>::
@@ -370,9 +370,9 @@ These options can be used to modify 'git p4 submit' behavior.
     submitted. Can also be set with git-p4.disableRebase.
 
 --disable-p4sync::
-    Disable the automatic sync of p4/master from Perforce after commits have
+    Disable the automatic sync of p4/main from Perforce after commits have
     been submitted. Implies --disable-rebase. Can also be set with
-    git-p4.disableP4Sync. Sync with origin/master still goes ahead if possible.
+    git-p4.disableP4Sync. Sync with origin/main still goes ahead if possible.
 
 Hooks for submit
 ----------------
@@ -435,7 +435,7 @@ Unshelve options
 
 --origin::
     Sets the git refspec against which the shelved P4 changelist is compared.
-    Defaults to p4/master.
+    Defaults to p4/main.
 
 DEPOT PATH SYNTAX
 -----------------
@@ -525,7 +525,7 @@ Then this 'git p4 clone' command:
 git p4 clone --detect-branches //depot@all
 ----
 produces a separate branch in 'refs/remotes/p4/' for //depot/main,
-called 'master', and one for //depot/branch1 called 'depot/branch1'.
+called 'main', and one for //depot/branch1 called 'depot/branch1'.
 
 However, it is not necessary to create branches in p4 to be able to use
 them like branches.  Because it is difficult to infer branch
@@ -745,10 +745,10 @@ git-p4.conflict::
 	--conflict.  The default behavior is 'ask'.
 
 git-p4.disableRebase::
-    Do not rebase the tree against p4/master following a submit.
+    Do not rebase the tree against p4/main following a submit.
 
 git-p4.disableP4Sync::
-    Do not sync p4/master with Perforce following a submit. Implies git-p4.disableRebase.
+    Do not sync p4/main with Perforce following a submit. Implies git-p4.disableRebase.
 
 IMPLEMENTATION DETAILS
 ----------------------

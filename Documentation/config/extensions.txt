@@ -1,0 +1,7 @@
+extensions.objectFormat::
+	Specify the hash algorithm to use.  The acceptable values are `sha1`
+	and (if supported) `sha256`.  If not specified, `sha1` is assumed.
++
+Note that this setting should only by set by linkgit:git-init[1] or
+linkgit:git-clone[1].  Trying to change it after initialization will not
+work and will produce hard-to-diagnose issues.

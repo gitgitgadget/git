@@ -96,16 +96,16 @@ OPTIONS
 
 --sha1-name::
 	Instead of naming the commits using the path to reach
-	them from heads (e.g. "master~2" to mean the grandparent
-	of "master"), name them with the unique prefix of their
+	them from heads (e.g. "main~2" to mean the grandparent
+	of "main"), name them with the unique prefix of their
 	object names.
 
 --topics::
 	Shows only commits that are NOT on the first branch given.
 	This helps track topic branches by hiding any commit that
 	is already in the main line of development.  When given
-	"git show-branch --topics master topic1 topic2", this
-	will show the revisions given by "git rev-list {caret}master
+	"git show-branch --topics main topic1 topic2", this
+	will show the revisions given by "git rev-list {caret}main
 	topic1 topic2"
 
 -g::
@@ -144,12 +144,12 @@ otherwise it shows a space.  Merge commits are denoted by
 a `-` sign.  Each commit shows a short name that
 can be used as an extended SHA-1 to name that commit.
 
-The following example shows three branches, "master", "fixes"
+The following example shows three branches, "main", "fixes"
 and "mhf":
 
 ------------------------------------------------
-$ git show-branch master fixes mhf
-* [master] Add 'git show-branch'.
+$ git show-branch main fixes mhf
+* [main] Add 'git show-branch'.
  ! [fixes] Introduce "reset type" flag to "git reset"
   ! [mhf] Allow "+remote:local" refspec to cause --force when fetching.
 ---
@@ -163,14 +163,14 @@ $ git show-branch master fixes mhf
   + [mhf~6] Retire git-parse-remote.
   + [mhf~7] Multi-head fetch.
   + [mhf~8] Start adding the $GIT_DIR/remotes/ support.
-*++ [master] Add 'git show-branch'.
+*++ [main] Add 'git show-branch'.
 ------------------------------------------------
 
-These three branches all forked from a common commit, [master],
+These three branches all forked from a common commit, [main],
 whose commit message is "Add \'git show-branch'".
 The "fixes" branch adds one commit "Introduce "reset type" flag to
 "git reset"". The "mhf" branch adds many other commits.
-The current branch is "master".
+The current branch is "main".
 
 
 EXAMPLES
@@ -192,7 +192,7 @@ only the primary branches.  In addition, if you happen to be on
 your topic branch, it is shown as well.
 
 ------------
-$ git show-branch --reflog="10,1 hour ago" --list master
+$ git show-branch --reflog="10,1 hour ago" --list main
 ------------
 
 shows 10 reflog entries going back from the tip as of 1 hour ago.

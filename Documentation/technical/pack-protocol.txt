@@ -177,7 +177,7 @@ with the object name that each reference currently points to.
    00887217a7c7e582c46cec22a130adf4b9d7d950fba0 HEAD\0multi_ack thin-pack
 		side-band side-band-64k ofs-delta shallow no-progress include-tag
    00441d3fcd5ced445d1abc402225c0b8a1299641f497 refs/heads/integration
-   003f7217a7c7e582c46cec22a130adf4b9d7d950fba0 refs/heads/master
+   003f7217a7c7e582c46cec22a130adf4b9d7d950fba0 refs/heads/main
    003cb88d2441cac0977faf98efc80305012112238d9d refs/tags/v0.9
    003c525128480b96c89e6418b1e40909bf6c5b2d580f refs/tags/v1.0
    003fe92df48743b7bc7d26bcaabfddde0a1e20cae47c refs/tags/v1.0^{}
@@ -659,16 +659,16 @@ An example client/server communication might look like this:
 ----
    S: 006274730d410fcb6603ace96f1dc55ea6196122532d refs/heads/local\0report-status delete-refs ofs-delta\n
    S: 003e7d1665144a3a975c05f1f43902ddaf084e784dbe refs/heads/debug\n
-   S: 003f74730d410fcb6603ace96f1dc55ea6196122532d refs/heads/master\n
+   S: 003f74730d410fcb6603ace96f1dc55ea6196122532d refs/heads/main\n
    S: 003d74730d410fcb6603ace96f1dc55ea6196122532d refs/heads/team\n
    S: 0000
 
    C: 00677d1665144a3a975c05f1f43902ddaf084e784dbe 74730d410fcb6603ace96f1dc55ea6196122532d refs/heads/debug\n
-   C: 006874730d410fcb6603ace96f1dc55ea6196122532d 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a refs/heads/master\n
+   C: 006874730d410fcb6603ace96f1dc55ea6196122532d 5a3f6be755bbb7deae50065988cbfa1ffa9ab68a refs/heads/main\n
    C: 0000
    C: [PACKDATA]
 
    S: 000eunpack ok\n
    S: 0018ok refs/heads/debug\n
-   S: 002ang refs/heads/master non-fast-forward\n
+   S: 002ang refs/heads/main non-fast-forward\n
 ----

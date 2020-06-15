@@ -1279,7 +1279,7 @@ An example crash:
 ====
 	$ cat >in <<END_OF_INPUT
 	# my very first test commit
-	commit refs/heads/master
+	commit refs/heads/main
 	committer Shawn O. Pearce <spearce> 19283 -0400
 	# who is that guy anyway?
 	data <<EOF
@@ -1307,7 +1307,7 @@ An example crash:
 	Most Recent Commands Before Crash
 	---------------------------------
 	  # my very first test commit
-	  commit refs/heads/master
+	  commit refs/heads/main
 	  committer Shawn O. Pearce <spearce> 19283 -0400
 	  # who is that guy anyway?
 	  data <<EOF
@@ -1321,11 +1321,11 @@ An example crash:
 
 	  pos  clock name
 	  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	   1)      0 refs/heads/master
+	   1)      0 refs/heads/main
 
 	Inactive Branches
 	-----------------
-	refs/heads/master:
+	refs/heads/main:
 	  status      : active loaded dirty
 	  tip commit  : 0000000000000000000000000000000000000000
 	  old tree    : 0000000000000000000000000000000000000000

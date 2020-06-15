@@ -626,3 +626,8 @@ core.abbrev::
 	in your repository, which hopefully is enough for
 	abbreviated object names to stay unique for some time.
 	The minimum length is 4.
+
+core.mainBranch::
+	The name of the main (or: primary) branch in the current repository.
+	For historical reasons, `master` is used as the fall-back for this
+	setting.

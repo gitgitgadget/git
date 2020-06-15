@@ -112,7 +112,7 @@ that the "Folder doesn't exist".
 
 Once the commits are ready to be sent, run the following command:
 
-  $ git format-patch --cover-letter -M --stdout origin/master | git imap-send
+  $ git format-patch --cover-letter -M --stdout origin/main | git imap-send
 
 Just make sure to disable line wrapping in the email client (GMail's web
 interface will wrap lines no matter what, so you need to use a real

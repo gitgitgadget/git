@@ -13,23 +13,23 @@ In general, always base your work on the oldest branch that your
 change is relevant to.
 
 * A bugfix should be based on `maint` in general. If the bug is not
-  present in `maint`, base it on `master`. For a bug that's not yet
-  in `master`, find the topic that introduces the regression, and
+  present in `maint`, base it on `main`. For a bug that's not yet
+  in `main`, find the topic that introduces the regression, and
   base your work on the tip of the topic.
 
-* A new feature should be based on `master` in general. If the new
-  feature depends on a topic that is in `pu`, but not in `master`,
+* A new feature should be based on `main` in general. If the new
+  feature depends on a topic that is in `pu`, but not in `main`,
   base your work on the tip of that topic.
 
-* Corrections and enhancements to a topic not yet in `master` should
+* Corrections and enhancements to a topic not yet in `main` should
   be based on the tip of that topic. If the topic has not been merged
   to `next`, it's alright to add a note to squash minor corrections
   into the series.
 
 * In the exceptional case that a new feature depends on several topics
-  not in `master`, start working on `next` or `pu` privately and send
+  not in `main`, start working on `next` or `pu` privately and send
   out patches for discussion. Before the final merge, you may have to
-  wait until some of the dependent topics graduate to `master`, and
+  wait until some of the dependent topics graduate to `main`, and
   rebase your work.
 
 * Some parts of the system have dedicated maintainers with their own
@@ -37,7 +37,7 @@ change is relevant to.
   these parts should be based on their trees.
 
 To find the tip of a topic branch, run `git log --first-parent
-master..pu` and look for the merge commit. The second parent of this
+main..pu` and look for the merge commit. The second parent of this
 commit is the tip of the topic branch.
 
 [[separate-commits]]
@@ -177,7 +177,7 @@ Please make sure your patch does not add commented out debugging code,
 or include any extra files which do not relate to what your patch
 is trying to achieve. Make sure to review
 your patch after generating it, to ensure accuracy.  Before
-sending out, please make sure it cleanly applies to the `master`
+sending out, please make sure it cleanly applies to the `main`
 branch head.  If you are preparing a work based on "next" branch,
 that is fine, but please mark it as such.
 
@@ -420,7 +420,7 @@ help you find out who they are.
   good.  Send it to the maintainer and cc the list.
 
 . A topic branch is created with the patch and is merged to `next`,
-  and cooked further and eventually graduates to `master`.
+  and cooked further and eventually graduates to `main`.
 
 In any time between the (2)-(3) cycle, the maintainer may pick it up
 from the list and queue it to `pu`, in order to make it easier for
@@ -431,11 +431,11 @@ their trees themselves.
 == Know the status of your patch after submission
 
 * You can use Git itself to find out when your patch is merged in
-  master. `git pull --rebase` will automatically skip already-applied
+  main. `git pull --rebase` will automatically skip already-applied
   patches, and will let you know. This works only if you rebase on top
   of the branch in which your patch has been merged (i.e. it will not
   tell you if your patch is merged in pu if you rebase on top of
-  master).
+  main).
 
 * Read the Git mailing list, the maintainer regularly posts messages
   entitled "What's cooking in git.git" and "What's in git.git" giving

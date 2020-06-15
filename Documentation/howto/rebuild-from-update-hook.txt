@@ -40,7 +40,7 @@ script:
 
     unset GIT_DIR
 
-    git pull /pub/scm/git/git.git/ master &&
+    git pull /pub/scm/git/git.git/ main &&
     cd Documentation &&
     make install-webdoc
     EOF
@@ -59,7 +59,7 @@ like this:
     # To enable this hook, make this file executable by "chmod +x post-update".
 
     case " $* " in
-    *' refs/heads/master '*)
+    *' refs/heads/main '*)
             echo $HOME/doc-git/dododoc.sh | at now
             ;;
     esac
@@ -72,7 +72,7 @@ There are four things worth mentioning:
  - The update-hook is run after the repository accepts a "git
    push", under my user privilege.  It is given the full names
    of refs that have been updated as arguments.  My post-update
-   runs the dododoc.sh script only when the master head is
+   runs the dododoc.sh script only when the main head is
    updated.
 
  - When update-hook is run, GIT_DIR is set to '.' by the calling

@@ -113,15 +113,15 @@ commands such as `sl`.)
 
 Let's start by making a development branch to work on our changes. Per
 `Documentation/SubmittingPatches`, since a brand new command is a new feature,
-it's fine to base your work on `master`. However, in the future for bugfixes,
+it's fine to base your work on `main`. However, in the future for bugfixes,
 etc., you should check that document and base it on the appropriate branch.
 
-For the purposes of this document, we will base all our work on the `master`
+For the purposes of this document, we will base all our work on the `main`
 branch of the upstream project. Create the `psuh` branch you will use for
 development like so:
 
 ----
-$ git checkout -b psuh origin/master
+$ git checkout -b psuh origin/main
 ----
 
 We'll make a number of commits here in order to demonstrate how to send a topic
@@ -417,7 +417,7 @@ the declarations and the logic, respectively.
 
 ...
 
-	c = lookup_commit_reference_by_name("origin/master");
+	c = lookup_commit_reference_by_name("origin/main");
 
 	if (c != NULL) {
 		pp_commit_easy(CMIT_FMT_ONELINE, c, &commitline);
@@ -438,12 +438,12 @@ pretty-prints the commit according to that shorthand. These are similar to the
 formats available with `--pretty=FOO` in many Git commands.
 
 Build it and run, and if you're using the same name in the example, you should
-see the subject line of the most recent commit in `origin/master` that you know
+see the subject line of the most recent commit in `origin/main` that you know
 about. Neat! Let's commit that as well.
 
 ----
 $ git add builtin/psuh.c
-$ git commit -sm "psuh: display the top of origin/master"
+$ git commit -sm "psuh: display the top of origin/main"
 ----
 
 [[add-documentation]]
@@ -780,13 +780,13 @@ by running `git branch`. If you didn't, now is a good time to move your new
 commits to their own branch.
 
 As mentioned briefly at the beginning of this document, we are basing our work
-on `master`, so go ahead and update as shown below, or using your preferred
+on `main`, so go ahead and update as shown below, or using your preferred
 workflow.
 
 ----
-$ git checkout master
+$ git checkout main
 $ git pull -r
-$ git rebase master psuh
+$ git rebase main psuh
 ----
 
 Finally, you're ready to push your new topic branch! (Due to our branch and
@@ -904,7 +904,7 @@ Sending emails with Git is a two-part process; before you can prepare the emails
 themselves, you'll need to prepare the patches. Luckily, this is pretty simple:
 
 ----
-$ git format-patch --cover-letter -o psuh/ master..psuh
+$ git format-patch --cover-letter -o psuh/ main..psuh
 ----
 
 The `--cover-letter` parameter tells `format-patch` to create a cover letter
@@ -915,8 +915,8 @@ The `-o psuh/` parameter tells `format-patch` to place the patch files into a
 directory. This is useful because `git send-email` can take a directory and
 send out all the patches from there.
 
-`master..psuh` tells `format-patch` to generate patches for the difference
-between `master` and `psuh`. It will make one patch file per commit. After you
+`main..psuh` tells `format-patch` to generate patches for the difference
+between `main` and `psuh`. It will make one patch file per commit. After you
 run, you can go have a look at each of the patches with your favorite text
 editor and make sure everything looks alright; however, it's not recommended to
 make code fixups via the patch file. It's a better idea to make the change the
@@ -1038,7 +1038,7 @@ similar.
 First, generate your v2 patches again:
 
 ----
-$ git format-patch -v2 --cover-letter -o psuh/ master..psuh
+$ git format-patch -v2 --cover-letter -o psuh/ main..psuh
 ----
 
 This will add your v2 patches, all named like `v2-000n-my-commit-subject.patch`,
@@ -1179,11 +1179,11 @@ look at the section below this one for some context.)
 [[after-approval]]
 === After Review Approval
 
-The Git project has four integration branches: `pu`, `next`, `master`, and
+The Git project has four integration branches: `pu`, `next`, `main`, and
 `maint`. Your change will be placed into `pu` fairly early on by the maintainer
 while it is still in the review process; from there, when it is ready for wider
 testing, it will be merged into `next`. Plenty of early testers use `next` and
-may report issues. Eventually, changes in `next` will make it to `master`,
+may report issues. Eventually, changes in `next` will make it to `main`,
 which is typically considered stable. Finally, when a new release is cut,
 `maint` is used to base bugfixes onto. As mentioned at the beginning of this
 document, you can read `Documents/SubmittingPatches` for some more info about
@@ -1214,4 +1214,4 @@ against the appropriate GitGitGadget/Git branch.
 
 If you're using `git send-email`, you can use it the same way as before, but you
 should generate your diffs from `<topic>..<mybranch>` and base your work on
-`<topic>` instead of `master`.
+`<topic>` instead of `main`.

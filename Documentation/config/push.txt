@@ -37,9 +37,9 @@ This mode has become the default in Git 2.0.
 * `matching` - push all branches having the same name on both ends.
   This makes the repository you are pushing to remember the set of
   branches that will be pushed out (e.g. if you always push 'maint'
-  and 'master' there and no other branches, the repository you push
+  and 'main' there and no other branches, the repository you push
   to will have these two branches, and your local 'maint' and
-  'master' will be pushed there).
+  'main' will be pushed there).
 +
 To use this mode effectively, you have to make sure _all_ the
 branches you would push out are ready to be pushed out before

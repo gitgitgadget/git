@@ -4,9 +4,9 @@
 # Compared to a source diff, this can reveal mistakes in the formatting.
 # For example:
 #
-#   ./doc-diff origin/master HEAD
+#   ./doc-diff origin/main HEAD
 #
-# would show the differences introduced by a branch based on master.
+# would show the differences introduced by a branch based on main.
 
 OPTIONS_SPEC="\
 doc-diff [options] <from> <to> [-- <diff-options>]

@@ -10,7 +10,7 @@ SYNOPSIS
 --------
 [verse]
 'git remote' [-v | --verbose]
-'git remote add' [-t <branch>] [-m <master>] [-f] [--[no-]tags] [--mirror=<fetch|push>] <name> <url>
+'git remote add' [-t <branch>] [-m <main>] [-f] [--[no-]tags] [--mirror=<fetch|push>] <name> <url>
 'git remote rename' <old> <new>
 'git remote remove' <name>
 'git remote set-head' <name> (-a | --auto | -d | --delete | <branch>)
@@ -68,8 +68,8 @@ the `refs/remotes/<name>/` namespace, a refspec to track only `<branch>`
 is created.  You can give more than one `-t <branch>` to track
 multiple branches without grabbing all branches.
 +
-With `-m <master>` option, a symbolic-ref `refs/remotes/<name>/HEAD` is set
-up to point at remote's `<master>` branch. See also the set-head command.
+With `-m <main>` option, a symbolic-ref `refs/remotes/<name>/HEAD` is set
+up to point at remote's `<main>` branch. See also the set-head command.
 +
 When a fetch mirror is created with `--mirror=fetch`, the refs will not
 be stored in the 'refs/remotes/' namespace, but rather everything in
@@ -102,8 +102,8 @@ symbolic-ref `refs/remotes/<name>/HEAD`) for
 the named remote. Having a default branch for a remote is not required,
 but allows the name of the remote to be specified in lieu of a specific
 branch. For example, if the default branch for `origin` is set to
-`master`, then `origin` may be specified wherever you would normally
-specify `origin/master`.
+`main`, then `origin` may be specified wherever you would normally
+specify `origin/main`.
 +
 With `-d` or `--delete`, the symbolic ref `refs/remotes/<name>/HEAD` is deleted.
 +
@@ -115,9 +115,9 @@ only work if `refs/remotes/origin/next` already exists; if not it must be
 fetched first.
 +
 Use `<branch>` to set the symbolic-ref `refs/remotes/<name>/HEAD` explicitly. e.g., "git
-remote set-head origin master" will set the symbolic-ref `refs/remotes/origin/HEAD` to
-`refs/remotes/origin/master`. This will only work if
-`refs/remotes/origin/master` already exists; if not it must be fetched first.
+remote set-head origin main" will set the symbolic-ref `refs/remotes/origin/HEAD` to
+`refs/remotes/origin/main`. This will only work if
+`refs/remotes/origin/main` already exists; if not it must be fetched first.
 +
 
 'set-branches'::
@@ -212,8 +212,8 @@ EXAMPLES
 $ git remote
 origin
 $ git branch -r
-  origin/HEAD -> origin/master
-  origin/master
+  origin/HEAD -> origin/main
+  origin/main
 $ git remote add staging git://git.kernel.org/.../gregkh/staging.git
 $ git remote
 origin
@@ -221,16 +221,16 @@ staging
 $ git fetch staging
 ...
 From git://git.kernel.org/pub/scm/linux/kernel/git/gregkh/staging
- * [new branch]      master     -> staging/master
+ * [new branch]      main     -> staging/main
  * [new branch]      staging-linus -> staging/staging-linus
  * [new branch]      staging-next -> staging/staging-next
 $ git branch -r
-  origin/HEAD -> origin/master
-  origin/master
-  staging/master
+  origin/HEAD -> origin/main
+  origin/main
+  staging/main
   staging/staging-linus
   staging/staging-next
-$ git switch -c staging staging/master
+$ git switch -c staging staging/main
 ...
 ------------
 
@@ -240,7 +240,7 @@ $ git switch -c staging staging/master
 $ mkdir project.git
 $ cd project.git
 $ git init
-$ git remote add -f -t master -m master origin git://example.com/git.git/
+$ git remote add -f -t main -m main origin git://example.com/git.git/
 $ git merge origin
 ------------
 

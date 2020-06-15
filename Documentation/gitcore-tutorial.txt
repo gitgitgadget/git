@@ -72,9 +72,9 @@ your new project. You will now have a `.git` directory, and you can
 inspect that with 'ls'. For your new empty project, it should show you
 three entries, among other things:
 
- - a file called `HEAD`, that has `ref: refs/heads/master` in it.
+ - a file called `HEAD`, that has `ref: refs/heads/main` in it.
    This is similar to a symbolic link and points at
-   `refs/heads/master` relative to the `HEAD` file.
+   `refs/heads/main` relative to the `HEAD` file.
 +
 Don't worry about the fact that the file that the `HEAD` link points to
 doesn't even exist yet -- you haven't created the commit that will
@@ -94,14 +94,14 @@ of different 'heads' of development (aka 'branches'), and to any
 'tags' that you have created to name specific versions in your
 repository.
 
-One note: the special `master` head is the default branch, which is
+One note: the special `main` head is the main branch, which is
 why the `.git/HEAD` file was created points to it even if it
 doesn't yet exist. Basically, the `HEAD` link is supposed to always
 point to the branch you are working on right now, and you always
-start out expecting to work on the `master` branch.
+start out expecting to work on the `main` branch.
 
 However, this is only a convention, and you can name your branches
-anything you want, and don't have to ever even 'have' a `master`
+anything you want, and don't have to ever even 'have' a `main`
 branch. A number of the Git tools will assume that `.git/HEAD` is
 valid, though.
 
@@ -328,9 +328,9 @@ the object name of the tree. However, 'git commit-tree' also wants to get a
 commit message on its standard input, and it will write out the resulting
 object name for the commit to its standard output.
 
-And this is where we create the `.git/refs/heads/master` file
+And this is where we create the `.git/refs/heads/main` file
 which is pointed at by `HEAD`. This file is supposed to contain
-the reference to the top-of-tree of the master branch, and since
+the reference to the top-of-tree of the main branch, and since
 that's exactly what 'git commit-tree' spits out, we can do this
 all with a sequence of simple shell commands:
 
@@ -733,7 +733,7 @@ You can at any time create a new branch by just picking an arbitrary
 point in the project history, and just writing the SHA-1 name of that
 object into a file under `.git/refs/heads/`. You can use any filename you
 want (and indeed, subdirectories), but the convention is that the
-"normal" branch is called `master`. That's just a convention, though,
+"normal" branch is called `main`. That's just a convention, though,
 and nothing enforces it.
 
 To show that as an example, let's go back to the git-tutorial repository we
@@ -762,10 +762,10 @@ and it would create the new branch `mybranch` at the earlier commit,
 and check out the state at that time.
 ================================================
 
-You can always just jump back to your original `master` branch by doing
+You can always just jump back to your original `main` branch by doing
 
 ------------
-$ git switch master
+$ git switch main
 ------------
 
 (or any other branch-name, for that matter) and if you forget which
@@ -804,7 +804,7 @@ Merging two branches
 One of the ideas of having a branch is that you do some (possibly
 experimental) work in it, and eventually merge it back to the main
 branch. So assuming you created the above `mybranch` that started out
-being the same as the original `master` branch, let's make sure we're in
+being the same as the original `main` branch, let's make sure we're in
 that branch, and do some work there.
 
 ------------------------------------------------
@@ -822,15 +822,15 @@ commit log message from the command line.
 
 Now, to make it a bit more interesting, let's assume that somebody else
 does some work in the original branch, and simulate that by going back
-to the master branch, and editing the same file differently there:
+to the main branch, and editing the same file differently there:
 
 ------------
-$ git switch master
+$ git switch main
 ------------
 
 Here, take a moment to look at the contents of `hello`, and notice how they
 don't contain the work we just did in `mybranch` -- because that work
-hasn't happened in the `master` branch at all. Then do
+hasn't happened in the `main` branch at all. Then do
 
 ------------
 $ echo "Play, play, play" >>hello
@@ -838,7 +838,7 @@ $ echo "Lots of fun" >>example
 $ git commit -m "Some fun." -i hello example
 ------------
 
-since the master branch is obviously in a much better mood.
+since the main branch is obviously in a much better mood.
 
 Now, you've got two branches, and you decide that you want to merge the
 work done. Before we do that, let's introduce a cool graphical tool that
@@ -854,7 +854,7 @@ histories. You can also see exactly how they came to be from a common
 source.
 
 Anyway, let's exit 'gitk' (`^Q` or the File menu), and decide that we want
-to merge the work we did on the `mybranch` branch into the `master`
+to merge the work we did on the `mybranch` branch into the `main`
 branch (which is currently our `HEAD` too). To do that, there's a nice
 script called 'git merge', which wants to know which branches you want
 to resolve and what the merge is all about:
@@ -906,60 +906,60 @@ After you're done, start up `gitk --all` to see graphically what the
 history looks like. Notice that `mybranch` still exists, and you can
 switch to it, and continue to work with it if you want to. The
 `mybranch` branch will not contain the merge, but next time you merge it
-from the `master` branch, Git will know how you merged it, so you'll not
+from the `main` branch, Git will know how you merged it, so you'll not
 have to do _that_ merge again.
 
 Another useful tool, especially if you do not always work in X-Window
 environment, is `git show-branch`.
 
 ------------------------------------------------
-$ git show-branch --topo-order --more=1 master mybranch
-* [master] Merge work in mybranch
+$ git show-branch --topo-order --more=1 main mybranch
+* [main] Merge work in mybranch
  ! [mybranch] Some work.
 --
--  [master] Merge work in mybranch
+-  [main] Merge work in mybranch
 *+ [mybranch] Some work.
-*  [master^] Some fun.
+*  [main^] Some fun.
 ------------------------------------------------
 
 The first two lines indicate that it is showing the two branches
 with the titles of their top-of-the-tree commits, you are currently on
-`master` branch (notice the asterisk `*` character), and the first
+`main` branch (notice the asterisk `*` character), and the first
 column for the later output lines is used to show commits contained in the
-`master` branch, and the second column for the `mybranch`
+`main` branch, and the second column for the `mybranch`
 branch. Three commits are shown along with their titles.
 All of them have non blank characters in the first column (`*`
 shows an ordinary commit on the current branch, `-` is a merge commit), which
-means they are now part of the `master` branch. Only the "Some
+means they are now part of the `main` branch. Only the "Some
 work" commit has the plus `+` character in the second column,
 because `mybranch` has not been merged to incorporate these
-commits from the master branch.  The string inside brackets
+commits from the main branch.  The string inside brackets
 before the commit log message is a short name you can use to
-name the commit.  In the above example, 'master' and 'mybranch'
-are branch heads.  'master^' is the first parent of 'master'
+name the commit.  In the above example, 'main' and 'mybranch'
+are branch heads.  'main^' is the first parent of 'main'
 branch head.  Please see linkgit:gitrevisions[7] if you want to
 see more complex cases.
 
 [NOTE]
 Without the '--more=1' option, 'git show-branch' would not output the
-'[master^]' commit, as '[mybranch]' commit is a common ancestor of
-both 'master' and 'mybranch' tips.  Please see linkgit:git-show-branch[1]
+'[main^]' commit, as '[mybranch]' commit is a common ancestor of
+both 'main' and 'mybranch' tips.  Please see linkgit:git-show-branch[1]
 for details.
 
 [NOTE]
-If there were more commits on the 'master' branch after the merge, the
+If there were more commits on the 'main' branch after the merge, the
 merge commit itself would not be shown by 'git show-branch' by
 default.  You would need to provide `--sparse` option to make the
 merge commit visible in this case.
 
 Now, let's pretend you are the one who did all the work in
 `mybranch`, and the fruit of your hard work has finally been merged
-to the `master` branch. Let's go back to `mybranch`, and run
+to the `main` branch. Let's go back to `mybranch`, and run
 'git merge' to get the "upstream changes" back to your branch.
 
 ------------
 $ git switch mybranch
-$ git merge -m "Merge upstream changes." master
+$ git merge -m "Merge upstream changes." main
 ------------
 
 This outputs something like this (the actual commit object names
@@ -974,20 +974,20 @@ Fast-forward (no commit created; -m option ignored)
 ----------------
 
 Because your branch did not contain anything more than what had
-already been merged into the `master` branch, the merge operation did
+already been merged into the `main` branch, the merge operation did
 not actually do a merge. Instead, it just updated the top of
-the tree of your branch to that of the `master` branch. This is
+the tree of your branch to that of the `main` branch. This is
 often called 'fast-forward' merge.
 
 You can run `gitk --all` again to see how the commit ancestry
 looks like, or run 'show-branch', which tells you this.
 
 ------------------------------------------------
-$ git show-branch master mybranch
-! [master] Merge work in mybranch
+$ git show-branch main mybranch
+! [main] Merge work in mybranch
  * [mybranch] Merge work in mybranch
 --
--- [master] Merge work in mybranch
+-- [main] Merge work in mybranch
 ------------------------------------------------
 
 
@@ -1119,35 +1119,35 @@ back to the earlier repository with "hello" and "example" file,
 and bring ourselves back to the pre-merge state:
 
 ------------
-$ git show-branch --more=2 master mybranch
-! [master] Merge work in mybranch
+$ git show-branch --more=2 main mybranch
+! [main] Merge work in mybranch
  * [mybranch] Merge work in mybranch
 --
--- [master] Merge work in mybranch
-+* [master^2] Some work.
-+* [master^] Some fun.
+-- [main] Merge work in mybranch
++* [main^2] Some work.
++* [main^] Some fun.
 ------------
 
-Remember, before running 'git merge', our `master` head was at
+Remember, before running 'git merge', our `main` head was at
 "Some fun." commit, while our `mybranch` head was at "Some
 work." commit.
 
 ------------
-$ git switch -C mybranch master^2
-$ git switch master
-$ git reset --hard master^
+$ git switch -C mybranch main^2
+$ git switch main
+$ git reset --hard main^
 ------------
 
 After rewinding, the commit structure should look like this:
 
 ------------
 $ git show-branch
-* [master] Some fun.
+* [main] Some fun.
  ! [mybranch] Some work.
 --
-*  [master] Some fun.
+*  [main] Some fun.
  + [mybranch] Some work.
-*+ [master^] Initial commit
+*+ [main^] Initial commit
 ------------
 
 Now we are ready to experiment with the merge by hand.
@@ -1334,11 +1334,11 @@ Come back to the machine you have your private repository. From
 there, run this command:
 
 ------------
-$ git push <public-host>:/path/to/my-git.git master
+$ git push <public-host>:/path/to/my-git.git main
 ------------
 
 This synchronizes your public repository to match the named
-branch head (i.e. `master` in this case) and objects reachable
+branch head (i.e. `main` in this case) and objects reachable
 from them in your current repository.
 
 As a real example, this is how I update my public Git
@@ -1346,7 +1346,7 @@ repository. Kernel.org mirror network takes care of the
 propagation to other publicly visible machines:
 
 ------------
-$ git push master.kernel.org:/pub/scm/git/git.git/
+$ git push main.kernel.org:/pub/scm/git/git.git/
 ------------
 
 
@@ -1523,12 +1523,12 @@ like this:
    the initial cloning is stored in the remote.origin.url
    configuration variable.
 
-2. Do your work in your repository on 'master' branch.
+2. Do your work in your repository on 'main' branch.
 
 3. Run `git fetch origin` from the public repository of your
    upstream every once in a while. This does only the first
    half of `git pull` but does not merge. The head of the
-   public repository is stored in `.git/refs/remotes/origin/master`.
+   public repository is stored in `.git/refs/remotes/origin/main`.
 
 4. Use `git cherry origin` to see which ones of your patches
    were accepted, and/or use `git rebase origin` to port your
@@ -1559,7 +1559,7 @@ using branches with Git.
 We have already seen how branches work previously,
 with "fun and work" example using two branches.  The idea is the
 same if there are more than two branches.  Let's say you started
-out from "master" head, and have some new code in the "master"
+out from "main" head, and have some new code in the "main"
 branch, and two independent fixes in the "commit-fix" and
 "diff-fix" branches:
 
@@ -1567,12 +1567,12 @@ branch, and two independent fixes in the "commit-fix" and
 $ git show-branch
 ! [commit-fix] Fix commit message normalization.
  ! [diff-fix] Fix rename detection.
-  * [master] Release candidate #1
+  * [main] Release candidate #1
 ---
  +  [diff-fix] Fix rename detection.
  +  [diff-fix~1] Better common substring algorithm.
 +   [commit-fix] Fix commit message normalization.
-  * [master] Release candidate #1
+  * [main] Release candidate #1
 ++* [diff-fix~2] Pretty-print messages.
 ------------
 
@@ -1591,15 +1591,15 @@ Which would result in:
 $ git show-branch
 ! [commit-fix] Fix commit message normalization.
  ! [diff-fix] Fix rename detection.
-  * [master] Merge fix in commit-fix
+  * [main] Merge fix in commit-fix
 ---
-  - [master] Merge fix in commit-fix
+  - [main] Merge fix in commit-fix
 + * [commit-fix] Fix commit message normalization.
-  - [master~1] Merge fix in diff-fix
+  - [main~1] Merge fix in diff-fix
  +* [diff-fix] Fix rename detection.
  +* [diff-fix~1] Better common substring algorithm.
-  * [master~2] Release candidate #1
-++* [master~3] Pretty-print messages.
+  * [main~2] Release candidate #1
+++* [main~3] Pretty-print messages.
 ------------
 
 However, there is no particular reason to merge in one branch
@@ -1607,11 +1607,11 @@ first and the other next, when what you have are a set of truly
 independent changes (if the order mattered, then they are not
 independent by definition).  You could instead merge those two
 branches into the current branch at once.  First let's undo what
-we just did and start over.  We would want to get the master
-branch before these two merges by resetting it to 'master~2':
+we just did and start over.  We would want to get the main
+branch before these two merges by resetting it to 'main~2':
 
 ------------
-$ git reset --hard master~2
+$ git reset --hard main~2
 ------------
 
 You can make sure `git show-branch` matches the state before
@@ -1624,14 +1624,14 @@ $ git merge commit-fix diff-fix
 $ git show-branch
 ! [commit-fix] Fix commit message normalization.
  ! [diff-fix] Fix rename detection.
-  * [master] Octopus merge of branches 'diff-fix' and 'commit-fix'
+  * [main] Octopus merge of branches 'diff-fix' and 'commit-fix'
 ---
-  - [master] Octopus merge of branches 'diff-fix' and 'commit-fix'
+  - [main] Octopus merge of branches 'diff-fix' and 'commit-fix'
 + * [commit-fix] Fix commit message normalization.
  +* [diff-fix] Fix rename detection.
  +* [diff-fix~1] Better common substring algorithm.
-  * [master~1] Release candidate #1
-++* [master~2] Pretty-print messages.
+  * [main~1] Release candidate #1
+++* [main~2] Pretty-print messages.
 ------------
 
 Note that you should not do Octopus just because you can.  An octopus

@@ -75,7 +75,7 @@ This file should have the following format:
 Depending on the operation, git will use one of the following
 refspecs, if you don't provide one on the command line.
 `<branch>` is the name of this file in `$GIT_DIR/branches` and
-`<head>` defaults to `master`.
+`<head>` mains to `main`.
 
 git fetch uses:
 

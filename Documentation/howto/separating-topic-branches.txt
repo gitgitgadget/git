@@ -14,7 +14,7 @@ than HEAD] while rewriting messy development history.  For example, I
 start doing some work without knowing exactly where it leads, and end
 up with a history like this:
 
-            "master"
+            "main"
         o---o
              \                    "topic"
               o---o---o---o---o---o
@@ -25,35 +25,35 @@ And often, one topic component is larger than the other.  It may
 contain more than two topics.
 
 In order to rewrite this mess to be more manageable, I would first do
-"diff master..topic", to extract the changes into a single patch, start
+"diff main..topic", to extract the changes into a single patch, start
 picking pieces from it to get logically self-contained units, and
-start building on top of "master":
+start building on top of "main":
 
-        $ git diff master..topic >P.diff
-        $ git checkout -b topicA master
+        $ git diff main..topic >P.diff
+        $ git checkout -b topicA main
         ... pick and apply pieces from P.diff to build
         ... commits on topicA branch.
 
               o---o---o
              /        "topicA"
-        o---o"master"
+        o---o"main"
              \                    "topic"
               o---o---o---o---o---o
 
 Before doing each commit on "topicA" HEAD, I run "diff HEAD"
 before update-index the affected paths, or "diff --cached HEAD"
-after.  Also I would run "diff --cached master" to make sure
+after.  Also I would run "diff --cached main" to make sure
 that the changes are only the ones related to "topicA".  Usually
 I do this for smaller topics first.
 
 After that, I'd do the remainder of the original "topic", but
 for that, I do not start from the patchfile I extracted by
-comparing "master" and "topic" I used initially.  Still on
+comparing "main" and "topic" I used initially.  Still on
 "topicA", I extract "diff topic", and use it to rebuild the
 other topic:
 
         $ git diff -R topic >P.diff ;# --cached also would work fine
-        $ git checkout -b topicB master
+        $ git checkout -b topicB main
         ... pick and apply pieces from P.diff to build
         ... commits on topicB branch.
 
@@ -62,7 +62,7 @@ other topic:
               /
              /o---o---o
             |/        "topicA"
-        o---o"master"
+        o---o"main"
              \                    "topic"
               o---o---o---o---o---o
 
@@ -76,7 +76,7 @@ After I am done, I'd try a pretend-merge between "topicA" and
               /                   /
              /o---o---o----------'
             |/        "topicA"
-        o---o"master"
+        o---o"main"
              \                    "topic"
               o---o---o---o---o---o
 
@@ -91,4 +91,4 @@ for cruft.  Then I can finally clean things up:
               /
              /o---o---o
             |/        "topicA"
-        o---o"master"
+        o---o"main"

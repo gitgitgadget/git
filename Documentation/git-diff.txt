@@ -154,14 +154,14 @@ $ git diff HEAD^ HEAD      <3>
 Comparing branches::
 +
 ------------
-$ git diff topic master    <1>
-$ git diff topic..master   <2>
-$ git diff topic...master  <3>
+$ git diff topic main    <1>
+$ git diff topic..main   <2>
+$ git diff topic...main  <3>
 ------------
 +
-<1> Changes between the tips of the topic and the master branches.
+<1> Changes between the tips of the topic and the main branches.
 <2> Same as above.
-<3> Changes that occurred on the master branch since when the topic
+<3> Changes that occurred on the main branch since when the topic
     branch was started off it.
 
 Limiting the diff output::

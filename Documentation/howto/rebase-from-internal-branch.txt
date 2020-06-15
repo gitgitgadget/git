@@ -5,7 +5,7 @@ Subject: Re: sending changesets from the middle of a git tree
 Date:	Sun, 14 Aug 2005 18:37:39 -0700
 Abstract: In this article, JC talks about how he rebases the
  public "pu" branch using the core Git tools when he updates
- the "master" branch, and how "rebase" works.  Also discussed
+ the "main" branch, and how "rebase" works.  Also discussed
  is how this applies to individual developers who sends patches
  upstream.
 Content-type: text/asciidoc
@@ -33,17 +33,17 @@ the kind of task StGIT is designed to do.
 I just have done a simpler one, this time using only the core
 Git tools.
 
-I had a handful of commits that were ahead of master in pu, and I
+I had a handful of commits that were ahead of main in pu, and I
 wanted to add some documentation bypassing my usual habit of
 placing new things in pu first.  At the beginning, the commit
 ancestry graph looked like this:
 
                              *"pu" head
-    master --> #1 --> #2 --> #3
+    main --> #1 --> #2 --> #3
 
-So I started from master, made a bunch of edits, and committed:
+So I started from main, made a bunch of edits, and committed:
 
-    $ git checkout master
+    $ git checkout main
     $ cd Documentation; ed git.txt ...
     $ cd ..; git add Documentation/*.txt
     $ git commit -s
@@ -51,41 +51,41 @@ So I started from master, made a bunch of edits, and committed:
 After the commit, the ancestry graph would look like this:
 
                               *"pu" head
-    master^ --> #1 --> #2 --> #3
+    main^ --> #1 --> #2 --> #3
           \
-            \---> master
+            \---> main
 
-The old master is now master^ (the first parent of the master).
-The new master commit holds my documentation updates.
+The old main is now main^ (the first parent of the main).
+The new main commit holds my documentation updates.
 
 Now I have to deal with "pu" branch.
 
 This is the kind of situation I used to have all the time when
 Linus was the maintainer and I was a contributor, when you look
-at "master" branch being the "maintainer" branch, and "pu"
+at "main" branch being the "maintainer" branch, and "pu"
 branch being the "contributor" branch.  Your work started at the
 tip of the "maintainer" branch some time ago, you made a lot of
 progress in the meantime, and now the maintainer branch has some
 other commits you do not have yet.  And "git rebase" was written
 with the explicit purpose of helping to maintain branches like
-"pu".  You _could_ merge master to pu and keep going, but if you
+"pu".  You _could_ merge main to pu and keep going, but if you
 eventually want to cherrypick and merge some but not necessarily
-all changes back to the master branch, it often makes later
+all changes back to the main branch, it often makes later
 operations for _you_ easier if you rebase (i.e. carry forward
 your changes) "pu" rather than merge.  So I ran "git rebase":
 
     $ git checkout pu
-    $ git rebase master pu
+    $ git rebase main pu
 
 What this does is to pick all the commits since the current
 branch (note that I now am on "pu" branch) forked from the
-master branch, and forward port these changes.
+main branch, and forward port these changes.
 
-    master^ --> #1 --> #2 --> #3
+    main^ --> #1 --> #2 --> #3
           \                                  *"pu" head
-            \---> master --> #1' --> #2' --> #3'
+            \---> main --> #1' --> #2' --> #3'
 
-The diff between master^ and #1 is applied to master and
+The diff between main^ and #1 is applied to main and
 committed to create #1' commit with the commit information (log,
 author and date) taken from commit #1.  On top of that #2' and #3'
 commits are made similarly out of #2 and #3 commits.
@@ -103,14 +103,14 @@ Let's go back to the earlier picture, with different labels.
 You, as an individual developer, cloned upstream repository and
 made a couple of commits on top of it.
 
-                              *your "master" head
+                              *your "main" head
    upstream --> #1 --> #2 --> #3
 
 You would want changes #2 and #3 incorporated in the upstream,
 while you feel that #1 may need further improvements.  So you
 prepare #2 and #3 for e-mail submission.
 
-    $ git format-patch master^^ master
+    $ git format-patch main^^ main
 
 This creates two files, 0001-XXXX.patch and 0002-XXXX.patch.  Send
 them out "To: " your project maintainer and "Cc: " your mailing
@@ -122,7 +122,7 @@ patch.
 Then you would wait, and you find out that the upstream picked
 up your changes, along with other changes.
 
-   where                      *your "master" head
+   where                      *your "main" head
   upstream --> #1 --> #2 --> #3
     used   \
    to be     \--> #A --> #2' --> #3' --> #B --> #C
@@ -139,10 +139,10 @@ You fetch from upstream, but not merge.
     $ git fetch upstream
 
 This leaves the updated upstream head in .git/FETCH_HEAD but
-does not touch your .git/HEAD or .git/refs/heads/master.
+does not touch your .git/HEAD or .git/refs/heads/main.
 You run "git rebase" now.
 
-    $ git rebase FETCH_HEAD master
+    $ git rebase FETCH_HEAD main
 
 Earlier, I said that rebase applies all the commits from your
 branch on top of the upstream head.  Well, I lied.  "git rebase"
@@ -150,15 +150,15 @@ is a bit smarter than that and notices that #2 and #3 need not
 be applied, so it only applies #1.  The commit ancestry graph
 becomes something like this:
 
-   where                     *your old "master" head
+   where                     *your old "main" head
   upstream --> #1 --> #2 --> #3
-    used   \                      your new "master" head*
+    used   \                      your new "main" head*
    to be     \--> #A --> #2' --> #3' --> #B --> #C --> #1'
                                                 *upstream
                                                 head
 
 Again, "git prune" would discard the disused commits #1-#3 and
-you continue on starting from the new "master" head, which is
+you continue on starting from the new "main" head, which is
 the #1' commit.
 
 -jc

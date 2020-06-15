@@ -89,11 +89,11 @@ you the list of branch heads:
 
 ------------------------------------------------
 $ git branch
-* master
+* main
 ------------------------------------------------
 
 A freshly cloned repository contains a single branch head, by default
-named "master", with the working directory initialized to the state of
+named "main", with the working directory initialized to the state of
 the project referred to by that branch head.
 
 Most projects also use <<def_tag,tags>>.  Tags, like heads, are
@@ -130,7 +130,7 @@ branches, with an asterisk marking the currently checked-out branch:
 
 ------------------------------------------------
 $ git branch
-  master
+  main
 * new
 ------------------------------------------------
 
@@ -231,7 +231,7 @@ lines drawn with - / and \.  Time goes left to right:
 ................................................
          o--o--o <-- Branch A
         /
- o--o--o <-- master
+ o--o--o <-- main
         \
          o--o--o <-- Branch B
 ................................................
@@ -286,7 +286,7 @@ to remember which branch is current:
 
 ------------------------------------------------
 $ cat .git/HEAD
-ref: refs/heads/master
+ref: refs/heads/main
 ------------------------------------------------
 
 [[detached-head]]
@@ -320,7 +320,7 @@ $ cat .git/HEAD
 427abfa28afedffadfca9dd8b067eb6d36bac53f
 $ git branch
 * (detached from v2.6.17)
-  master
+  main
 ------------------------------------------------
 
 In this case we say that the HEAD is "detached".
@@ -332,7 +332,7 @@ make up a name for the new branch.   You can still create a new branch
 [[examining-remote-branches]]
 === Examining branches from a remote repository
 
-The "master" branch that was created at the time you cloned is a copy
+The "main" branch that was created at the time you cloned is a copy
 of the HEAD in the repository that you cloned from.  That repository
 may also have had other branches, though, and your local repository
 keeps branches which track each of those remote branches, called
@@ -345,7 +345,7 @@ $ git branch -r
   origin/html
   origin/maint
   origin/man
-  origin/master
+  origin/main
   origin/next
   origin/pu
   origin/todo
@@ -381,7 +381,7 @@ shorthand:
 
 	- The branch `test` is short for `refs/heads/test`.
 	- The tag `v2.6.18` is short for `refs/tags/v2.6.18`.
-	- `origin/master` is short for `refs/remotes/origin/master`.
+	- `origin/main` is short for `refs/remotes/origin/main`.
 
 The full name is occasionally useful if, for example, there ever
 exists a tag and a branch with the same name.
@@ -409,7 +409,7 @@ may wish to check the original repository for updates.
 The `git-fetch` command, with no arguments, will update all of the
 remote-tracking branches to the latest version found in the original
 repository.  It will not touch any of your own branches--not even the
-"master" branch that was created for you on clone.
+"main" branch that was created for you on clone.
 
 [[fetching-branches]]
 === Fetching branches from other repositories
@@ -422,7 +422,7 @@ $ git remote add staging git://git.kernel.org/.../gregkh/staging.git
 $ git fetch staging
 ...
 From git://git.kernel.org/pub/scm/linux/kernel/git/gregkh/staging
- * [new branch]      master     -> staging/master
+ * [new branch]      main     -> staging/main
  * [new branch]      staging-linus -> staging/staging-linus
  * [new branch]      staging-next -> staging/staging-next
 -------------------------------------------------
@@ -432,9 +432,9 @@ that you gave `git remote add`, in this case `staging`:
 
 -------------------------------------------------
 $ git branch -r
-  origin/HEAD -> origin/master
-  origin/master
-  staging/master
+  origin/HEAD -> origin/main
+  origin/main
+  staging/main
   staging/staging-linus
   staging/staging-next
 -------------------------------------------------
@@ -477,7 +477,7 @@ commit that introduced a bug into a project.
 === How to use bisect to find a regression
 
 Suppose version 2.6.18 of your project worked, but the version at
-"master" crashes.  Sometimes the best way to find the cause of such a
+"main" crashes.  Sometimes the best way to find the cause of such a
 regression is to perform a brute-force search through the project's
 history to find the particular commit that caused the problem.  The
 linkgit:git-bisect[1] command can help you do this:
@@ -485,7 +485,7 @@ linkgit:git-bisect[1] command can help you do this:
 -------------------------------------------------
 $ git bisect start
 $ git bisect good v2.6.18
-$ git bisect bad master
+$ git bisect bad main
 Bisecting: 3537 revisions left to test after this
 [65934a9a028b88e83e2b0f8b36618fe503349f8e] BLOCK: Make USB storage depend on SCSI rather than selecting it [try #6]
 -------------------------------------------------
@@ -493,7 +493,7 @@ Bisecting: 3537 revisions left to test after this
 If you run `git branch` at this point, you'll see that Git has
 temporarily moved you in "(no branch)". HEAD is now detached from any
 branch and points directly to a commit (with commit id 65934) that
-is reachable from "master" but not from v2.6.18. Compile and test it,
+is reachable from "main" but not from v2.6.18. Compile and test it,
 and see whether it crashes. Assume it does crash. Then:
 
 -------------------------------------------------
@@ -645,9 +645,9 @@ can also make more specific requests:
 
 -------------------------------------------------
 $ git log v2.5..	# commits since (not reachable from) v2.5
-$ git log test..master	# commits reachable from master but not test
-$ git log master..test	# ...reachable from test but not master
-$ git log master...test	# ...reachable from either test or master,
+$ git log test..main	# commits reachable from main but not test
+$ git log main..test	# ...reachable from test but not main
+$ git log main...test	# ...reachable from either test or main,
 			#    but not both
 $ git log --since="2 weeks ago" # commits from the last 2 weeks
 $ git log Makefile      # commits which modify Makefile
@@ -684,7 +684,7 @@ You can generate diffs between any two versions using
 linkgit:git-diff[1]:
 
 -------------------------------------------------
-$ git diff master..test
+$ git diff main..test
 -------------------------------------------------
 
 That will produce the diff between the tips of the two branches.  If
@@ -692,18 +692,18 @@ you'd prefer to find the diff from their common ancestor to test, you
 can use three dots instead of two:
 
 -------------------------------------------------
-$ git diff master...test
+$ git diff main...test
 -------------------------------------------------
 
 Sometimes what you want instead is a set of patches; for this you can
 use linkgit:git-format-patch[1]:
 
 -------------------------------------------------
-$ git format-patch master..test
+$ git format-patch main..test
 -------------------------------------------------
 
 will generate a file with a patch for each commit reachable from test
-but not from master.
+but not from main.
 
 [[viewing-old-file-versions]]
 === Viewing old file versions
@@ -748,7 +748,7 @@ Suppose you want to check whether two branches point at the same point
 in history.
 
 -------------------------------------------------
-$ git diff origin..master
+$ git diff origin..main
 -------------------------------------------------
 
 will tell you whether the contents of the project are the same at the
@@ -759,7 +759,7 @@ routes.  You could compare the object names:
 -------------------------------------------------
 $ git rev-list origin
 e05db0fd4f31dde7005f075a84f96b360d05984b
-$ git rev-list master
+$ git rev-list main
 e05db0fd4f31dde7005f075a84f96b360d05984b
 -------------------------------------------------
 
@@ -768,7 +768,7 @@ reachable from either one reference or the other but not
 both; so
 
 -------------------------------------------------
-$ git log origin...master
+$ git log origin...main
 -------------------------------------------------
 
 will return no commits when the two branches are equal.
@@ -861,7 +861,7 @@ and from v1.5.0-rc2, and not from v1.5.0-rc0.
 ==== Showing commits unique to a given branch
 
 Suppose you would like to see all the commits reachable from the branch
-head named `master` but not from any other head in your repository.
+head named `main` but not from any other head in your repository.
 
 We can list all the heads in this repository with
 linkgit:git-show-ref[1]:
@@ -870,28 +870,28 @@ linkgit:git-show-ref[1]:
 $ git show-ref --heads
 bf62196b5e363d73353a9dcf094c59595f3153b7 refs/heads/core-tutorial
 db768d5504c1bb46f63ee9d6e1772bd047e05bf9 refs/heads/maint
-a07157ac624b2524a059a3414e99f6f44bebc1e7 refs/heads/master
+a07157ac624b2524a059a3414e99f6f44bebc1e7 refs/heads/main
 24dbc180ea14dc1aebe09f14c8ecf32010690627 refs/heads/tutorial-2
 1e87486ae06626c2f31eaa63d26fc0fd646c8af2 refs/heads/tutorial-fixes
 -------------------------------------------------
 
-We can get just the branch-head names, and remove `master`, with
+We can get just the branch-head names, and remove `main`, with
 the help of the standard utilities cut and grep:
 
 -------------------------------------------------
-$ git show-ref --heads | cut -d' ' -f2 | grep -v '^refs/heads/master'
+$ git show-ref --heads | cut -d' ' -f2 | grep -v '^refs/heads/main'
 refs/heads/core-tutorial
 refs/heads/maint
 refs/heads/tutorial-2
 refs/heads/tutorial-fixes
 -------------------------------------------------
 
-And then we can ask to see all the commits reachable from master
+And then we can ask to see all the commits reachable from main
 but not from these other heads:
 
 -------------------------------------------------
-$ gitk master --not $( git show-ref --heads | cut -d' ' -f2 |
-				grep -v '^refs/heads/master' )
+$ gitk main --not $( git show-ref --heads | cut -d' ' -f2 |
+				grep -v '^refs/heads/main' )
 -------------------------------------------------
 
 Obviously, endless variations are possible; for example, to see all
@@ -1585,19 +1585,19 @@ previous values of each branch.  So in this case you can still find the
 old history using, for example,
 
 -------------------------------------------------
-$ git log master@{1}
+$ git log main@{1}
 -------------------------------------------------
 
 This lists the commits reachable from the previous version of the
-`master` branch head.  This syntax can be used with any Git command
+`main` branch head.  This syntax can be used with any Git command
 that accepts a commit, not just with `git log`.  Some other examples:
 
 -------------------------------------------------
-$ git show master@{2}		# See where the branch pointed 2,
-$ git show master@{3}		# 3, ... changes ago.
-$ gitk master@{yesterday}	# See where it pointed yesterday,
-$ gitk master@{"1 week ago"}	# ... or last week
-$ git log --walk-reflogs master	# show reflog entries for master
+$ git show main@{2}		# See where the branch pointed 2,
+$ git show main@{3}		# 3, ... changes ago.
+$ gitk main@{yesterday}	# See where it pointed yesterday,
+$ gitk main@{"1 week ago"}	# ... or last week
+$ git log --walk-reflogs main	# show reflog entries for main
 -------------------------------------------------
 
 A separate reflog is kept for the HEAD, so
@@ -1677,21 +1677,21 @@ into your own work.
 We have already seen <<Updating-a-repository-With-git-fetch,how to
 keep remote-tracking branches up to date>> with linkgit:git-fetch[1],
 and how to merge two branches.  So you can merge in changes from the
-original repository's master branch with:
+original repository's main branch with:
 
 -------------------------------------------------
 $ git fetch
-$ git merge origin/master
+$ git merge origin/main
 -------------------------------------------------
 
 However, the linkgit:git-pull[1] command provides a way to do this in
 one step:
 
 -------------------------------------------------
-$ git pull origin master
+$ git pull origin main
 -------------------------------------------------
 
-In fact, if you have `master` checked out, then this branch has been
+In fact, if you have `main` checked out, then this branch has been
 configured by `git clone` to get changes from the HEAD branch of the
 origin repository.  So often you can
 accomplish the above with just a simple
@@ -1928,17 +1928,17 @@ access, which you will need to update the public repository with the
 latest changes created in your private repository.
 
 The simplest way to do this is using linkgit:git-push[1] and ssh; to
-update the remote branch named `master` with the latest state of your
-branch named `master`, run
+update the remote branch named `main` with the latest state of your
+branch named `main`, run
 
 -------------------------------------------------
-$ git push ssh://yourserver.com/~you/proj.git master:master
+$ git push ssh://yourserver.com/~you/proj.git main:main
 -------------------------------------------------
 
 or just
 
 -------------------------------------------------
-$ git push ssh://yourserver.com/~you/proj.git master
+$ git push ssh://yourserver.com/~you/proj.git main
 -------------------------------------------------
 
 As with `git fetch`, `git push` will complain if this does not result in a
@@ -1970,7 +1970,7 @@ adds the following to `.git/config`:
 which lets you do the same push with just
 
 -------------------------------------------------
-$ git push public-repo master
+$ git push public-repo main
 -------------------------------------------------
 
 See the explanations of the `remote.<name>.url`,
@@ -1984,7 +1984,7 @@ If a push would not result in a <<fast-forwards,fast-forward>> of the
 remote branch, then it will fail with an error like:
 
 -------------------------------------------------
- ! [rejected]        master -> master (non-fast-forward)
+ ! [rejected]        main -> main (non-fast-forward)
 error: failed to push some refs to '...'
 hint: Updates were rejected because the tip of your current branch is behind
 hint: its remote counterpart. Integrate the remote changes (e.g.
@@ -2004,14 +2004,14 @@ You may force `git push` to perform the update anyway by preceding the
 branch name with a plus sign:
 
 -------------------------------------------------
-$ git push ssh://yourserver.com/~you/proj.git +master
+$ git push ssh://yourserver.com/~you/proj.git +main
 -------------------------------------------------
 
 Note the addition of the `+` sign.  Alternatively, you can use the
 `-f` flag to force the remote update, as in:
 
 -------------------------------------------------
-$ git push -f ssh://yourserver.com/~you/proj.git master
+$ git push -f ssh://yourserver.com/~you/proj.git main
 -------------------------------------------------
 
 Normally whenever a branch head in a public repository is modified, it
@@ -2127,20 +2127,20 @@ $ git clone git://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git wor
 $ cd work
 -------------------------------------------------
 
-Linus's tree will be stored in the remote-tracking branch named origin/master,
+Linus's tree will be stored in the remote-tracking branch named origin/main,
 and can be updated using linkgit:git-fetch[1]; you can track other
 public trees using linkgit:git-remote[1] to set up a "remote" and
 linkgit:git-fetch[1] to keep them up to date; see
 <<repositories-and-branches>>.
 
 Now create the branches in which you are going to work; these start out
-at the current tip of origin/master branch, and should be set up (using
+at the current tip of origin/main branch, and should be set up (using
 the `--track` option to linkgit:git-branch[1]) to merge changes in from
 Linus by default.
 
 -------------------------------------------------
-$ git branch --track test origin/master
-$ git branch --track release origin/master
+$ git branch --track test origin/main
+$ git branch --track release origin/main
 -------------------------------------------------
 
 These can be easily kept up to date using linkgit:git-pull[1].
@@ -2165,7 +2165,7 @@ make it easy to push both branches to your public tree.  (See
 -------------------------------------------------
 $ cat >> .git/config <<EOF
 [remote "mytree"]
-	url =  master.kernel.org:/pub/scm/linux/kernel/git/aegl/linux.git
+	url =  main.kernel.org:/pub/scm/linux/kernel/git/aegl/linux.git
 	push = release
 	push = test
 EOF
@@ -2256,7 +2256,7 @@ If it has been merged, then there will be no output.)
 
 Once a patch completes the great cycle (moving from test to release,
 then pulled by Linus, and finally coming back into your local
-`origin/master` branch), the branch for this change is no longer needed.
+`origin/main` branch), the branch for this change is no longer needed.
 You detect this when the output from:
 
 -------------------------------------------------
@@ -2289,16 +2289,16 @@ Here are some of the scripts that simplify all this even further.
 ==== update script ====
 # Update a branch in my Git tree.  If the branch to be updated
 # is origin, then pull from kernel.org.  Otherwise merge
-# origin/master branch into test|release branch
+# origin/main branch into test|release branch
 
 case "$1" in
 test|release)
 	git checkout $1 && git pull . origin
 	;;
 origin)
-	before=$(git rev-parse refs/remotes/origin/master)
+	before=$(git rev-parse refs/remotes/origin/main)
 	git fetch origin
-	after=$(git rev-parse refs/remotes/origin/master)
+	after=$(git rev-parse refs/remotes/origin/main)
 	if [ $before != $after ]
 	then
 		git log $before..$after | git shortlog
@@ -2366,7 +2366,7 @@ do
 
 	echo -n $gb ======= $branch ====== $restore " "
 	status=
-	for ref in test release origin/master
+	for ref in test release origin/main
 	do
 		if [ `git rev-list $ref..$branch | wc -c` -gt 0 ]
 		then
@@ -2390,7 +2390,7 @@ do
 		echo $rb "<$status>" $restore
 		;;
 	esac
-	git log origin/master..$branch | git shortlog
+	git log origin/main..$branch | git shortlog
 done
 -------------------------------------------------
 
@@ -2760,14 +2760,14 @@ store it locally under the name `refs/heads/my-todo-work`.
 You can also fetch branches from other repositories; so
 
 -------------------------------------------------
-$ git fetch git://example.com/proj.git master:example-master
+$ git fetch git://example.com/proj.git main:example-main
 -------------------------------------------------
 
-will create a new branch named `example-master` and store in it the
-branch named `master` from the repository at the given URL.  If you
-already have a branch named example-master, it will attempt to
+will create a new branch named `example-main` and store in it the
+branch named `main` from the repository at the given URL.  If you
+already have a branch named example-main, it will attempt to
 <<fast-forwards,fast-forward>> to the commit given by example.com's
-master branch.  In more detail:
+main branch.  In more detail:
 
 [[fetch-fast-forwards]]
 === git fetch and fast-forwards
@@ -2813,7 +2813,7 @@ If git fetch fails because the new head of a branch is not a
 descendant of the old head, you may force the update with:
 
 -------------------------------------------------
-$ git fetch git://example.com/proj.git +master:refs/remotes/example/master
+$ git fetch git://example.com/proj.git +main:refs/remotes/example/main
 -------------------------------------------------
 
 Note the addition of the `+` sign.  Alternatively, you can use the `-f`
@@ -2823,7 +2823,7 @@ flag to force updates of all the fetched branches, as in:
 $ git fetch -f origin
 -------------------------------------------------
 
-Be aware that commits that the old version of example/master pointed at
+Be aware that commits that the old version of example/main pointed at
 may be lost, as we saw in the previous section.
 
 [[remote-branch-configuration]]
@@ -2841,8 +2841,8 @@ core.filemode=true
 core.logallrefupdates=true
 remote.origin.url=git://git.kernel.org/pub/scm/git/git.git
 remote.origin.fetch=+refs/heads/*:refs/remotes/origin/*
-branch.master.remote=origin
-branch.master.merge=refs/heads/master
+branch.main.remote=origin
+branch.main.merge=refs/heads/main
 -------------------------------------------------
 
 If there are other repositories that you also use frequently, you can
@@ -3507,7 +3507,7 @@ $ ls -a
 The `git submodule add <repo> <path>` command does a couple of things:
 
 - It clones the submodule from `<repo>` to the given `<path>` under the
-  current directory and by default checks out the master branch.
+  current directory and by main checks out the main branch.
 - It adds the submodule's clone path to the linkgit:gitmodules[5] file and
   adds this file to the index, ready to be committed.
 - It adds the submodule's current commit ID to the index, ready to be
@@ -3568,7 +3568,7 @@ working on a branch.
 -------------------------------------------------
 $ git branch
 * (detached from d266b98)
-  master
+  main
 -------------------------------------------------
 
 If you want to make a change within a submodule and you have a detached head,
@@ -3577,7 +3577,7 @@ change within the submodule, and then update the superproject to reference the
 new commit:
 
 -------------------------------------------------
-$ git switch master
+$ git switch main
 -------------------------------------------------
 
 or
@@ -4355,10 +4355,10 @@ Update and examine branches from the repository you cloned from:
 -----------------------------------------------
 $ git fetch		# update
 $ git branch -r		# list
-  origin/master
+  origin/main
   origin/next
   ...
-$ git switch -c masterwork origin/master
+$ git switch -c mainwork origin/main
 -----------------------------------------------
 
 Fetch a branch from a different repository, and give it a new
@@ -4380,7 +4380,7 @@ $ git remote show example	# get details
 * remote example
   URL: git://example.com/project.git
   Tracked remote branches
-    master
+    main
     next
     ...
 $ git fetch example		# update branches from example
@@ -4396,9 +4396,9 @@ $ gitk			    # visualize and browse history
 $ git log		    # list all commits
 $ git log src/		    # ...modifying src/
 $ git log v2.6.15..v2.6.16  # ...in v2.6.16, not in v2.6.15
-$ git log master..test	    # ...in branch test, not in branch master
-$ git log test..master	    # ...in branch master, but not in test
-$ git log test...master	    # ...in one branch, not in both
+$ git log main..test	    # ...in branch test, not in branch main
+$ git log test..main	    # ...in branch main, but not in test
+$ git log test...main	    # ...in one branch, not in both
 $ git log -S'foo()'	    # ...where difference contain "foo()"
 $ git log --since="2 weeks ago"
 $ git log -p		    # show patches as well
@@ -4458,7 +4458,7 @@ $ git commit -a	   # use latest content of all tracked files
 
 -----------------------------------------------
 $ git merge test   # merge branch "test" into the current branch
-$ git pull git://example.com/project.git master
+$ git pull git://example.com/project.git main
 		   # fetch and merge in remote branch
 $ git pull . test  # equivalent to git merge test
 -----------------------------------------------

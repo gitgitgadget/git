@@ -294,7 +294,7 @@ the branch we were in before we started bisecting:
 $ git bisect reset
 Checking out files: 100% (21549/21549), done.
 Previous HEAD position was 2ddcca3... Linux 2.6.26-rc1
-Switched to branch 'master'
+Switched to branch 'main'
 -------------
 
 Driving a bisection automatically
@@ -1229,7 +1229,7 @@ message or the author. And it can also be used instead of git "grafts"
 to link a repository with another old repository.
 
 In fact it's this last feature that "sold" it to the Git community, so
-it is now in the "master" branch of Git's Git repository and it should
+it is now in the "main" branch of Git's Git repository and it should
 be released in Git 1.6.5 in October or November 2009.
 
 One problem with "git replace" is that currently it stores all the
