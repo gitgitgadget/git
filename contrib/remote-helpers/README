@@ -9,7 +9,7 @@ You can pick a directory on your $PATH and download them from these
 repositories, e.g.:
 
   $ wget -O $HOME/bin/git-remote-hg \
-    https://raw.github.com/felipec/git-remote-hg/master/git-remote-hg
+    https://raw.github.com/felipec/git-remote-hg/main/git-remote-hg
   $ wget -O $HOME/bin/git-remote-bzr \
-    https://raw.github.com/felipec/git-remote-bzr/master/git-remote-bzr
+    https://raw.github.com/felipec/git-remote-bzr/main/git-remote-bzr
   $ chmod +x $HOME/bin/git-remote-hg $HOME/bin/git-remote-bzr

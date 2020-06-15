@@ -35,6 +35,7 @@ ifndef NO_OPENSSL
 endif
 
 ifndef NO_PTHREADS
+	PTHREAD_LIBS = -lpthread
 	CFLAGS += $(PTHREADS_CFLAGS)
 	EXTLIBS += $(PTHREAD_LIBS)
 endif
@@ -52,7 +53,7 @@ GIT_LIB = ../../libgit.a
 VCSSVN_LIB = ../../vcs-svn/lib.a
 XDIFF_LIB = ../../xdiff/lib.a
 
-LIBS = $(VCSSVN_LIB) $(GIT_LIB) $(XDIFF_LIB)
+LIBS = ../../common-main.o $(VCSSVN_LIB) $(GIT_LIB) $(XDIFF_LIB)
 
 QUIET_SUBDIR0 = +$(MAKE) -C # space to separate -C and subdir
 QUIET_SUBDIR1 =
@@ -74,10 +75,10 @@ endif
 endif
 
 svn-fe$X: svn-fe.o $(VCSSVN_LIB) $(XDIFF_LIB) $(GIT_LIB)
-	$(QUIET_LINK)$(CC) $(CFLAGS) $(LDFLAGS) $(EXTLIBS) -o $@ svn-fe.o $(LIBS)
+	$(QUIET_LINK)$(CC) $(CFLAGS) $(LDFLAGS) -o $@ svn-fe.o $(LIBS) $(EXTLIBS)
 
 svn-fe.o: svn-fe.c ../../vcs-svn/svndump.h
-	$(QUIET_CC)$(CC) $(CFLAGS) -I../../vcs-svn -o $*.o -c $<
+	$(QUIET_CC)$(CC) $(CFLAGS) -I ../.. -I../../vcs-svn -o $*.o -c $<
 
 svn-fe.html: svn-fe.txt
 	$(QUIET_SUBDIR0)../../Documentation $(QUIET_SUBDIR1) \

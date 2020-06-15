@@ -20,7 +20,7 @@ requests, and we use GitHub pull requests to exchange patches (though,
 if you prefer, you can send patches via the Git mailing list with CC
 to the maintainers). Please sign off your patches as per the `Git
 project practice
-<https://github.com/git/git/blob/master/Documentation/SubmittingPatches#L234>`__.
+<https://github.com/git/git/blob/main/Documentation/SubmittingPatches#L234>`__.
 
 Please vote for issues you would like to be addressed in priority
 (click "add your reaction" and then the "+1" thumbs-up button on the

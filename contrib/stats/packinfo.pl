@@ -50,8 +50,8 @@
 #   0   blob 03156f21...     1767     1767 Documentation/git-lost-found.txt @ tags/v1.2.0~142
 #   1    blob f52a9d7f...       10     1777 Documentation/git-lost-found.txt @ tags/v1.5.0-rc1~74
 #   2     blob a8cc5739...       51     1828 Documentation/git-lost+found.txt @ tags/v0.99.9h^0
-#   3      blob 660e90b1...       15     1843 Documentation/git-lost+found.txt @ master~3222^2~2
-#   4       blob 0cb8e3bb...       33     1876 Documentation/git-lost+found.txt @ master~3222^2~3
+#   3      blob 660e90b1...       15     1843 Documentation/git-lost+found.txt @ main~3222^2~2
+#   4       blob 0cb8e3bb...       33     1876 Documentation/git-lost+found.txt @ main~3222^2~3
 #   2     blob e48607f0...      311     2088 Documentation/git-lost-found.txt @ tags/v1.5.2-rc3~4
 #      size: count 6 total 2187 min 10 max 1767 mean 364.50 median 51 std_dev 635.85
 # path size: count 6 total 11179 min 1767 max 2088 mean 1863.17 median 1843 std_dev 107.26
