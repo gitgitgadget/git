@@ -73,4 +73,13 @@ test_expect_success 'post-checkout hook is triggered by clone' '
 	test -f clone3/.git/post-checkout.args
 '
 
+test_expect_success 'exit code of post-checkout hook is passed through' '
+	mkdir -p exit-code &&
+	echo "exit 123" | write_script exit-code/post-checkout &&
+	test_expect_code 123 \
+	git -c core.hooksPath="$PWD/exit-code" switch -c trigger-exit-code &&
+	test_expect_code 123 \
+	git -c core.hooksPath="$PWD/exit-code" restore .
+'
+
 test_done

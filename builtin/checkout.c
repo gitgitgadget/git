@@ -420,7 +420,7 @@ static int checkout_paths(const struct checkout_opts *opts,
 	static char *ps_matched;
 	struct object_id rev;
 	struct commit *head;
-	int errs = 0;
+	int errs = 0, ret;
 	struct lock_file lock_file = LOCK_INIT;
 	int checkout_index;
 
@@ -570,8 +570,8 @@ static int checkout_paths(const struct checkout_opts *opts,
 	read_ref_full("HEAD", 0, &rev, NULL);
 	head = lookup_commit_reference_gently(the_repository, &rev, 1);
 
-	errs |= post_checkout_hook(head, head, 0);
-	return errs;
+	ret = post_checkout_hook(head, head, 0);
+	return !errs ? ret : (errs < 0 ? 1 : errs);
 }
 
 static void show_local_changes(struct object *head,
@@ -1094,6 +1094,8 @@ static int switch_branches(const struct checkout_opts *opts,
 
 	ret = post_checkout_hook(old_branch_info.commit, new_branch_info->commit, 1);
 	free(path_to_free);
+	if (ret > 0)
+		return ret;
 	return ret || writeout_error;
 }
 
