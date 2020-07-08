@@ -1675,6 +1675,8 @@ ifdef NO_UNIX_SOCKETS
 	BASIC_CFLAGS += -DNO_UNIX_SOCKETS
 else
 	LIB_OBJS += unix-socket.o
+	LIB_OBJS += compat/simple-ipc/shared.o
+	LIB_OBJS += compat/simple-ipc/unix-sockets.o
 endif
 
 ifdef USE_WIN32_IPC
