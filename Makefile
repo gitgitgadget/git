@@ -1676,6 +1676,11 @@ else
 	LIB_OBJS += unix-socket.o
 endif
 
+ifdef USE_WIN32_IPC
+	LIB_OBJS += compat/simple-ipc/shared.o
+	LIB_OBJS += compat/simple-ipc/win32.o
+endif
+
 ifdef NO_ICONV
 	BASIC_CFLAGS += -DNO_ICONV
 endif
