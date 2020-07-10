@@ -71,7 +71,7 @@ int cmd_verify_tag(int argc, const char **argv, const char *prefix)
 		}
 
 		if (format.format)
-			pretty_print_ref(name, &oid, &format);
+			pretty_print_ref(the_repository, name, &oid, &format);
 	}
 	return had_error;
 }

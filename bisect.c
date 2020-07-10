@@ -704,17 +704,20 @@ static int is_expected_rev(const struct object_id *oid)
 	return res;
 }
 
-static enum bisect_error bisect_checkout(const struct object_id *bisect_rev, int no_checkout)
+static enum bisect_error bisect_checkout(struct repository *r,
+					 const struct object_id *bisect_rev,
+					 int no_checkout)
 {
 	char bisect_rev_hex[GIT_MAX_HEXSZ + 1];
 	enum bisect_error res = BISECT_OK;
 
 	memcpy(bisect_rev_hex, oid_to_hex(bisect_rev), the_hash_algo->hexsz + 1);
-	update_ref(NULL, "BISECT_EXPECTED_REV", bisect_rev, NULL, 0, UPDATE_REFS_DIE_ON_ERR);
+	update_ref(r, NULL, "BISECT_EXPECTED_REV", bisect_rev, NULL, 0,
+		   UPDATE_REFS_DIE_ON_ERR);
 
 	argv_checkout[2] = bisect_rev_hex;
 	if (no_checkout) {
-		update_ref(NULL, "BISECT_HEAD", bisect_rev, NULL, 0,
+		update_ref(r, NULL, "BISECT_HEAD", bisect_rev, NULL, 0,
 			   UPDATE_REFS_DIE_ON_ERR);
 	} else {
 		res = run_command_v_opt(argv_checkout, RUN_GIT_CMD);
@@ -820,7 +823,8 @@ static void handle_skipped_merge_base(const struct object_id *mb)
  * for early success, this will be converted back to 0 in
  * check_good_are_ancestors_of_bad().
  */
-static enum bisect_error check_merge_bases(int rev_nr, struct commit **rev, int no_checkout)
+static enum bisect_error check_merge_bases(struct repository *r, int rev_nr,
+					   struct commit **rev, int no_checkout)
 {
 	enum bisect_error res = BISECT_OK;
 	struct commit_list *result;
@@ -838,7 +842,7 @@ static enum bisect_error check_merge_bases(int rev_nr, struct commit **rev, int 
 			handle_skipped_merge_base(mb);
 		} else {
 			printf(_("Bisecting: a merge base must be tested\n"));
-			res = bisect_checkout(mb, no_checkout);
+			res = bisect_checkout(r, mb, no_checkout);
 			if (!res)
 				/* indicate early success */
 				res = BISECT_INTERNAL_SUCCESS_MERGE_BASE;
@@ -903,7 +907,7 @@ static enum bisect_error check_good_are_ancestors_of_bad(struct repository *r,
 
 	rev = get_bad_and_good_commits(r, &rev_nr);
 	if (check_ancestors(r, rev_nr, rev, prefix))
-		res = check_merge_bases(rev_nr, rev, no_checkout);
+		res = check_merge_bases(r, rev_nr, rev, no_checkout);
 	free(rev);
 
 	if (!res) {
@@ -1065,7 +1069,7 @@ enum bisect_error bisect_next_all(struct repository *r, const char *prefix, int 
 		  nr), nr, steps_msg);
 	free(steps_msg);
 
-	return bisect_checkout(bisect_rev, no_checkout);
+	return bisect_checkout(r, bisect_rev, no_checkout);
 }
 
 static inline int log2i(int n)

@@ -76,12 +76,12 @@ int cmd_for_each_ref(int argc, const char **argv, const char *prefix)
 	filter.name_patterns = argv;
 	filter.match_as_path = 1;
 	filter_refs(&array, &filter, FILTER_REFS_ALL | FILTER_REFS_INCLUDE_BROKEN);
-	ref_array_sort(sorting, &array);
+	ref_array_sort(the_repository, sorting, &array);
 
 	if (!maxcount || array.nr < maxcount)
 		maxcount = array.nr;
 	for (i = 0; i < maxcount; i++)
-		show_ref_array_item(array.items[i], &format);
+		show_ref_array_item(the_repository, array.items[i], &format);
 	ref_array_clear(&array);
 	return 0;
 }

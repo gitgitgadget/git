@@ -53,7 +53,7 @@ void commit_notes(struct repository *r, struct notes_tree *t, const char *msg)
 
 	create_notes_commit(r, t, NULL, buf.buf, buf.len, &commit_oid);
 	strbuf_insertstr(&buf, 0, "notes: ");
-	update_ref(buf.buf, t->update_ref, &commit_oid, NULL, 0,
+	update_ref(r, buf.buf, t->update_ref, &commit_oid, NULL, 0,
 		   UPDATE_REFS_DIE_ON_ERR);
 
 	strbuf_release(&buf);

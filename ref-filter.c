@@ -1412,14 +1412,15 @@ static const char *show_ref(struct refname_atom *atom, const char *refname)
 		return xstrdup(refname);
 }
 
-static void fill_remote_ref_details(struct used_atom *atom, const char *refname,
+static void fill_remote_ref_details(struct repository *r,
+				    struct used_atom *atom, const char *refname,
 				    struct branch *branch, const char **s)
 {
 	int num_ours, num_theirs;
 	if (atom->u.remote_ref.option == RR_REF)
 		*s = show_ref(&atom->u.remote_ref.refname, refname);
 	else if (atom->u.remote_ref.option == RR_TRACK) {
-		if (stat_tracking_info(branch, &num_ours, &num_theirs,
+		if (stat_tracking_info(r, branch, &num_ours, &num_theirs,
 				       NULL, atom->u.remote_ref.push,
 				       AHEAD_BEHIND_FULL) < 0) {
 			*s = xstrdup(msgs.gone);
@@ -1438,7 +1439,7 @@ static void fill_remote_ref_details(struct used_atom *atom, const char *refname,
 			free((void *)to_free);
 		}
 	} else if (atom->u.remote_ref.option == RR_TRACKSHORT) {
-		if (stat_tracking_info(branch, &num_ours, &num_theirs,
+		if (stat_tracking_info(r, branch, &num_ours, &num_theirs,
 				       NULL, atom->u.remote_ref.push,
 				       AHEAD_BEHIND_FULL) < 0) {
 			*s = xstrdup("");
@@ -1605,7 +1606,8 @@ static char *get_worktree_path(const struct used_atom *atom, const struct ref_ar
 /*
  * Parse the object referred by ref, and grab needed value.
  */
-static int populate_value(struct ref_array_item *ref, struct strbuf *err)
+static int populate_value(struct repository *r, struct ref_array_item *ref,
+			  struct strbuf *err)
 {
 	struct object *obj;
 	int i;
@@ -1658,9 +1660,10 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 			}
 			branch = branch_get(branch_name);
 
-			refname = branch_get_upstream(branch, NULL);
+			refname = branch_get_upstream(r, branch, NULL);
 			if (refname)
-				fill_remote_ref_details(atom, refname, branch, &v->s);
+				fill_remote_ref_details(r, atom, refname,
+							branch, &v->s);
 			else
 				v->s = xstrdup("");
 			continue;
@@ -1675,13 +1678,14 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 			if (atom->u.remote_ref.push_remote)
 				refname = NULL;
 			else {
-				refname = branch_get_push(branch, NULL);
+				refname = branch_get_push(r, branch, NULL);
 				if (!refname)
 					continue;
 			}
 			/* We will definitely re-init v->s on the next line. */
 			free((char *)v->s);
-			fill_remote_ref_details(atom, refname, branch, &v->s);
+			fill_remote_ref_details(r, atom, refname, branch,
+						&v->s);
 			continue;
 		} else if (starts_with(name, "color:")) {
 			v->s = xstrdup(atom->u.color);
@@ -1785,11 +1789,12 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
  * Given a ref, return the value for the atom.  This lazily gets value
  * out of the object by calling populate value.
  */
-static int get_ref_atom_value(struct ref_array_item *ref, int atom,
-			      struct atom_value **v, struct strbuf *err)
+static int get_ref_atom_value(struct repository *r, struct ref_array_item *ref,
+			      int atom, struct atom_value **v,
+			      struct strbuf *err)
 {
 	if (!ref->value) {
-		if (populate_value(ref, err))
+		if (populate_value(r, ref, err))
 			return -1;
 		fill_missing_values(ref->value);
 	}
@@ -2273,7 +2278,8 @@ int filter_refs(struct ref_array *array, struct ref_filter *filter, unsigned int
 	return ret;
 }
 
-static int cmp_ref_sorting(struct ref_sorting *s, struct ref_array_item *a, struct ref_array_item *b)
+static int cmp_ref_sorting(struct repository *r, struct ref_sorting *s,
+			   struct ref_array_item *a, struct ref_array_item *b)
 {
 	struct atom_value *va, *vb;
 	int cmp;
@@ -2281,9 +2287,9 @@ static int cmp_ref_sorting(struct ref_sorting *s, struct ref_array_item *a, stru
 	int (*cmp_fn)(const char *, const char *);
 	struct strbuf err = STRBUF_INIT;
 
-	if (get_ref_atom_value(a, s->atom, &va, &err))
+	if (get_ref_atom_value(r, a, s->atom, &va, &err))
 		die("%s", err.buf);
-	if (get_ref_atom_value(b, s->atom, &vb, &err))
+	if (get_ref_atom_value(r, b, s->atom, &vb, &err))
 		die("%s", err.buf);
 	strbuf_release(&err);
 	cmp_fn = s->ignore_case ? strcasecmp : strcmp;
@@ -2303,18 +2309,25 @@ static int cmp_ref_sorting(struct ref_sorting *s, struct ref_array_item *a, stru
 	return (s->reverse) ? -cmp : cmp;
 }
 
-static int compare_refs(const void *a_, const void *b_, void *ref_sorting)
+struct ref_sorting_internal {
+	struct repository *r;
+	struct ref_sorting *s;
+};
+
+static int compare_refs(const void *a_, const void *b_, void *data)
 {
 	struct ref_array_item *a = *((struct ref_array_item **)a_);
 	struct ref_array_item *b = *((struct ref_array_item **)b_);
+	struct ref_sorting_internal *s_internal = data;
+	struct repository *r = s_internal->r;
 	struct ref_sorting *s;
 
-	for (s = ref_sorting; s; s = s->next) {
-		int cmp = cmp_ref_sorting(s, a, b);
+	for (s = s_internal->s; s; s = s->next) {
+		int cmp = cmp_ref_sorting(r, s, a, b);
 		if (cmp)
 			return cmp;
 	}
-	s = ref_sorting;
+	s = s_internal->s;
 	return s && s->ignore_case ?
 		strcasecmp(a->refname, b->refname) :
 		strcmp(a->refname, b->refname);
@@ -2326,9 +2339,12 @@ void ref_sorting_icase_all(struct ref_sorting *sorting, int flag)
 		sorting->ignore_case = !!flag;
 }
 
-void ref_array_sort(struct ref_sorting *sorting, struct ref_array *array)
+void ref_array_sort(struct repository *r, struct ref_sorting *sorting,
+		    struct ref_array *array)
 {
-	QSORT_S(array->items, array->nr, compare_refs, sorting);
+	struct ref_sorting_internal data = { r, sorting };
+
+	QSORT_S(array->items, array->nr, compare_refs, &data);
 }
 
 static void append_literal(const char *cp, const char *ep, struct ref_formatting_state *state)
@@ -2353,10 +2369,10 @@ static void append_literal(const char *cp, const char *ep, struct ref_formatting
 	}
 }
 
-int format_ref_array_item(struct ref_array_item *info,
-			   const struct ref_format *format,
-			   struct strbuf *final_buf,
-			   struct strbuf *error_buf)
+int format_ref_array_item(struct repository *r, struct ref_array_item *info,
+			  const struct ref_format *format,
+			  struct strbuf *final_buf,
+			  struct strbuf *error_buf)
 {
 	const char *cp, *sp, *ep;
 	struct ref_formatting_state state = REF_FORMATTING_STATE_INIT;
@@ -2372,7 +2388,8 @@ int format_ref_array_item(struct ref_array_item *info,
 		if (cp < sp)
 			append_literal(cp, sp, &state);
 		pos = parse_ref_filter_atom(format, sp + 2, ep, error_buf);
-		if (pos < 0 || get_ref_atom_value(info, pos, &atomv, error_buf) ||
+		if (pos < 0 ||
+		    get_ref_atom_value(r, info, pos, &atomv, error_buf) ||
 		    atomv->handler(atomv, &state, error_buf)) {
 			pop_stack_element(&state.stack);
 			return -1;
@@ -2399,13 +2416,13 @@ int format_ref_array_item(struct ref_array_item *info,
 	return 0;
 }
 
-void show_ref_array_item(struct ref_array_item *info,
+void show_ref_array_item(struct repository *r, struct ref_array_item *info,
 			 const struct ref_format *format)
 {
 	struct strbuf final_buf = STRBUF_INIT;
 	struct strbuf error_buf = STRBUF_INIT;
 
-	if (format_ref_array_item(info, format, &final_buf, &error_buf))
+	if (format_ref_array_item(r, info, format, &final_buf, &error_buf))
 		die("%s", error_buf.buf);
 	fwrite(final_buf.buf, 1, final_buf.len, stdout);
 	strbuf_release(&error_buf);
@@ -2413,13 +2430,14 @@ void show_ref_array_item(struct ref_array_item *info,
 	putchar('\n');
 }
 
-void pretty_print_ref(const char *name, const struct object_id *oid,
+void pretty_print_ref(struct repository *r, const char *name,
+		      const struct object_id *oid,
 		      const struct ref_format *format)
 {
 	struct ref_array_item *ref_item;
 	ref_item = new_ref_array_item(name, oid);
 	ref_item->kind = ref_kind_from_refname(name);
-	show_ref_array_item(ref_item, format);
+	show_ref_array_item(r, ref_item, format);
 	free_array_item(ref_item);
 }
 

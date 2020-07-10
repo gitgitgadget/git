@@ -358,7 +358,8 @@ static int get_ref_states(const struct ref *remote_refs, struct ref_states *stat
 	states->tracked.strdup_strings = 1;
 	states->stale.strdup_strings = 1;
 	for (ref = fetch_map; ref; ref = ref->next) {
-		if (!ref->peer_ref || !ref_exists(ref->peer_ref->name))
+		if (!ref->peer_ref ||
+		    !ref_exists(the_repository, ref->peer_ref->name))
 			string_list_append(&states->new_refs, abbrev_branch(ref->name));
 		else
 			string_list_append(&states->tracked, abbrev_branch(ref->name));
@@ -762,7 +763,8 @@ static int mv(int argc, const char **argv)
 		read_ref_full(item->string, RESOLVE_REF_READING, NULL, &flag);
 		if (!(flag & REF_ISSYMREF))
 			continue;
-		if (delete_ref(NULL, item->string, NULL, REF_NO_DEREF))
+		if (delete_ref(the_repository, NULL, item->string, NULL,
+			       REF_NO_DEREF))
 			die(_("deleting '%s' failed"), item->string);
 	}
 	for (i = 0; i < remote_branches.nr; i++) {
@@ -1343,7 +1345,8 @@ static int set_head(int argc, const char **argv)
 			head_name = xstrdup(states.heads.items[0].string);
 		free_remote_ref_states(&states);
 	} else if (opt_d && !opt_a && argc == 1) {
-		if (delete_ref(NULL, buf.buf, NULL, REF_NO_DEREF))
+		if (delete_ref(the_repository, NULL, buf.buf, NULL,
+			       REF_NO_DEREF))
 			result |= error(_("Could not delete %s"), buf.buf);
 	} else
 		usage_with_options(builtin_remote_sethead_usage, options);
@@ -1351,7 +1354,7 @@ static int set_head(int argc, const char **argv)
 	if (head_name) {
 		strbuf_addf(&buf2, "refs/remotes/%s/%s", argv[0], head_name);
 		/* make sure it's valid */
-		if (!ref_exists(buf2.buf))
+		if (!ref_exists(the_repository, buf2.buf))
 			result |= error(_("Not a valid ref: %s"), buf2.buf);
 		else if (create_symref(buf.buf, buf2.buf, "remote set-head"))
 			result |= error(_("Could not setup %s"), buf.buf);

@@ -318,9 +318,9 @@ static int refs_ref_exists(struct ref_store *refs, const char *refname)
 	return !!refs_resolve_ref_unsafe(refs, refname, RESOLVE_REF_READING, NULL, NULL);
 }
 
-int ref_exists(const char *refname)
+int ref_exists(struct repository *r, const char *refname)
 {
-	return refs_ref_exists(get_main_ref_store(the_repository), refname);
+	return refs_ref_exists(get_main_ref_store(r), refname);
 }
 
 static int filter_refs(const char *refname, const struct object_id *oid,
@@ -895,11 +895,11 @@ int refs_delete_ref(struct ref_store *refs, const char *msg,
 	return 0;
 }
 
-int delete_ref(const char *msg, const char *refname,
+int delete_ref(struct repository *r, const char *msg, const char *refname,
 	       const struct object_id *old_oid, unsigned int flags)
 {
-	return refs_delete_ref(get_main_ref_store(the_repository), msg, refname,
-			       old_oid, flags);
+	return refs_delete_ref(get_main_ref_store(r), msg, refname, old_oid,
+			       flags);
 }
 
 void copy_reflog_msg(struct strbuf *sb, const char *msg)
@@ -1237,12 +1237,12 @@ int refs_update_ref(struct ref_store *refs, const char *msg,
 	return 0;
 }
 
-int update_ref(const char *msg, const char *refname,
+int update_ref(struct repository *r, const char *msg, const char *refname,
 	       const struct object_id *new_oid,
 	       const struct object_id *old_oid,
 	       unsigned int flags, enum action_on_err onerr)
 {
-	return refs_update_ref(get_main_ref_store(the_repository), msg, refname, new_oid,
+	return refs_update_ref(get_main_ref_store(r), msg, refname, new_oid,
 			       old_oid, flags, onerr);
 }
 

@@ -104,10 +104,10 @@ reset_head_refs:
 				strbuf_addstr(&msg, "updating ORIG_HEAD");
 				reflog_orig_head = msg.buf;
 			}
-			update_ref(reflog_orig_head, "ORIG_HEAD", orig,
+			update_ref(r, reflog_orig_head, "ORIG_HEAD", orig,
 				   old_orig, 0, UPDATE_REFS_MSG_ON_ERR);
 		} else if (old_orig)
-			delete_ref(NULL, "ORIG_HEAD", old_orig, 0);
+			delete_ref(r, NULL, "ORIG_HEAD", old_orig, 0);
 	}
 
 	if (!reflog_head) {
@@ -116,11 +116,11 @@ reset_head_refs:
 		reflog_head = msg.buf;
 	}
 	if (!switch_to_branch)
-		ret = update_ref(reflog_head, "HEAD", oid, orig,
+		ret = update_ref(r, reflog_head, "HEAD", oid, orig,
 				 detach_head ? REF_NO_DEREF : 0,
 				 UPDATE_REFS_MSG_ON_ERR);
 	else {
-		ret = update_ref(reflog_head, switch_to_branch, oid,
+		ret = update_ref(r, reflog_head, switch_to_branch, oid,
 				 NULL, 0, UPDATE_REFS_MSG_ON_ERR);
 		if (!ret)
 			ret = create_symref("HEAD", switch_to_branch,

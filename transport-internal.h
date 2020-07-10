@@ -2,6 +2,7 @@
 #define TRANSPORT_INTERNAL_H
 
 struct ref;
+struct repository;
 struct transport;
 struct argv_array;
 
@@ -56,7 +57,8 @@ struct transport_vtable {
 	 * could be a different value from peer_ref->new_oid if the
 	 * process involved generating new commits.
 	 **/
-	int (*push_refs)(struct transport *transport, struct ref *refs, int flags);
+	int (*push_refs)(struct repository *r, struct transport *transport,
+			 struct ref *refs, int flags);
 	int (*connect)(struct transport *connection, const char *name,
 		       const char *executable, int fd[2]);
 

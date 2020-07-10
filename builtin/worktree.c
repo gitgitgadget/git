@@ -332,7 +332,7 @@ static int add_worktree(const char *path, const char *refname,
 
 	/* is 'refname' a branch or commit? */
 	if (!opts->detach && !strbuf_check_branch_ref(&symref, refname) &&
-	    ref_exists(symref.buf)) {
+	    ref_exists(the_repository, symref.buf)) {
 		is_branch = 1;
 		if (!opts->force)
 			die_if_checked_out(symref.buf, 0);
@@ -501,7 +501,7 @@ static void print_preparing_worktree_line(int detach,
 	} else {
 		struct strbuf s = STRBUF_INIT;
 		if (!detach && !strbuf_check_branch_ref(&s, branch) &&
-		    ref_exists(s.buf))
+		    ref_exists(the_repository, s.buf))
 			printf_ln(_("Preparing worktree (checking out '%s')"),
 				  branch);
 		else {
@@ -524,7 +524,7 @@ static const char *dwim_branch(const char *path, const char **new_branch)
 
 	UNLEAK(branchname);
 	if (!strbuf_check_branch_ref(&ref, branchname) &&
-	    ref_exists(ref.buf)) {
+	    ref_exists(the_repository, ref.buf)) {
 		strbuf_release(&ref);
 		return branchname;
 	}
@@ -588,7 +588,7 @@ static int add(int ac, const char **av, const char *prefix)
 
 		if (!opts.force &&
 		    !strbuf_check_branch_ref(&symref, new_branch) &&
-		    ref_exists(symref.buf))
+		    ref_exists(the_repository, symref.buf))
 			die_if_checked_out(symref.buf, 0);
 		strbuf_release(&symref);
 	}

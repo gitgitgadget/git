@@ -61,10 +61,10 @@ static int list_tags(struct ref_filter *filter, struct ref_sorting *sorting,
 		die(_("unable to parse format string"));
 	filter->with_commit_tag_algo = 1;
 	filter_refs(&array, filter, FILTER_REFS_TAGS);
-	ref_array_sort(sorting, &array);
+	ref_array_sort(the_repository, sorting, &array);
 
 	for (i = 0; i < array.nr; i++)
-		show_ref_array_item(array.items[i], format);
+		show_ref_array_item(the_repository, array.items[i], format);
 	ref_array_clear(&array);
 	free(to_free);
 
@@ -100,7 +100,7 @@ static int for_each_tag_name(const char **argv, each_tag_name_fn fn,
 static int delete_tag(const char *name, const char *ref,
 		      const struct object_id *oid, const void *cb_data)
 {
-	if (delete_ref(NULL, ref, oid, 0))
+	if (delete_ref(the_repository, NULL, ref, oid, 0))
 		return 1;
 	printf(_("Deleted tag '%s' (was %s)\n"), name,
 	       find_unique_abbrev(oid, DEFAULT_ABBREV));
@@ -121,7 +121,7 @@ static int verify_tag(const char *name, const char *ref,
 		return -1;
 
 	if (format->format)
-		pretty_print_ref(name, oid, format);
+		pretty_print_ref(the_repository, name, oid, format);
 
 	return 0;
 }

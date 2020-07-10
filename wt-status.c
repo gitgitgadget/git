@@ -1086,7 +1086,8 @@ static void wt_longstatus_print_verbose(struct wt_status *s)
 	}
 }
 
-static void wt_longstatus_print_tracking(struct wt_status *s)
+static void wt_longstatus_print_tracking(struct repository *r,
+					 struct wt_status *s)
 {
 	struct strbuf sb = STRBUF_INIT;
 	const char *cp, *ep, *branch_name;
@@ -1102,7 +1103,7 @@ static void wt_longstatus_print_tracking(struct wt_status *s)
 
 	t_begin = getnanotime();
 
-	if (!format_tracking_info(branch, &sb, s->ahead_behind_flags))
+	if (!format_tracking_info(r, branch, &sb, s->ahead_behind_flags))
 		return;
 
 	if (advice_status_ahead_behind_warning &&
@@ -1724,7 +1725,7 @@ static void wt_longstatus_print_state(struct wt_status *s)
 		show_sparse_checkout_in_use(s, state_color);
 }
 
-static void wt_longstatus_print(struct wt_status *s)
+static void wt_longstatus_print(struct repository *r, struct wt_status *s)
 {
 	const char *branch_color = color(WT_STATUS_ONBRANCH, s);
 	const char *branch_status_color = color(WT_STATUS_HEADER, s);
@@ -1757,7 +1758,7 @@ static void wt_longstatus_print(struct wt_status *s)
 		status_printf_more(s, branch_status_color, "%s", on_what);
 		status_printf_more(s, branch_color, "%s\n", branch_name);
 		if (!s->is_initial)
-			wt_longstatus_print_tracking(s);
+			wt_longstatus_print_tracking(r, s);
 	}
 
 	wt_longstatus_print_state(s);
@@ -1919,7 +1920,8 @@ static void wt_shortstatus_other(struct string_list_item *it,
 	}
 }
 
-static void wt_shortstatus_print_tracking(struct wt_status *s)
+static void wt_shortstatus_print_tracking(struct repository *r,
+					  struct wt_status *s)
 {
 	struct branch *branch;
 	const char *header_color = color(WT_STATUS_HEADER, s);
@@ -1955,7 +1957,7 @@ static void wt_shortstatus_print_tracking(struct wt_status *s)
 
 	color_fprintf(s->fp, branch_color_local, "%s", branch_name);
 
-	sti = stat_tracking_info(branch, &num_ours, &num_theirs, &base,
+	sti = stat_tracking_info(r, branch, &num_ours, &num_theirs, &base,
 				 0, s->ahead_behind_flags);
 	if (sti < 0) {
 		if (!base)
@@ -1995,12 +1997,12 @@ static void wt_shortstatus_print_tracking(struct wt_status *s)
 	fputc(s->null_termination ? '\0' : '\n', s->fp);
 }
 
-static void wt_shortstatus_print(struct wt_status *s)
+static void wt_shortstatus_print(struct repository *r, struct wt_status *s)
 {
 	struct string_list_item *it;
 
 	if (s->show_branch)
-		wt_shortstatus_print_tracking(s);
+		wt_shortstatus_print_tracking(r, s);
 
 	for_each_string_list_item(it, &s->change) {
 		struct wt_status_change_data *d = it->util;
@@ -2017,13 +2019,13 @@ static void wt_shortstatus_print(struct wt_status *s)
 		wt_shortstatus_other(it, s, "!!");
 }
 
-static void wt_porcelain_print(struct wt_status *s)
+static void wt_porcelain_print(struct repository *r, struct wt_status *s)
 {
 	s->use_color = 0;
 	s->relative_paths = 0;
 	s->prefix = NULL;
 	s->no_gettext = 1;
-	wt_shortstatus_print(s);
+	wt_shortstatus_print(r, s);
 }
 
 /*
@@ -2059,7 +2061,8 @@ static void wt_porcelain_print(struct wt_status *s)
  * upstream.  When AHEAD_BEHIND_QUICK is requested and the branches
  * are different, '?' will be substituted for the actual count.
  */
-static void wt_porcelain_v2_print_tracking(struct wt_status *s)
+static void wt_porcelain_v2_print_tracking(struct repository *r,
+					   struct wt_status *s)
 {
 	struct branch *branch;
 	const char *base;
@@ -2094,7 +2097,7 @@ static void wt_porcelain_v2_print_tracking(struct wt_status *s)
 		/* Lookup stats on the upstream tracking branch, if set. */
 		branch = branch_get(branch_name);
 		base = NULL;
-		ab_info = stat_tracking_info(branch, &nr_ahead, &nr_behind,
+		ab_info = stat_tracking_info(r, branch, &nr_ahead, &nr_behind,
 					     &base, 0, s->ahead_behind_flags);
 		if (base) {
 			base = shorten_unambiguous_ref(base, 0);
@@ -2369,14 +2372,14 @@ static void wt_porcelain_v2_print_other(
  * [<v2_ignored_items>]*
  *
  */
-static void wt_porcelain_v2_print(struct wt_status *s)
+static void wt_porcelain_v2_print(struct repository *r, struct wt_status *s)
 {
 	struct wt_status_change_data *d;
 	struct string_list_item *it;
 	int i;
 
 	if (s->show_branch)
-		wt_porcelain_v2_print_tracking(s);
+		wt_porcelain_v2_print_tracking(r, s);
 
 	for (i = 0; i < s->change.nr; i++) {
 		it = &(s->change.items[i]);
@@ -2403,7 +2406,7 @@ static void wt_porcelain_v2_print(struct wt_status *s)
 	}
 }
 
-void wt_status_print(struct wt_status *s)
+void wt_status_print(struct repository *r, struct wt_status *s)
 {
 	trace2_data_intmax("status", s->repo, "count/changed", s->change.nr);
 	trace2_data_intmax("status", s->repo, "count/untracked",
@@ -2414,20 +2417,20 @@ void wt_status_print(struct wt_status *s)
 
 	switch (s->status_format) {
 	case STATUS_FORMAT_SHORT:
-		wt_shortstatus_print(s);
+		wt_shortstatus_print(r, s);
 		break;
 	case STATUS_FORMAT_PORCELAIN:
-		wt_porcelain_print(s);
+		wt_porcelain_print(r, s);
 		break;
 	case STATUS_FORMAT_PORCELAIN_V2:
-		wt_porcelain_v2_print(s);
+		wt_porcelain_v2_print(r, s);
 		break;
 	case STATUS_FORMAT_UNSPECIFIED:
 		BUG("finalize_deferred_config() should have been called");
 		break;
 	case STATUS_FORMAT_NONE:
 	case STATUS_FORMAT_LONG:
-		wt_longstatus_print(s);
+		wt_longstatus_print(r, s);
 		break;
 	}
 

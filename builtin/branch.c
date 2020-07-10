@@ -126,7 +126,8 @@ static int branch_merged(int kind, const char *name,
 
 	if (kind == FILTER_REFS_BRANCHES) {
 		struct branch *branch = branch_get(name);
-		const char *upstream = branch_get_upstream(branch, NULL);
+		const char *upstream =
+			branch_get_upstream(the_repository, branch, NULL);
 		struct object_id oid;
 
 		if (upstream &&
@@ -265,8 +266,8 @@ static int delete_branches(int argc, const char **argv, int force, int kinds,
 			goto next;
 		}
 
-		if (delete_ref(NULL, name, is_null_oid(&oid) ? NULL : &oid,
-			       REF_NO_DEREF)) {
+		if (delete_ref(the_repository, NULL, name,
+			       is_null_oid(&oid) ? NULL : &oid, REF_NO_DEREF)) {
 			error(remote_branch
 			      ? _("Error deleting remote-tracking branch '%s'")
 			      : _("Error deleting branch '%s'"),
@@ -428,12 +429,13 @@ static void print_ref_list(struct ref_filter *filter, struct ref_sorting *sortin
 	if (verify_ref_format(format))
 		die(_("unable to parse format string"));
 
-	ref_array_sort(sorting, &array);
+	ref_array_sort(the_repository, sorting, &array);
 
 	for (i = 0; i < array.nr; i++) {
 		struct strbuf out = STRBUF_INIT;
 		struct strbuf err = STRBUF_INIT;
-		if (format_ref_array_item(array.items[i], format, &out, &err))
+		if (format_ref_array_item(the_repository, array.items[i],
+					  format, &out, &err))
 			die("%s", err.buf);
 		if (column_active(colopts)) {
 			assert(!filter->verbose && "--column and --verbose are incompatible");
@@ -509,7 +511,7 @@ static void copy_or_rename_branch(const char *oldname, const char *newname, int 
 		 * Bad name --- this could be an attempt to rename a
 		 * ref that we used to allow to be created by accident.
 		 */
-		if (ref_exists(oldref.buf))
+		if (ref_exists(the_repository, oldref.buf))
 			recovery = 1;
 		else
 			die(_("Invalid branch name: '%s'"), oldname);
@@ -520,9 +522,10 @@ static void copy_or_rename_branch(const char *oldname, const char *newname, int 
 	 * cause the worktree to become inconsistent with HEAD, so allow it.
 	 */
 	if (!strcmp(oldname, newname))
-		validate_branchname(newname, &newref);
+		validate_branchname(the_repository, newname, &newref);
 	else
-		validate_new_branchname(newname, &newref, force);
+		validate_new_branchname(the_repository, newname, &newref,
+					force);
 
 	reject_rebase_or_bisect_branch(oldref.buf);
 
@@ -756,7 +759,7 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 			die(_("cannot edit description of more than one branch"));
 
 		strbuf_addf(&branch_ref, "refs/heads/%s", branch_name);
-		if (!ref_exists(branch_ref.buf)) {
+		if (!ref_exists(the_repository, branch_ref.buf)) {
 			strbuf_release(&branch_ref);
 
 			if (!argc)
@@ -802,7 +805,7 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 			die(_("no such branch '%s'"), argv[0]);
 		}
 
-		if (!ref_exists(branch->refname))
+		if (!ref_exists(the_repository, branch->refname))
 			die(_("branch '%s' does not exist"), branch->name);
 
 		/*

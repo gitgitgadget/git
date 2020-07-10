@@ -694,9 +694,10 @@ static int merge_abort(struct notes_merge_options *o)
 	 * notes_merge_abort() to remove .git/NOTES_MERGE_WORKTREE.
 	 */
 
-	if (delete_ref(NULL, "NOTES_MERGE_PARTIAL", NULL, 0))
+	if (delete_ref(the_repository, NULL, "NOTES_MERGE_PARTIAL", NULL, 0))
 		ret += error(_("failed to delete ref NOTES_MERGE_PARTIAL"));
-	if (delete_ref(NULL, "NOTES_MERGE_REF", NULL, REF_NO_DEREF))
+	if (delete_ref(the_repository, NULL, "NOTES_MERGE_REF", NULL,
+		       REF_NO_DEREF))
 		ret += error(_("failed to delete ref NOTES_MERGE_REF"));
 	if (notes_merge_abort(o))
 		ret += error(_("failed to remove 'git notes merge' worktree"));
@@ -746,7 +747,7 @@ static int merge_commit(struct notes_merge_options *o)
 	format_commit_message(partial, "%s", &msg, &pretty_ctx);
 	strbuf_trim(&msg);
 	strbuf_insertstr(&msg, 0, "notes: ");
-	update_ref(msg.buf, o->local_ref, &oid,
+	update_ref(the_repository, msg.buf, o->local_ref, &oid,
 		   is_null_oid(&parent_oid) ? NULL : &parent_oid,
 		   0, UPDATE_REFS_DIE_ON_ERR);
 
@@ -860,13 +861,13 @@ static int merge(int argc, const char **argv, const char *prefix)
 
 	if (result >= 0) /* Merge resulted (trivially) in result_oid */
 		/* Update default notes ref with new commit */
-		update_ref(msg.buf, default_notes_ref(), &result_oid, NULL, 0,
-			   UPDATE_REFS_DIE_ON_ERR);
+		update_ref(the_repository, msg.buf, default_notes_ref(),
+			   &result_oid, NULL, 0, UPDATE_REFS_DIE_ON_ERR);
 	else { /* Merge has unresolved conflicts */
 		const struct worktree *wt;
 		/* Update .git/NOTES_MERGE_PARTIAL with partial merge result */
-		update_ref(msg.buf, "NOTES_MERGE_PARTIAL", &result_oid, NULL,
-			   0, UPDATE_REFS_DIE_ON_ERR);
+		update_ref(the_repository, msg.buf, "NOTES_MERGE_PARTIAL",
+			   &result_oid, NULL, 0, UPDATE_REFS_DIE_ON_ERR);
 		/* Store ref-to-be-updated into .git/NOTES_MERGE_REF */
 		wt = find_shared_symref("NOTES_MERGE_REF", default_notes_ref());
 		if (wt)

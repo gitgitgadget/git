@@ -1445,7 +1445,8 @@ static struct commit *get_base_commit(const char *base_commit,
 			die(_("unknown commit %s"), base_commit);
 	} else if ((base_commit && !strcmp(base_commit, "auto"))) {
 		struct branch *curr_branch = branch_get(NULL);
-		const char *upstream = branch_get_upstream(curr_branch, NULL);
+		const char *upstream =
+			branch_get_upstream(the_repository, curr_branch, NULL);
 		if (upstream) {
 			struct commit_list *base_list;
 			struct commit *commit;
@@ -2201,7 +2202,8 @@ int cmd_cherry(int argc, const char **argv, const char *prefix)
 		break;
 	default:
 		current_branch = branch_get(NULL);
-		upstream = branch_get_upstream(current_branch, NULL);
+		upstream = branch_get_upstream(the_repository, current_branch,
+					       NULL);
 		if (!upstream) {
 			fprintf(stderr, _("Could not find a tracked"
 					" remote branch, please"

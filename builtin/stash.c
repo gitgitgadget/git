@@ -157,7 +157,7 @@ static int get_stash_info(struct stash_info *info, int argc, const char **argv)
 
 	strbuf_init(&info->revision, 0);
 	if (!commit) {
-		if (!ref_exists(ref_stash)) {
+		if (!ref_exists(the_repository, ref_stash)) {
 			free_stash_info(info);
 			fprintf_ln(stderr, _("No stash entries found."));
 			return -1;
@@ -208,7 +208,7 @@ static int do_clear_stash(void)
 	if (get_oid(ref_stash, &obj))
 		return 0;
 
-	return delete_ref(NULL, ref_stash, &obj, 0);
+	return delete_ref(the_repository, NULL, ref_stash, &obj, 0);
 }
 
 static int clear_stash(int argc, const char **argv, const char *prefix)
@@ -688,7 +688,7 @@ static int list_stash(int argc, const char **argv, const char *prefix)
 			     git_stash_list_usage,
 			     PARSE_OPT_KEEP_UNKNOWN);
 
-	if (!ref_exists(ref_stash))
+	if (!ref_exists(the_repository, ref_stash))
 		return 0;
 
 	cp.git_cmd = 1;
@@ -792,7 +792,7 @@ static int do_store_stash(const struct object_id *w_commit, const char *stash_ms
 	if (!stash_msg)
 		stash_msg = "Created via \"git stash store\".";
 
-	if (update_ref(stash_msg, ref_stash, w_commit, NULL,
+	if (update_ref(the_repository, stash_msg, ref_stash, w_commit, NULL,
 		       REF_FORCE_CREATE_REFLOG,
 		       quiet ? UPDATE_REFS_QUIET_ON_ERR :
 		       UPDATE_REFS_MSG_ON_ERR)) {

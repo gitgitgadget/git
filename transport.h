@@ -266,7 +266,8 @@ int transport_helper_init(struct transport *transport, const char *name);
 int bidirectional_transfer_loop(int input, int output);
 
 /* common methods used by transport.c and builtin/send-pack.c */
-void transport_update_tracking_ref(struct remote *remote, struct ref *ref, int verbose);
+void transport_update_tracking_ref(struct repository *r, struct remote *remote,
+				   struct ref *ref, int verbose);
 
 int transport_refs_pushed(struct ref *ref);
 

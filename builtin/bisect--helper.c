@@ -222,7 +222,7 @@ static int bisect_write(const char *state, const char *rev,
 		goto finish;
 	}
 
-	if (update_ref(NULL, tag.buf, &oid, NULL, 0,
+	if (update_ref(the_repository, NULL, tag.buf, &oid, NULL, 0,
 		       UPDATE_REFS_MSG_ON_ERR)) {
 		res = -1;
 		goto finish;
@@ -336,7 +336,7 @@ static int bisect_next_check(const struct bisect_terms *terms,
 	char *bad_ref = xstrfmt("refs/bisect/%s", terms->term_bad);
 	char *good_glob = xstrfmt("%s-*", terms->term_good);
 
-	if (ref_exists(bad_ref))
+	if (ref_exists(the_repository, bad_ref))
 		missing_bad = 0;
 
 	for_each_glob_ref_in(mark_good, good_glob, "refs/bisect/",
@@ -582,8 +582,8 @@ static int bisect_start(struct bisect_terms *terms, int no_checkout,
 			res = error(_("invalid ref: '%s'"), start_head.buf);
 			goto finish;
 		}
-		if (update_ref(NULL, "BISECT_HEAD", &oid, NULL, 0,
-			       UPDATE_REFS_MSG_ON_ERR)) {
+		if (update_ref(the_repository, NULL, "BISECT_HEAD", &oid, NULL,
+			       0, UPDATE_REFS_MSG_ON_ERR)) {
 			res = -1;
 			goto finish;
 		}

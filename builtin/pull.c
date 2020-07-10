@@ -625,7 +625,8 @@ static int pull_into_void(const struct object_id *merge_head,
 				  merge_head, 0))
 		return 1;
 
-	if (update_ref("initial pull", "HEAD", merge_head, curr_head, 0, UPDATE_REFS_DIE_ON_ERR))
+	if (update_ref(the_repository, "initial pull", "HEAD", merge_head,
+		       curr_head, 0, UPDATE_REFS_DIE_ON_ERR))
 		return 1;
 
 	return 0;
@@ -735,7 +736,7 @@ static const char *get_upstream_branch(const char *remote)
 	if (strcmp(curr_branch_remote, rm->name))
 		return NULL;
 
-	return branch_get_upstream(curr_branch, NULL);
+	return branch_get_upstream(the_repository, curr_branch, NULL);
 }
 
 /**

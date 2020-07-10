@@ -951,7 +951,7 @@ static void am_setup(struct am_state *state, enum patch_format patch_format,
 
 	if (mkdir(state->dir, 0777) < 0 && errno != EEXIST)
 		die_errno(_("failed to create directory '%s'"), state->dir);
-	delete_ref(NULL, "REBASE_HEAD", NULL, REF_NO_DEREF);
+	delete_ref(the_repository, NULL, "REBASE_HEAD", NULL, REF_NO_DEREF);
 
 	if (split_mail(state, patch_format, paths, keep_cr) < 0) {
 		am_destroy(state);
@@ -1013,12 +1013,12 @@ static void am_setup(struct am_state *state, enum patch_format patch_format,
 	if (!get_oid("HEAD", &curr_head)) {
 		write_state_text(state, "abort-safety", oid_to_hex(&curr_head));
 		if (!state->rebasing)
-			update_ref("am", "ORIG_HEAD", &curr_head, NULL, 0,
-				   UPDATE_REFS_DIE_ON_ERR);
+			update_ref(the_repository, "am", "ORIG_HEAD",
+				   &curr_head, NULL, 0, UPDATE_REFS_DIE_ON_ERR);
 	} else {
 		write_state_text(state, "abort-safety", "");
 		if (!state->rebasing)
-			delete_ref(NULL, "ORIG_HEAD", NULL, 0);
+			delete_ref(the_repository, NULL, "ORIG_HEAD", NULL, 0);
 	}
 
 	/*
@@ -1051,7 +1051,7 @@ static void am_next(struct am_state *state)
 
 	oidclr(&state->orig_commit);
 	unlink(am_path(state, "original-commit"));
-	delete_ref(NULL, "REBASE_HEAD", NULL, REF_NO_DEREF);
+	delete_ref(the_repository, NULL, "REBASE_HEAD", NULL, REF_NO_DEREF);
 
 	if (!get_oid("HEAD", &head))
 		write_state_text(state, "abort-safety", oid_to_hex(&head));
@@ -1378,7 +1378,7 @@ static int parse_mail_rebase(struct am_state *state, const char *mail)
 
 	oidcpy(&state->orig_commit, &commit_oid);
 	write_state_text(state, "original-commit", oid_to_hex(&commit_oid));
-	update_ref("am", "REBASE_HEAD", &commit_oid,
+	update_ref(the_repository, "am", "REBASE_HEAD", &commit_oid,
 		   NULL, REF_NO_DEREF, UPDATE_REFS_DIE_ON_ERR);
 
 	return 0;
@@ -1594,7 +1594,7 @@ static void do_commit(const struct am_state *state)
 	strbuf_addf(&sb, "%s: %.*s", reflog_msg, linelen(state->msg),
 			state->msg);
 
-	update_ref(sb.buf, "HEAD", &commit, old_oid, 0,
+	update_ref(the_repository, sb.buf, "HEAD", &commit, old_oid, 0,
 		   UPDATE_REFS_DIE_ON_ERR);
 
 	if (state->rebasing) {
@@ -2055,11 +2055,12 @@ static void am_abort(struct am_state *state)
 	clean_index(&curr_head, &orig_head);
 
 	if (has_orig_head)
-		update_ref("am --abort", "HEAD", &orig_head,
+		update_ref(the_repository, "am --abort", "HEAD", &orig_head,
 			   has_curr_head ? &curr_head : NULL, 0,
 			   UPDATE_REFS_DIE_ON_ERR);
 	else if (curr_branch)
-		delete_ref(NULL, curr_branch, NULL, REF_NO_DEREF);
+		delete_ref(the_repository, NULL, curr_branch, NULL,
+			   REF_NO_DEREF);
 
 	free(curr_branch);
 	am_destroy(state);

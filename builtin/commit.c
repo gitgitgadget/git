@@ -538,7 +538,7 @@ static int run_status(FILE *fp, const char *index_file, const char *prefix, int 
 	s->ignore_submodule_arg = ignore_submodule_arg;
 
 	wt_status_collect(s);
-	wt_status_print(s);
+	wt_status_print(the_repository, s);
 	wt_status_collect_free_buffers(s);
 
 	return s->committable;
@@ -1457,7 +1457,7 @@ int cmd_status(int argc, const char **argv, const char *prefix)
 	if (s.relative_paths)
 		s.prefix = prefix;
 
-	wt_status_print(&s);
+	wt_status_print(the_repository, &s);
 	wt_status_collect_free_buffers(&s);
 
 	return 0;

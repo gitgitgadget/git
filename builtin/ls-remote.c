@@ -140,7 +140,7 @@ int cmd_ls_remote(int argc, const char **argv, const char *prefix)
 	}
 
 	if (sorting)
-		ref_array_sort(sorting, &ref_array);
+		ref_array_sort(the_repository, sorting, &ref_array);
 
 	for (i = 0; i < ref_array.nr; i++) {
 		const struct ref_array_item *ref = ref_array.items[i];
