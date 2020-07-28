@@ -77,6 +77,7 @@ test_expect_success 'git pull -q -v --no-rebase' '
 	test_must_be_empty out &&
 	test -s err)
 '
+
 test_expect_success 'git pull --cleanup errors early on invalid argument' '
 	mkdir clonedcleanup &&
 	(cd clonedcleanup && git init &&
@@ -85,6 +86,21 @@ test_expect_success 'git pull --cleanup errors early on invalid argument' '
 	test -s err)
 '
 
+test_expect_success 'git pull --no-write-fetch-head fails' '
+	mkdir clonedwfh &&
+	(cd clonedwfh && git init &&
+	test_must_fail git pull --no-write-fetch-head "../parent" >out 2>err &&
+	test_must_be_empty out &&
+	test_i18ngrep "no-write-fetch-head" err)
+'
+
+test_expect_success 'git pull succeeds with fetch.writeFetchHEAD=false' '
+	mkdir clonedwfhconfig &&
+	(cd clonedwfhconfig && git init &&
+	git config fetch.writeFetchHEAD false &&
+	git pull "../parent" >out 2>err &&
+	grep FETCH_HEAD err)
+'
 
 test_expect_success 'git pull --force' '
 	mkdir clonedoldstyle &&

@@ -527,7 +527,8 @@ static int run_fetch(const char *repo, const char **refspecs)
 	struct strvec args = STRVEC_INIT;
 	int ret;
 
-	strvec_pushl(&args, "fetch", "--update-head-ok", NULL);
+	strvec_pushl(&args, "fetch", "--update-head-ok",
+		     "--write-fetch-head", NULL);
 
 	/* Shared options */
 	argv_push_verbosity(&args);
