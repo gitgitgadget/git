@@ -284,6 +284,12 @@ static const char **prepare_shell_cmd(struct argv_array *out, const char **argv)
 			argv_array_push(out, argv[0]);
 		else
 			argv_array_pushf(out, "%s \"$@\"", argv[0]);
+
+		/*
+		 * -c expects shell_name after command_string.
+		 * Pushing entire original argv below will pass argv[0]
+		 * as shell name.
+		 */
 	}
 
 	argv_array_pushv(out, argv);
