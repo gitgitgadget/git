@@ -12,12 +12,12 @@ diff-highlight: shebang.perl DiffHighlight.pm diff-highlight.perl
 
 shebang.perl: FORCE
 	@echo '#!$(PERL_PATH_SQ)' >$@+
-	@cmp $@+ $@ >/dev/null 2>/dev/null || mv $@+ $@
+	@cmp $@+ $@ >/dev/null 2>/dev/null && rm $@+ || mv $@+ $@
 
 test: all
 	$(MAKE) -C t
 
 clean:
-	$(RM) diff-highlight
+	$(RM) diff-highlight shebang.perl
 
 .PHONY: FORCE
