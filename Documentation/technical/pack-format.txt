@@ -9,7 +9,7 @@ Git pack format
          The signature is: {'P', 'A', 'C', 'K'}
 
      4-byte version number (network byte order):
-	 Git currently accepts version number 2 or 3 but
+         Git currently accepts version number 2 or 3 but
          generates version 2 only.
 
      4-byte number of objects contained in the pack (network byte order)
@@ -20,19 +20,34 @@ Git pack format
    - The header is followed by number of object entries, each of
      which looks like this:
 
-     (undeltified representation)
-     n-byte type and length (3-bit type, (n-1)*7+4-bit length)
-     compressed data
+     packed object header:
+        1-byte size extension bit (MSB)
+            type (next 3-bit)
+            size0 (lower 4-bit)
+        n-byte sizeN (as long as MSB is set, each 7-bit)
+            size0..sizeN form 4+7+7+..+7 bit integer, size0
+            is the least significant part, and sizeN is the
+            most significant part.
+     packed object data:
+        If it is not DELTA, then deflated bytes (the
+            size above is the size before compression).
+        If it is REF_DELTA, then
+            20-byte base object name SHA-1.
+            deflated delta data (the size above is the
+                size of this data before compression).
+        If it is OFS_DELTA, then
+            n-byte offset (see below) interpreted as a
+                negative offset from the type-byte of
+                the header of the ofs-delta entry.
+            deflated delta data (the size above is the
+                size of this data before compression).
 
-     (deltified representation)
-     n-byte type and length (3-bit type, (n-1)*7+4-bit length)
-     20-byte base object name if OBJ_REF_DELTA or a negative relative
-	 offset from the delta object's position in the pack if this
-	 is an OBJ_OFS_DELTA object
-     compressed delta data
-
-     Observation: length of each object is encoded in a variable
-     length format and is not constrained to 32-bit or anything.
+     offset encoding:
+        n bytes with MSB set in all but the last one.
+        The offset is then the number constructed by
+        concatenating the lower 7 bit of each byte, and
+        for n >= 2 adding 2^7 + 2^14 + ... + 2^(7*(n-1))
+        to the result.
 
   - The trailer records 20-byte SHA-1 checksum of all of the above.
 
@@ -67,7 +82,9 @@ Ref-delta can also refer to an object outside the pack (i.e. the
 so-called "thin pack"). When stored on disk however, the pack should
 be self contained to avoid cyclic dependency.
 
-The delta data is a sequence of instructions to reconstruct an object
+The deflated delta data begins with two n-byte sizes: the size of
+the base object data, and the size of the reconstructed object data.
+What follows is a sequence of instructions to reconstruct the object
 from the base object. If the base object is deltified, it must be
 converted to canonical form first. Each instruction appends more and
 more data to the target object until it's complete. There are two
@@ -185,36 +202,6 @@ trailer	  | | packfile checksum              |
           .-------.
                   |
 Pack file entry: <+
-
-     packed object header:
-	1-byte size extension bit (MSB)
-	       type (next 3 bit)
-	       size0 (lower 4-bit)
-        n-byte sizeN (as long as MSB is set, each 7-bit)
-		size0..sizeN form 4+7+7+..+7 bit integer, size0
-		is the least significant part, and sizeN is the
-		most significant part.
-     packed object data:
-        If it is not DELTA, then deflated bytes (the size above
-		is the size before compression).
-	If it is REF_DELTA, then
-	  20-byte base object name SHA-1 (the size above is the
-		size of the delta data that follows).
-          delta data, deflated.
-	If it is OFS_DELTA, then
-	  n-byte offset (see below) interpreted as a negative
-		offset from the type-byte of the header of the
-		ofs-delta entry (the size above is the size of
-		the delta data that follows).
-	  delta data, deflated.
-
-     offset encoding:
-	  n bytes with MSB set in all but the last one.
-	  The offset is then the number constructed by
-	  concatenating the lower 7 bit of each byte, and
-	  for n >= 2 adding 2^7 + 2^14 + ... + 2^(7*(n-1))
-	  to the result.
-
 
 
 == Version 2 pack-*.idx files support packs larger than 4 GiB, and
