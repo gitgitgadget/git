@@ -390,6 +390,8 @@ include::config/instaweb.txt[]
 
 include::config/interactive.txt[]
 
+include::config/job.txt[]
+
 include::config/log.txt[]
 
 include::config/mailinfo.txt[]

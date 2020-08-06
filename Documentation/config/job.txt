@@ -1,0 +1,37 @@
+job.loopInterval::
+	The number of seconds to sleep between rounds of running
+	background jobs in `git job-runner`.
+
+job.<job-name>.enabled::
+	If set to `false`, this option will disable the `<job-name>`
+	when run by `git job-runner`.
+
+job.<job-name>.interval::
+	The minimum number of seconds between runs of
+	`git run-job <job-name>` when running `git job-runner`.
+
+job.<job-name>.lastRun::
+	The Unix epoch for the timestamp of the previous run of
+	`git run-job <job-name>` when running `git job-runner`. You
+	can manually update this to a later time to delay a specific
+	job on this repository.
+
+job.loose-objects.batchSize::
+	This string value `<count>` limits the number of loose-objects
+	collected into a single pack-file during the `loose-objects`
+	job. Default batch size is fifty thousand. See linkgit:git-run-job[1]
+	for more details.
+
+job.pack-files.batchSize::
+	This string value `<size>` will be passed to the
+	`git multi-pack-index repack --batch-size=<size>` command as
+	part of `git run-job pack-files`. If not specified, then a
+	dynamic size calculation is run. See linkgit:git-run-job[1]
+	for more details.
+
+job.repo::
+	Store an absolute path to a repository that wants background
+	jobs run by `git job-runner`. This is a multi-valued config
+	option, but it must be stored in a config file seen by the
+	background runner. This may be the global or system config
+	depending on how `git job-runner` is launched on your system.

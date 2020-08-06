@@ -111,6 +111,7 @@ git-init                                mainporcelain           init
 git-instaweb                            ancillaryinterrogators          complete
 git-interpret-trailers                  purehelpers
 gitk                                    mainporcelain
+git-job-runner                          plumbingmanipulators
 git-log                                 mainporcelain           info
 git-ls-files                            plumbinginterrogators
 git-ls-remote                           plumbinginterrogators
@@ -157,6 +158,7 @@ git-revert                              mainporcelain
 git-rev-list                            plumbinginterrogators
 git-rev-parse                           plumbinginterrogators
 git-rm                                  mainporcelain           worktree
+git-run-job                             plumbingmanipulators
 git-send-email                          foreignscminterface             complete
 git-send-pack                           synchingrepositories
 git-shell                               synchelpers

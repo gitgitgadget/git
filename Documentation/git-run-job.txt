@@ -1,0 +1,102 @@
+git-run-job(1)
+==============
+
+NAME
+----
+git-run-job - Run a maintenance job. Intended for background operation.
+
+
+SYNOPSIS
+--------
+[verse]
+'git run-job (commit-graph|fetch|loose-objects|pack-files) [<options>]'
+
+
+DESCRIPTION
+-----------
+
+Run a maintenance job on the current repository. This is available as a
+command for a few reasons. First, the background job feature can launch
+these commands on a schedule and each process will completely clear its
+memory when complete. Second, an expert user could create their own job
+schedule by running these jobs themselves.
+
+THIS COMMAND IS EXPERIMENTAL. THE SET OF AVAILABLE JOBS OR THEIR EXACT
+BEHAVIOR MAY BE ALTERED IN THE FUTURE.
+
+
+JOBS
+----
+
+'commit-graph'::
+
+The `commit-graph` job updates the `commit-graph` files incrementally,
+then verifies that the written data is correct. If the new layer has an
+issue, then the chain file is removed and the `commit-graph` is
+rewritten from scratch.
++
+The verification only checks the top layer of the `commit-graph` chain.
+If the incremental write merged the new commits with at least one
+existing layer, then there is potential for on-disk corruption being
+carried forward into the new file. This will be noticed and the new
+commit-graph file will be clean as Git reparses the commit data from
+the object database.
++
+The incremental write is safe to run alongside concurrent Git processes
+since it will not expire `.graph` files that were in the previous
+`commit-graph-chain` file. They will be deleted by a later run based on
+the expiration delay.
+
+'fetch'::
+
+The `fetch` job updates the object directory with the latest objects
+from all registered remotes. For each remote, a `git fetch` command is
+run. The refmap is custom to avoid updating local or remote branches
+(those in `refs/heads` or `refs/remotes`). Instead, the remote refs are
+stored in `refs/hidden/<remote>/`. Also, no tags are updated.
++
+This means that foreground fetches are still required to update the
+remote refs, but the users is notified when the branches and tags are
+updated on the remote.
+
+'loose-objects'::
+
+The `loose-objects` job cleans up loose objects and places them into
+pack-files. In order to prevent race conditions with concurrent Git
+commands, it follows a two-step process. First, it deletes any loose
+objects that already exist in a pack-file; concurrent Git processes will
+examine the pack-file for the object data instead of the loose object.
+Second, it creates a new pack-file (starting with "loose-") containing
+a batch of loose objects.
++
+By default, the batch size is limited to 50 thousand objects to prevent
+the job from taking too long on a repository with many loose objects.
+This can be overridden with the `--batch-size=<count>` option.
+
+'pack-files'::
+
+The `pack-files` job incrementally repacks the object directory using
+the `multi-pack-index` feature. In order to prevent race conditions with
+concurrent Git commands, it follows a two-step process. First, it
+deletes any pack-files included in the `multi-pack-index` where none of
+the objects in the `multi-pack-index` reference those pack-files; this
+only happens if all objects in the pack-file are also stored in a newer
+pack-file. Second, it selects a group of pack-files whose "expected
+size" is below the batch size until the group has total expected size at
+least the batch size; see the `--batch-size` option for the `repack`
+subcommand in linkgit:git-multi-pack-index[1].
++
+The default batch size is computed to optimize for having a single large
+pack-file and many small pack-files. When there are two or fewer
+pack-files, the job does not attempt to repack. Otherwise, the batch
+size is the sum of all pack-file sizes minus the largest pack-file size.
+The batch size is capped at two gigabytes. This intends to pack all
+small pack-files into a single pack-file.
++
+The `--batch-size=<size>` option will override the dynamic or configured
+batch size.
+
+
+GIT
+---
+Part of the linkgit:git[1] suite

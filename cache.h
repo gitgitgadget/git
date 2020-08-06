@@ -17,6 +17,7 @@
 #include "oid-array.h"
 #include "repository.h"
 #include "mem-pool.h"
+#include "daemon.h"
 
 #include <zlib.h>
 typedef struct git_zstream {
@@ -630,9 +631,6 @@ int init_db(const char *git_dir, const char *real_git_dir,
 	    const char *template_dir, int hash_algo,
 	    const char *initial_branch, unsigned int flags);
 void initialize_repository_version(int hash_algo);
-
-void sanitize_stdfds(void);
-int daemonize(void);
 
 #define alloc_nr(x) (((x)+16)*3/2)
 

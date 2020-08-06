@@ -1,0 +1,63 @@
+git-job-runner(1)
+=================
+
+NAME
+----
+git-job-runner - run jobs on multiple repos according to a schedlue.
+Intended for background operation.
+
+
+SYNOPSIS
+--------
+[verse]
+'git job-runner [--repo=<path>]'
+
+
+DESCRIPTION
+-----------
+
+Run jobs in a loop with some frequency. Intended for running in the
+background.
+
+The `git run-job <job-name>` command runs a specific maintenance task.
+The `job-runner` command is a long-running process that calls the
+`run-job` command on a set of repositories at some frequency. The
+`job.*` config values customize the frequencies of these jobs.
+
+
+OPTIONS
+-------
+
+--repo=<dir>::
+	If at least one `--repo` option is provided, the runner only
+	attempts running jobs on repositories located at the provided
+	`<dir>` values. This option can be specified multiple times.
+
+--interval=<span>::
+	The job runner pauses between each attempt to run jobs. Use the
+	specified `<span>` as a number of seconds between each attempt.
+	If this is not specified, then the default will be found from
+	`jobs.loopInterval` or the default value of 30 minutes.
+
+--daemonize::
+	If supported by your platform, launch an identical
+	`git job-runner` process in the background and close the
+	foreground process immediately.
+
+
+CONFIGURATION
+-------------
+
+The `git job-runner` command is intended to run as a long-running
+process. The following config options are checked periodically during
+the process and will modify its behavior:
+
+The below documentation is the same as what's found in
+linkgit:git-config[1]:
+
+include::config/job.txt[]
+
+
+GIT
+---
+Part of the linkgit:git[1] suite

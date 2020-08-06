@@ -84,6 +84,7 @@
 /git-init-db
 /git-interpret-trailers
 /git-instaweb
+/git-job-runner
 /git-log
 /git-ls-files
 /git-ls-remote
@@ -145,6 +146,7 @@
 /git-rev-parse
 /git-revert
 /git-rm
+/git-run-job
 /git-send-email
 /git-send-pack
 /git-serve
