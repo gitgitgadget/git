@@ -1716,7 +1716,7 @@ static int do_git_config_sequence(const struct config_options *opts,
 {
 	int ret = 0;
 	char *xdg_config = xdg_config_home("config");
-	char *user_config = expand_user_path("~/.gitconfig", 0);
+	char *user_config = expand_user_path(USER_GITCONFIG, 0);
 	char *repo_config;
 	enum config_scope prev_parsing_scope = current_parsing_scope;
 
@@ -2457,7 +2457,8 @@ static int store_aux_event(enum config_event_t type,
 			return error(_("invalid section name '%s'"), cf->var.buf);
 
 		if (cf->subsection_case_sensitive)
-			cmpfn = strncasecmp;
+			/* Plan 9's strncasecmp is typed (char*, char*, int) */
+			cmpfn = (int (*)(const char*, const char*, size_t))strncasecmp;
 		else
 			cmpfn = strncmp;
 
