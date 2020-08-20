@@ -18,7 +18,7 @@ test_expect_success 'setup' '
 	test_commit second &&
 	git checkout --orphan tmp &&
 	test_commit start2 &&
-	git checkout master &&
+	git checkout main &&
 	git merge -m next --allow-unrelated-histories start2 &&
 	test_commit final &&
 

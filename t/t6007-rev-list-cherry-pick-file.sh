@@ -31,7 +31,7 @@ test_expect_success setup '
 	test_tick &&
 	git commit -m "E" &&
 	git tag E &&
-	git checkout master &&
+	git checkout main &&
 	git checkout branch foo &&
 	test_tick &&
 	git commit -m "B" &&
@@ -233,7 +233,7 @@ test_expect_success '--cherry-pick with independent, but identical branches' '
 	test_tick &&
 	git commit -m "independent, too" foo &&
 	test -z "$(git rev-list --left-right --cherry-pick \
-		HEAD...master -- foo)"
+		HEAD...main -- foo)"
 '
 
 cat >expect <<EOF
