@@ -48,11 +48,11 @@ EOF
 cat >expected <<EOF
 parent1
 repo1
-refs/heads/master $COMMIT2 refs/heads/foreign $COMMIT1
+refs/heads/main $COMMIT2 refs/heads/foreign $COMMIT1
 EOF
 
 test_expect_success 'push with hook' '
-	git push parent1 master:foreign &&
+	git push parent1 main:foreign &&
 	diff expected actual
 '
 
