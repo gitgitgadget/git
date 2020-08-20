@@ -36,7 +36,7 @@ test_expect_success "setup: create a couple of commits" '
 
 	test_tick &&
 	cat <<INPUT_END >input &&
-commit refs/heads/master
+commit refs/heads/main
 committer $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL> $GIT_COMMITTER_DATE
 data <<COMMIT
 commit #1
@@ -51,7 +51,7 @@ INPUT_END
 
 	test_tick &&
 	cat <<INPUT_END >>input &&
-commit refs/heads/master
+commit refs/heads/main
 committer $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL> $GIT_COMMITTER_DATE
 data <<COMMIT
 commit #2
@@ -68,8 +68,8 @@ INPUT_END
 
 test_expect_success "create a notes tree with both notes and non-notes" '
 
-	commit1=$(git rev-parse refs/heads/master^) &&
-	commit2=$(git rev-parse refs/heads/master) &&
+	commit1=$(git rev-parse refs/heads/main^) &&
+	commit2=$(git rev-parse refs/heads/main) &&
 	test_tick &&
 	cat <<INPUT_END >input &&
 commit refs/notes/commits
