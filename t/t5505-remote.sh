@@ -234,7 +234,7 @@ cat >test/expect <<EOF
     main  pushes to another (up to date)
 EOF
 
-test_expect_success PREPARE_FOR_MAIN_BRANCH 'show' '
+test_expect_success 'show' '
 	(
 		cd test &&
 		git config --add remote.origin.fetch refs/heads/main:refs/heads/upstream &&
@@ -285,7 +285,7 @@ cat >test/expect <<EOF
     refs/tags/lastbackup forces to refs/tags/lastbackup
 EOF
 
-test_expect_success PREPARE_FOR_MAIN_BRANCH 'show -n' '
+test_expect_success 'show -n' '
 	mv one one.unreachable &&
 	(
 		cd test &&
@@ -328,7 +328,7 @@ test_expect_success 'set-head --auto' '
 	)
 '
 
-test_expect_success PREPARE_FOR_MAIN_BRANCH 'set-head --auto has no problem w/multiple HEADs' '
+test_expect_success 'set-head --auto has no problem w/multiple HEADs' '
 	(
 		cd test &&
 		git fetch two "refs/heads/*:refs/remotes/two/*" &&
@@ -1348,7 +1348,7 @@ test_expect_success 'unqualified <dst> refspec DWIM and advice' '
 	)
 '
 
-test_expect_success PREPARE_FOR_MAIN_BRANCH 'refs/remotes/* <src> refspec and unqualified <dst> DWIM and advice' '
+test_expect_success 'refs/remotes/* <src> refspec and unqualified <dst> DWIM and advice' '
 	(
 		cd two &&
 		git tag -a -m "Some tag" my-tag main &&
