@@ -14,7 +14,7 @@ test_expect_success 'setup binary merge conflict' '
 	echo threeQ3 | q_to_nul >binary &&
 	git commit -a -m three &&
 	three=$(git rev-parse --short HEAD:binary) &&
-	test_must_fail git merge master &&
+	test_must_fail git merge main &&
 	echo resolvedQhooray | q_to_nul >binary &&
 	git commit -a -m resolved &&
 	res=$(git rev-parse --short HEAD:binary)
@@ -62,14 +62,14 @@ test_expect_success 'diff --cc indicates binary-ness' '
 '
 
 test_expect_success 'setup non-binary with binary attribute' '
-	git checkout master &&
+	git checkout main &&
 	test_commit one text &&
 	test_commit two text &&
 	two=$(git rev-parse --short HEAD:text) &&
 	git checkout -b branch-text HEAD^ &&
 	test_commit three text &&
 	three=$(git rev-parse --short HEAD:text) &&
-	test_must_fail git merge master &&
+	test_must_fail git merge main &&
 	test_commit resolved text &&
 	res=$(git rev-parse --short HEAD:text) &&
 	echo text -diff >.gitattributes
@@ -206,11 +206,11 @@ index $three,$two..0000000
  +THREE
 ++=======
 + TWO
-++>>>>>>> MASTER
+++>>>>>>> MAIN
 EOF
 test_expect_success 'diff --cc respects textconv on worktree file' '
 	git reset --hard HEAD^ &&
-	test_must_fail git merge master &&
+	test_must_fail git merge main &&
 	git diff >actual &&
 	test_cmp expect actual
 '
