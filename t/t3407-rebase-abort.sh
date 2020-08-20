@@ -37,7 +37,7 @@ testrebase() {
 		cd "$work_dir" &&
 		# Clean up the state from the previous one
 		git reset --hard pre-rebase &&
-		test_must_fail git rebase$type master &&
+		test_must_fail git rebase$type main &&
 		test_path_is_dir "$dotest" &&
 		git rebase --abort &&
 		test $(git rev-parse to-rebase) = $(git rev-parse pre-rebase) &&
@@ -48,10 +48,10 @@ testrebase() {
 		cd "$work_dir" &&
 		# Clean up the state from the previous one
 		git reset --hard pre-rebase &&
-		test_must_fail git rebase$type master &&
+		test_must_fail git rebase$type main &&
 		test_path_is_dir "$dotest" &&
 		test_must_fail git rebase --skip &&
-		test $(git rev-parse HEAD) = $(git rev-parse master) &&
+		test $(git rev-parse HEAD) = $(git rev-parse main) &&
 		git rebase --abort &&
 		test $(git rev-parse to-rebase) = $(git rev-parse pre-rebase) &&
 		test ! -d "$dotest"
@@ -61,13 +61,13 @@ testrebase() {
 		cd "$work_dir" &&
 		# Clean up the state from the previous one
 		git reset --hard pre-rebase &&
-		test_must_fail git rebase$type master &&
+		test_must_fail git rebase$type main &&
 		test_path_is_dir "$dotest" &&
 		echo c > a &&
 		echo d >> a &&
 		git add a &&
 		test_must_fail git rebase --continue &&
-		test $(git rev-parse HEAD) != $(git rev-parse master) &&
+		test $(git rev-parse HEAD) != $(git rev-parse main) &&
 		git rebase --abort &&
 		test $(git rev-parse to-rebase) = $(git rev-parse pre-rebase) &&
 		test ! -d "$dotest"
@@ -78,7 +78,7 @@ testrebase() {
 		# Clean up the state from the previous one
 		git reset --hard pre-rebase &&
 		git reflog show to-rebase > reflog_before &&
-		test_must_fail git rebase$type master &&
+		test_must_fail git rebase$type main &&
 		git rebase --abort &&
 		git reflog show to-rebase > reflog_after &&
 		test_cmp reflog_before reflog_after &&
@@ -89,7 +89,7 @@ testrebase() {
 		cd "$work_dir" &&
 		# Clean up the state from the previous one
 		git reset --hard pre-rebase &&
-		test_must_fail git rebase$type master &&
+		test_must_fail git rebase$type main &&
 		test_must_fail git rebase -v --abort &&
 		test_must_fail git rebase --abort -v &&
 		git rebase --abort
@@ -103,7 +103,7 @@ test_expect_success 'rebase --apply --quit' '
 	cd "$work_dir" &&
 	# Clean up the state from the previous one
 	git reset --hard pre-rebase &&
-	test_must_fail git rebase --apply master &&
+	test_must_fail git rebase --apply main &&
 	test_path_is_dir .git/rebase-apply &&
 	head_before=$(git rev-parse HEAD) &&
 	git rebase --quit &&
@@ -115,7 +115,7 @@ test_expect_success 'rebase --merge --quit' '
 	cd "$work_dir" &&
 	# Clean up the state from the previous one
 	git reset --hard pre-rebase &&
-	test_must_fail git rebase --merge master &&
+	test_must_fail git rebase --merge main &&
 	test_path_is_dir .git/rebase-merge &&
 	head_before=$(git rev-parse HEAD) &&
 	git rebase --quit &&
