@@ -174,8 +174,8 @@ test_expect_success 'showing the superproject correctly' '
 	test_commit -C super/dir/sub branch1_commit &&
 	git -C super add dir/sub &&
 	test_commit -C super branch1_commit &&
-	git -C super checkout -b branch2 master &&
-	git -C super/dir/sub checkout -b branch2 master &&
+	git -C super checkout -b branch2 main &&
+	git -C super/dir/sub checkout -b branch2 main &&
 	test_commit -C super/dir/sub branch2_commit &&
 	git -C super add dir/sub &&
 	test_commit -C super branch2_commit &&
