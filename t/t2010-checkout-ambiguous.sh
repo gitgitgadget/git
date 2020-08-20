@@ -17,7 +17,7 @@ test_expect_success 'reference must be a tree' '
 '
 
 test_expect_success 'branch switching' '
-	test "refs/heads/master" = "$(git symbolic-ref HEAD)" &&
+	test "refs/heads/main" = "$(git symbolic-ref HEAD)" &&
 	git checkout world -- &&
 	test "refs/heads/world" = "$(git symbolic-ref HEAD)"
 '
@@ -57,7 +57,7 @@ test_expect_success 'disambiguate checking out from a tree-ish' '
 '
 
 test_expect_success 'accurate error message with more than one ref' '
-	test_must_fail git checkout HEAD master -- 2>actual &&
+	test_must_fail git checkout HEAD main -- 2>actual &&
 	test_i18ngrep 2 actual &&
 	test_i18ngrep "one reference expected, 2 given" actual
 '
