@@ -1055,7 +1055,7 @@ test_expect_success 'teardown after filtering matching refs' '
 	git -C otherrepo branch -D matching/branch-in-other
 '
 
-test_expect_success PREPARE_FOR_MAIN_BRANCH '__git_refs - for-each-ref format specifiers in prefix' '
+test_expect_success '__git_refs - for-each-ref format specifiers in prefix' '
 	cat >expected <<-EOF &&
 	evil-%%-%42-%(refname)..main
 	EOF
