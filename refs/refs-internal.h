@@ -546,7 +546,7 @@ typedef int ref_transaction_commit_fn(struct ref_store *refs,
 typedef int pack_refs_fn(struct ref_store *ref_store, unsigned int flags);
 typedef int create_symref_fn(struct ref_store *ref_store,
 			     const char *ref_target,
-			     const char *refs_heads_master,
+			     const char *refs_heads_main,
 			     const char *logmsg);
 typedef int delete_refs_fn(struct ref_store *ref_store, const char *msg,
 			   struct string_list *refnames, unsigned int flags);
@@ -606,7 +606,7 @@ typedef int reflog_expire_fn(struct ref_store *ref_store,
  *
  * - If refname is the name of a symbolic reference, write the full
  *   name of the reference to which it refers (e.g.
- *   "refs/heads/master") to referent and set the REF_ISSYMREF bit in
+ *   "refs/heads/main") to referent and set the REF_ISSYMREF bit in
  *   type (leaving oid unchanged). The caller is responsible for
  *   validating that referent is a valid reference name.
  *

@@ -292,7 +292,7 @@ static void read_branches_file(struct remote *remote)
 
 	/*
 	 * Cogito compatible push: push current HEAD to remote #branch
-	 * (master if missing)
+	 * (main if missing)
 	 */
 	refspec_appendf(&remote->push, "HEAD:refs/heads/%s", frag);
 	remote->fetch_tags = 1; /* always auto-follow */
@@ -953,10 +953,10 @@ int count_refspec_match(const char *pattern,
 
 		/* A match is "weak" if it is with refs outside
 		 * heads or tags, and did not specify the pattern
-		 * in full (e.g. "refs/remotes/origin/master") or at
-		 * least from the toplevel (e.g. "remotes/origin/master");
-		 * otherwise "git push $URL master" would result in
-		 * ambiguity between remotes/origin/master and heads/master
+		 * in full (e.g. "refs/remotes/origin/main") or at
+		 * least from the toplevel (e.g. "remotes/origin/main");
+		 * otherwise "git push $URL main" would result in
+		 * ambiguity between remotes/origin/main and heads/main
 		 * at the remote site.
 		 */
 		if (namelen != patlen &&

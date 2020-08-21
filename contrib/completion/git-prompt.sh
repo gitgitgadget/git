@@ -89,7 +89,7 @@
 # to one of these values:
 #
 #     contains      relative to newer annotated tag (v1.6.3.2~35)
-#     branch        relative to newer tag or branch (master~4)
+#     branch        relative to newer tag or branch (main~4)
 #     describe      relative to older annotated tag (v1.6.3.1-13-gdd42c2f)
 #     tag           relative to any older tag (v1.6.3.1-13-gdd42c2f)
 #     default       exactly matching tag

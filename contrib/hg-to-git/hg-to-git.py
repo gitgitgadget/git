@@ -122,7 +122,7 @@ if verbose:
     print('analysing the branches...')
 hgchildren["0"] = ()
 hgparents["0"] = (None, None)
-hgbranch["0"] = "master"
+hgbranch["0"] = "main"
 for cset in range(1, int(tip) + 1):
     hgchildren[str(cset)] = ()
     prnts = os.popen('hg log -r %d --template "{parents}"' % cset).read().strip().split(' ')
@@ -141,9 +141,9 @@ for cset in range(1, int(tip) + 1):
     hgparents[str(cset)] = (parent, mparent)
 
     if mparent:
-        # For merge changesets, take either one, preferably the 'master' branch
-        if hgbranch[mparent] == 'master':
-            hgbranch[str(cset)] = 'master'
+        # For merge changesets, take either one, preferably the 'main' branch
+        if hgbranch[mparent] == 'main':
+            hgbranch[str(cset)] = 'main'
         else:
             hgbranch[str(cset)] = hgbranch[parent]
     else:

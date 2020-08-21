@@ -522,7 +522,7 @@ sub download_mw_mediafile {
 sub get_last_local_revision {
 	# Get note regarding last mediawiki revision.
 	my $note = run_git_quoted_nostderr(["notes", "--ref=${remotename}/mediawiki",
-					    "show", "refs/mediawiki/${remotename}/master"]);
+					    "show", "refs/mediawiki/${remotename}/main"]);
 	my @note_info = split(/ /, $note);
 
 	my $lastrevision_number;
@@ -649,9 +649,9 @@ sub mw_capabilities {
 
 sub mw_list {
 	# MediaWiki do not have branches, we consider one branch arbitrarily
-	# called master, and HEAD pointing to it.
-	print {*STDOUT} "? refs/heads/master\n";
-	print {*STDOUT} "\@refs/heads/master HEAD\n";
+	# called main, and HEAD pointing to it.
+	print {*STDOUT} "? refs/heads/main\n";
+	print {*STDOUT} "\@refs/heads/main HEAD\n";
 	print {*STDOUT} "\n";
 	return;
 }
@@ -754,14 +754,14 @@ sub import_file_revision {
 	my $author = $commit{author};
 	my $date = $commit{date};
 
-	print {*STDOUT} "commit refs/mediawiki/${remotename}/master\n";
+	print {*STDOUT} "commit refs/mediawiki/${remotename}/main\n";
 	print {*STDOUT} "mark :${n}\n";
 	print {*STDOUT} "committer ${author} <${author}\@${wiki_name}> " . $date->epoch . " +0000\n";
 	literal_data($comment);
 
 	# If it's not a clone, we need to know where to start from
 	if (!$full_import && $n == 1) {
-		print {*STDOUT} "from refs/mediawiki/${remotename}/master^0\n";
+		print {*STDOUT} "from refs/mediawiki/${remotename}/main^0\n";
 	}
 	if ($content ne DELETED_CONTENT) {
 		print {*STDOUT} 'M 644 inline ' .
@@ -830,8 +830,8 @@ sub mw_import {
 sub mw_import_ref {
 	my $ref = shift;
 	# The remote helper will call "import HEAD" and
-	# "import refs/heads/master".
-	# Since HEAD is a symbolic ref to master (by convention,
+	# "import refs/heads/main".
+	# Since HEAD is a symbolic ref to main (by convention,
 	# followed by the output of the command "list" that we gave),
 	# we don't need to do anything in this case.
 	if ($ref eq 'HEAD') {
@@ -1154,9 +1154,9 @@ sub mw_push {
 			print {*STDOUT} "error ${remote} cannot delete\n";
 			next;
 		}
-		if ($remote ne 'refs/heads/master') {
-			print {*STDERR} "Only push to the branch 'master' is supported on a MediaWiki\n";
-			print {*STDOUT} "error ${remote} only master allowed\n";
+		if ($remote ne 'refs/heads/main') {
+			print {*STDERR} "Only push to the branch 'main' is supported on a MediaWiki\n";
+			print {*STDOUT} "error ${remote} only main allowed\n";
 			next;
 		}
 		if (mw_push_revision($local, $remote)) {
@@ -1180,7 +1180,7 @@ sub mw_push {
 
 sub mw_push_revision {
 	my $local = shift;
-	my $remote = shift; # actually, this has to be "refs/heads/master" at this point.
+	my $remote = shift; # actually, this has to be "refs/heads/main" at this point.
 	my $last_local_revid = get_last_local_revision();
 	print {*STDERR} ".\n"; # Finish sentence started by get_last_local_revision()
 	my $last_remote_revid = get_last_remote_revision();
@@ -1189,8 +1189,8 @@ sub mw_push_revision {
 	# Get sha1 of commit pointed by local HEAD
 	my $HEAD_sha1 = run_git_quoted_nostderr(["rev-parse", $local]);
 	chomp($HEAD_sha1);
-	# Get sha1 of commit pointed by remotes/$remotename/master
-	my $remoteorigin_sha1 = run_git_quoted_nostderr(["rev-parse", "refs/remotes/${remotename}/master"]);
+	# Get sha1 of commit pointed by remotes/$remotename/main
+	my $remoteorigin_sha1 = run_git_quoted_nostderr(["rev-parse", "refs/remotes/${remotename}/main"]);
 	chomp($remoteorigin_sha1);
 
 	if ($last_local_revid > 0 &&
@@ -1203,8 +1203,8 @@ sub mw_push_revision {
 		return 0;
 	}
 
-	# Get every commit in between HEAD and refs/remotes/origin/master,
-	# including HEAD and refs/remotes/origin/master
+	# Get every commit in between HEAD and refs/remotes/origin/main,
+	# including HEAD and refs/remotes/origin/main
 	my @commit_pairs = ();
 	if ($last_local_revid > 0) {
 		my $parsed_sha1 = $remoteorigin_sha1;
