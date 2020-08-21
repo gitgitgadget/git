@@ -13,7 +13,7 @@ test_expect_success setup '
 	mkdir another && (
 		cd another &&
 		git init &&
-		git fetch --update-head-ok .. master:master
+		git fetch --update-head-ok .. main:main
 	) &&
 
 	>file2 && git add file2 && test_tick &&
@@ -25,7 +25,7 @@ test_expect_success 'non forced push should die not segfault' '
 
 	(
 		cd another &&
-		test_must_fail git push .. master:master
+		test_must_fail git push .. main:main
 	)
 
 '
@@ -34,7 +34,7 @@ test_expect_success 'forced push should succeed' '
 
 	(
 		cd another &&
-		git push .. +master:master
+		git push .. +main:main
 	)
 
 '

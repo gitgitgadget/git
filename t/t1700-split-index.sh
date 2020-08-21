@@ -496,7 +496,7 @@ test_expect_success 'do not refresh null base index' '
 		test_commit initial &&
 		git checkout -b side-branch &&
 		test_commit extra &&
-		git checkout master &&
+		git checkout main &&
 		git update-index --split-index &&
 		test_commit more &&
 		# must not write a new shareindex, or we wont catch the problem

@@ -24,12 +24,12 @@ test_expect_success 'prepare repository' '
 '
 
 test_expect_success 'Merge with d/f conflicts' '
-	test_expect_code 1 git merge -m "merge msg" master
+	test_expect_code 1 git merge -m "merge msg" main
 '
 
 test_expect_success 'F/D conflict' '
 	git reset --hard &&
-	git checkout master &&
+	git checkout main &&
 	rm .git/index &&
 
 	mkdir before &&
@@ -47,7 +47,7 @@ test_expect_success 'F/D conflict' '
 	git add . &&
 	git commit -m para &&
 
-	git merge master
+	git merge main
 '
 
 test_expect_success 'setup modify/delete + directory/file conflict' '

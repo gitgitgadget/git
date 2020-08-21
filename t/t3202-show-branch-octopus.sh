@@ -15,7 +15,7 @@ test_expect_success 'setup' '
 
 	for i in $numbers
 	do
-		git checkout -b branch$i master &&
+		git checkout -b branch$i main &&
 		> file$i &&
 		git add file$i &&
 		test_tick &&

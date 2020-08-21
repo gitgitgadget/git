@@ -45,7 +45,7 @@ test_expect_success setup '
 
 	# the first commit on the side branch is UTF-8
 	test_tick &&
-	git checkout -b side master^ &&
+	git checkout -b side main^ &&
 	echo Another file >yours &&
 	git add yours &&
 	git commit -s -m "Second on side" &&
@@ -69,7 +69,7 @@ test_expect_success setup '
 test_expect_success 'format-patch output (ISO-8859-1)' '
 	git config i18n.logoutputencoding ISO8859-1 &&
 
-	git format-patch --stdout master..HEAD^ >out-l1 &&
+	git format-patch --stdout main..HEAD^ >out-l1 &&
 	git format-patch --stdout HEAD^ >out-l2 &&
 	grep "^Content-Type: text/plain; charset=ISO8859-1" out-l1 &&
 	grep "^From: =?ISO8859-1?q?=C1=E9=ED=20=F3=FA?=" out-l1 &&
@@ -80,7 +80,7 @@ test_expect_success 'format-patch output (ISO-8859-1)' '
 test_expect_success 'format-patch output (UTF-8)' '
 	git config i18n.logoutputencoding UTF-8 &&
 
-	git format-patch --stdout master..HEAD^ >out-u1 &&
+	git format-patch --stdout main..HEAD^ >out-u1 &&
 	git format-patch --stdout HEAD^ >out-u2 &&
 	grep "^Content-Type: text/plain; charset=UTF-8" out-u1 &&
 	grep "^From: =?UTF-8?q?=C3=81=C3=A9=C3=AD=20=C3=B3=C3=BA?=" out-u1 &&
@@ -102,7 +102,7 @@ test_expect_success 'rebase (U/U)' '
 	# we want UTF-8 encoded name.
 	. "$TEST_DIRECTORY"/t3901/utf8.txt &&
 	git checkout -b test &&
-	git rebase master &&
+	git rebase main &&
 
 	check_encoding 2
 '
@@ -113,7 +113,7 @@ test_expect_success 'rebase (U/L)' '
 	. "$TEST_DIRECTORY"/t3901/utf8.txt &&
 
 	git reset --hard side &&
-	git rebase master &&
+	git rebase main &&
 
 	check_encoding 2
 '
@@ -125,7 +125,7 @@ test_expect_success !MINGW 'rebase (L/L)' '
 	. "$TEST_DIRECTORY"/t3901/8859-1.txt &&
 
 	git reset --hard side &&
-	git rebase master &&
+	git rebase main &&
 
 	check_encoding 2 8859
 '
@@ -138,7 +138,7 @@ test_expect_success !MINGW 'rebase (L/U)' '
 	. "$TEST_DIRECTORY"/t3901/8859-1.txt &&
 
 	git reset --hard side &&
-	git rebase master &&
+	git rebase main &&
 
 	check_encoding 2 8859
 '
@@ -150,7 +150,7 @@ test_expect_success 'cherry-pick(U/U)' '
 	git config i18n.logoutputencoding UTF-8 &&
 	. "$TEST_DIRECTORY"/t3901/utf8.txt &&
 
-	git reset --hard master &&
+	git reset --hard main &&
 	git cherry-pick side^ &&
 	git cherry-pick side &&
 	git revert HEAD &&
@@ -165,7 +165,7 @@ test_expect_success !MINGW 'cherry-pick(L/L)' '
 	git config i18n.logoutputencoding ISO8859-1 &&
 	. "$TEST_DIRECTORY"/t3901/8859-1.txt &&
 
-	git reset --hard master &&
+	git reset --hard main &&
 	git cherry-pick side^ &&
 	git cherry-pick side &&
 	git revert HEAD &&
@@ -180,7 +180,7 @@ test_expect_success 'cherry-pick(U/L)' '
 	git config i18n.logoutputencoding ISO8859-1 &&
 	. "$TEST_DIRECTORY"/t3901/utf8.txt &&
 
-	git reset --hard master &&
+	git reset --hard main &&
 	git cherry-pick side^ &&
 	git cherry-pick side &&
 	git revert HEAD &&
@@ -196,7 +196,7 @@ test_expect_success !MINGW 'cherry-pick(L/U)' '
 	git config i18n.logoutputencoding UTF-8 &&
 	. "$TEST_DIRECTORY"/t3901/8859-1.txt &&
 
-	git reset --hard master &&
+	git reset --hard main &&
 	git cherry-pick side^ &&
 	git cherry-pick side &&
 	git revert HEAD &&
@@ -210,7 +210,7 @@ test_expect_success 'rebase --merge (U/U)' '
 	. "$TEST_DIRECTORY"/t3901/utf8.txt &&
 
 	git reset --hard side &&
-	git rebase --merge master &&
+	git rebase --merge main &&
 
 	check_encoding 2
 '
@@ -221,7 +221,7 @@ test_expect_success 'rebase --merge (U/L)' '
 	. "$TEST_DIRECTORY"/t3901/utf8.txt &&
 
 	git reset --hard side &&
-	git rebase --merge master &&
+	git rebase --merge main &&
 
 	check_encoding 2
 '
@@ -233,7 +233,7 @@ test_expect_success 'rebase --merge (L/L)' '
 	. "$TEST_DIRECTORY"/t3901/8859-1.txt &&
 
 	git reset --hard side &&
-	git rebase --merge master &&
+	git rebase --merge main &&
 
 	check_encoding 2 8859
 '
@@ -246,7 +246,7 @@ test_expect_success 'rebase --merge (L/U)' '
 	. "$TEST_DIRECTORY"/t3901/8859-1.txt &&
 
 	git reset --hard side &&
-	git rebase --merge master &&
+	git rebase --merge main &&
 
 	check_encoding 2 8859
 '
@@ -256,7 +256,7 @@ test_expect_success 'am (U/U)' '
 	git config i18n.commitencoding UTF-8 &&
 	. "$TEST_DIRECTORY"/t3901/utf8.txt &&
 
-	git reset --hard master &&
+	git reset --hard main &&
 	git am out-u1 out-u2 &&
 
 	check_encoding 2
@@ -267,7 +267,7 @@ test_expect_success !MINGW 'am (L/L)' '
 	git config i18n.commitencoding ISO8859-1 &&
 	. "$TEST_DIRECTORY"/t3901/8859-1.txt &&
 
-	git reset --hard master &&
+	git reset --hard main &&
 	git am out-l1 out-l2 &&
 
 	check_encoding 2 8859
@@ -277,7 +277,7 @@ test_expect_success 'am (U/L)' '
 	# Apply ISO-8859-1 patches with UTF-8 commitencoding
 	git config i18n.commitencoding UTF-8 &&
 	. "$TEST_DIRECTORY"/t3901/utf8.txt &&
-	git reset --hard master &&
+	git reset --hard main &&
 
 	# am specifies --utf8 by default.
 	git am out-l1 out-l2 &&
@@ -290,7 +290,7 @@ test_expect_success 'am --no-utf8 (U/L)' '
 	git config i18n.commitencoding UTF-8 &&
 	. "$TEST_DIRECTORY"/t3901/utf8.txt &&
 
-	git reset --hard master &&
+	git reset --hard main &&
 	git am --no-utf8 out-l1 out-l2 2>err &&
 
 	# commit-tree will warn that the commit message does not contain valid UTF-8
@@ -305,7 +305,7 @@ test_expect_success !MINGW 'am (L/U)' '
 	git config i18n.commitencoding ISO8859-1 &&
 	. "$TEST_DIRECTORY"/t3901/8859-1.txt &&
 
-	git reset --hard master &&
+	git reset --hard main &&
 	# mailinfo will re-code the commit message to the charset specified by
 	# i18n.commitencoding
 	git am out-u1 out-u2 &&

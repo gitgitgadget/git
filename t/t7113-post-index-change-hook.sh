@@ -85,7 +85,7 @@ test_expect_success 'test checkout and reset trigger the hook' '
 	EOF
 	: force index to be dirty &&
 	test-tool chmtime +60 dir1/file1.txt &&
-	git checkout master &&
+	git checkout main &&
 	test_path_is_file testsuccess && rm -f testsuccess &&
 	test_path_is_missing testfailure &&
 	test-tool chmtime +60 dir1/file1.txt &&

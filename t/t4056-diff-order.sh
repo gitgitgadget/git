@@ -106,7 +106,7 @@ done
 test_expect_success 'setup for testing combine-diff order' '
 	git checkout -b tmp HEAD~ &&
 	create_files 3 &&
-	git checkout master &&
+	git checkout main &&
 	git merge --no-commit -s ours tmp &&
 	create_files 5
 '

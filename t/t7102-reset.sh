@@ -145,7 +145,7 @@ test_expect_success 'trying to do reset --soft with pending merge should fail' '
 	printf "1st line 2nd file\n2nd line 2nd file\n3rd line" >secondfile &&
 	git commit -a -m "the change in branch2" &&
 
-	git checkout master &&
+	git checkout main &&
 	git branch -D branch1 branch2 &&
 	check_changes $head5
 '
@@ -167,7 +167,7 @@ test_expect_success 'trying to do reset --soft with pending checkout merge shoul
 	printf "1st line 2nd file\n2nd line 2nd file\n3rd line" >secondfile &&
 	git commit -a -m "the line in branch3" &&
 
-	git checkout master &&
+	git checkout main &&
 	git branch -D branch3 branch4 &&
 	check_changes $head5
 '
@@ -380,7 +380,7 @@ test_expect_success '--hard reset to ORIG_HEAD should clear a fast-forward merge
 	git reset --hard ORIG_HEAD &&
 	check_changes $head5 &&
 
-	git checkout master &&
+	git checkout main &&
 	git branch -D branch1 branch2 &&
 	check_changes $head5
 '

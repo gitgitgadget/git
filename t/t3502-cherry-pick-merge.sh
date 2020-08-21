@@ -25,7 +25,7 @@ test_expect_success setup '
 	echo new line >B &&
 	git commit -m "add line to B" B &&
 	git tag b &&
-	git checkout master &&
+	git checkout main &&
 	git merge side &&
 	git tag c
 

@@ -19,6 +19,6 @@ test_expect_success 'do not switch branches with dirty file' \
 	 git checkout other &&
 	 echo dirt >file &&
 	 git update-index --assume-unchanged file &&
-	 test_must_fail git checkout master'
+	 test_must_fail git checkout main'
 
 test_done

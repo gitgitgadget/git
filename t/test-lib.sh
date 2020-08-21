@@ -256,6 +256,19 @@ case "$TRASH_DIRECTORY" in
  *) TRASH_DIRECTORY="$TEST_OUTPUT_DIRECTORY/$TRASH_DIRECTORY" ;;
 esac
 
+case "$TEST_NUMBER" in
+3404|4013|5310|6300|7064|7817|9902)
+	# Avoid conflicts with patch series that are cooking at the same time
+	# as the patch series changing the default of `init.defaultBranch`.
+	GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME=master
+	export GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME
+	;;
+*)
+	GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME=main
+	export GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME
+	;;
+esac
+
 # If --stress was passed, run this test repeatedly in several parallel loops.
 if test "$GIT_TEST_STRESS_STARTED" = "done"
 then

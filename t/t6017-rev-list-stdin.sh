@@ -40,7 +40,7 @@ test_expect_success setup '
 		done &&
 		for i in $them
 		do
-			git checkout -b side-$i master~$i &&
+			git checkout -b side-$i main~$i &&
 			echo updated $i >file-$i &&
 			git add file-$i &&
 			test_tick &&
@@ -49,7 +49,7 @@ test_expect_success setup '
 	)
 '
 
-check master
+check main
 check side-1 ^side-4
 check side-1 ^side-7 --
 check side-1 ^side-7 -- file-1
@@ -66,11 +66,11 @@ test_expect_success 'not only --stdin' '
 	file-2
 	EOF
 	cat >input <<-EOF &&
-	^master^
+	^main^
 	--
 	file-2
 	EOF
-	git log --pretty=tformat:%s --name-only --stdin master -- file-1 \
+	git log --pretty=tformat:%s --name-only --stdin main -- file-1 \
 		<input >actual &&
 	test_cmp expect actual
 '

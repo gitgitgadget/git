@@ -10,7 +10,7 @@ test_expect_success setup '
 	git checkout -b side HEAD^ &&
 	test_commit D &&
 	test_commit E &&
-	git merge master
+	git merge main
 '
 
 test_expect_success 'rev-list --first-parent --boundary' '

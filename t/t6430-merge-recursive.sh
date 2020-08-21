@@ -35,7 +35,7 @@ test_expect_success 'setup 1' '
 	git add a d/e &&
 
 	test_tick &&
-	git commit -m "master modifies a and d/e" &&
+	git commit -m "main modifies a and d/e" &&
 	c1=$(git rev-parse --verify HEAD) &&
 	( git ls-tree -r HEAD && git ls-files -s ) >actual &&
 	(
@@ -466,7 +466,7 @@ test_expect_success SYMLINKS 'dir in working tree with symlink ancestor does not
 		git checkout -b branch1 &&
 		git commit --allow-empty -m "empty commit" &&
 
-		git checkout master &&
+		git checkout main &&
 		git rm foo &&
 		mkdir foo &&
 		>foo/bar &&
@@ -475,7 +475,7 @@ test_expect_success SYMLINKS 'dir in working tree with symlink ancestor does not
 
 		git checkout branch1 &&
 
-		git cherry-pick master &&
+		git cherry-pick main &&
 		test_path_is_dir foo &&
 		test_path_is_file foo/bar
 	)
@@ -490,8 +490,8 @@ test_expect_success 'reset and 3-way merge' '
 
 test_expect_success 'reset and bind merge' '
 
-	git reset --hard master &&
-	git read-tree --prefix=M/ master &&
+	git reset --hard main &&
+	git read-tree --prefix=M/ main &&
 	git ls-files -s >actual &&
 	(
 		echo "100644 $o1 0	M/a" &&
@@ -505,7 +505,7 @@ test_expect_success 'reset and bind merge' '
 	) >expected &&
 	test_cmp expected actual &&
 
-	git read-tree --prefix=a1/ master &&
+	git read-tree --prefix=a1/ main &&
 	git ls-files -s >actual &&
 	(
 		echo "100644 $o1 0	M/a" &&
@@ -523,7 +523,7 @@ test_expect_success 'reset and bind merge' '
 	) >expected &&
 	test_cmp expected actual &&
 
-	git read-tree --prefix=z/ master &&
+	git read-tree --prefix=z/ main &&
 	git ls-files -s >actual &&
 	(
 		echo "100644 $o1 0	M/a" &&
@@ -599,11 +599,11 @@ test_expect_success 'merge-recursive w/ empty work tree - theirs has rename' '
 
 test_expect_success 'merge removes empty directories' '
 
-	git reset --hard master &&
+	git reset --hard main &&
 	git checkout -b rm &&
 	git rm d/e &&
 	git commit -mremoved-d/e &&
-	git checkout master &&
+	git checkout main &&
 	git merge -s recursive rm &&
 	test_path_is_missing d
 '

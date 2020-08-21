@@ -21,12 +21,12 @@ test_expect_success setup '
 	git add . &&
 	test_tick &&
 	git commit -m "third commit" &&
-	git checkout -b unrelated-onto-branch master &&
+	git checkout -b unrelated-onto-branch main &&
 	echo unrelated >file4 &&
 	git add . &&
 	test_tick &&
 	git commit -m "unrelated commit" &&
-	git checkout -b related-onto-branch master &&
+	git checkout -b related-onto-branch main &&
 	echo conflicting-change >file2 &&
 	git add . &&
 	test_tick &&
@@ -305,7 +305,7 @@ test_expect_success 'autostash is saved on editor failure with conflict' '
 '
 
 test_expect_success 'autostash with dirty submodules' '
-	test_when_finished "git reset --hard && git checkout master" &&
+	test_when_finished "git reset --hard && git checkout main" &&
 	git checkout -b with-submodule &&
 	git submodule add ./ sub &&
 	test_tick &&
@@ -324,7 +324,7 @@ test_expect_success 'branch is left alone when possible' '
 
 test_expect_success 'never change active branch' '
 	git checkout -b not-the-feature-branch unrelated-onto-branch &&
-	test_when_finished "git reset --hard && git checkout master" &&
+	test_when_finished "git reset --hard && git checkout main" &&
 	echo changed >file0 &&
 	git rebase --autostash not-the-feature-branch feature-branch &&
 	test_cmp_rev not-the-feature-branch unrelated-onto-branch

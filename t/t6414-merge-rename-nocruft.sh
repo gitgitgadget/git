@@ -65,7 +65,7 @@ test_expect_success 'setup' '
 	git update-index A &&
 	git commit -m "blue modify A" &&
 
-	git checkout master
+	git checkout main
 '
 
 # This test broke in 65ac6e9c3f47807cb603af07a6a9e1a43bc119ae
