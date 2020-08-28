@@ -2415,7 +2415,8 @@ void show_ref_array_item(struct ref_array_item *info,
 	fwrite(final_buf.buf, 1, final_buf.len, stdout);
 	strbuf_release(&error_buf);
 	strbuf_release(&final_buf);
-	putchar('\n');
+	if(format->need_newline_at_eol)
+		putchar('\n');
 }
 
 void pretty_print_ref(const char *name, const struct object_id *oid,

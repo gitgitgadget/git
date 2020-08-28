@@ -48,3 +48,7 @@ log.mailmap::
 	If true, makes linkgit:git-log[1], linkgit:git-show[1], and
 	linkgit:git-whatchanged[1] assume `--use-mailmap`, otherwise
 	assume `--no-use-mailmap`. True by default.
+
+log.useRefFilter::
+	[EXPERIMENTAL] If true, forces `git log` to use ref-filter's logic.
+	Is `false` by default.

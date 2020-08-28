@@ -139,4 +139,7 @@ const char *format_subject(struct strbuf *sb, const char *msg,
 /* Check if "cmit_fmt" will produce an empty output. */
 int commit_format_is_empty(enum cmit_fmt);
 
+/* Returns user_format */
+const char *get_user_format(void);
+
 #endif /* PRETTY_H */

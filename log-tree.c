@@ -17,6 +17,7 @@
 #include "help.h"
 #include "interdiff.h"
 #include "range-diff.h"
+#include "pretty-lib.h"
 
 static struct decoration name_decoration = { "object names" };
 static int decoration_loaded;
@@ -756,7 +757,11 @@ void show_log(struct rev_info *opt)
 		ctx.from_ident = &opt->from_ident;
 	if (opt->graph)
 		ctx.graph_width = graph_width(opt->graph);
-	pretty_print_commit(&ctx, commit, &msgbuf);
+
+	if (opt->use_ref_filter)
+		ref_pretty_print_commit(&ctx, commit, &msgbuf);
+	else
+		pretty_print_commit(&ctx, commit, &msgbuf);
 
 	if (opt->add_signoff)
 		append_signoff(&msgbuf, 0, APPEND_SIGNOFF_DEDUP);
