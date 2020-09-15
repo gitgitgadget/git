@@ -11,7 +11,7 @@ test_expect_success 'create commits with glob characters' '
 	# on Windows (the tests below do not depend on the presence
 	# of the file in the worktree)
 	git config core.protectNTFS false &&
-	git update-index --add --cacheinfo 100644 "$(git rev-parse HEAD:foo)" "f*" &&
+	git update-index --add --cacheinfo 100644,"$(git rev-parse HEAD:foo)","f*" &&
 	test_tick &&
 	git commit -m star &&
 	test_commit bracket "f[o][o]"

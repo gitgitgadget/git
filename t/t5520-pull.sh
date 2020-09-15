@@ -350,7 +350,7 @@ test_expect_success 'failed --rebase shows advice' '
 	git checkout -b diverging &&
 	test_commit attributes .gitattributes "* text=auto" attrs &&
 	sha1="$(printf "1\\r\\n" | git hash-object -w --stdin)" &&
-	git update-index --cacheinfo 0644 $sha1 file &&
+	git update-index --cacheinfo 0644,$sha1,file &&
 	git commit -m v1-with-cr &&
 	# force checkout because `git reset --hard` will not leave clean `file`
 	git checkout -f -b fails-to-rebase HEAD^ &&

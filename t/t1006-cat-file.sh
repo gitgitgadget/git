@@ -134,7 +134,7 @@ run_tests 'blob' $hello_sha1 $hello_size "$hello_content" "$hello_content"
 
 test_expect_success '--batch-check without %(rest) considers whole line' '
 	echo "$hello_sha1 blob $hello_size" >expect &&
-	git update-index --add --cacheinfo 100644 $hello_sha1 "white space" &&
+	git update-index --add --cacheinfo 100644,$hello_sha1,"white space" &&
 	test_when_finished "git update-index --remove \"white space\"" &&
 	echo ":white space" | git cat-file --batch-check >actual &&
 	test_cmp expect actual

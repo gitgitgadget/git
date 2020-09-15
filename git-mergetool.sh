@@ -224,7 +224,7 @@ stage_submodule () {
 	)
 	test -n "$work_rel_path" ||
 	die "fatal: unable to get path of module $path relative to work tree"
-	git update-index --add --replace --cacheinfo 160000 "$submodule_sha1" "${work_rel_path%/}" || die
+	git update-index --add --replace --cacheinfo 160000,"$submodule_sha1","${work_rel_path%/}" || die
 }
 
 checkout_staged_file () {

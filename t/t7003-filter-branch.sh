@@ -467,7 +467,7 @@ test_expect_success 'replace submodule revision' '
 	git reset --hard original &&
 	git filter-branch -f --tree-filter \
 	    "if git ls-files --error-unmatch -- submod > /dev/null 2>&1
-	     then git update-index --cacheinfo 160000 $invalid submod
+	     then git update-index --cacheinfo 160000,$invalid,submod
 	     fi" HEAD &&
 	test $orig_head != $(git show-ref --hash --head HEAD)
 '

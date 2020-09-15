@@ -23,7 +23,7 @@ test_expect_success setup '
 	test_tick &&
 	git commit -q -m one &&
 	H=$(git rev-parse HEAD) &&
-	git update-index --add --cacheinfo 160000 $H sub &&
+	git update-index --add --cacheinfo 160000,$H,sub &&
 	test_tick &&
 	git commit -q -m two &&
 	git rev-parse HEAD^{tree} >tree.withsub &&

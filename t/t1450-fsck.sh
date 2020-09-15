@@ -59,7 +59,7 @@ test_expect_success 'object with bad sha1' '
 	sha="$(dirname $new)$(basename $new)" &&
 	mv .git/objects/$old .git/objects/$new &&
 	test_when_finished "remove_object $sha" &&
-	git update-index --add --cacheinfo 100644 $sha foo &&
+	git update-index --add --cacheinfo 100644,$sha,foo &&
 	test_when_finished "git read-tree -u --reset HEAD" &&
 	tree=$(git write-tree) &&
 	test_when_finished "remove_object $tree" &&
@@ -438,7 +438,7 @@ test_expect_success 'rev-list --verify-objects with bad sha1' '
 	sha="$(dirname $new)$(basename $new)" &&
 	mv .git/objects/$old .git/objects/$new &&
 	test_when_finished "remove_object $sha" &&
-	git update-index --add --cacheinfo 100644 $sha foo &&
+	git update-index --add --cacheinfo 100644,$sha,foo &&
 	test_when_finished "git read-tree -u --reset HEAD" &&
 	tree=$(git write-tree) &&
 	test_when_finished "remove_object $tree" &&

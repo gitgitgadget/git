@@ -301,7 +301,7 @@ test_expect_success 'push succeeds if submodule commit disabling recursion from 
 test_expect_success 'submodule entry pointing at a tag is error' '
 	git -C work/gar/bage tag -a test1 -m "tag" &&
 	tag=$(git -C work/gar/bage rev-parse test1^{tag}) &&
-	git -C work update-index --cacheinfo 160000 "$tag" gar/bage &&
+	git -C work update-index --cacheinfo 160000,"$tag",gar/bage &&
 	git -C work commit -m "bad commit" &&
 	test_when_finished "git -C work reset --hard HEAD^" &&
 	test_must_fail git -C work push --recurse-submodules=on-demand ../pub.git master 2>err &&

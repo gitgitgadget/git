@@ -71,7 +71,7 @@ case "${1:-.}${2:-.}${3:-.}" in
 ".$2.")
 	# the other side did not add and we added so there is nothing
 	# to be done, except making the path merged.
-	exec git update-index --add --cacheinfo "$6" "$2" "$4"
+	exec git update-index --add --cacheinfo "$6","$2","$4"
 	;;
 "..$3")
 	echo "Adding $4"
@@ -80,7 +80,7 @@ case "${1:-.}${2:-.}${3:-.}" in
 		echo "ERROR: untracked $4 is overwritten by the merge." >&2
 		exit 1
 	fi
-	git update-index --add --cacheinfo "$7" "$3" "$4" &&
+	git update-index --add --cacheinfo "$7","$3","$4" &&
 		exec git checkout-index -u -f -- "$4"
 	;;
 
@@ -95,7 +95,7 @@ case "${1:-.}${2:-.}${3:-.}" in
 		exit 1
 	fi
 	echo "Adding $4"
-	git update-index --add --cacheinfo "$6" "$2" "$4" &&
+	git update-index --add --cacheinfo "$6","$2","$4" &&
 		exec git checkout-index -u -f -- "$4"
 	;;
 

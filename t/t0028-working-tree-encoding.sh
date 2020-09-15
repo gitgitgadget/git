@@ -213,7 +213,7 @@ test_expect_success 'error if encoding round trip is not the same during refresh
 	echo "*.utf16le text working-tree-encoding=utf-16le" >.gitattributes &&
 	echo "hallo" >nonsense.utf16le &&
 	TEST_HASH=$(git hash-object --no-filters -w nonsense.utf16le) &&
-	git update-index --add --cacheinfo 100644 $TEST_HASH nonsense.utf16le &&
+	git update-index --add --cacheinfo 100644,$TEST_HASH,nonsense.utf16le &&
 	COMMIT=$(git commit-tree -p $(git rev-parse HEAD) -m "plain commit" $(git write-tree)) &&
 	git update-ref refs/heads/master $COMMIT &&
 
@@ -229,7 +229,7 @@ test_expect_success 'error if encoding garbage is already in Git' '
 	# This simulates a Git version that has no checkoutEncoding support
 	cp nobom.utf16be.raw nonsense.utf16 &&
 	TEST_HASH=$(git hash-object --no-filters -w nonsense.utf16) &&
-	git update-index --add --cacheinfo 100644 $TEST_HASH nonsense.utf16 &&
+	git update-index --add --cacheinfo 100644,$TEST_HASH,nonsense.utf16 &&
 	COMMIT=$(git commit-tree -p $(git rev-parse HEAD) -m "plain commit" $(git write-tree)) &&
 	git update-ref refs/heads/master $COMMIT &&
 

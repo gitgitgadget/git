@@ -517,7 +517,7 @@ test_expect_success 'submodule init does not copy command into .git/config' '
 	 git ls-files -s submodule >out &&
 	 H=$(cut -d" " -f2 out) &&
 	 mkdir submodule1 &&
-	 git update-index --add --cacheinfo 160000 $H submodule1 &&
+	 git update-index --add --cacheinfo 160000,$H,submodule1 &&
 	 git config -f .gitmodules submodule.submodule1.path submodule1 &&
 	 git config -f .gitmodules submodule.submodule1.url ../submodule &&
 	 git config -f .gitmodules submodule.submodule1.update !false &&
@@ -928,7 +928,7 @@ test_expect_success 'submodule update properly revives a moved submodule' '
 	 git rm --cached submodule2 &&
 	 rm -rf submodule2 &&
 	 mkdir -p "moved/sub module" &&
-	 git update-index --add --cacheinfo 160000 $H "moved/sub module" &&
+	 git update-index --add --cacheinfo 160000,$H,"moved/sub module" &&
 	 git config -f .gitmodules submodule.submodule2.path "moved/sub module" &&
 	 git commit -am "post move" &&
 	 git submodule update &&

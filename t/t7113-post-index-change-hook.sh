@@ -132,7 +132,7 @@ test_expect_success 'test reset --mixed and update-index triggers the hook' '
 	test_path_is_file testsuccess && rm -f testsuccess &&
 	test_path_is_missing testfailure &&
 	git hash-object -w --stdin <dir1/file2.txt >expect &&
-	git update-index --cacheinfo 100644 "$(cat expect)" dir1/file1.txt &&
+	git update-index --cacheinfo 100644,"$(cat expect)",dir1/file1.txt &&
 	test_path_is_file testsuccess && rm -f testsuccess &&
 	test_path_is_missing testfailure &&
 	git update-index --skip-worktree dir1/file2.txt &&

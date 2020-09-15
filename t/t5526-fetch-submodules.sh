@@ -614,12 +614,12 @@ test_expect_success "fetch new submodule commits on-demand outside standard refs
 
 	C=$(git -C submodule commit-tree -m "new change outside refs/heads" HEAD^{tree}) &&
 	git -C submodule update-ref refs/changes/1 $C &&
-	git update-index --cacheinfo 160000 $C submodule &&
+	git update-index --cacheinfo 160000,$C,submodule &&
 	test_tick &&
 
 	D=$(git -C sub1 commit-tree -m "new change outside refs/heads" HEAD^{tree}) &&
 	git -C sub1 update-ref refs/changes/2 $D &&
-	git update-index --cacheinfo 160000 $D sub1 &&
+	git update-index --cacheinfo 160000,$D,sub1 &&
 
 	git commit -m "updated submodules outside of refs/heads" &&
 	E=$(git rev-parse HEAD) &&
@@ -638,12 +638,12 @@ test_expect_success 'fetch new submodule commit on-demand in FETCH_HEAD' '
 
 	C=$(git -C submodule commit-tree -m "another change outside refs/heads" HEAD^{tree}) &&
 	git -C submodule update-ref refs/changes/4 $C &&
-	git update-index --cacheinfo 160000 $C submodule &&
+	git update-index --cacheinfo 160000,$C,submodule &&
 	test_tick &&
 
 	D=$(git -C sub1 commit-tree -m "another change outside refs/heads" HEAD^{tree}) &&
 	git -C sub1 update-ref refs/changes/5 $D &&
-	git update-index --cacheinfo 160000 $D sub1 &&
+	git update-index --cacheinfo 160000,$D,sub1 &&
 
 	git commit -m "updated submodules outside of refs/heads" &&
 	E=$(git rev-parse HEAD) &&
@@ -669,12 +669,12 @@ test_expect_success 'fetch new submodule commits on-demand without .gitmodules e
 
 	C=$(git -C submodule commit-tree -m "yet another change outside refs/heads" HEAD^{tree}) &&
 	git -C submodule update-ref refs/changes/7 $C &&
-	git update-index --cacheinfo 160000 $C submodule &&
+	git update-index --cacheinfo 160000,$C,submodule &&
 	test_tick &&
 
 	D=$(git -C sub1 commit-tree -m "yet another change outside refs/heads" HEAD^{tree}) &&
 	git -C sub1 update-ref refs/changes/8 $D &&
-	git update-index --cacheinfo 160000 $D sub1 &&
+	git update-index --cacheinfo 160000,$D,sub1 &&
 
 	git commit -m "updated submodules outside of refs/heads" &&
 	E=$(git rev-parse HEAD) &&
@@ -696,15 +696,15 @@ test_expect_success 'fetch new submodule commit intermittently referenced by sup
 	F=$(git -C sub1 commit-tree -m "change 12 outside refs/heads" HEAD^{tree}) &&
 
 	git -C sub1 update-ref refs/changes/10 $D &&
-	git update-index --cacheinfo 160000 $D sub1 &&
+	git update-index --cacheinfo 160000,$D,sub1 &&
 	git commit -m "updated submodules outside of refs/heads" &&
 
 	git -C sub1 update-ref refs/changes/11 $E &&
-	git update-index --cacheinfo 160000 $E sub1 &&
+	git update-index --cacheinfo 160000,$E,sub1 &&
 	git commit -m "updated submodules outside of refs/heads" &&
 
 	git -C sub1 update-ref refs/changes/12 $F &&
-	git update-index --cacheinfo 160000 $F sub1 &&
+	git update-index --cacheinfo 160000,$F,sub1 &&
 	git commit -m "updated submodules outside of refs/heads" &&
 
 	G=$(git rev-parse HEAD) &&

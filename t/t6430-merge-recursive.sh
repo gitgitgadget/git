@@ -246,7 +246,7 @@ test_expect_success 'setup 7' '
 	git rm d/e &&
 	test_tick &&
 	git commit -m "remove d/e" &&
-	git update-index --add --cacheinfo 160000 $c1 d &&
+	git update-index --add --cacheinfo 160000,$c1,d &&
 	test_tick &&
 	git commit -m "make d/ a submodule"
 '

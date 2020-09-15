@@ -90,7 +90,7 @@ test_expect_success 'add a large file or two' '
 
 test_expect_success 'checkout a large file' '
 	large1=$(git rev-parse :large1) &&
-	git update-index --add --cacheinfo 100644 $large1 another &&
+	git update-index --add --cacheinfo 100644,$large1,another &&
 	git checkout another &&
 	test_cmp large1 another
 '

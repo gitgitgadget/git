@@ -56,7 +56,7 @@ test_expect_success 'read-tree removes worktree, dirty case' '
 setup_absent() {
 	test -f 1 && rm 1
 	git update-index --remove 1 &&
-	git update-index --add --cacheinfo 100644 $EMPTY_BLOB 1 &&
+	git update-index --add --cacheinfo 100644,$EMPTY_BLOB,1 &&
 	git update-index --skip-worktree 1
 }
 
@@ -70,7 +70,7 @@ test_absent() {
 setup_dirty() {
 	git update-index --force-remove 1 &&
 	echo dirty > 1 &&
-	git update-index --add --cacheinfo 100644 $EMPTY_BLOB 1 &&
+	git update-index --add --cacheinfo 100644,$EMPTY_BLOB,1 &&
 	git update-index --skip-worktree 1
 }
 

@@ -604,10 +604,10 @@ test_expect_success 'fast-export quotes pathnames' '
 	(cd crazy-paths &&
 	 blob=$(echo foo | git hash-object -w --stdin) &&
 	 git -c core.protectNTFS=false update-index --add \
-		--cacheinfo 100644 $blob "$(printf "path with\\nnewline")" \
-		--cacheinfo 100644 $blob "path with \"quote\"" \
-		--cacheinfo 100644 $blob "path with \\backslash" \
-		--cacheinfo 100644 $blob "path with space" &&
+		--cacheinfo 100644,$blob,"$(printf "path with\\nnewline")" \
+		--cacheinfo 100644,$blob,"path with \"quote\"" \
+		--cacheinfo 100644,$blob,"path with \\backslash" \
+		--cacheinfo 100644,$blob,"path with space" &&
 	 git commit -m addition &&
 	 git ls-files -z -s | perl -0pe "s{\\t}{$&subdir/}" >index &&
 	 git read-tree --empty &&
