@@ -582,7 +582,7 @@ test_expect_success 'overlay sync: colA content switch' '
 	(
 		cd "$git" &&
 		git p4 sync --use-client-spec &&
-		git merge --ff-only p4/master
+		git merge --ff-only p4/main
 	) &&
 	git_verify $files &&
 	test_cmp actual "$git"/colA
@@ -609,7 +609,7 @@ test_expect_success 'overlay sync: colB appears' '
 	(
 		cd "$git" &&
 		git p4 sync --use-client-spec &&
-		git merge --ff-only p4/master
+		git merge --ff-only p4/main
 	) &&
 	git_verify $files &&
 	test_cmp actual "$git"/colB
@@ -637,7 +637,7 @@ test_expect_success 'overlay sync: colB disappears' '
 	(
 		cd "$git" &&
 		git p4 sync --use-client-spec &&
-		git merge --ff-only p4/master
+		git merge --ff-only p4/main
 	) &&
 	git_verify $files
 '
@@ -720,7 +720,7 @@ test_expect_failure 'overlay sync swap: colA no content switch' '
 	(
 		cd "$git" &&
 		git p4 sync --use-client-spec &&
-		git merge --ff-only p4/master
+		git merge --ff-only p4/main
 	) &&
 	git_verify $files &&
 	test_cmp actual "$git"/colA
@@ -747,7 +747,7 @@ test_expect_success 'overlay sync swap: colB appears' '
 	(
 		cd "$git" &&
 		git p4 sync --use-client-spec &&
-		git merge --ff-only p4/master
+		git merge --ff-only p4/main
 	) &&
 	git_verify $files &&
 	test_cmp actual "$git"/colB
@@ -777,7 +777,7 @@ test_expect_failure 'overlay sync swap: colB no change' '
 	(
 		cd "$git" &&
 		git p4 sync --use-client-spec &&
-		git merge --ff-only p4/master
+		git merge --ff-only p4/main
 	) &&
 	git_verify $files &&
 	test_cmp actual "$cli"/colB

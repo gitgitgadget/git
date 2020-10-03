@@ -119,7 +119,7 @@ test_expect_success 'submit with allowSubmit' '
 	)
 '
 
-test_expect_success 'submit with master branch name from argv' '
+test_expect_success 'submit with main branch name from argv' '
 	test_when_finished cleanup_git &&
 	git p4 clone --dest="$git" //depot &&
 	(
