@@ -1032,8 +1032,8 @@ msgstr "没有东西可从 %s 克隆."
 
 #: lib/choose_repository.tcl:690 lib/choose_repository.tcl:904
 #: lib/choose_repository.tcl:916
-msgid "The 'master' branch has not been initialized."
-msgstr "'master'分支尚未初始化."
+msgid "The 'main' branch has not been initialized."
+msgstr "'main'分支尚未初始化."
 
 #: lib/choose_repository.tcl:703
 msgid "Hardlinks are unavailable.  Falling back to copying."

@@ -178,8 +178,8 @@ msgstr ""
 msgid "loose object"
 msgstr ""
 
-#. "a branch called by convention 'master' that exists in a newly created git repository"
-msgid "master branch"
+#. "a branch called by convention 'main' that exists in a newly created git repository"
+msgid "main branch"
 msgstr ""
 
 #. "A successful merge results in the creation of a new commit representing the result of the merge."

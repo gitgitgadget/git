@@ -1248,8 +1248,8 @@ msgstr "Няма какво да се клонира от „%s“."
 
 #: lib/choose_repository.tcl:726 lib/choose_repository.tcl:940
 #: lib/choose_repository.tcl:952
-msgid "The 'master' branch has not been initialized."
-msgstr "Основният клон — „master“ не е инициализиран."
+msgid "The 'main' branch has not been initialized."
+msgstr "Основният клон — „main“ не е инициализиран."
 
 #: lib/choose_repository.tcl:739
 msgid "Hardlinks are unavailable.  Falling back to copying."

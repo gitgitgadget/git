@@ -1113,8 +1113,8 @@ msgstr "Ingenting å klone fra %s."
 
 #: lib/choose_repository.tcl:697 lib/choose_repository.tcl:911
 #: lib/choose_repository.tcl:923
-msgid "The 'master' branch has not been initialized."
-msgstr "Grenen 'master' har ikke blitt initsialisert."
+msgid "The 'main' branch has not been initialized."
+msgstr "Grenen 'main' har ikke blitt initsialisert."
 
 #: lib/choose_repository.tcl:710
 msgid "Hardlinks are unavailable.  Falling back to copying."
