@@ -75,11 +75,11 @@ test_expect_success 'ensure blobs store only lf newlines' '
 		git p4 sync //depot@all &&
 
 		# verify the files in .git are stored only with newlines
-		o=$(git ls-tree p4/master -- f-unix | cut -f1 | cut -d\  -f3) &&
+		o=$(git ls-tree p4/main -- f-unix | cut -f1 | cut -d\  -f3) &&
 		git cat-file blob $o >f-unix-blob &&
 		test_cmp "$cli"/f-unix-orig f-unix-blob &&
 
-		o=$(git ls-tree p4/master -- f-win | cut -f1 | cut -d\  -f3) &&
+		o=$(git ls-tree p4/main -- f-win | cut -f1 | cut -d\  -f3) &&
 		git cat-file blob $o >f-win-blob &&
 		test_cmp "$cli"/f-win-as-lf f-win-blob &&
 
@@ -95,7 +95,7 @@ test_expect_success 'gitattributes setting eol=lf produces lf newlines' '
 		git init &&
 		echo "* eol=lf" >.gitattributes &&
 		git p4 sync //depot@all &&
-		git checkout -b master p4/master &&
+		git checkout -b main p4/main &&
 		test_cmp "$cli"/f-unix-orig f-unix &&
 		test_cmp "$cli"/f-win-as-lf f-win
 	)
@@ -109,7 +109,7 @@ test_expect_success 'gitattributes setting eol=crlf produces crlf newlines' '
 		git init &&
 		echo "* eol=crlf" >.gitattributes &&
 		git p4 sync //depot@all &&
-		git checkout -b master p4/master &&
+		git checkout -b main p4/main &&
 		test_cmp "$cli"/f-unix-as-crlf f-unix &&
 		test_cmp "$cli"/f-win-orig f-win
 	)

@@ -106,7 +106,7 @@ test_expect_success 'Syncing files' '
 	(
 		cd "$git" &&
 		git p4 sync --changes-block-size=7 &&
-		git checkout p4/master &&
+		git checkout p4/main &&
 		ls -l x* > log &&
 		test_line_count = 11 log
 	)

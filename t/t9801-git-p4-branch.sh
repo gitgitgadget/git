@@ -701,7 +701,7 @@ test_expect_success !CASE_INSENSITIVE_FS 'git p4 clone, branchList branch defini
 
 		git log --all --graph --decorate --stat &&
 
-		git reset --hard p4/master &&
+		git reset --hard p4/main &&
 		test_path_is_file mf1 &&
 		test_path_is_file mf2 &&
 		test_path_is_missing B1f3 &&
@@ -728,7 +728,7 @@ test_expect_success !CASE_INSENSITIVE_FS 'git p4 clone with client-spec, branchL
 
 		git log --all --graph --decorate --stat &&
 
-		git reset --hard p4/master &&
+		git reset --hard p4/main &&
 		test_path_is_file mf1 &&
 		test_path_is_file mf2 &&
 		test_path_is_missing B1f3 &&
