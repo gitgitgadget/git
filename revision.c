@@ -852,7 +852,7 @@ static struct treesame_state *initialise_treesame(struct rev_info *revs, struct 
 /*
  * Must be called immediately after removing the nth_parent from a commit's
  * parent list, if we are maintaining the per-parent treesame[] decoration.
- * This does not recalculate the master TREESAME flag - update_treesame()
+ * This does not recalculate the main TREESAME flag - update_treesame()
  * should be called to update it after a sequence of treesame[] modifications
  * that may have affected it.
  */

@@ -147,7 +147,7 @@ struct ref_entry {
 		struct ref_dir subdir; /* if (flags&REF_DIR) */
 	} u;
 	/*
-	 * The full name of the reference (e.g., "refs/heads/master")
+	 * The full name of the reference (e.g., "refs/heads/main")
 	 * or the full name of the directory with a trailing slash
 	 * (e.g., "refs/heads/"):
 	 */

@@ -693,8 +693,8 @@ static inline void strbuf_complete_line(struct strbuf *sb)
 /*
  * Copy "name" to "sb", expanding any special @-marks as handled by
  * interpret_branch_name(). The result is a non-qualified branch name
- * (so "foo" or "origin/master" instead of "refs/heads/foo" or
- * "refs/remotes/origin/master").
+ * (so "foo" or "origin/main" instead of "refs/heads/foo" or
+ * "refs/remotes/origin/main").
  *
  * Note that the resulting name may not be a syntactically valid refname.
  *
