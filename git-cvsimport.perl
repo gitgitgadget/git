@@ -186,7 +186,7 @@ $git_tree ||= ".";
 my $remote;
 if (defined $opt_r) {
 	$remote = 'refs/remotes/' . $opt_r;
-	$opt_o ||= "master";
+	$opt_o ||= "main";
 } else {
 	$opt_o ||= "origin";
 	$remote = 'refs/heads';
@@ -695,8 +695,8 @@ unless (-d $git_dir) {
 	$last_branch = basename($last_branch);
 	close(F);
 	unless ($last_branch) {
-		warn "Cannot read the last branch name: $! -- assuming 'master'\n";
-		$last_branch = "master";
+		warn "Cannot read the last branch name: $! -- assuming 'main'\n";
+		$last_branch = "main";
 	}
 	$orig_branch = $last_branch;
 	$tip_at_start = `git rev-parse --verify HEAD`;
@@ -1169,10 +1169,10 @@ if ($orig_branch) {
 		die "Could not merge $opt_o into the current branch.\n" if $?;
 	}
 } else {
-	$orig_branch = "master";
+	$orig_branch = "main";
 	print "DONE; creating $orig_branch branch\n" if $opt_v;
-	system("git", "update-ref", "refs/heads/master", "$remote/$opt_o")
-		unless defined get_headref('refs/heads/master');
+	system("git", "update-ref", "refs/heads/main", "$remote/$opt_o")
+		unless defined get_headref('refs/heads/main');
 	system("git", "symbolic-ref", "$remote/HEAD", "$remote/$opt_o")
 		if ($opt_r && $opt_o ne 'HEAD');
 	system('git', 'update-ref', 'HEAD', "$orig_branch");
