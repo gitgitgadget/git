@@ -5,7 +5,7 @@ use File::Spec;
 
 $ENV{PATH}     = '/opt/git/bin';
 my $acl_git    = '/vcs/acls.git';
-my $acl_branch = 'refs/heads/master';
+my $acl_branch = 'refs/heads/main';
 my $debug      = 0;
 
 =doc
@@ -34,7 +34,7 @@ Example:
     committer = John R. Doe <john.doe@example.com>
 
   [repository "acls"]
-    allow = heads/master
+    allow = heads/main
     allow = CDUR for heads/jd/
     allow = C    for ^tags/v\\d+$
 
