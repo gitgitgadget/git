@@ -244,8 +244,8 @@ msgstr "ramo local"
 msgid "loose object"
 msgstr "objeto solto"
 
-#. "a branch called by convention 'master' that exists in a newly created git repository"
-msgid "master branch"
+#. "a branch called by convention 'main' that exists in a newly created git repository"
+msgid "main branch"
 msgstr "ramo mestre"
 
 #. "a remote called by convention 'origin' that the current git repository has been cloned from"

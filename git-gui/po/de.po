@@ -1916,8 +1916,8 @@ msgstr "Von »%s« konnte nichts geklont werden."
 
 #: lib/choose_repository.tcl:742 lib/choose_repository.tcl:962
 #: lib/choose_repository.tcl:974
-msgid "The 'master' branch has not been initialized."
-msgstr "Der »master«-Branch wurde noch nicht initialisiert."
+msgid "The 'main' branch has not been initialized."
+msgstr "Der »main«-Branch wurde noch nicht initialisiert."
 
 #: lib/choose_repository.tcl:755
 msgid "Hardlinks are unavailable.  Falling back to copying."

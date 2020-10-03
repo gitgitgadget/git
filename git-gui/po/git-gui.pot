@@ -1831,7 +1831,7 @@ msgstr ""
 
 #: lib/choose_repository.tcl:742 lib/choose_repository.tcl:962
 #: lib/choose_repository.tcl:974
-msgid "The 'master' branch has not been initialized."
+msgid "The 'main' branch has not been initialized."
 msgstr ""
 
 #: lib/choose_repository.tcl:755
