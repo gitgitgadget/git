@@ -14,14 +14,14 @@ How to revert a faulty merge
 
 Alan <alan@clueserver.org> said:
 
-    I have a master branch.  We have a branch off of that that some
+    I have a main branch.  We have a branch off of that that some
     developers are doing work on.  They claim it is ready. We merge it
-    into the master branch.  It breaks something so we revert the merge.
+    into the main branch.  It breaks something so we revert the merge.
     They make changes to the code.  they get it to a point where they say
     it is ok and we merge again.
 
     When examined, we find that code changes made before the revert are
-    not in the master branch, but code changes after are in the master
+    not in the main branch, but code changes after are in the main
     branch.
 
 and asked for help recovering from this situation.

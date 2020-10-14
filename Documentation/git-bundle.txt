@@ -67,8 +67,8 @@ unbundle <file>::
 	A list of arguments, acceptable to 'git rev-parse' and
 	'git rev-list' (and containing a named ref, see SPECIFYING REFERENCES
 	below), that specifies the specific objects and references
-	to transport.  For example, `master~10..master` causes the
-	current master reference to be packaged along with all objects
+	to transport.  For example, `main~10..main` causes the
+	current main reference to be packaged along with all objects
 	added since its 10th ancestor commit.  There is no explicit
 	limit to the number of references and objects that may be
 	packaged.
@@ -119,12 +119,12 @@ SPECIFYING REFERENCES
 
 'git bundle' will only package references that are shown by
 'git show-ref': this includes heads, tags, and remote heads.  References
-such as `master~1` cannot be packaged, but are perfectly suitable for
+such as `main~1` cannot be packaged, but are perfectly suitable for
 defining the basis.  More than one reference may be packaged, and more
 than one basis can be specified.  The objects packaged are those not
 contained in the union of the given bases.  Each basis can be
-specified explicitly (e.g. `^master~10`), or implicitly (e.g.
-`master~10..master`, `--since=10.days.ago master`).
+specified explicitly (e.g. `^main~10`), or implicitly (e.g.
+`main~10..main`, `--since=10.days.ago main`).
 
 It is very important that the basis used be held by the destination.
 It is okay to err on the side of caution, causing the bundle file
@@ -146,7 +146,7 @@ Assume you want to transfer the history from a repository R1 on machine A
 to another repository R2 on machine B.
 For whatever reason, direct connection between A and B is not allowed,
 but we can move data from A to B via some mechanism (CD, email, etc.).
-We want to update R2 with development made on the branch master in R1.
+We want to update R2 with development made on the branch main in R1.
 
 To bootstrap the process, you can first create a bundle that does not have
 any basis. You can use a tag to remember up to what commit you last
@@ -155,8 +155,8 @@ with an incremental bundle:
 
 ----------------
 machineA$ cd R1
-machineA$ git bundle create file.bundle master
-machineA$ git tag -f lastR2bundle master
+machineA$ git bundle create file.bundle main
+machineA$ git tag -f lastR2bundle main
 ----------------
 
 Then you transfer file.bundle to the target machine B. Because this
@@ -164,7 +164,7 @@ bundle does not require any existing object to be extracted, you can
 create a new repository on machine B by cloning from it:
 
 ----------------
-machineB$ git clone -b master /home/me/tmp/file.bundle R2
+machineB$ git clone -b main /home/me/tmp/file.bundle R2
 ----------------
 
 This will define a remote called "origin" in the resulting repository that
@@ -186,8 +186,8 @@ incremental bundle to update the other repository:
 
 ----------------
 machineA$ cd R1
-machineA$ git bundle create file.bundle lastR2bundle..master
-machineA$ git tag -f lastR2bundle master
+machineA$ git bundle create file.bundle lastR2bundle..main
+machineA$ git tag -f lastR2bundle main
 ----------------
 
 You then transfer the bundle to the other machine to replace
@@ -208,19 +208,19 @@ the linkgit:git-log[1] command. Here are more examples:
 You can use a tag that is present in both:
 
 ----------------
-$ git bundle create mybundle v1.0.0..master
+$ git bundle create mybundle v1.0.0..main
 ----------------
 
 You can use a basis based on time:
 
 ----------------
-$ git bundle create mybundle --since=10.days master
+$ git bundle create mybundle --since=10.days main
 ----------------
 
 You can use the number of commits:
 
 ----------------
-$ git bundle create mybundle -10 master
+$ git bundle create mybundle -10 main
 ----------------
 
 You can run `git-bundle verify` to see if you can extract from a bundle
@@ -238,7 +238,7 @@ regular repository which it fetches or pulls from. You can, for example, map
 references when fetching:
 
 ----------------
-$ git fetch mybundle master:localRef
+$ git fetch mybundle main:localRef
 ----------------
 
 You can also see what references it offers:

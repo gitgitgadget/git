@@ -21,7 +21,7 @@ DESCRIPTION
 This command creates an empty Git repository - basically a `.git`
 directory with subdirectories for `objects`, `refs/heads`,
 `refs/tags`, and template files.  An initial `HEAD` file that
-references the HEAD of the master branch is also created.
+references the HEAD of the main branch is also created.
 
 If the `$GIT_DIR` environment variable is set then it specifies a path
 to use instead of `./.git` for the base of the repository.
@@ -74,7 +74,7 @@ If this is reinitialization, the repository will be moved to the specified path.
 --initial-branch=<branch-name>::
 
 Use the specified name for the initial branch in the newly created repository.
-If not specified, fall back to the default name: `master`.
+If not specified, fall back to the default name: `main`.
 
 --shared[=(false|true|umask|group|all|world|everybody|0xxx)]::
 

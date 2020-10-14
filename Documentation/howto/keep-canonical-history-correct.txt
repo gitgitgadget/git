@@ -136,7 +136,7 @@ this:
 ------------
 		 C0--C1--C2     topic-c
 		/
-    ---o---o---A                master
+    ---o---o---A                main
 		\
 		 B0--B1--B2     topic-b
 ------------
@@ -146,26 +146,26 @@ so:
 
 ------------
     $ git clone $URL work && cd work
-    $ git checkout -b topic-b master
+    $ git checkout -b topic-b main
     $ ... work to create B0, B1 and B2 to complete one theme
-    $ git checkout -b topic-c master
+    $ git checkout -b topic-c main
     $ ... same for the theme of topic-c
 ------------
 
 And then
 
 ------------
-    $ git checkout master
+    $ git checkout main
     $ git pull --ff-only
 ------------
 
-would grab `X`, `Y` and `Z` from the upstream and advance your master
+would grab `X`, `Y` and `Z` from the upstream and advance your main
 branch:
 
 ------------
 		 C0--C1--C2     topic-c
 		/
-    ---o---o---A---X---Y---Z    master
+    ---o---o---A---X---Y---Z    main
 		\
 		 B0--B1--B2     topic-b
 ------------
@@ -194,10 +194,10 @@ topic-c, somebody again advanced the history in the central repository
 to put `W` on top of `Z`, and make your `git push` fail.
 
 In such a case, you would rewind to discard `M` and `N`, update the
-tip of your 'master' again and redo the two merges:
+tip of your 'main' again and redo the two merges:
 
 ------------
-    $ git reset --hard origin/master
+    $ git reset --hard origin/main
     $ git pull --ff-only
     $ git merge topic-b
     $ git merge topic-c

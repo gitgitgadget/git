@@ -89,7 +89,7 @@ $ git commit -a -s <5>
 $ edit/compile/test
 $ git diff HEAD^ <6>
 $ git commit -a --amend <7>
-$ git switch master <8>
+$ git switch main <8>
 $ git merge alsa-audio <9>
 $ git log --since='3 days ago' <10>
 $ git log v2.43.. curses/ <11>
@@ -104,8 +104,8 @@ modification will be caught if you do `git commit -a` later.
 <6> look at all your changes including the previous commit.
 <7> amend the previous commit, adding all your new changes,
 using your original message.
-<8> switch to the master branch.
-<9> merge a topic branch into your master branch.
+<8> switch to the main branch.
+<9> merge a topic branch into your main branch.
 <10> review commit logs; other forms to limit output can be
 combined and include `-10` (to show up to 10 commits),
 `--until=2005-12-10`, etc.
@@ -147,11 +147,11 @@ Clone the upstream and work on it.  Feed changes to upstream.::
 ------------
 $ git clone git://git.kernel.org/pub/scm/.../torvalds/linux-2.6 my2.6
 $ cd my2.6
-$ git switch -c mine master <1>
+$ git switch -c mine main <1>
 $ edit/compile/test; git commit -a -s <2>
-$ git format-patch master <3>
+$ git format-patch main <3>
 $ git send-email --to="person <email@example.com>" 00*.patch <4>
-$ git switch master <5>
+$ git switch main <5>
 $ git pull <6>
 $ git log -p ORIG_HEAD.. arch/i386 include/asm-i386 <7>
 $ git ls-remote --heads http://git.kernel.org/.../jgarzik/libata-dev.git <8>
@@ -160,11 +160,11 @@ $ git reset --hard ORIG_HEAD <10>
 $ git gc <11>
 ------------
 +
-<1> checkout a new branch `mine` from master.
+<1> checkout a new branch `mine` from main.
 <2> repeat as needed.
-<3> extract patches from your branch, relative to master,
+<3> extract patches from your branch, relative to main,
 <4> and email them.
-<5> return to `master`, ready to see what's new
+<5> return to `main`, ready to see what's new
 <6> `git pull` fetches from `origin` by default and merges into the
 current branch.
 <7> immediately after pulling, look at the changes done upstream
@@ -185,16 +185,16 @@ satellite$ cd frotz
 satellite$ git config --get-regexp '^(remote|branch)\.' <2>
 remote.origin.url mothership:frotz
 remote.origin.fetch refs/heads/*:refs/remotes/origin/*
-branch.master.remote origin
-branch.master.merge refs/heads/master
+branch.main.remote origin
+branch.main.merge refs/heads/main
 satellite$ git config remote.origin.push \
 	   +refs/heads/*:refs/remotes/satellite/* <3>
 satellite$ edit/compile/test/commit
 satellite$ git push origin <4>
 
 mothership$ cd frotz
-mothership$ git switch master
-mothership$ git merge satellite/master <5>
+mothership$ git switch main
+mothership$ git merge satellite/main <5>
 ------------
 +
 <1> mothership machine has a frotz repository under your home
@@ -210,20 +210,20 @@ remote-tracking branches on the mothership machine.  You could use this
 as a back-up method. Likewise, you can pretend that mothership
 "fetched" from you (useful when access is one sided).
 <5> on mothership machine, merge the work done on the satellite
-machine into the master branch.
+machine into the main branch.
 
 Branch off of a specific tag.::
 +
 ------------
 $ git switch -c private2.6.14 v2.6.14 <1>
 $ edit/compile/test; git commit -a
-$ git checkout master
+$ git checkout main
 $ git cherry-pick v2.6.14..private2.6.14 <2>
 ------------
 +
 <1> create a private branch based on a well known (but somewhat behind)
 tag.
-<2> forward port all changes in `private2.6.14` branch to `master` branch
+<2> forward port all changes in `private2.6.14` branch to `main` branch
 without a formal "merging". Or longhand +
 `git format-patch -k -m --stdout v2.6.14..private2.6.14 |
   git am -3 -k`
@@ -268,23 +268,23 @@ A typical integrator's Git day.::
 +
 ------------
 $ git status <1>
-$ git branch --no-merged master <2>
+$ git branch --no-merged main <2>
 $ mailx <3>
 & s 2 3 4 5 ./+to-apply
 & s 7 8 ./+hold-linus
 & q
-$ git switch -c topic/one master
+$ git switch -c topic/one main
 $ git am -3 -i -s ./+to-apply <4>
 $ compile/test
 $ git switch -c hold/linus && git am -3 -i -s ./+hold-linus <5>
-$ git switch topic/one && git rebase master <6>
+$ git switch topic/one && git rebase main <6>
 $ git switch -C seen next <7>
 $ git merge topic/one topic/two && git merge hold/linus <8>
 $ git switch maint
-$ git cherry-pick master~4 <9>
+$ git cherry-pick main~4 <9>
 $ compile/test
 $ git tag -s -m "GIT 0.99.9x" v0.99.9x <10>
-$ git fetch ko && for branch in master maint next seen <11>
+$ git fetch ko && for branch in main maint next seen <11>
     do
 	git show-branch ko/$branch $branch <12>
     done
@@ -292,7 +292,7 @@ $ git push --follow-tags ko <13>
 ------------
 +
 <1> see what you were in the middle of doing, if anything.
-<2> see which branches haven't been merged into `master` yet.
+<2> see which branches haven't been merged into `main` yet.
 Likewise for any other integration branches e.g. `maint`, `next`
 and `seen`.
 <3> read mails, save ones that are applicable, and save others
@@ -300,15 +300,15 @@ that are not quite ready (other mail readers are available).
 <4> apply them, interactively, with your sign-offs.
 <5> create topic branch as needed and apply, again with sign-offs.
 <6> rebase internal topic branch that has not been merged to the
-master or exposed as a part of a stable branch.
+main or exposed as a part of a stable branch.
 <7> restart `seen` every time from the next.
 <8> and bundle topic branches still cooking.
 <9> backport a critical fix.
 <10> create a signed tag.
-<11> make sure master was not accidentally rewound beyond that
+<11> make sure main was not accidentally rewound beyond that
 already pushed out.
-<12> In the output from `git show-branch`, `master` should have
-everything `ko/master` has, and `next` should have
+<12> In the output from `git show-branch`, `main` should have
+everything `ko/main` has, and `next` should have
 everything `ko/next` has, etc.
 <13> push out the bleeding edge, together with new tags that point
 into the pushed history.
@@ -321,7 +321,7 @@ repository at kernel.org, and looks like this:
 [remote "ko"]
 	url = kernel.org:/pub/scm/git/git.git
 	fetch = refs/heads/*:refs/remotes/ko/*
-	push = refs/heads/master
+	push = refs/heads/main
 	push = refs/heads/next
 	push = +refs/heads/seen
 	push = refs/heads/maint
@@ -424,7 +424,7 @@ $ grep git /etc/group <1>
 git:x:9418:alice,bob,cindy,david
 $ cd /home/devo.git
 $ ls -l <2>
-  lrwxrwxrwx   1 david git    17 Dec  4 22:40 HEAD -> refs/heads/master
+  lrwxrwxrwx   1 david git    17 Dec  4 22:40 HEAD -> refs/heads/main
   drwxrwsr-x   2 david git  4096 Dec  4 22:40 branches
   -rw-rw-r--   1 david git    84 Dec  4 22:40 config
   -rw-rw-r--   1 david git    58 Dec  4 22:40 description
@@ -437,7 +437,7 @@ $ ls -l <2>
 $ ls -l hooks/update <3>
   -r-xr-xr-x   1 david git  3536 Dec  4 22:40 update
 $ cat info/allowed-users <4>
-refs/heads/master	alice\|cindy
+refs/heads/main	alice\|cindy
 refs/heads/doc-update	bob
 refs/tags/v[0-9]*	david
 ------------
@@ -446,7 +446,7 @@ refs/tags/v[0-9]*	david
 <2> and make the shared repository writable by the group.
 <3> use update-hook example by Carl from Documentation/howto/
 for branch policy control.
-<4> alice and cindy can push into master, only bob can push into doc-update.
+<4> alice and cindy can push into main, only bob can push into doc-update.
 david is the release manager and is the only person who can
 create and push version tags.
 

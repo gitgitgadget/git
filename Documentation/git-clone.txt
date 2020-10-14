@@ -30,8 +30,8 @@ currently active branch.
 
 After the clone, a plain `git fetch` without arguments will update
 all the remote-tracking branches, and a `git pull` without
-arguments will in addition merge the remote master branch into the
-current master branch, if any (this is untrue when "--single-branch"
+arguments will in addition merge the remote main branch into the
+current main branch, if any (this is untrue when "--single-branch"
 is given; see below).
 
 This default configuration is achieved by creating references to

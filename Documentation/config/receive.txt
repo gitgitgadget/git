@@ -124,8 +124,8 @@ receive.procReceiveRefs::
 	`execute_commands` function.
 +
 For example, if this variable is set to "refs/for", pushing to reference
-such as "refs/for/master" will not create or update a reference named
-"refs/for/master", but may create or update a pull request directly by
+such as "refs/for/main" will not create or update a reference named
+"refs/for/main", but may create or update a pull request directly by
 running the hook "proc-receive".
 +
 Optional modifiers can be provided in the beginning of the value to filter

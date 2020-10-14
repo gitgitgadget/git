@@ -27,7 +27,7 @@ symbolic ref.
 
 A symbolic ref is a regular file that stores a string that
 begins with `ref: refs/`.  For example, your `.git/HEAD` is
-a regular file whose contents is `ref: refs/heads/master`.
+a regular file whose contents is `ref: refs/heads/main`.
 
 OPTIONS
 -------
@@ -44,7 +44,7 @@ OPTIONS
 
 --short::
 	When showing the value of <name> as a symbolic ref, try to shorten the
-	value, e.g. from `refs/heads/master` to `master`.
+	value, e.g. from `refs/heads/main` to `main`.
 
 -m::
 	Update the reflog for <name> with <reason>.  This is valid only
@@ -53,7 +53,7 @@ OPTIONS
 NOTES
 -----
 In the past, `.git/HEAD` was a symbolic link pointing at
-`refs/heads/master`.  When we wanted to switch to another branch,
+`refs/heads/main`.  When we wanted to switch to another branch,
 we did `ln -sf refs/heads/newbranch .git/HEAD`, and when we wanted
 to find out which branch we are on, we did `readlink .git/HEAD`.
 But symbolic links are not entirely portable, so they are now
