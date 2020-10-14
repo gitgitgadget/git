@@ -33,12 +33,12 @@ Initialized empty Git repository in .git/
 $ echo 'hello world' > file.txt
 $ git add .
 $ git commit -a -m "initial commit"
-[master (root-commit) 54196cc] initial commit
+[main (root-commit) 54196cc] initial commit
  1 file changed, 1 insertion(+)
  create mode 100644 file.txt
 $ echo 'hello world!' >file.txt
 $ git commit -a -m "add emphasis"
-[master c4d59f3] add emphasis
+[main c4d59f3] add emphasis
  1 file changed, 1 insertion(+), 1 deletion(-)
 ------------------------------------------------
 
@@ -137,7 +137,7 @@ from .git/HEAD:
 
 ------------------------------------------------
 $ cat .git/HEAD
-ref: refs/heads/master
+ref: refs/heads/main
 ------------------------------------------------
 
 As you can see, this tells us which branch we're currently on, and it
@@ -146,7 +146,7 @@ contains a SHA-1 name referring to a commit object, which we can
 examine with cat-file:
 
 ------------------------------------------------
-$ cat .git/refs/heads/master
+$ cat .git/refs/heads/main
 c4d59f390b9cfd4318117afde11d601c1085f241
 $ git cat-file -t c4d59f39
 commit
@@ -368,7 +368,7 @@ situation:
 
 ------------------------------------------------
 $ git status
-On branch master
+On branch main
 Changes to be committed:
   (use "git restore --staged <file>..." to unstage)
 
