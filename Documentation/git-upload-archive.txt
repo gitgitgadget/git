@@ -37,7 +37,7 @@ but easier-to-check set of rules:
      `ref:path` syntax. E.g., `git archive --remote=origin v1.0:Documentation`.
 
   3. Clients may _not_ use other sha1 expressions, even if the end
-     result is reachable. E.g., neither a relative commit like `master^`
+     result is reachable. E.g., neither a relative commit like `main^`
      nor a literal sha1 like `abcd1234` is allowed, even if the result
      is reachable from the refs.
 

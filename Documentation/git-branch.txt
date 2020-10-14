@@ -329,7 +329,7 @@ $ git branch -D test                                    <2>
 <1> Delete the remote-tracking branches "todo", "html" and "man". The next
     'fetch' or 'pull' will create them again unless you configure them not to.
     See linkgit:git-fetch[1].
-<2> Delete the "test" branch even if the "master" branch (or whichever branch
+<2> Delete the "test" branch even if the "main" branch (or whichever branch
     is currently checked out) does not have all commits from the test branch.
 
 Listing branches from a specific remote::

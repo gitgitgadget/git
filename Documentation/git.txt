@@ -27,7 +27,7 @@ linkgit:giteveryday[7] for a useful minimum set of
 commands.  The link:user-manual.html[Git User's Manual] has a more
 in-depth introduction.
 
-After you mastered the basic concepts, you can come back to this
+After you mained the basic concepts, you can come back to this
 page to learn what commands Git offers.  You can learn more about
 individual Git commands with "git help command".  linkgit:gitcli[7]
 manual page gives you an overview of the command-line command syntax.

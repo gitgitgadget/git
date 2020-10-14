@@ -45,7 +45,7 @@ archives that it imports, it is also possible to specify Git branch names
 manually.  To do so, write a Git branch name after each <archive/branch>
 parameter, separated by a colon.  This way, you can shorten the Arch
 branch names and convert Arch jargon to Git jargon, for example mapping a
-"PROJECT{litdd}devo{litdd}VERSION" branch to "master".
+"PROJECT{litdd}devo{litdd}VERSION" branch to "main".
 
 Associating multiple Arch branches to one Git branch is possible; the
 result will make the most sense only if no commits are made to the first

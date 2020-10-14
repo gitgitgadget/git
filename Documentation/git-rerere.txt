@@ -77,55 +77,55 @@ DISCUSSION
 ----------
 
 When your topic branch modifies an overlapping area that your
-master branch (or upstream) touched since your topic branch
-forked from it, you may want to test it with the latest master,
+main branch (or upstream) touched since your topic branch
+forked from it, you may want to test it with the latest main,
 even before your topic branch is ready to be pushed upstream:
 
 ------------
               o---*---o topic
              /
-    o---o---o---*---o---o master
+    o---o---o---*---o---o main
 ------------
 
-For such a test, you need to merge master and topic somehow.
-One way to do it is to pull master into the topic branch:
+For such a test, you need to merge main and topic somehow.
+One way to do it is to pull main into the topic branch:
 
 ------------
 	$ git switch topic
-	$ git merge master
+	$ git merge main
 
               o---*---o---+ topic
              /           /
-    o---o---o---*---o---o master
+    o---o---o---*---o---o main
 ------------
 
 The commits marked with `*` touch the same area in the same
 file; you need to resolve the conflicts when creating the commit
 marked with `+`.  Then you can test the result to make sure your
-work-in-progress still works with what is in the latest master.
+work-in-progress still works with what is in the latest main.
 
 After this test merge, there are two ways to continue your work
 on the topic.  The easiest is to build on top of the test merge
 commit `+`, and when your work in the topic branch is finally
-ready, pull the topic branch into master, and/or ask the
-upstream to pull from you.  By that time, however, the master or
+ready, pull the topic branch into main, and/or ask the
+upstream to pull from you.  By that time, however, the main or
 the upstream might have been advanced since the test merge `+`,
 in which case the final commit graph would look like this:
 
 ------------
 	$ git switch topic
-	$ git merge master
-	$ ... work on both topic and master branches
-	$ git switch master
+	$ git merge main
+	$ ... work on both topic and main branches
+	$ git switch main
 	$ git merge topic
 
               o---*---o---+---o---o topic
              /           /         \
-    o---o---o---*---o---o---o---o---+ master
+    o---o---o---*---o---o---o---o---+ main
 ------------
 
 When your topic branch is long-lived, however, your topic branch
-would end up having many such "Merge from master" commits on it,
+would end up having many such "Merge from main" commits on it,
 which would unnecessarily clutter the development history.
 Readers of the Linux kernel mailing list may remember that Linus
 complained about such too frequent test merges when a subsystem
@@ -137,19 +137,19 @@ top of the tip before the test merge:
 
 ------------
 	$ git switch topic
-	$ git merge master
+	$ git merge main
 	$ git reset --hard HEAD^ ;# rewind the test merge
-	$ ... work on both topic and master branches
-	$ git switch master
+	$ ... work on both topic and main branches
+	$ git switch main
 	$ git merge topic
 
               o---*---o-------o---o topic
              /                     \
-    o---o---o---*---o---o---o---o---+ master
+    o---o---o---*---o---o---o---o---+ main
 ------------
 
 This would leave only one merge commit when your topic branch is
-finally ready and merged into the master branch.  This merge
+finally ready and merged into the main branch.  This merge
 would require you to resolve the conflict, introduced by the
 commits marked with `*`.  However, this conflict is often the
 same conflict you resolved when you created the test merge you
@@ -163,7 +163,7 @@ usual conflict markers `<<<<<<<`, `=======`, and `>>>>>>>` in
 them.  Later, after you are done resolving the conflicts,
 running 'git rerere' again will record the resolved state of these
 files.  Suppose you did this when you created the test merge of
-master into the topic branch.
+main into the topic branch.
 
 Next time, after seeing the same conflicted automerge,
 running 'git rerere' will perform a three-way merge between the
@@ -185,7 +185,7 @@ the rerere.enabled config variable).
 
 In our example, when you do the test merge, the manual
 resolution is recorded, and it will be reused when you do the
-actual merge later with the updated master and topic branch, as long
+actual merge later with the updated main and topic branch, as long
 as the recorded resolution is still applicable.
 
 The information 'git rerere' records is also used when running
@@ -195,16 +195,16 @@ development on the topic branch:
 ------------
               o---*---o-------o---o topic
              /
-    o---o---o---*---o---o---o---o   master
+    o---o---o---*---o---o---o---o   main
 
-	$ git rebase master topic
+	$ git rebase main topic
 
 				  o---*---o-------o---o topic
 				 /
-    o---o---o---*---o---o---o---o   master
+    o---o---o---*---o---o---o---o   main
 ------------
 
-you could run `git rebase master topic`, to bring yourself
+you could run `git rebase main topic`, to bring yourself
 up to date before your topic is ready to be sent upstream.
 This would result in falling back to a three-way merge, and it
 would conflict the same way as the test merge you resolved earlier.

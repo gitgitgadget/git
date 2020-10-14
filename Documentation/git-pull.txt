@@ -36,26 +36,26 @@ Default values for <repository> and <branch> are read from the
 as set by linkgit:git-branch[1] `--track`.
 
 Assume the following history exists and the current branch is
-"`master`":
+"`main`":
 
 ------------
-	  A---B---C master on origin
+	  A---B---C main on origin
 	 /
-    D---E---F---G master
+    D---E---F---G main
 	^
-	origin/master in your repository
+	origin/main in your repository
 ------------
 
 Then "`git pull`" will fetch and replay the changes from the remote
-`master` branch since it diverged from the local `master` (i.e., `E`)
-until its current commit (`C`) on top of `master` and record the
+`main` branch since it diverged from the local `main` (i.e., `E`)
+until its current commit (`C`) on top of `main` and record the
 result in a new commit along with the names of the two parent commits
 and a log message from the user describing the changes.
 
 ------------
-	  A---B---C origin/master
+	  A---B---C origin/main
 	 /         \
-    D---E---F---G---H master
+    D---E---F---G---H main
 ------------
 
 See linkgit:git-merge[1] for details, including how conflicts

@@ -537,12 +537,12 @@ move local branches onto the new tree.
 	Discard the specified revision as well, keeping the nearest
 	parent instead.
 Example:;;
-Assume you have local changes in "master", but you need to refetch "r2".
+Assume you have local changes in "main", but you need to refetch "r2".
 +
 ------------
     r1---r2---r3 remotes/git-svn
                 \
-                 A---B master
+                 A---B main
 ------------
 +
 Fix the ignore-paths or SVN permissions problem that caused "r2" to
@@ -555,20 +555,20 @@ git svn fetch
 ------------
     r1---r2'--r3' remotes/git-svn
       \
-       r2---r3---A---B master
+       r2---r3---A---B main
 ------------
 +
-Then fixup "master" with 'git rebase'.
+Then fixup "main" with 'git rebase'.
 Do NOT use 'git merge' or your history will not be compatible with a
 future 'dcommit'!
 +
 [verse]
-git rebase --onto remotes/git-svn A^ master
+git rebase --onto remotes/git-svn A^ main
 +
 ------------
     r1---r2'--r3' remotes/git-svn
                 \
-                 A'--B' master
+                 A'--B' main
 ------------
 
 OPTIONS
@@ -862,7 +862,7 @@ Tracking and contributing to the trunk of a Subversion-managed project
 	git svn clone http://svn.example.com/project/trunk
 # Enter the newly cloned directory:
 	cd trunk
-# You should be on master branch, double-check with 'git branch'
+# You should be on main branch, double-check with 'git branch'
 	git branch
 # Do some work and commit locally to Git:
 	git commit ...
@@ -888,7 +888,7 @@ Tracking and contributing to an entire Subversion-managed project
 	git branch -r
 # Create a new branch in SVN
 	git svn branch waldo
-# Reset your master to trunk (or any other branch, replacing 'trunk'
+# Reset your main to main (or any other branch, replacing 'main'
 # with the appropriate name):
 	git reset --hard svn/trunk
 # You may only dcommit to one branch/tag/trunk at a time.  The usage
@@ -916,7 +916,7 @@ have each person clone that repository with 'git clone':
 # we only want to use git svn for future updates
 	git config --remove-section remote.origin
 # Create a local branch from one of the branches just fetched
-	git checkout -b master FETCH_HEAD
+	git checkout -b main FETCH_HEAD
 # Initialize 'git svn' locally (be sure to use the same URL and
 # --stdlayout/-T/-b/-t/--prefix options as were used on server)
 	git svn init http://svn.example.com/project [options...]

@@ -200,10 +200,10 @@ EXAMPLES
 	any of remote-tracking branches for 'origin' (what you have that
 	origin doesn't).
 
-`git log master --not --remotes=*/master`::
+`git log main --not --remotes=*/main`::
 
-	Shows all commits that are in local master but not in any remote
-	repository master branches.
+	Shows all commits that are in local main but not in any remote
+	repository main branches.
 
 `git log -p -m --first-parent`::
 

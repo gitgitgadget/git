@@ -193,10 +193,10 @@ name, the guessing is aborted.  You can explicitly give a name with
 EXAMPLES
 --------
 
-The following command switches to the "master" branch:
+The following command switches to the "main" branch:
 
 ------------
-$ git switch master
+$ git switch main
 ------------
 
 After working in the wrong branch, switching to the correct branch
@@ -228,7 +228,7 @@ registered in your index file, so `git diff` would show you what
 changes you made since the tip of the new branch.
 
 To switch back to the previous branch before we switched to mytopic
-(i.e. "master" branch):
+(i.e. "main" branch):
 
 ------------
 $ git switch -
