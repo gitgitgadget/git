@@ -81,7 +81,7 @@ mkdir $repo
 cd $repo
 git init .
 
-# Create an initial commit just to define master.
+# Create an initial commit just to define main.
 touch many-files.empty
 echo "$depth $width $files" >many-files.params
 git add many-files.*
@@ -100,11 +100,11 @@ echo "$depth $width $files" >>many-files.params
 git add many-files.params
 git commit -q -m "ballast plus 1"
 
-# Checkout master to put repo in canonical state (because
+# Checkout main to put repo in canonical state (because
 # the perf test may need to clone and enable sparse-checkout
 # before attempting to checkout a commit with the ballast
 # (because it may contain 100K directories and 1M files)).
-git checkout master
+git checkout main
 
 echo "Repository "$repo" ($depth, $width, $files) created.  Ballast $nr_files."
 exit 0
