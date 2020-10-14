@@ -65,7 +65,7 @@ Note that if no extensions are specified in the config file, then
 provides no benefit, and makes the repository incompatible with older
 implementations of git).
 
-This document will serve as the master list for extensions. Any
+This document will serve as the main list for extensions. Any
 implementation wishing to define a new extension should make a note of
 it here, in order to claim the name.
 
