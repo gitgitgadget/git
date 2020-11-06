@@ -12,7 +12,7 @@ test_description='git rebase --onto A...B'
 #
 #	    F---G topic                             G'
 #	   /                                       /
-# A---B---C---D---E master      -->       A---B---C---D---E
+# A---B---C---D---E master        -->       A---B---C---D---E
 #      \   \ /
 #	\   x
 #	 \ / \
