@@ -11,7 +11,7 @@ test_description='test automatic tag following'
 #   L - A ------ O ------ B
 #    \   \                 \
 #     \   C - origin/cat    \
-#      origin/master         master
+#      origin/master           master
 
 test_expect_success setup '
 	test_tick &&
