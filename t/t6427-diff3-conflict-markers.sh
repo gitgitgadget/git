@@ -43,7 +43,7 @@ test_expect_success 'check no merge base' '
 # Setup:
 #          L1
 #         /  \
-#   master    ?
+#     master    ?
 #         \  /
 #          R1
 #
@@ -101,7 +101,7 @@ test_expect_success 'check unique merge base' '
 # Setup:
 #          L1---L2--L3
 #         /  \ /      \
-#   master    X1       ?
+#     master    X1       ?
 #         \  / \      /
 #          R1---R2--R3
 #

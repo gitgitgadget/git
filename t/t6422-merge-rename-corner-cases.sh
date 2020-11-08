@@ -1130,7 +1130,7 @@ test_conflicts_with_adds_and_renames() {
 	# Setup:
 	#          L
 	#         / \
-	#   master   ?
+	#     master   ?
 	#         \ /
 	#          R
 	#
@@ -1290,7 +1290,7 @@ test_conflicts_with_adds_and_renames add    add
 # Setup:
 #          L
 #         / \
-#   master   ?
+#     master   ?
 #         \ /
 #          R
 #
