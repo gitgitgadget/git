@@ -24,8 +24,8 @@ test_expect_success 'setup repo with moderate-sized history' '
 	test_commit_bulk --id=file 100 &&
 	git checkout -b other HEAD~5 &&
 	test_commit_bulk --id=side 10 &&
-	git checkout master &&
-	bitmaptip=$(git rev-parse master) &&
+	git checkout main &&
+	bitmaptip=$(git rev-parse main) &&
 	blob=$(echo tagged-blob | git hash-object -w --stdin) &&
 	git tag tagged-blob $blob &&
 	git config repack.writebitmaps true
@@ -63,8 +63,8 @@ rev_list_tests() {
 	'
 
 	test_expect_success "counting non-linear history ($state)" '
-		git rev-list --count other...master >expect &&
-		git rev-list --use-bitmap-index --count other...master >actual &&
+		git rev-list --count other...main >expect &&
+		git rev-list --use-bitmap-index --count other...main >actual &&
 		test_cmp expect actual
 	'
 
@@ -128,7 +128,7 @@ test_expect_success 'setup further non-bitmapped commits' '
 rev_list_tests 'partial bitmap'
 
 test_expect_success 'fetch (partial bitmap)' '
-	git --git-dir=clone.git fetch origin master:master &&
+	git --git-dir=clone.git fetch origin main:main &&
 	git rev-parse HEAD >expect &&
 	git --git-dir=clone.git rev-parse HEAD >actual &&
 	test_cmp expect actual
@@ -230,7 +230,7 @@ test_expect_success 'full repack, reusing previous bitmaps' '
 '
 
 test_expect_success 'fetch (full bitmap)' '
-	git --git-dir=clone.git fetch origin master:master &&
+	git --git-dir=clone.git fetch origin main:main &&
 	git rev-parse HEAD >expect &&
 	git --git-dir=clone.git rev-parse HEAD >actual &&
 	test_cmp expect actual
