@@ -713,4 +713,60 @@ test_expect_success '--dry-run --short' '
 	git commit --dry-run --short
 '
 
+test_expect_success '--reword does not commit staged changes' '
+	echo changed >file &&
+	git add file &&
+	cat >expect <<-EOF &&
+	$(git log -1 --pretty=format:%B HEAD)
+
+	reworded
+	EOF
+	GIT_EDITOR="printf reworded >>" git commit --reword &&
+	git log -1 --pretty=format:%B >actual &&
+	test_cmp expect actual &&
+	test_cmp_rev HEAD@{1}^{tree} HEAD^{tree} &&
+	test_cmp_rev HEAD@{1}^ HEAD^ &&
+	git cat-file blob :file >actual &&
+	test_cmp file actual
+'
+
+test_reword_opt () {
+	test_expect_success "--reword incompatible with $1" "
+		echo 'fatal: cannot combine --reword with $1' >expect &&
+		test_must_fail git commit --reword $1 2>actual &&
+		test_i18ncmp expect actual
+	"
+}
+
+for opt in --all --amend --include --interactive --only --patch --no-edit
+do
+	test_reword_opt $opt
+done
+
+test_expect_success '--reword with paths' '
+	echo "fatal: cannot combine --reword with paths" >expect &&
+	test_must_fail git commit --reword file 2>actual &&
+	test_i18ncmp expect actual
+'
+
+test_reword_no_edit () {
+	test_expect_success "--reword $@ --no-edit" '
+		git commit --reword '"$@"' --no-edit
+	'
+}
+
+for opt in -mmessage -CHEAD^ -cHEAD --reset-author \
+		"--author=\"Commit Author <commit.author@example.com>\"" \
+		--date=yesterday --fixup=HEAD^ --squash=HEAD^ --signoff
+do
+	test_reword_no_edit "$opt"
+done
+
+test_expect_success '--reword -F' '
+	echo reworded >msg &&
+	git commit --reword -F msg --no-edit &&
+	git log -1 --pretty=format:%B >actual &&
+	test_cmp msg actual
+'
+
 test_done

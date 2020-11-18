@@ -107,6 +107,7 @@ static const char *author_message, *author_message_buffer;
 static char *edit_message, *use_message;
 static char *fixup_message, *squash_message;
 static int all, also, interactive, patch_interactive, only, amend, signoff;
+static int reword;
 static int edit_flag = -1; /* unspecified */
 static int quiet, verbose, no_verify, allow_empty, dry_run, renew_authorship;
 static int config_commit_verbose = -1; /* unspecified */
@@ -1152,6 +1153,41 @@ static void finalize_deferred_config(struct wt_status *s)
 		s->ahead_behind_flags = AHEAD_BEHIND_FULL;
 }
 
+static void validate_reword_options(int argc, struct commit *current_head)
+{
+	if (!current_head)
+		die(_("You have nothing to reword."));
+	if (whence != FROM_COMMIT) {
+		if (whence == FROM_MERGE)
+			die(_("You are in the middle of a merge -- cannot "
+			      "reword."));
+		else if (is_from_cherry_pick(whence))
+			die(_("You are in the middle of a cherry-pick -- cannot"
+			      " reword."));
+		else if (is_from_rebase(whence))
+			die(_("You are in the middle of a rebase -- cannot "
+			      "reword."));
+	}
+	if (amend)
+		die(_("cannot combine --reword with --amend"));
+	if (argc)
+		die(_("cannot combine --reword with paths"));
+	if (interactive)
+		die(_("cannot combine --reword with --interactive"));
+	if (patch_interactive)
+		die(_("cannot combine --reword with --patch"));
+	if (all)
+		die(_("cannot combine --reword with --all"));
+	if (also)
+		die(_("cannot combine --reword with --include"));
+	if (only)
+		die(_("cannot combine --reword with --only"));
+	if (!edit_flag && !force_author && !force_date && !renew_authorship &&
+	    !use_message && !edit_message && !fixup_message &&
+	    !squash_message && !logfile && !have_option_m && !signoff)
+		die(_("cannot combine --reword with --no-edit"));
+}
+
 static int parse_and_validate_options(int argc, const char *argv[],
 				      const struct option *options,
 				      const char * const usage[],
@@ -1186,6 +1222,12 @@ static int parse_and_validate_options(int argc, const char *argv[],
 		else if (whence == FROM_REBASE_PICK)
 			die(_("You are in the middle of a rebase -- cannot amend."));
 	}
+	if (reword) {
+		validate_reword_options(argc, current_head);
+		amend = 1;
+		only = 1;
+		allow_empty = 1;
+	}
 	if (fixup_message && squash_message)
 		die(_("Options --squash and --fixup cannot be used together"));
 	if (use_message)
@@ -1208,7 +1250,8 @@ static int parse_and_validate_options(int argc, const char *argv[],
 		use_message = "HEAD";
 	if (!use_message && !is_from_cherry_pick(whence) &&
 	    !is_from_rebase(whence) && renew_authorship)
-		die(_("--reset-author can be used only with -C, -c or --amend."));
+		die(_("--reset-author can be used only with -C, -c, --amend "
+		      "or --reword."));
 	if (use_message) {
 		use_message_buffer = read_commit_message(use_message);
 		if (!renew_authorship) {
@@ -1537,6 +1580,7 @@ int cmd_commit(int argc, const char **argv, const char *prefix)
 		OPT_BOOL('z', "null", &s.null_termination,
 			 N_("terminate entries with NUL")),
 		OPT_BOOL(0, "amend", &amend, N_("amend previous commit")),
+		OPT_BOOL(0, "reword", &reword, N_("reword the previous commit")),
 		OPT_BOOL(0, "no-post-rewrite", &no_post_rewrite, N_("bypass post-rewrite hook")),
 		{ OPTION_STRING, 'u', "untracked-files", &untracked_files_arg, N_("mode"), N_("show untracked files, optional modes: all, normal, no. (Default: all)"), PARSE_OPT_OPTARG, NULL, (intptr_t)"all" },
 		OPT_PATHSPEC_FROM_FILE(&pathspec_from_file),
