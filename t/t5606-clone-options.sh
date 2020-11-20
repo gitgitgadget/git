@@ -15,7 +15,7 @@ test_expect_success 'setup' '
 test_expect_success 'clone -o' '
 
 	git clone -o foo parent clone-o &&
-	git -C clone-o rev-parse --verify refs/remotes/foo/master
+	git -C clone-o rev-parse --verify refs/remotes/foo/main
 
 '
 
@@ -45,7 +45,7 @@ test_expect_success 'disallows --bare with --separate-git-dir' '
 test_expect_success 'uses "origin" for default remote name' '
 
 	git clone parent clone-default-origin &&
-	git -C clone-default-origin rev-parse --verify refs/remotes/origin/master
+	git -C clone-default-origin rev-parse --verify refs/remotes/origin/main
 
 '
 
@@ -74,14 +74,14 @@ test_expect_success 'prefers config "clone.defaultRemoteName" over default' '
 
 	test_config_global clone.defaultRemoteName from_config &&
 	git clone parent clone-config-origin &&
-	git -C clone-config-origin rev-parse --verify refs/remotes/from_config/master
+	git -C clone-config-origin rev-parse --verify refs/remotes/from_config/main
 
 '
 
 test_expect_success 'prefers --origin over -c config' '
 
 	git clone -c clone.defaultRemoteName=inline --origin from_option parent clone-o-and-inline-config &&
-	git -C clone-o-and-inline-config rev-parse --verify refs/remotes/from_option/master
+	git -C clone-o-and-inline-config rev-parse --verify refs/remotes/from_option/main
 
 '
 
@@ -103,7 +103,6 @@ test_expect_success 'redirected clone -v does show progress' '
 
 test_expect_success 'chooses correct default initial branch name' '
 	git init --bare empty &&
-	GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME= \
 	git -c init.defaultBranch=up clone empty whats-up &&
 	test refs/heads/up = $(git -C whats-up symbolic-ref HEAD) &&
 	test refs/heads/up = $(git -C whats-up config branch.up.merge)
@@ -118,11 +117,9 @@ test_expect_success 'guesses initial branch name correctly' '
 
 	git -c init.defaultBranch=none init --bare no-head &&
 	git -C initial-branch push ../no-head guess abc &&
-	GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME= \
 	git clone no-head is-it2 &&
 	test_must_fail git -C is-it2 symbolic-ref refs/remotes/origin/HEAD &&
 	git -C no-head update-ref --no-deref HEAD refs/heads/guess &&
-	GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME= \
 	git -c init.defaultBranch=guess clone no-head is-it3 &&
 	test refs/remotes/origin/guess = \
 		$(git -C is-it3 symbolic-ref refs/remotes/origin/HEAD)

@@ -74,7 +74,7 @@ git commit -q -m "ballast plus 1"
 
 nr_files=$(git ls-files | wc -l)
 
-# Checkout master to put repo in canonical state (because
+# Checkout main to put repo in canonical state (because
 # the perf test may need to clone and enable sparse-checkout
 # before attempting to checkout a commit with the ballast
 # (because it may contain 100K directories and 1M files)).

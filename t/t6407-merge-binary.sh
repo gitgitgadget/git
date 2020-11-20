@@ -20,7 +20,7 @@ test_expect_success setup '
 	git ls-files -s a >E0 &&
 	git ls-files -s m | sed -e "s/ 0	/ 3	/" >E3 &&
 	test_tick &&
-	git commit -m "master adds some" &&
+	git commit -m "main adds some" &&
 
 	git checkout side &&
 	echo rezrov >>m &&
@@ -39,7 +39,7 @@ test_expect_success resolve '
 	rm -f a* m* &&
 	git reset --hard anchor &&
 
-	if git merge -s resolve master
+	if git merge -s resolve main
 	then
 		echo Oops, should not have succeeded
 		false
@@ -54,7 +54,7 @@ test_expect_success recursive '
 	rm -f a* m* &&
 	git reset --hard anchor &&
 
-	if git merge -s recursive master
+	if git merge -s recursive main
 	then
 		echo Oops, should not have succeeded
 		false

@@ -39,9 +39,9 @@ POST() {
 
 grep '^[^#]' >exp <<EOF
 
-###  refs/heads/master
+###  refs/heads/main
 ###
-GET  /smart/repo.git/refs/heads/master HTTP/1.1 404 -
+GET  /smart/repo.git/refs/heads/main HTTP/1.1 404 -
 
 ###  getanyfile default
 ###

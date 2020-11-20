@@ -43,7 +43,7 @@ By default, for each push received by the repository, git-multimail:
    commits.  Commits are handled in reverse topological order (i.e.,
    parents shown before children).  For example::
 
-     [git] branch master updated
+     [git] branch main updated
      + [git] 01/08: doc: fix xref link from api docs to manual pages
      + [git] 02/08: api-credentials.txt: show the big picture first
      + [git] 03/08: api-credentials.txt: mention credential.helper explicitly
@@ -626,9 +626,9 @@ multimailhook.refFilterInclusionRegex, multimailhook.refFilterExclusionRegex, mu
     considered to match if any substring matches. For example, to
     filter-out all tags, set ``refFilterExclusionRegex`` to
     ``^refs/tags/`` (note the leading ``^`` but no trailing ``$``). If
-    you set ``refFilterExclusionRegex`` to ``master``, then any ref
-    containing ``master`` will be excluded (the ``master`` branch, but
-    also ``refs/tags/master`` or ``refs/heads/foo-master-bar``).
+    you set ``refFilterExclusionRegex`` to ``main``, then any ref
+    containing ``main`` will be excluded (the ``main`` branch, but
+    also ``refs/tags/main`` or ``refs/heads/foo-main-bar``).
 
     ``refFilterDoSendRegex`` and ``refFilterDontSendRegex`` are
     analogous to ``refFilterInclusionRegex`` and
@@ -637,8 +637,8 @@ multimailhook.refFilterInclusionRegex, multimailhook.refFilterExclusionRegex, mu
     introduced by one excluded ref will not be considered as new when
     they reach an included ref. Typically, if you add a branch ``foo``
     to  ``refFilterDontSendRegex``, push commits to this branch, and
-    later merge branch ``foo`` into ``master``, then the notification
-    email for ``master`` will contain a commit email only for the
+    later merge branch ``foo`` into ``main``, then the notification
+    email for ``main`` will contain a commit email only for the
     merge commit. If you include ``foo`` in
     ``refFilterExclusionRegex``, then at the time of merge, you will
     receive one commit email per commit in the branch.
@@ -647,18 +647,18 @@ multimailhook.refFilterInclusionRegex, multimailhook.refFilterExclusionRegex, mu
 
       [multimailhook]
               refFilterExclusionRegex = ^refs/tags/
-              refFilterExclusionRegex = ^refs/heads/master$
+              refFilterExclusionRegex = ^refs/heads/main$
 
     You can also provide a whitespace-separated list like::
 
       [multimailhook]
-              refFilterExclusionRegex = ^refs/tags/ ^refs/heads/master$
+              refFilterExclusionRegex = ^refs/tags/ ^refs/heads/main$
 
-    Both examples exclude tags and the master branch, and are
+    Both examples exclude tags and the main branch, and are
     equivalent to::
 
       [multimailhook]
-              refFilterExclusionRegex = ^refs/tags/|^refs/heads/master$
+              refFilterExclusionRegex = ^refs/tags/|^refs/heads/main$
 
     ``refFilterInclusionRegex`` and ``refFilterExclusionRegex`` are
     strictly stronger than ``refFilterDoSendRegex`` and

@@ -12366,7 +12366,7 @@ set wrapcomment "none"
 set showneartags 1
 set hideremotes 0
 set maxrefs 20
-set visiblerefs {"master"}
+set visiblerefs {"main" "master"}
 set maxlinelen 200
 set showlocalchanges 1
 set limitdiffs 1

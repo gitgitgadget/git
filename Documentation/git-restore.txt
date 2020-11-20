@@ -150,13 +150,13 @@ For more details, see the 'pathspec' entry in linkgit:gitglossary[7].
 EXAMPLES
 --------
 
-The following sequence switches to the `master` branch, reverts the
+The following sequence switches to the `main` branch, reverts the
 `Makefile` to two revisions back, deletes hello.c by mistake, and gets
 it back from the index.
 
 ------------
-$ git switch master
-$ git restore --source master~2 Makefile  <1>
+$ git switch main
+$ git restore --source main~2 Makefile  <1>
 $ rm -f hello.c
 $ git restore hello.c                     <2>
 ------------

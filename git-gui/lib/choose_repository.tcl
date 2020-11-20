@@ -718,7 +718,7 @@ method _do_clone2 {} {
 			info_popup [strcat \
 				[mc "Nothing to clone from %s." $origin_url] \
 				"\n" \
-				[mc "The 'master' branch has not been initialized."] \
+				[mc "The 'main' branch has not been initialized."] \
 				]
 			destroy $w_body
 			set done 1
@@ -938,7 +938,7 @@ method _do_clone_checkout {HEAD} {
 		info_popup [strcat \
 			[mc "No default branch obtained."] \
 			"\n" \
-			[mc "The 'master' branch has not been initialized."] \
+			[mc "The 'main' branch has not been initialized."] \
 			]
 		set done 1
 		return
@@ -950,7 +950,7 @@ method _do_clone_checkout {HEAD} {
 			[mc "Cannot resolve %s as a commit." $HEAD^0] \
 			"\n  $err" \
 			"\n" \
-			[mc "The 'master' branch has not been initialized."] \
+			[mc "The 'main' branch has not been initialized."] \
 			]
 		set done 1
 		return

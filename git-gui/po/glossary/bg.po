@@ -238,8 +238,8 @@ msgstr "локален клон"
 msgid "loose object"
 msgstr "непакетиран обект"
 
-#. "a branch called by convention 'master' that exists in a newly created git repository"
-msgid "master branch"
+#. "a branch called by convention 'main' that exists in a newly created git repository"
+msgid "main branch"
 msgstr "основен клон"
 
 #. "a remote called by convention 'origin' that the current git repository has been cloned from"

@@ -71,7 +71,7 @@ test_expect_success 'create child packs' '
 
 test_perf 'fetch' '
 	# make sure there is something to fetch on each iteration
-	git -C child update-ref -d refs/remotes/origin/master &&
+	git -C child update-ref -d refs/remotes/origin/main &&
 	git -C child fetch
 '
 

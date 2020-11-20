@@ -212,7 +212,7 @@ test_expect_success 'more history' '
 	side=$(git rev-parse HEAD) &&
 
 	# commit 000000000066
-	git checkout master &&
+	git checkout main &&
 
 	# If you use recursive, merge will fail and you will need to
 	# clean up a0blgqsjc as well.  If you use resolve, merge will

@@ -7,7 +7,7 @@ Set up repo with conflicting and non-conflicting branches:
 There are three files foo/bar/baz, and the following graph illustrates the
 content of these files in each commit:
 
-# foo/bar/baz --- foo/bar/bazz     <-- master
+# foo/bar/baz --- foo/bar/bazz     <-- main
 #             \
 #              --- foo/barf/bazf   <-- conflict_branch
 #               \
@@ -40,7 +40,7 @@ test_expect_success 'setup' '
 	git checkout -b clean_branch HEAD^ &&
 	echo bart > bar &&
 	git commit -a -m "clean" &&
-	git checkout master
+	git checkout main
 '
 
 pre_merge_head="$(git rev-parse HEAD)"

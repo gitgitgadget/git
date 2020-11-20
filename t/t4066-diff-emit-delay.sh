@@ -13,7 +13,7 @@ test_expect_success 'set up history with a merge' '
 	test_commit B &&
 	git checkout -b side HEAD^ &&
 	test_commit C &&
-	git merge -m M master &&
+	git merge -m M main &&
 	test_commit D
 '
 

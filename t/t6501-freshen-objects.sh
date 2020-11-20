@@ -67,7 +67,7 @@ for repack in '' true; do
 		git checkout -b experiment &&
 		commit abandon &&
 		maybe_repack &&
-		git checkout master &&
+		git checkout main &&
 		git branch -D experiment
 	'
 

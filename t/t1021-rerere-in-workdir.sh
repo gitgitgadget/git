@@ -19,7 +19,7 @@ test_expect_success SYMLINKS setup '
 	test_tick &&
 	git commit -a -m goodbye &&
 
-	git checkout master
+	git checkout main
 '
 
 test_expect_success SYMLINKS 'rerere in workdir' '

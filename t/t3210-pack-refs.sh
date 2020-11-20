@@ -135,7 +135,7 @@ test_expect_success 'delete ref with dangling packed version' '
 	git commit --allow-empty -m "future garbage" &&
 	git pack-refs --all &&
 	git reset --hard HEAD^ &&
-	git checkout master &&
+	git checkout main &&
 	git reflog expire --expire=all --all &&
 	git prune --expire=all &&
 	git branch -d lamb 2>result &&
@@ -240,7 +240,7 @@ test_expect_success 'retry acquiring packed-refs.lock' '
 
 test_expect_success SYMLINKS 'pack symlinked packed-refs' '
 	# First make sure that symlinking works when reading:
-	git update-ref refs/heads/lossy refs/heads/master &&
+	git update-ref refs/heads/lossy refs/heads/main &&
 	git for-each-ref >all-refs-before &&
 	mv .git/packed-refs .git/my-deviant-packed-refs &&
 	ln -s my-deviant-packed-refs .git/packed-refs &&

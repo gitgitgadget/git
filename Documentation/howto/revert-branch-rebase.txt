@@ -11,37 +11,37 @@ Message-ID: <7voe7g3uop.fsf@assigned-by-dhcp.cox.net>
 How to revert an existing commit
 ================================
 
-One of the changes I pulled into the 'master' branch turns out to
+One of the changes I pulled into the 'main' branch turns out to
 break building Git with GCC 2.95.  While they were well-intentioned
 portability fixes, keeping things working with gcc-2.95 was also
-important.  Here is what I did to revert the change in the 'master'
+important.  Here is what I did to revert the change in the 'main'
 branch and to adjust the 'seen' branch, using core Git tools and
 barebone Porcelain.
 
 First, prepare a throw-away branch in case I screw things up.
 
 ------------------------------------------------
-$ git checkout -b revert-c99 master
+$ git checkout -b revert-c99 main
 ------------------------------------------------
 
 Now I am on the 'revert-c99' branch.  Let's figure out which commit to
-revert.  I happen to know that the top of the 'master' branch is a
+revert.  I happen to know that the top of the 'main' branch is a
 merge, and its second parent (i.e. foreign commit I merged from) has
 the change I would want to undo.  Further I happen to know that that
 merge introduced 5 commits or so:
 
 ------------------------------------------------
-$ git show-branch --more=4 master master^2 | head
-* [master] Merge refs/heads/portable from http://www.cs.berkeley....
- ! [master^2] Replace C99 array initializers with code.
+$ git show-branch --more=4 main main^2 | head
+* [main] Merge refs/heads/portable from http://www.cs.berkeley....
+ ! [main^2] Replace C99 array initializers with code.
 --
--  [master] Merge refs/heads/portable from http://www.cs.berkeley....
-*+ [master^2] Replace C99 array initializers with code.
-*+ [master^2~1] Replace unsetenv() and setenv() with older putenv().
-*+ [master^2~2] Include sys/time.h in daemon.c.
-*+ [master^2~3] Fix ?: statements.
-*+ [master^2~4] Replace zero-length array decls with [].
-*  [master~1] tutorial note about git branch
+-  [main] Merge refs/heads/portable from http://www.cs.berkeley....
+*+ [main^2] Replace C99 array initializers with code.
+*+ [main^2~1] Replace unsetenv() and setenv() with older putenv().
+*+ [main^2~2] Include sys/time.h in daemon.c.
+*+ [main^2~3] Fix ?: statements.
+*+ [main^2~4] Replace zero-length array decls with [].
+*  [main~1] tutorial note about git branch
 ------------------------------------------------
 
 The '--more=4' above means "after we reach the merge base of refs,
@@ -51,15 +51,15 @@ git.git repository, so this would show everything on both branches
 since then.  I just limited the output to the first handful using
 'head'.
 
-Now I know 'master^2~4' (pronounce it as "find the second parent of
-the 'master', and then go four generations back following the first
+Now I know 'main^2~4' (pronounce it as "find the second parent of
+the 'main', and then go four generations back following the first
 parent") is the one I would want to revert.  Since I also want to say
 why I am reverting it, the '-n' flag is given to 'git revert'.  This
 prevents it from actually making a commit, and instead 'git revert'
 leaves the commit log message it wanted to use in '.msg' file:
 
 ------------------------------------------------
-$ git revert -n master^2~4
+$ git revert -n main^2~4
 $ cat .msg
 Revert "Replace zero-length array decls with []."
 
@@ -79,12 +79,12 @@ $ git commit -a -s ;# read .msg into the log,
 ------------------------------------------------
 
 I could have screwed up in any of the above steps, but in the worst
-case I could just have done 'git checkout master' to start over.
+case I could just have done 'git checkout main' to start over.
 Fortunately I did not have to; what I have in the current branch
-'revert-c99' is what I want.  So merge that back into 'master':
+'revert-c99' is what I want.  So merge that back into 'main':
 
 ------------------------------------------------
-$ git checkout master
+$ git checkout main
 $ git merge revert-c99 ;# this should be a fast-forward
 Updating from 10d781b9caa4f71495c7b34963bef137216f86a8 to e3a693c...
  cache.h        |    8 ++++----
@@ -96,10 +96,10 @@ Updating from 10d781b9caa4f71495c7b34963bef137216f86a8 to e3a693c...
 ------------------------------------------------
 
 There is no need to redo the test at this point.  We fast-forwarded
-and we know 'master' matches 'revert-c99' exactly.  In fact:
+and we know 'main' matches 'revert-c99' exactly.  In fact:
 
 ------------------------------------------------
-$ git diff master..revert-c99
+$ git diff main..revert-c99
 ------------------------------------------------
 
 says nothing.
@@ -109,7 +109,7 @@ Then we rebase the 'seen' branch as usual.
 ------------------------------------------------
 $ git checkout seen
 $ git tag seen-anchor seen
-$ git rebase master
+$ git rebase main
 * Applying: Redo "revert" using three-way merge machinery.
 First trying simple merge strategy to cherry-pick.
 * Applying: Remove git-apply-patch-script.
@@ -131,7 +131,7 @@ The temporary tag 'seen-anchor' is me just being careful, in case 'git
 rebase' screws up.  After this, I can do these for sanity check:
 
 ------------------------------------------------
-$ git diff seen-anchor..seen ;# make sure we got the master fix.
+$ git diff seen-anchor..seen ;# make sure we got the main fix.
 $ make CC=gcc-2.95 clean test ;# make sure it fixed the breakage.
 $ make clean test ;# make sure it did not cause other breakage.
 ------------------------------------------------
@@ -150,11 +150,11 @@ be some days off:
 
 ------------------------------------------------
 $ git checkout rc
-$ git pull . master
+$ git pull . main
 Packing 0 objects
 Unpacking 0 objects
 
-* commit-ish: e3a693c...	refs/heads/master from .
+* commit-ish: e3a693c...	refs/heads/main from .
 Trying to merge e3a693c... into 8c1f5f0... using 10d781b...
 Committed merge 7fb9b7262a1d1e0a47bbfdcbbcf50ce0635d3f8f
  cache.h        |    8 ++++----
@@ -168,10 +168,10 @@ Committed merge 7fb9b7262a1d1e0a47bbfdcbbcf50ce0635d3f8f
 And the final repository status looks like this:
 
 ------------------------------------------------
-$ git show-branch --more=1 master seen rc
-! [master] Revert "Replace zero-length array decls with []."
+$ git show-branch --more=1 main seen rc
+! [main] Revert "Replace zero-length array decls with []."
  ! [seen] git-repack: Add option to repack all objects.
-  * [rc] Merge refs/heads/master from .
+  * [rc] Merge refs/heads/main from .
 ---
  +  [seen] git-repack: Add option to repack all objects.
  +  [seen~1] More documentation updates.
@@ -180,8 +180,8 @@ $ git show-branch --more=1 master seen rc
  +  [seen~4] Document "git cherry-pick" and "git revert"
  +  [seen~5] Remove git-apply-patch-script.
  +  [seen~6] Redo "revert" using three-way merge machinery.
-  - [rc] Merge refs/heads/master from .
-++* [master] Revert "Replace zero-length array decls with []."
-  - [rc~1] Merge refs/heads/master from .
-... [master~1] Merge refs/heads/portable from http://www.cs.berkeley....
+  - [rc] Merge refs/heads/main from .
+++* [main] Revert "Replace zero-length array decls with []."
+  - [rc~1] Merge refs/heads/main from .
+... [main~1] Merge refs/heads/portable from http://www.cs.berkeley....
 ------------------------------------------------

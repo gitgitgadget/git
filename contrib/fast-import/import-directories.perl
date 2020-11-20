@@ -88,7 +88,7 @@ about the revision.
  ; author sets the author of the revisions
  author=Peter Krefting <peter@softwolves.pp.se>
  ; branch sets the branch that the revision should be committed to
- branch=master
+ branch=main
  ; parent describes the revision that is the parent of this commit
  ; (optional)
  parent=1

@@ -214,7 +214,7 @@ To check whether all is OK, do:
 
    curl --netrc --location -v http://<username>@<servername>/my-new-repo.git/HEAD
 
-...this should give something like 'ref: refs/heads/master', which is
+...this should give something like 'ref: refs/heads/main', which is
 the content of the file HEAD on the server.
 
 Now, add the remote in your existing repository which contains the project
@@ -233,9 +233,9 @@ Step 4: make the initial push
 
 From your client repository, do
 
-   $ git push upload master
+   $ git push upload main
 
-This pushes branch 'master' (which is assumed to be the branch you
+This pushes branch 'main' (which is assumed to be the branch you
 want to export) to repository called 'upload', which we previously
 defined with git-config.
 

@@ -20,18 +20,18 @@ test_expect_success 'merge with case-changing rename' '
 	>foo &&
 	git add foo &&
 	git commit -m "intervening commit" &&
-	git checkout master &&
+	git checkout main &&
 	git rm TestCase &&
 	>testcase &&
 	git add testcase &&
 	git commit -m "rename to testcase" &&
 	git checkout with-camel &&
-	git merge master -m "merge" &&
+	git merge main -m "merge" &&
 	test_path_is_file testcase
 '
 
 test_expect_success 'merge with case-changing rename on both sides' '
-	git checkout master &&
+	git checkout main &&
 	git reset --hard baseline &&
 	git branch -D with-camel &&
 	git checkout -b with-camel &&
@@ -40,13 +40,13 @@ test_expect_success 'merge with case-changing rename on both sides' '
 	>foo &&
 	git add foo &&
 	git commit -m "intervening commit" &&
-	git checkout master &&
+	git checkout main &&
 	git rm TestCase &&
 	>testcase &&
 	git add testcase &&
 	git commit -m "rename to testcase" &&
 	git checkout with-camel &&
-	git merge master -m "merge" &&
+	git merge main -m "merge" &&
 	test_path_is_file testcase
 '
 

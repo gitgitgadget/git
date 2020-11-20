@@ -17,20 +17,20 @@ test_expect_success setup '
 	echo side >file &&
 	git commit -a -m side &&
 
-	git checkout master &&
+	git checkout main &&
 	echo next >file &&
 	git commit -a -m next
 '
 
 test_expect_success 'non-fast-forward fetch' '
 
-	test_must_fail git fetch . master:side
+	test_must_fail git fetch . main:side
 
 '
 
 test_expect_success 'forced update' '
 
-	git fetch . +master:side
+	git fetch . +main:side
 
 '
 

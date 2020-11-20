@@ -1039,8 +1039,8 @@ msgstr "Τίποτα προς κλωνοποίηση από το %s."
 
 #: lib/choose_repository.tcl:690 lib/choose_repository.tcl:904
 #: lib/choose_repository.tcl:916
-msgid "The 'master' branch has not been initialized."
-msgstr "Ο κλάδος 'master' δεν έχει αρχικοποιηθεί."
+msgid "The 'main' branch has not been initialized."
+msgstr "Ο κλάδος 'main' δεν έχει αρχικοποιηθεί."
 
 #: lib/choose_repository.tcl:703
 msgid "Hardlinks are unavailable.  Falling back to copying."

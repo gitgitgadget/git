@@ -1216,8 +1216,8 @@ msgstr "Không có gì để nhân bản từ %s"
 
 #: lib/choose_repository.tcl:705 lib/choose_repository.tcl:919
 #: lib/choose_repository.tcl:931
-msgid "The 'master' branch has not been initialized."
-msgstr "Nhánh 'master' chưa được khởi tạo."
+msgid "The 'main' branch has not been initialized."
+msgstr "Nhánh 'main' chưa được khởi tạo."
 
 #: lib/choose_repository.tcl:718
 msgid "Hardlinks are unavailable.  Falling back to copying."

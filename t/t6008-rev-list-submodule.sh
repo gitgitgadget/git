@@ -36,7 +36,7 @@ test_expect_success 'setup' '
 '
 
 test_expect_success "Ilari's test" '
-	git rev-list --objects super master ^super^
+	git rev-list --objects super main ^super^
 '
 
 test_done

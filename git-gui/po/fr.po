@@ -1189,8 +1189,8 @@ msgstr "Il n'y a rien à cloner depuis %s."
 
 #: lib/choose_repository.tcl:703 lib/choose_repository.tcl:917
 #: lib/choose_repository.tcl:929
-msgid "The 'master' branch has not been initialized."
-msgstr "La branche 'master' n'a pas été initialisée."
+msgid "The 'main' branch has not been initialized."
+msgstr "La branche 'main' n'a pas été initialisée."
 
 #: lib/choose_repository.tcl:716
 msgid "Hardlinks are unavailable.  Falling back to copying."

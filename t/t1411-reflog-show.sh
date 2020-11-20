@@ -167,7 +167,7 @@ test_expect_success 'git log -g -p shows diffs vs. parents' '
 '
 
 test_expect_success 'reflog exists works' '
-	git reflog exists refs/heads/master &&
+	git reflog exists refs/heads/main &&
 	! git reflog exists refs/heads/nonexistent
 '
 

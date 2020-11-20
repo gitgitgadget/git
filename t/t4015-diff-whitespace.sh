@@ -883,7 +883,7 @@ test_expect_success 'combined diff with autocrlf conversion' '
 	echo >x goodbye &&
 	git commit -m "the other side" x &&
 	git config core.autocrlf true &&
-	test_must_fail git merge master &&
+	test_must_fail git merge main &&
 
 	git diff >actual.raw &&
 	sed -e "1,/^@@@/d" actual.raw >actual &&

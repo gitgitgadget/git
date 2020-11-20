@@ -83,14 +83,14 @@ This configuration is used in two ways:
   hierarchy.
 
 * When `git fetch` is run with explicit branches and/or tags
-  to fetch on the command line, e.g. `git fetch origin master`, the
+  to fetch on the command line, e.g. `git fetch origin main`, the
   <refspec>s given on the command line determine what are to be
-  fetched (e.g. `master` in the example,
-  which is a short-hand for `master:`, which in turn means
-  "fetch the 'master' branch but I do not explicitly say what
+  fetched (e.g. `main` in the example,
+  which is a short-hand for `main:`, which in turn means
+  "fetch the 'main' branch but I do not explicitly say what
   remote-tracking branch to update with it from the command line"),
   and the example command will
-  fetch _only_ the 'master' branch.  The `remote.<repository>.fetch`
+  fetch _only_ the 'main' branch.  The `remote.<repository>.fetch`
   values determine which
   remote-tracking branch, if any, is updated.  When used in this
   way, the `remote.<repository>.fetch` values do not have any
@@ -210,7 +210,7 @@ used.
 In compact output mode, specified with configuration variable
 fetch.output, if either entire `<from>` or `<to>` is found in the
 other string, it will be substituted with `*` in the other string. For
-example, `master -> origin/master` becomes `master -> origin/*`.
+example, `main -> origin/main` becomes `main -> origin/*`.
 
 flag::
 	A single character indicating the status of the ref:

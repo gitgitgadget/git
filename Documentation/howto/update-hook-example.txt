@@ -21,7 +21,7 @@ section of the documentation:
            $GIT_DIR/hooks/update refname sha1-old sha1-new
 
     The refname parameter is relative to $GIT_DIR; e.g. for the
-    master head this is "refs/heads/master".  Two sha1 are the
+    main head this is "refs/heads/main".  Two sha1 are the
     object names for the refname before and after the update.  Note
     that the hook is called before the refname is updated, so either
     sha1-old is 0{40} (meaning there is no such ref yet), or it
@@ -178,7 +178,7 @@ This uses two files, $GIT_DIR/info/allowed-users and
 allowed-groups, to describe which heads can be pushed into by
 whom.  The format of each file would look like this:
 
-    refs/heads/master   junio
+    refs/heads/main     junio
     +refs/heads/seen    junio
     refs/heads/cogito$  pasky
     refs/heads/bw/.*    linus
@@ -187,6 +187,6 @@ whom.  The format of each file would look like this:
 
 With this, Linus can push or create "bw/penguin" or "bw/zebra"
 or "bw/panda" branches, Pasky can do only "cogito", and JC can
-do master and "seen" branches and make versioned tags.  And anybody
-can do tmp/blah branches. The '+' sign at the "seen" record means
+do main and seen branches and make versioned tags.  And anybody
+can do tmp/blah branches. The '+' sign at the seen record means
 that JC can make non-fast-forward pushes on it.

@@ -35,7 +35,7 @@ test_expect_success 'unrelated submodule/file conflict is ignored' '
 		git add a_file &&
 		git commit -m "modify a file" &&
 
-		git checkout master &&
+		git checkout main &&
 
 		git submodule add ../sub sub &&
 		git submodule update sub &&

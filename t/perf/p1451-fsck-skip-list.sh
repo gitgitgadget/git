@@ -11,7 +11,7 @@ n=1000000
 test_expect_success "setup $n bad commits" '
 	for i in $(test_seq 1 $n)
 	do
-		echo "commit refs/heads/master" &&
+		echo "commit refs/heads/main" &&
 		echo "committer C <c@example.com> 1234567890 +0000" &&
 		echo "data <<EOF" &&
 		echo "$i.Q." &&

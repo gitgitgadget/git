@@ -52,7 +52,7 @@ test_strip_patch_header () {
 # dh_test_setup_history generates a contrived graph such that we have at least
 # 1 nesting (E) and 2 nestings (F).
 #
-#	  A---B master
+#	  A---B main
 #	 /
 #	D---E---F branch
 #
@@ -80,7 +80,7 @@ dh_test_setup_history () {
 	test_tick &&
 	git commit -a -m "E" &&
 
-	git checkout master &&
+	git checkout main &&
 	echo file2 >file &&
 	test_tick &&
 	git commit -a -m "A" &&
@@ -90,7 +90,7 @@ dh_test_setup_history () {
 	test_tick &&
 	git commit -a -m "F" &&
 
-	git checkout master &&
+	git checkout main &&
 	echo file3 >file &&
 	test_tick &&
 	git commit -a -m "B"
@@ -287,13 +287,13 @@ test_expect_success 'diff-highlight ignores combined diffs' '
 	git commit -m base &&
 
 	>file &&
-	git commit -am master &&
+	git commit -am main &&
 
 	git checkout -b other HEAD^ &&
 	echo "modified content" >file &&
 	git commit -am other &&
 
-	test_must_fail git merge master &&
+	test_must_fail git merge main &&
 	echo "resolved content" >file &&
 	git commit -am resolved &&
 

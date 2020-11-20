@@ -5,7 +5,7 @@
 
 test_description='git cherry should detect patches integrated upstream
 
-This test cherry-picks one local change of two into master branch, and
+This test cherry-picks one local change of two into main branch, and
 checks that git cherry only returns the second patch in the local branch
 '
 . ./test-lib.sh
@@ -32,7 +32,7 @@ test_expect_success \
      test_tick &&
      git commit -m "Add C." &&
 
-     git checkout -f master &&
+     git checkout -f main &&
      rm -f B C &&
 
      echo Third >> A &&
@@ -40,19 +40,19 @@ test_expect_success \
      test_tick &&
      git commit -m "Modify A." &&
 
-     expr "$(echo $(git cherry master my-topic-branch) )" : "+ [^ ]* + .*"
+     expr "$(echo $(git cherry main my-topic-branch) )" : "+ [^ ]* + .*"
 '
 
 test_expect_success \
     'check that cherry with limit returns only the top patch'\
-    'expr "$(echo $(git cherry master my-topic-branch my-topic-branch^1) )" : "+ [^ ]*"
+    'expr "$(echo $(git cherry main my-topic-branch my-topic-branch^1) )" : "+ [^ ]*"
 '
 
 test_expect_success \
     'cherry-pick one of the 2 patches, and check cherry recognized one and only one as new' \
     'git cherry-pick my-topic-branch^0 &&
-     echo $(git cherry master my-topic-branch) &&
-     expr "$(echo $(git cherry master my-topic-branch) )" : "+ [^ ]* - .*"
+     echo $(git cherry main my-topic-branch) &&
+     expr "$(echo $(git cherry main my-topic-branch) )" : "+ [^ ]* - .*"
 '
 
 test_expect_success 'cherry ignores whitespace' '

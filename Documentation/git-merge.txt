@@ -24,24 +24,24 @@ from another repository and can be used by hand to merge changes
 from one branch into another.
 
 Assume the following history exists and the current branch is
-"`master`":
+"`main`":
 
 ------------
 	  A---B---C topic
 	 /
-    D---E---F---G master
+    D---E---F---G main
 ------------
 
 Then "`git merge topic`" will replay the changes made on the
-`topic` branch since it diverged from `master` (i.e., `E`) until
-its current commit (`C`) on top of `master`, and record the result
+`topic` branch since it diverged from `main` (i.e., `E`) until
+its current commit (`C`) on top of `main`, and record the result
 in a new commit along with the names of the two parent commits and
 a log message from the user describing the changes.
 
 ------------
 	  A---B---C topic
 	 /         \
-    D---E---F---G---H master
+    D---E---F---G---H main
 ------------
 
 The second syntax ("`git merge --abort`") can only be run after the

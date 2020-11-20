@@ -19,7 +19,7 @@ print_ref() {
 
 test_expect_success 'set up expected show-ref output' '
 	{
-		print_ref "refs/heads/master" &&
+		print_ref "refs/heads/main" &&
 		print_ref "refs/outside/foo" &&
 		print_ref "refs/outside/foo^{}" &&
 		print_ref "refs/tags/base" &&
@@ -47,7 +47,7 @@ test_expect_success 'create old-style pack-refs without fully-peeled' '
 	# know we are emulating exactly what an older git would have written.
 	{
 		echo "# pack-refs with: peeled " &&
-		print_ref "refs/heads/master" &&
+		print_ref "refs/heads/main" &&
 		print_ref "refs/outside/foo" &&
 		print_ref "refs/tags/base" &&
 		print_ref "refs/tags/foo" &&

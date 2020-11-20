@@ -35,23 +35,23 @@ test_expect_success 'basic usage requires no repo' '
 	test_i18ngrep ^usage: output
 '
 
-# Create a file on master and change it on branch
+# Create a file on main and change it on branch
 test_expect_success 'setup' '
-	echo master >file &&
+	echo main >file &&
 	git add file &&
 	git commit -m "added file" &&
 
-	git checkout -b branch master &&
+	git checkout -b branch main &&
 	echo branch >file &&
 	git commit -a -m "branch changed file" &&
-	git checkout master
+	git checkout main
 '
 
 # Configure a custom difftool.<tool>.cmd and use it
 test_expect_success 'custom commands' '
 	difftool_test_setup &&
 	test_config difftool.test-tool.cmd "cat \"\$REMOTE\"" &&
-	echo master >expect &&
+	echo main >expect &&
 	git difftool --no-prompt branch >actual &&
 	test_cmp expect actual &&
 
@@ -63,7 +63,7 @@ test_expect_success 'custom commands' '
 
 test_expect_success 'custom tool commands override built-ins' '
 	test_config difftool.vimdiff.cmd "cat \"\$REMOTE\"" &&
-	echo master >expect &&
+	echo main >expect &&
 	git difftool --tool vimdiff --no-prompt branch >actual &&
 	test_cmp expect actual
 '
@@ -311,21 +311,21 @@ test_expect_success 'difftool.<tool>.path' '
 
 test_expect_success 'difftool --extcmd=cat' '
 	echo branch >expect &&
-	echo master >>expect &&
+	echo main >>expect &&
 	git difftool --no-prompt --extcmd=cat branch >actual &&
 	test_cmp expect actual
 '
 
 test_expect_success 'difftool --extcmd cat' '
 	echo branch >expect &&
-	echo master >>expect &&
+	echo main >>expect &&
 	git difftool --no-prompt --extcmd=cat branch >actual &&
 	test_cmp expect actual
 '
 
 test_expect_success 'difftool -x cat' '
 	echo branch >expect &&
-	echo master >>expect &&
+	echo main >>expect &&
 	git difftool --no-prompt -x cat branch >actual &&
 	test_cmp expect actual
 '
@@ -338,7 +338,7 @@ test_expect_success 'difftool --extcmd echo arg1' '
 '
 
 test_expect_success 'difftool --extcmd cat arg1' '
-	echo master >expect &&
+	echo main >expect &&
 	git difftool --no-prompt \
 		--extcmd sh\ -c\ \"cat\ \$1\" branch >actual &&
 	test_cmp expect actual
@@ -351,7 +351,7 @@ test_expect_success 'difftool --extcmd cat arg2' '
 	test_cmp expect actual
 '
 
-# Create a second file on master and a different version on branch
+# Create a second file on main and a different version on branch
 test_expect_success 'setup with 2 files different' '
 	echo m2 >file2 &&
 	git add file2 &&
@@ -361,7 +361,7 @@ test_expect_success 'setup with 2 files different' '
 	echo br2 >file2 &&
 	git add file2 &&
 	git commit -a -m "branch changed file2" &&
-	git checkout master
+	git checkout main
 '
 
 test_expect_success 'say no to the first file' '
@@ -369,14 +369,14 @@ test_expect_success 'say no to the first file' '
 	git difftool -x cat branch <input >output &&
 	grep m2 output &&
 	grep br2 output &&
-	! grep master output &&
+	! grep main output &&
 	! grep branch output
 '
 
 test_expect_success 'say no to the second file' '
 	(echo && echo n) >input &&
 	git difftool -x cat branch <input >output &&
-	grep master output &&
+	grep main output &&
 	grep branch output &&
 	! grep m2 output &&
 	! grep br2 output
@@ -384,7 +384,7 @@ test_expect_success 'say no to the second file' '
 
 test_expect_success 'ending prompt input with EOF' '
 	git difftool -x cat branch </dev/null >output &&
-	! grep master output &&
+	! grep main output &&
 	! grep branch output &&
 	! grep m2 output &&
 	! grep br2 output
@@ -396,9 +396,9 @@ test_expect_success 'difftool --tool-help' '
 '
 
 test_expect_success 'setup change in subdirectory' '
-	git checkout master &&
+	git checkout main &&
 	mkdir sub &&
-	echo master >sub/sub &&
+	echo main >sub/sub &&
 	git add sub/sub &&
 	git commit -m "added sub/sub" &&
 	git tag v1 &&
@@ -526,7 +526,7 @@ run_dir_diff_test 'difftool --dir-diff from subdirectory with GIT_DIR set' '
 run_dir_diff_test 'difftool --dir-diff when worktree file is missing' '
 	test_when_finished git reset --hard &&
 	rm file2 &&
-	git difftool --dir-diff $symlinks --extcmd ls branch master >output &&
+	git difftool --dir-diff $symlinks --extcmd ls branch main >output &&
 	grep file2 output
 '
 
@@ -543,7 +543,7 @@ run_dir_diff_test 'difftool --dir-diff with unmerged files' '
 	echo b >>file &&
 	git add file &&
 	git commit -m conflict-b &&
-	git checkout master &&
+	git checkout main &&
 	git merge conflict-a &&
 	test_must_fail git merge conflict-b &&
 	cat >expect <<-EOF &&

@@ -233,10 +233,10 @@ input with lines of the form:
 
   <local ref> SP <local sha1> SP <remote ref> SP <remote sha1> LF
 
-For instance, if the command +git push origin master:foreign+ were run the
+For instance, if the command +git push origin main:foreign+ were run the
 hook would receive a line like the following:
 
-  refs/heads/master 67890 refs/heads/foreign 12345
+  refs/heads/main 67890 refs/heads/foreign 12345
 
 although the full, 40-character SHA-1s would be supplied.  If the foreign ref
 does not yet exist the `<remote SHA-1>` will be 40 `0`.  If a ref is to be

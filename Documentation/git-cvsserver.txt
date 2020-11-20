@@ -199,11 +199,11 @@ allowing access over SSH.
 5. Clients should now be able to check out the project. Use the CVS 'module'
    name to indicate what Git 'head' you want to check out.  This also sets the
    name of your newly checked-out directory, unless you tell it otherwise with
-   `-d <dir_name>`.  For example, this checks out 'master' branch to the
-   `project-master` directory:
+   `-d <dir_name>`.  For example, this checks out 'main' branch to the
+   `project-main` directory:
 +
 ------
-     cvs co -d project-master master
+     cvs co -d project-main main
 ------
 
 [[dbbackend]]

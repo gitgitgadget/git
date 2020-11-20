@@ -51,9 +51,9 @@ applied by the upstream maintainer.  In such a workflow you might
 create and send a topic branch like this:
 
 ------------
-$ git checkout -b topic origin/master
+$ git checkout -b topic origin/main
 # work and create some commits
-$ git format-patch origin/master
+$ git format-patch origin/main
 $ git send-email ... 00*
 ------------
 
@@ -61,7 +61,7 @@ Later, you can see whether your changes have been applied by saying
 (still on `topic`):
 
 ------------
-$ git fetch  # update your notion of origin/master
+$ git fetch  # update your notion of origin/main
 $ git cherry -v
 ------------
 
@@ -72,8 +72,8 @@ In a situation where topic consisted of three commits, and the
 maintainer applied two of them, the situation might look like:
 
 ------------
-$ git log --graph --oneline --decorate --boundary origin/master...topic
-* 7654321 (origin/master) upstream tip commit
+$ git log --graph --oneline --decorate --boundary origin/main...topic
+* 7654321 (origin/main) upstream tip commit
 [... snip some other commits ...]
 * cccc111 cherry-pick of C
 * aaaa111 cherry-pick of A
@@ -89,7 +89,7 @@ In such cases, git-cherry shows a concise summary of what has yet to
 be applied:
 
 ------------
-$ git cherry origin/master topic
+$ git cherry origin/main topic
 - cccc000... commit C
 + bbbb000... commit B
 - aaaa000... commit A
@@ -97,8 +97,8 @@ $ git cherry origin/master topic
 
 Here, we see that the commits A and C (marked with `-`) can be
 dropped from your `topic` branch when you rebase it on top of
-`origin/master`, while the commit B (marked with `+`) still needs to
-be kept so that it will be sent to be applied to `origin/master`.
+`origin/main`, while the commit B (marked with `+`) still needs to
+be kept so that it will be sent to be applied to `origin/main`.
 
 
 Using a limit
@@ -109,8 +109,8 @@ other work that is not in upstream.  Expanding on the previous
 example, this might look like:
 
 ------------
-$ git log --graph --oneline --decorate --boundary origin/master...topic
-* 7654321 (origin/master) upstream tip commit
+$ git log --graph --oneline --decorate --boundary origin/main...topic
+* 7654321 (origin/main) upstream tip commit
 [... snip some other commits ...]
 * cccc111 cherry-pick of C
 * aaaa111 cherry-pick of A
@@ -129,7 +129,7 @@ By specifying `base` as the limit, you can avoid listing commits
 between `base` and `topic`:
 
 ------------
-$ git cherry origin/master topic base
+$ git cherry origin/main topic base
 - cccc000... commit C
 + bbbb000... commit B
 - aaaa000... commit A

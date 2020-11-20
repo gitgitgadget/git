@@ -275,7 +275,7 @@ test_expect_success 'dcommit $rev does not clobber current branch' '
 	test refs/heads/my-bar = $(git symbolic-ref HEAD) &&
 	git log refs/remotes/bar | grep "change 1" &&
 	! git log refs/remotes/bar | grep "change 2" &&
-	git checkout master &&
+	git checkout main &&
 	git branch -D my-bar
 	'
 

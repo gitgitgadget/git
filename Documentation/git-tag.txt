@@ -297,7 +297,7 @@ On Automatic following
 ~~~~~~~~~~~~~~~~~~~~~~
 
 If you are following somebody else's tree, you are most likely
-using remote-tracking branches (eg. `refs/remotes/origin/master`).
+using remote-tracking branches (eg. `refs/remotes/origin/main`).
 You usually want the tags from the other end.
 
 On the other hand, if you are fetching because you would want a
@@ -315,7 +315,7 @@ command line:
 ------------
 Linus, please pull from
 
-	git://git..../proj.git master
+	git://git..../proj.git main
 
 to get the following updates...
 ------------
@@ -323,7 +323,7 @@ to get the following updates...
 becomes:
 
 ------------
-$ git pull git://git..../proj.git master
+$ git pull git://git..../proj.git main
 ------------
 
 In such a case, you do not want to automatically follow the other

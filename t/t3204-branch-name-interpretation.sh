@@ -28,7 +28,7 @@ test_expect_success 'update branch via @{-1}' '
 	git branch previous one &&
 
 	git checkout previous &&
-	git checkout master &&
+	git checkout main &&
 
 	git branch -f @{-1} two &&
 	expect_branch previous two
@@ -58,7 +58,7 @@ test_expect_success 'delete branch via @{-1}' '
 	git branch previous-del &&
 
 	git checkout previous-del &&
-	git checkout master &&
+	git checkout main &&
 
 	git branch -D @{-1} &&
 	expect_deleted previous-del
@@ -98,7 +98,7 @@ test_expect_success 'disallow deleting remote branch via @{-1}' '
 	git update-ref refs/remotes/origin/previous one &&
 
 	git checkout -b origin/previous two &&
-	git checkout master &&
+	git checkout main &&
 
 	test_must_fail git branch -r -D @{-1} &&
 	expect_branch refs/remotes/origin/previous one &&

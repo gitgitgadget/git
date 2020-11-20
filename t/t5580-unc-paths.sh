@@ -53,7 +53,7 @@ test_expect_success fetch '
 	git init to-fetch &&
 	(
 		cd to-fetch &&
-		git fetch "$UNCPATH" master
+		git fetch "$UNCPATH" main
 	)
 '
 

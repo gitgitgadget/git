@@ -60,7 +60,7 @@ OPTIONS[[OPTIONS]]
 	by a colon `:`, followed by the destination ref <dst>.
 +
 The <src> is often the name of the branch you would want to push, but
-it can be any arbitrary "SHA-1 expression", such as `master~4` or
+it can be any arbitrary "SHA-1 expression", such as `main~4` or
 `HEAD` (see linkgit:gitrevisions[7]).
 +
 The <dst> tells which ref on the remote side is updated with this
@@ -73,7 +73,7 @@ be omitted--such a push will update a ref that `<src>` normally updates
 without any `<refspec>` on the command line.  Otherwise, missing
 `:<dst>` means to update the same ref as the `<src>`.
 +
-If <dst> doesn't start with `refs/` (e.g. `refs/heads/master`) we will
+If <dst> doesn't start with `refs/` (e.g. `refs/heads/main`) we will
 try to infer where in `refs/*` on the destination <repository> it
 belongs based on the type of <src> being pushed and whether <dst>
 is ambiguous.
@@ -310,15 +310,15 @@ is of course entirely defeated by something that runs `git fetch
 --all`, in that case you'd need to either disable it or do something
 more tedious like:
 +
-	git fetch              # update 'master' from remote
-	git tag base master    # mark our base point
-	git rebase -i master   # rewrite some commits
-	git push --force-with-lease=master:base master:master
+	git fetch              # update 'main' from remote
+	git tag base main    # mark our base point
+	git rebase -i main   # rewrite some commits
+	git push --force-with-lease=main:base main:main
 +
 I.e. create a `base` tag for versions of the upstream code that you've
 seen and are willing to overwrite, then rewrite history, and finally
-force push changes to `master` if the remote version is still at
-`base`, regardless of what your local `remotes/origin/master` has been
+force push changes to `main` if the remote version is still at
+`base`, regardless of what your local `remotes/origin/main` has been
 updated to in the background.
 +
 Alternatively, specifying `--force-if-includes` as an ancillary option
@@ -346,7 +346,7 @@ destinations configured with `remote.*.push` may overwrite refs
 other than the current branch (including local refs that are
 strictly behind their remote counterpart).  To force a push to only
 one branch, use a `+` in front of the refspec to push (e.g `git push
-origin +master` to force a push to the `master` branch). See the
+origin +main` to force a push to the `main` branch). See the
 `<refspec>...` section above for details.
 
 --[no-]force-if-includes::
@@ -618,21 +618,21 @@ the ones in the examples below) can be configured as the default for
 	<refspec> in the <<OPTIONS,OPTIONS>> section above for a
 	description of "matching" branches.
 
-`git push origin master`::
-	Find a ref that matches `master` in the source repository
-	(most likely, it would find `refs/heads/master`), and update
-	the same ref (e.g. `refs/heads/master`) in `origin` repository
-	with it.  If `master` did not exist remotely, it would be
+`git push origin main`::
+	Find a ref that matches `main` in the source repository
+	(most likely, it would find `refs/heads/main`), and update
+	the same ref (e.g. `refs/heads/main`) in `origin` repository
+	with it.  If `main` did not exist remotely, it would be
 	created.
 
 `git push origin HEAD`::
 	A handy way to push the current branch to the same name on the
 	remote.
 
-`git push mothership master:satellite/master dev:satellite/dev`::
-	Use the source ref that matches `master` (e.g. `refs/heads/master`)
-	to update the ref that matches `satellite/master` (most probably
-	`refs/remotes/satellite/master`) in the `mothership` repository;
+`git push mothership main:satellite/main dev:satellite/dev`::
+	Use the source ref that matches `main` (e.g. `refs/heads/main`)
+	to update the ref that matches `satellite/main` (most probably
+	`refs/remotes/satellite/main`) in the `mothership` repository;
 	do the same for `dev` and `satellite/dev`.
 +
 See the section describing `<refspec>...` above for a discussion of
@@ -650,14 +650,14 @@ ssh into the `mothership` and run `git merge` there to complete the
 emulation of `git pull` that were run on `mothership` to pull changes
 made on `satellite`.
 
-`git push origin HEAD:master`::
-	Push the current branch to the remote ref matching `master` in the
+`git push origin HEAD:main`::
+	Push the current branch to the remote ref matching `main` in the
 	`origin` repository. This form is convenient to push the current
 	branch without thinking about its local name.
 
-`git push origin master:refs/heads/experimental`::
+`git push origin main:refs/heads/experimental`::
 	Create the branch `experimental` in the `origin` repository
-	by copying the current `master` branch.  This form is only
+	by copying the current `main` branch.  This form is only
 	needed to create a new branch or tag in the remote repository when
 	the local name and the remote name are different; otherwise,
 	the ref name on its own will work.
@@ -666,14 +666,14 @@ made on `satellite`.
 	Find a ref that matches `experimental` in the `origin` repository
 	(e.g. `refs/heads/experimental`), and delete it.
 
-`git push origin +dev:master`::
-	Update the origin repository's master branch with the dev branch,
+`git push origin +dev:main`::
+	Update the origin repository's main branch with the dev branch,
 	allowing non-fast-forward updates.  *This can leave unreferenced
 	commits dangling in the origin repository.*  Consider the
 	following situation, where a fast-forward is not possible:
 +
 ----
-	    o---o---o---A---B  origin/master
+	    o---o---o---A---B  origin/main
 		     \
 		      X---Y---Z  dev
 ----
@@ -683,7 +683,7 @@ The above command would change the origin repository to
 ----
 		      A---B  (unnamed branch)
 		     /
-	    o---o---o---X---Y---Z  master
+	    o---o---o---X---Y---Z  main
 ----
 +
 Commits A and B would no longer belong to a branch with a symbolic name,

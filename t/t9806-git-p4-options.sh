@@ -27,26 +27,26 @@ test_expect_success 'clone no --git-dir' '
 	test_must_fail git p4 clone --git-dir=xx //depot
 '
 
-test_expect_success 'clone --branch should checkout master' '
+test_expect_success 'clone --branch should checkout main' '
 	git p4 clone --branch=refs/remotes/p4/sb --dest="$git" //depot &&
 	test_when_finished cleanup_git &&
 	(
 		cd "$git" &&
 		git rev-parse refs/remotes/p4/sb >sb &&
-		git rev-parse refs/heads/master >master &&
-		test_cmp sb master &&
+		git rev-parse refs/heads/main >main &&
+		test_cmp sb main &&
 		git rev-parse HEAD >head &&
 		test_cmp sb head
 	)
 '
 
-test_expect_success 'sync when no master branch prints a nice error' '
+test_expect_success 'sync when no main branch prints a nice error' '
 	test_when_finished cleanup_git &&
 	git p4 clone --branch=refs/remotes/p4/sb --dest="$git" //depot@2 &&
 	(
 		cd "$git" &&
 		test_must_fail git p4 sync 2>err &&
-		grep "Error: no branch refs/remotes/p4/master" err
+		grep "Error: no branch refs/remotes/p4/main" err
 	)
 '
 
@@ -73,7 +73,7 @@ test_expect_success 'sync --branch builds the full ref name correctly' '
 
 # engages --detect-branches code, which will do filename filtering so
 # no sync to either b1 or b2
-test_expect_success 'sync when two branches but no master should noop' '
+test_expect_success 'sync when two branches but no main should noop' '
 	test_when_finished cleanup_git &&
 	(
 		cd "$git" &&
@@ -103,15 +103,15 @@ test_expect_success 'sync --branch updates specific branch, no detection' '
 	)
 '
 
-# allows using the refname "p4" as a short name for p4/master
+# allows using the refname "p4" as a short name for p4/main
 test_expect_success 'clone creates HEAD symbolic reference' '
 	git p4 clone --dest="$git" //depot &&
 	test_when_finished cleanup_git &&
 	(
 		cd "$git" &&
-		git rev-parse --verify refs/remotes/p4/master >master &&
+		git rev-parse --verify refs/remotes/p4/main >main &&
 		git rev-parse --verify p4 >p4 &&
-		test_cmp master p4
+		test_cmp main p4
 	)
 '
 
@@ -133,7 +133,7 @@ test_expect_success 'clone --changesfile' '
 	test_when_finished cleanup_git &&
 	(
 		cd "$git" &&
-		git log --oneline p4/master >lines &&
+		git log --oneline p4/main >lines &&
 		test_line_count = 2 lines &&
 		test_path_is_file file1 &&
 		test_path_is_missing file2 &&
@@ -147,24 +147,24 @@ test_expect_success 'clone --changesfile, @all' '
 	test_must_fail git p4 clone --changesfile="$TRASH_DIRECTORY/cf" --dest="$git" //depot@all
 '
 
-# imports both master and p4/master in refs/heads
+# imports both main and p4/main in refs/heads
 # requires --import-local on sync to find p4 refs/heads
-# does not update master on sync, just p4/master
+# does not update main on sync, just p4/main
 test_expect_success 'clone/sync --import-local' '
 	git p4 clone --import-local --dest="$git" //depot@1,2 &&
 	test_when_finished cleanup_git &&
 	(
 		cd "$git" &&
-		git log --oneline refs/heads/master >lines &&
+		git log --oneline refs/heads/main >lines &&
 		test_line_count = 2 lines &&
-		git log --oneline refs/heads/p4/master >lines &&
+		git log --oneline refs/heads/p4/main >lines &&
 		test_line_count = 2 lines &&
 		test_must_fail git p4 sync &&
 
 		git p4 sync --import-local &&
-		git log --oneline refs/heads/master >lines &&
+		git log --oneline refs/heads/main >lines &&
 		test_line_count = 2 lines &&
-		git log --oneline refs/heads/p4/master >lines &&
+		git log --oneline refs/heads/p4/main >lines &&
 		test_line_count = 3 lines
 	)
 '
@@ -174,7 +174,7 @@ test_expect_success 'clone --max-changes' '
 	test_when_finished cleanup_git &&
 	(
 		cd "$git" &&
-		git log --oneline refs/heads/master >lines &&
+		git log --oneline refs/heads/main >lines &&
 		test_line_count = 2 lines
 	)
 '
@@ -237,14 +237,14 @@ test_expect_success 'clone --use-client-spec' '
 			git init &&
 			git config git-p4.useClientSpec true &&
 			git p4 sync //depot/... &&
-			git checkout -b master p4/master &&
+			git checkout -b main p4/main &&
 			test_path_is_file bus/dir/f4 &&
 			test_path_is_missing file1
 		)
 	)
 '
 
-test_expect_success 'submit works with no p4/master' '
+test_expect_success 'submit works with no p4/main' '
 	test_when_finished cleanup_git &&
 	git p4 clone --branch=b1 //depot@1,2 --destination="$git" &&
 	(
@@ -287,7 +287,7 @@ test_expect_success 'use --git-dir option and GIT_DIR' '
 		p4 submit -d "cli change"
 	) &&
 	(git --git-dir "$git" p4 sync) &&
-	(cd "$git" && git checkout -q p4/master) &&
+	(cd "$git" && git checkout -q p4/main) &&
 	test_path_is_file "$git"/cli_file.t &&
 	(
 		cd "$cli" &&
@@ -296,7 +296,7 @@ test_expect_success 'use --git-dir option and GIT_DIR' '
 		p4 submit -d "cli change2"
 	) &&
 	(GIT_DIR="$git" git p4 sync) &&
-	(cd "$git" && git checkout -q p4/master) &&
+	(cd "$git" && git checkout -q p4/main) &&
 	test_path_is_file "$git"/cli_file2.t
 '
 

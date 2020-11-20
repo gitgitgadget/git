@@ -1187,8 +1187,8 @@ msgstr "Niente da clonare da %s."
 
 #: lib/choose_repository.tcl:703 lib/choose_repository.tcl:917
 #: lib/choose_repository.tcl:929
-msgid "The 'master' branch has not been initialized."
-msgstr "Il ramo 'master' non è stato inizializzato."
+msgid "The 'main' branch has not been initialized."
+msgstr "Il ramo 'main' non è stato inizializzato."
 
 #: lib/choose_repository.tcl:716
 msgid "Hardlinks are unavailable.  Falling back to copying."

@@ -75,10 +75,10 @@ to the main README file:
   describe new commits that were included in multiple branches.  For
   example, if a single push adds the "*" commits in the diagram below,
   then post-receive-email would never include the details of the two
-  commits that are common to "master" and "branch" in its
+  commits that are common to "main" and "branch" in its
   notifications.
 
-      o---o---o---*---*---*    <-- master
+      o---o---o---*---*---*    <-- main
                        \
                         *---*  <-- branch
 

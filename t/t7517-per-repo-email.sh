@@ -47,24 +47,24 @@ test_expect_success 'set up rebase scenarios' '
 
 test_expect_success 'fast-forward rebase does not care about ident' '
 	git checkout -B tmp side-without-commit &&
-	git rebase master
+	git rebase main
 '
 
 test_expect_success 'non-fast-forward rebase refuses to write commits' '
 	test_when_finished "git rebase --abort || true" &&
 	git checkout -B tmp side-with-commit &&
-	test_must_fail git rebase master
+	test_must_fail git rebase main
 '
 
 test_expect_success 'fast-forward rebase does not care about ident (interactive)' '
 	git checkout -B tmp side-without-commit &&
-	git rebase -i master
+	git rebase -i main
 '
 
 test_expect_success 'non-fast-forward rebase refuses to write commits (interactive)' '
 	test_when_finished "git rebase --abort || true" &&
 	git checkout -B tmp side-with-commit &&
-	test_must_fail git rebase -i master
+	test_must_fail git rebase -i main
 '
 
 test_expect_success 'noop interactive rebase does not care about ident' '
@@ -75,14 +75,14 @@ test_expect_success 'noop interactive rebase does not care about ident' '
 test_expect_success REBASE_P \
 	'fast-forward rebase does not care about ident (preserve)' '
 	git checkout -B tmp side-without-commit &&
-	git rebase -p master
+	git rebase -p main
 '
 
 test_expect_success REBASE_P \
 	'non-fast-forward rebase refuses to write commits (preserve)' '
 	test_when_finished "git rebase --abort || true" &&
 	git checkout -B tmp side-with-commit &&
-	test_must_fail git rebase -p master
+	test_must_fail git rebase -p main
 '
 
 test_expect_success 'author.name overrides user.name' '

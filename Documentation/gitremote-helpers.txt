@@ -322,13 +322,13 @@ Supported if the helper has the "fetch" capability.
 	(if there is only one reference to push, a single 'push' command
 	is followed by a blank line). For example, the following would
 	be two batches of 'push', the first asking the remote-helper
-	to push the local ref 'master' to the remote ref 'master' and
+	to push the local ref 'main' to the remote ref 'main' and
 	the local `HEAD` to the remote 'branch', and the second
 	asking to push ref 'foo' to ref 'bar' (forced update requested
 	by the '+').
 +
 ------------
-push refs/heads/master:refs/heads/master
+push refs/heads/main:refs/heads/main
 push HEAD:refs/heads/branch
 \n
 push +refs/heads/foo:refs/heads/bar

@@ -105,14 +105,14 @@ test_expect_success 'setup' '
 '
 
 test_expect_success 'cvs co (default crlf)' '
-    GIT_CONFIG="$git_config" cvs -Q co -d cvswork master >cvs.log 2>&1 &&
+    GIT_CONFIG="$git_config" cvs -Q co -d cvswork main >cvs.log 2>&1 &&
     test x"$(grep '/-k' cvswork/CVS/Entries cvswork/subdir/CVS/Entries)" = x""
 '
 
 rm -rf cvswork
 test_expect_success 'cvs co (allbinary)' '
     GIT_DIR="$SERVERDIR" git config --bool gitcvs.allbinary true &&
-    GIT_CONFIG="$git_config" cvs -Q co -d cvswork master >cvs.log 2>&1 &&
+    GIT_CONFIG="$git_config" cvs -Q co -d cvswork main >cvs.log 2>&1 &&
     marked_as cvswork textfile.c -kb &&
     marked_as cvswork binfile.bin -kb &&
     marked_as cvswork .gitattributes -kb &&
@@ -125,7 +125,7 @@ test_expect_success 'cvs co (allbinary)' '
 rm -rf cvswork cvs.log
 test_expect_success 'cvs co (use attributes/allbinary)' '
     GIT_DIR="$SERVERDIR" git config --bool gitcvs.usecrlfattr true &&
-    GIT_CONFIG="$git_config" cvs -Q co -d cvswork master >cvs.log 2>&1 &&
+    GIT_CONFIG="$git_config" cvs -Q co -d cvswork main >cvs.log 2>&1 &&
     marked_as cvswork textfile.c "" &&
     marked_as cvswork binfile.bin -kb &&
     marked_as cvswork .gitattributes -kb &&
@@ -138,7 +138,7 @@ test_expect_success 'cvs co (use attributes/allbinary)' '
 rm -rf cvswork
 test_expect_success 'cvs co (use attributes)' '
     GIT_DIR="$SERVERDIR" git config --bool gitcvs.allbinary false &&
-    GIT_CONFIG="$git_config" cvs -Q co -d cvswork master >cvs.log 2>&1 &&
+    GIT_CONFIG="$git_config" cvs -Q co -d cvswork main >cvs.log 2>&1 &&
     marked_as cvswork textfile.c "" &&
     marked_as cvswork binfile.bin -kb &&
     marked_as cvswork .gitattributes "" &&
@@ -194,7 +194,7 @@ test_expect_success 'updating' '
 rm -rf cvswork
 test_expect_success 'cvs co (use attributes/guess)' '
     GIT_DIR="$SERVERDIR" git config gitcvs.allbinary guess &&
-    GIT_CONFIG="$git_config" cvs -Q co -d cvswork master >cvs.log 2>&1 &&
+    GIT_CONFIG="$git_config" cvs -Q co -d cvswork main >cvs.log 2>&1 &&
     marked_as cvswork textfile.c "" &&
     marked_as cvswork binfile.bin -kb &&
     marked_as cvswork .gitattributes "" &&
@@ -224,7 +224,7 @@ test_expect_success 'setup multi-line files' '
 rm -rf cvswork
 test_expect_success 'cvs co (guess)' '
     GIT_DIR="$SERVERDIR" git config --bool gitcvs.usecrlfattr false &&
-    GIT_CONFIG="$git_config" cvs -Q co -d cvswork master >cvs.log 2>&1 &&
+    GIT_CONFIG="$git_config" cvs -Q co -d cvswork main >cvs.log 2>&1 &&
     marked_as cvswork textfile.c "" &&
     marked_as cvswork binfile.bin -kb &&
     marked_as cvswork .gitattributes "" &&
@@ -239,7 +239,7 @@ test_expect_success 'cvs co (guess)' '
 '
 
 test_expect_success 'cvs co another copy (guess)' '
-    GIT_CONFIG="$git_config" cvs -Q co -d cvswork2 master >cvs.log 2>&1 &&
+    GIT_CONFIG="$git_config" cvs -Q co -d cvswork2 main >cvs.log 2>&1 &&
     marked_as cvswork2 textfile.c "" &&
     marked_as cvswork2 binfile.bin -kb &&
     marked_as cvswork2 .gitattributes "" &&
@@ -335,7 +335,7 @@ test_expect_success 'update subdir of other copy (guess)' '
 
 echo "starting update/merge" >> "${WORKDIR}/marked.log"
 test_expect_success 'update/merge full other copy (guess)' '
-    git pull gitcvs.git master &&
+    git pull gitcvs.git main &&
     sed "s/3/replaced_3/" < multilineTxt.c > ml.temp &&
     mv ml.temp multilineTxt.c &&
     git add multilineTxt.c &&

@@ -1356,8 +1356,8 @@ msgstr "%s から複製する内容はありません"
 
 #: lib/choose_repository.tcl:726 lib/choose_repository.tcl:940
 #: lib/choose_repository.tcl:952
-msgid "The 'master' branch has not been initialized."
-msgstr "'master' ブランチが初期化されていません"
+msgid "The 'main' branch has not been initialized."
+msgstr "'main' ブランチが初期化されていません"
 
 #: lib/choose_repository.tcl:739
 msgid "Hardlinks are unavailable.  Falling back to copying."

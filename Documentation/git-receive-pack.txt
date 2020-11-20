@@ -49,8 +49,8 @@ standard input of the hook will be one line per ref to be updated:
 
        sha1-old SP sha1-new SP refname LF
 
-The refname value is relative to $GIT_DIR; e.g. for the master
-head this is "refs/heads/master".  The two sha1 values before
+The refname value is relative to $GIT_DIR; e.g. for the main
+head this is "refs/heads/main".  The two sha1 values before
 each refname are the object names for the refname before and after
 the update.  Refs to be created will have sha1-old equal to 0\{40},
 while refs to be deleted will have sha1-new equal to 0\{40}, otherwise
@@ -123,8 +123,8 @@ and is executable, it is invoked once per ref, with three parameters:
 
        $GIT_DIR/hooks/update refname sha1-old sha1-new
 
-The refname parameter is relative to $GIT_DIR; e.g. for the master
-head this is "refs/heads/master".  The two sha1 arguments are
+The refname parameter is relative to $GIT_DIR; e.g. for the main
+head this is "refs/heads/main".  The two sha1 arguments are
 the object names for the refname before and after the update.
 Note that the hook is called before the refname is updated,
 so either sha1-old is 0\{40} (meaning there is no such ref yet),
@@ -148,8 +148,8 @@ for each successfully updated ref:
 
        sha1-old SP sha1-new SP refname LF
 
-The refname value is relative to $GIT_DIR; e.g. for the master
-head this is "refs/heads/master".  The two sha1 values before
+The refname value is relative to $GIT_DIR; e.g. for the main
+head this is "refs/heads/main".  The two sha1 values before
 each refname are the object names for the refname before and after
 the update.  Refs that were created will have sha1-old equal to
 0\{40}, while refs that were deleted will have sha1-new equal to

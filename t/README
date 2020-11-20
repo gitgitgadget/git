@@ -876,7 +876,7 @@ library for your script to use.
    For example:
 
 	test_expect_success 'Merge with d/f conflicts' '
-		test_expect_code 1 git merge "merge msg" B master
+		test_expect_code 1 git merge "merge msg" B main
 	'
 
  - test_must_fail [<options>] <git-command>

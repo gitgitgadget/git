@@ -35,7 +35,7 @@ Please see the section <<issues,ISSUES>> for further reference.
 
 You should *never* do any work of your own on the branches that are
 created by 'git cvsimport'.  By default initial import will create and populate a
-"master" branch from the CVS repository's main branch which you're free
+"main" branch from the CVS repository's main branch which you're free
 to work with; after that, you need to 'git merge' incremental imports, or
 any CVS branches, yourself.  It is advisable to specify a named remote via
 -r to separate and protect the incoming branches.
@@ -78,11 +78,11 @@ OPTIONS
 	from CVS is imported to the 'origin' branch within the Git
 	repository, as `HEAD` already has a special meaning for Git.
 	When a remote is specified the `HEAD` branch is named
-	remotes/<remote>/master mirroring 'git clone' behaviour.
+	remotes/<remote>/main mirroring 'git clone' behaviour.
 	Use this option if you want to import into a different
 	branch.
 +
-Use '-o master' for continuing an import that was initially done by
+Use '-o main' for continuing an import that was initially done by
 the old cvs2git tool.
 
 -i::

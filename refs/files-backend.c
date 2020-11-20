@@ -2944,7 +2944,7 @@ static int files_initial_transaction_commit(struct ref_store *ref_store,
 	 * the same time we do, and (2) any existing loose versions of
 	 * the references that we are setting would have precedence
 	 * over our values. But some remote helpers create the remote
-	 * "HEAD" and "master" branches before calling this function,
+	 * "HEAD" and "main" branches before calling this function,
 	 * so here we really only check that none of the references
 	 * that we are creating already exists.
 	 */

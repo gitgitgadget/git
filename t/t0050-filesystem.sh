@@ -65,7 +65,7 @@ test_expect_success "setup case tests" '
 	git mv camelcase tmp &&
 	git mv tmp CamelCase &&
 	git commit -m "rename" &&
-	git checkout -f master
+	git checkout -f main
 '
 
 test_expect_success 'rename (case change)' '
@@ -118,7 +118,7 @@ test_expect_success "setup unicode normalization tests" '
 	git mv $aumlcdiar tmp &&
 	git mv tmp "$auml" &&
 	git commit -m rename &&
-	git checkout -f master
+	git checkout -f main
 '
 
 $test_unicode 'rename (silent unicode normalization)' '
@@ -147,7 +147,7 @@ test_expect_success CASE_INSENSITIVE_FS 'checkout with no pathspec and a case in
 		git add gitweb &&
 		git commit -m "add gitweb/subdir/file" &&
 
-		git checkout master
+		git checkout main
 	)
 '
 

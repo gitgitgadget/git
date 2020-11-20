@@ -55,7 +55,7 @@ repository. You should see something like::
   remote: ===========================================================================
   remote: Date: Mon, 25 Apr 2016 18:39:59 +0200
   remote: To: foo.bar@example.com
-  remote: Subject: [git] branch master updated: foo
+  remote: Subject: [git] branch main updated: foo
   remote: MIME-Version: 1.0
   remote: Content-Type: text/plain; charset=utf-8
   remote: Content-Transfer-Encoding: 8bit
@@ -69,7 +69,7 @@ repository. You should see something like::
   remote: the administrator of this repository.
   remote: ===========================================================================
   To /path/to/repo
-     6278f04..e173f20  master -> master
+     6278f04..e173f20  main -> main
 
 Note: this does not include the sender (Return-Path: header), as it is
 not part of the message content but passed to the mailer. Some mailer

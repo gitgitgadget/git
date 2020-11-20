@@ -1206,19 +1206,19 @@ test_expect_success 'grep -e -- -- path' '
 '
 
 test_expect_success 'dashdash disambiguates rev as rev' '
-	test_when_finished "rm -f master" &&
-	echo content >master &&
-	echo master:hello.c >expect &&
-	git grep -l o master -- hello.c >actual &&
+	test_when_finished "rm -f main" &&
+	echo content >main &&
+	echo main:hello.c >expect &&
+	git grep -l o main -- hello.c >actual &&
 	test_cmp expect actual
 '
 
 test_expect_success 'dashdash disambiguates pathspec as pathspec' '
-	test_when_finished "git rm -f master" &&
-	echo content >master &&
-	git add master &&
-	echo master:content >expect &&
-	git grep o -- master >actual &&
+	test_when_finished "git rm -f main" &&
+	echo content >main &&
+	git add main &&
+	echo main:content >expect &&
+	git grep o -- main >actual &&
 	test_cmp expect actual
 '
 
@@ -1254,15 +1254,15 @@ test_expect_success 'grep --no-index pattern -- path' '
 '
 
 test_expect_success 'grep --no-index complains of revs' '
-	test_must_fail git grep --no-index o master -- 2>err &&
+	test_must_fail git grep --no-index o main -- 2>err &&
 	test_i18ngrep "cannot be used with revs" err
 '
 
 test_expect_success 'grep --no-index prefers paths to revs' '
-	test_when_finished "rm -f master" &&
-	echo content >master &&
-	echo master:content >expect &&
-	git grep --no-index o master >actual &&
+	test_when_finished "rm -f main" &&
+	echo content >main &&
+	echo main:content >expect &&
+	git grep --no-index o main >actual &&
 	test_cmp expect actual
 '
 

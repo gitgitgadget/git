@@ -58,8 +58,8 @@ test_expect_success 'simplify reachability' '
 	git for-each-ref --format="option no-deref%0adelete %(refname)" |
 	git update-ref --stdin &&
 	rm -rf .git/logs &&
-	git update-ref refs/heads/master $tip &&
-	git symbolic-ref HEAD refs/heads/master &&
+	git update-ref refs/heads/main $tip &&
+	git symbolic-ref HEAD refs/heads/main &&
 	git repack -ad
 '
 

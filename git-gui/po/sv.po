@@ -1970,8 +1970,8 @@ msgstr "Ingenting att klona från %s."
 
 #: lib/choose_repository.tcl:726 lib/choose_repository.tcl:940
 #: lib/choose_repository.tcl:952
-msgid "The 'master' branch has not been initialized."
-msgstr "Grenen \"master\" har inte initierats."
+msgid "The 'main' branch has not been initialized."
+msgstr "Grenen \"main\" har inte initierats."
 
 #: lib/choose_repository.tcl:739
 msgid "Hardlinks are unavailable.  Falling back to copying."

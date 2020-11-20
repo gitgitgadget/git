@@ -25,7 +25,7 @@ test_expect_success "setup repo" '
 	if git rev-parse --verify refs/heads/p0006-ballast^{commit}
 	then
 		echo Assuming synthetic repo from many-files.sh
-		git branch br_base            master
+		git branch br_base            main
 		git branch br_ballast         p0006-ballast
 		git config --local core.sparsecheckout 1
 		cat >.git/info/sparse-checkout <<-EOF

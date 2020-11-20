@@ -53,10 +53,10 @@ If you have multiple hideRefs values, later entries override earlier ones
 +
 If a namespace is in use, the namespace prefix is stripped from each
 reference before it is matched against `transfer.hiderefs` patterns.
-For example, if `refs/heads/master` is specified in `transfer.hideRefs` and
-the current namespace is `foo`, then `refs/namespaces/foo/refs/heads/master`
-is omitted from the advertisements but `refs/heads/master` and
-`refs/namespaces/bar/refs/heads/master` are still advertised as so-called
+For example, if `refs/heads/main` is specified in `transfer.hideRefs` and
+the current namespace is `foo`, then `refs/namespaces/foo/refs/heads/main`
+is omitted from the advertisements but `refs/heads/main` and
+`refs/namespaces/bar/refs/heads/main` are still advertised as so-called
 "have" lines. In order to match refs before stripping, add a `^` in front of
 the ref name. If you combine `!` and `^`, `!` must be specified first.
 +

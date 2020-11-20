@@ -6,10 +6,10 @@ test_description='behavior of diff with symmetric-diff setups and --merge-base'
 
 # build these situations:
 #  - normal merge with one merge base (br1...b2r);
-#  - criss-cross merge ie 2 merge bases (br1...master);
-#  - disjoint subgraph (orphan branch, br3...master).
+#  - criss-cross merge ie 2 merge bases (br1...main);
+#  - disjoint subgraph (orphan branch, br3...main).
 #
-#     B---E   <-- master
+#     B---E   <-- main
 #    / \ /
 #   A   X
 #    \ / \
@@ -32,9 +32,9 @@ test_expect_success setup '
 	git add c &&
 	git commit -m C &&
 	git tag commit-C &&
-	git merge -m D master &&
+	git merge -m D main &&
 	git tag commit-D &&
-	git checkout master &&
+	git checkout main &&
 	git merge -m E commit-C &&
 	git checkout -b br2 commit-C &&
 	echo f >f &&
@@ -58,7 +58,7 @@ test_expect_success 'diff with one merge base' '
 # It should have one of those two, which comes out
 # to seven lines.
 test_expect_success 'diff with two merge bases' '
-	git diff br1...master >tmp 2>err &&
+	git diff br1...main >tmp 2>err &&
 	test_line_count = 7 tmp &&
 	test_line_count = 1 err
 '
@@ -69,22 +69,22 @@ test_expect_success 'diff with no merge bases' '
 '
 
 test_expect_success 'diff with too many symmetric differences' '
-	test_must_fail git diff br1...master br2...br3 2>err &&
+	test_must_fail git diff br1...main br2...br3 2>err &&
 	test_i18ngrep "usage" err
 '
 
 test_expect_success 'diff with symmetric difference and extraneous arg' '
-	test_must_fail git diff master br1...master 2>err &&
+	test_must_fail git diff main br1...main 2>err &&
 	test_i18ngrep "usage" err
 '
 
 test_expect_success 'diff with two ranges' '
-	test_must_fail git diff master br1..master br2..br3 2>err &&
+	test_must_fail git diff main br1..main br2..br3 2>err &&
 	test_i18ngrep "usage" err
 '
 
 test_expect_success 'diff with ranges and extra arg' '
-	test_must_fail git diff master br1..master commit-D 2>err &&
+	test_must_fail git diff main br1..main commit-D 2>err &&
 	test_i18ngrep "usage" err
 '
 
@@ -93,21 +93,21 @@ test_expect_success 'diff --merge-base with no commits' '
 '
 
 test_expect_success 'diff --merge-base with three commits' '
-	test_must_fail git diff --merge-base br1 br2 master 2>err &&
+	test_must_fail git diff --merge-base br1 br2 main 2>err &&
 	test_i18ngrep "usage" err
 '
 
 for cmd in diff-index diff
 do
 	test_expect_success "$cmd --merge-base with one commit" '
-		git checkout master &&
+		git checkout main &&
 		git $cmd commit-C >expect &&
 		git $cmd --merge-base br2 >actual &&
 		test_cmp expect actual
 	'
 
 	test_expect_success "$cmd --merge-base with one commit and unstaged changes" '
-		git checkout master &&
+		git checkout main &&
 		test_when_finished git reset --hard &&
 		echo unstaged >>c &&
 		git $cmd commit-C >expect &&
@@ -116,7 +116,7 @@ do
 	'
 
 	test_expect_success "$cmd --merge-base with one commit and staged and unstaged changes" '
-		git checkout master &&
+		git checkout main &&
 		test_when_finished git reset --hard &&
 		echo staged >>c &&
 		git add c &&
@@ -127,7 +127,7 @@ do
 	'
 
 	test_expect_success "$cmd --merge-base --cached with one commit and staged and unstaged changes" '
-		git checkout master &&
+		git checkout main &&
 		test_when_finished git reset --hard &&
 		echo staged >>c &&
 		git add c &&
@@ -138,19 +138,19 @@ do
 	'
 
 	test_expect_success "$cmd --merge-base with non-commit" '
-		git checkout master &&
-		test_must_fail git $cmd --merge-base master^{tree} 2>err &&
+		git checkout main &&
+		test_must_fail git $cmd --merge-base main^{tree} 2>err &&
 		test_i18ngrep "fatal: --merge-base only works with commits" err
 	'
 
 	test_expect_success "$cmd --merge-base with no merge bases and one commit" '
-		git checkout master &&
+		git checkout main &&
 		test_must_fail git $cmd --merge-base br3 2>err &&
 		test_i18ngrep "fatal: no merge base found" err
 	'
 
 	test_expect_success "$cmd --merge-base with multiple merge bases and one commit" '
-		git checkout master &&
+		git checkout main &&
 		test_must_fail git $cmd --merge-base br1 2>err &&
 		test_i18ngrep "fatal: multiple merge bases found" err
 	'
@@ -159,13 +159,13 @@ done
 for cmd in diff-tree diff
 do
 	test_expect_success "$cmd --merge-base with two commits" '
-		git $cmd commit-C master >expect &&
-		git $cmd --merge-base br2 master >actual &&
+		git $cmd commit-C main >expect &&
+		git $cmd --merge-base br2 main >actual &&
 		test_cmp expect actual
 	'
 
 	test_expect_success "$cmd --merge-base commit and non-commit" '
-		test_must_fail git $cmd --merge-base br2 master^{tree} 2>err &&
+		test_must_fail git $cmd --merge-base br2 main^{tree} 2>err &&
 		test_i18ngrep "fatal: --merge-base only works with commits" err
 	'
 
@@ -175,13 +175,13 @@ do
 	'
 
 	test_expect_success "$cmd --merge-base with multiple merge bases and two commits" '
-		test_must_fail git $cmd --merge-base master br1 2>err &&
+		test_must_fail git $cmd --merge-base main br1 2>err &&
 		test_i18ngrep "fatal: multiple merge bases found" err
 	'
 done
 
 test_expect_success 'diff-tree --merge-base with one commit' '
-	test_must_fail git diff-tree --merge-base master 2>err &&
+	test_must_fail git diff-tree --merge-base main 2>err &&
 	test_i18ngrep "fatal: --merge-base only works with two commits" err
 '
 

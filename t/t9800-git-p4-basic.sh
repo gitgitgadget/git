@@ -88,7 +88,7 @@ test_expect_success 'clone two dirs' '
 		cd "$git" &&
 		git ls-files >lines &&
 		test_line_count = 2 lines &&
-		git log --oneline p4/master >lines &&
+		git log --oneline p4/main >lines &&
 		test_line_count = 1 lines
 	)
 '
@@ -106,7 +106,7 @@ test_expect_success 'clone two dirs, @all' '
 		cd "$git" &&
 		git ls-files >lines &&
 		test_line_count = 3 lines &&
-		git log --oneline p4/master >lines &&
+		git log --oneline p4/main >lines &&
 		test_line_count = 3 lines
 	)
 '
@@ -124,7 +124,7 @@ test_expect_success 'clone two dirs, @all, conflicting files' '
 		cd "$git" &&
 		git ls-files >lines &&
 		test_line_count = 3 lines &&
-		git log --oneline p4/master >lines &&
+		git log --oneline p4/main >lines &&
 		test_line_count = 4 lines &&
 		echo sub2/f3 >expected &&
 		test_cmp expected f3
@@ -146,7 +146,7 @@ test_expect_success 'clone two dirs, each edited by submit, single git commit' '
 		cd "$git" &&
 		git ls-files >lines &&
 		test_line_count = 4 lines &&
-		git log --oneline p4/master >lines &&
+		git log --oneline p4/main >lines &&
 		test_line_count = 5 lines
 	)
 '
@@ -224,9 +224,9 @@ test_expect_success 'clone --bare should make a bare repository' '
 		cd "$git" &&
 		test_path_is_missing .git &&
 		git config --get --bool core.bare true &&
-		git rev-parse --verify refs/remotes/p4/master &&
+		git rev-parse --verify refs/remotes/p4/main &&
 		git rev-parse --verify refs/remotes/p4/HEAD &&
-		git rev-parse --verify refs/heads/master &&
+		git rev-parse --verify refs/heads/main &&
 		git rev-parse --verify HEAD
 	)
 '
@@ -294,14 +294,14 @@ test_expect_success 'submit from detached head' '
 	git p4 clone --dest="$git" //depot &&
 	(
 		cd "$git" &&
-		git checkout p4/master &&
+		git checkout p4/main &&
 		>detached_head_test &&
 		git add detached_head_test &&
 		git commit -m "add detached_head" &&
 		git config git-p4.skipSubmitEdit true &&
 		git p4 submit &&
 		git p4 rebase &&
-		git log p4/master | grep detached_head
+		git log p4/main | grep detached_head
 	)
 '
 

@@ -128,7 +128,7 @@ test_expect_success 'Store files in Mock LFS based on extension (dat) and use gi
 		git config git-p4.largeFileExtensions dat &&
 		git config git-p4.largeFilePush True &&
 		git p4 sync //depot &&
-		git checkout p4/master &&
+		git checkout p4/main &&
 
 		test_file_is_not_in_mock_lfs file1.txt "content 1 txt 23 bytes" &&
 		test_file_is_in_mock_lfs file2.dat "content 2-3 bin 25 bytes" &&

@@ -1130,8 +1130,8 @@ msgstr "Нечего клонировать с %s."
 
 #: lib/choose_repository.tcl:703 lib/choose_repository.tcl:917
 #: lib/choose_repository.tcl:929
-msgid "The 'master' branch has not been initialized."
-msgstr "Не инициализирована ветвь «master»."
+msgid "The 'main' branch has not been initialized."
+msgstr "Не инициализирована ветвь «main»."
 
 #: lib/choose_repository.tcl:716
 msgid "Hardlinks are unavailable.  Falling back to copying."

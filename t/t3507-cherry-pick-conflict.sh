@@ -29,7 +29,7 @@ test_expect_success setup '
 	test_commit redundant-pick foo c redundant &&
 	git commit --allow-empty --allow-empty-message &&
 	git tag empty &&
-	git checkout master &&
+	git checkout main &&
 	git config advice.detachedhead false
 
 '

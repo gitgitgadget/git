@@ -236,11 +236,11 @@ endif::git-rev-list[]
 '%gD':: reflog selector, e.g., `refs/stash@{1}` or `refs/stash@{2
 	minutes ago}`; the format follows the rules described for the
 	`-g` option. The portion before the `@` is the refname as
-	given on the command line (so `git log -g refs/heads/master`
-	would yield `refs/heads/master@{0}`).
+	given on the command line (so `git log -g refs/heads/main`
+	would yield `refs/heads/main@{0}`).
 '%gd':: shortened reflog selector; same as `%gD`, but the refname
 	portion is shortened for human readability (so
-	`refs/heads/master` becomes just `master`).
+	`refs/heads/main` becomes just `main`).
 '%gn':: reflog identity name
 '%gN':: reflog identity name (respecting .mailmap, see
 	linkgit:git-shortlog[1] or linkgit:git-blame[1])

@@ -21,16 +21,16 @@ test_expect_success 'setup first case' '
 	git add file2 &&
 	git commit --author "U Gly <ug@localhost>" -m ugly &&
 
-	# Back to master and change something
-	git checkout master &&
+	# Back to main and change something
+	git checkout main &&
 	echo "
 
 bla" >> file1 &&
 	git commit --author "Old Line <ol@localhost>" -a -m file1.b &&
 
-	# Back to foo and merge master
+	# Back to foo and merge main
 	git checkout foo &&
-	if git merge master; then
+	if git merge main; then
 		echo needed conflict here
 		exit 1
 	else
@@ -44,8 +44,8 @@ Even more" > file2 &&
 	git rm file1 &&
 	git commit --author "M Result <mr@localhost>" -a -m merged &&
 
-	# Back to master and change file1 again
-	git checkout master &&
+	# Back to main and change file1 again
+	git checkout main &&
 	sed s/bla/foo/ <file1 >X &&
 	rm file1 &&
 	mv X file1 &&
@@ -53,7 +53,7 @@ Even more" > file2 &&
 
 	# Try to merge into foo again
 	git checkout foo &&
-	if git merge master; then
+	if git merge main; then
 		echo needed conflict here
 		exit 1
 	else

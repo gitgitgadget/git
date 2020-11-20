@@ -195,8 +195,8 @@ symref
 ------
 
 This parameterized capability is used to inform the receiver which symbolic ref
-points to which ref; for example, "symref=HEAD:refs/heads/master" tells the
-receiver that HEAD points to master. This capability can be repeated to
+points to which ref; for example, "symref=HEAD:refs/heads/main" tells the
+receiver that HEAD points to main. This capability can be repeated to
 represent multiple symrefs.
 
 Servers SHOULD include this capability for the HEAD symref if it is one of the

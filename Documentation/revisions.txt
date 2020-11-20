@@ -23,11 +23,11 @@ characters and to avoid word splitting.
   followed by a dash and a number of commits, followed by a dash, a
   'g', and an abbreviated object name.
 
-'<refname>', e.g. 'master', 'heads/master', 'refs/heads/master'::
-  A symbolic ref name.  E.g. 'master' typically means the commit
-  object referenced by 'refs/heads/master'.  If you
-  happen to have both 'heads/master' and 'tags/master', you can
-  explicitly say 'heads/master' to tell Git which one you mean.
+'<refname>', e.g. 'main', 'heads/main', 'refs/heads/main'::
+  A symbolic ref name.  E.g. 'main' typically means the commit
+  object referenced by 'refs/heads/main'.  If you
+  happen to have both 'heads/main' and 'tags/main', you can
+  explicitly say 'heads/main' to tell Git which one you mean.
   When ambiguous, a '<refname>' is disambiguated by taking the
   first match in the following rules:
 
@@ -65,7 +65,7 @@ some output processing may assume ref names in UTF-8.
 '@'::
   '@' alone is a shortcut for `HEAD`.
 
-'[<refname>]@{<date>}', e.g. 'master@\{yesterday\}', 'HEAD@{5 minutes ago}'::
+'[<refname>]@{<date>}', e.g. 'main@\{yesterday\}', 'HEAD@{5 minutes ago}'::
   A ref followed by the suffix '@' with a date specification
   enclosed in a brace
   pair (e.g. '\{yesterday\}', '{1 month 2 weeks 3 days 1 hour 1
@@ -74,15 +74,15 @@ some output processing may assume ref names in UTF-8.
   used immediately following a ref name and the ref must have an
   existing log ('$GIT_DIR/logs/<ref>'). Note that this looks up the state
   of your *local* ref at a given time; e.g., what was in your local
-  'master' branch last week. If you want to look at commits made during
+  'main' branch last week. If you want to look at commits made during
   certain times, see `--since` and `--until`.
 
-'<refname>@{<n>}', e.g. 'master@\{1\}'::
+'<refname>@{<n>}', e.g. 'main@\{1\}'::
   A ref followed by the suffix '@' with an ordinal specification
   enclosed in a brace pair (e.g. '\{1\}', '\{15\}') specifies
-  the n-th prior value of that ref.  For example 'master@\{1\}'
-  is the immediate prior value of 'master' while 'master@\{5\}'
-  is the 5th prior value of 'master'. This suffix may only be used
+  the n-th prior value of that ref.  For example 'main@\{1\}'
+  is the immediate prior value of 'main' while 'main@\{5\}'
+  is the 5th prior value of 'main'. This suffix may only be used
   immediately following a ref name and the ref must have an existing
   log ('$GIT_DIR/logs/<refname>').
 
@@ -95,7 +95,7 @@ some output processing may assume ref names in UTF-8.
   The construct '@{-<n>}' means the <n>th branch/commit checked out
   before the current one.
 
-'[<branchname>]@\{upstream\}', e.g. 'master@\{upstream\}', '@\{u\}'::
+'[<branchname>]@\{upstream\}', e.g. 'main@\{upstream\}', '@\{u\}'::
   The suffix '@\{upstream\}' to a branchname (short form '<branchname>@\{u\}')
   refers to the branch that the branch specified by branchname is set to build on
   top of (configured with `branch.<name>.remote` and
@@ -103,7 +103,7 @@ some output processing may assume ref names in UTF-8.
   current one. These suffixes are also accepted when spelled in uppercase, and
   they mean the same thing no matter the case.
 
-'[<branchname>]@\{push\}', e.g. 'master@\{push\}', '@\{push\}'::
+'[<branchname>]@\{push\}', e.g. 'main@\{push\}', '@\{push\}'::
   The suffix '@\{push}' reports the branch "where we would push to" if
   `git push` were run while `branchname` was checked out (or the current
   `HEAD` if no branchname is specified). Since our push destination is
@@ -115,10 +115,10 @@ Here's an example to make it more clear:
 ------------------------------
 $ git config push.default current
 $ git config remote.pushdefault myfork
-$ git switch -c mybranch origin/master
+$ git switch -c mybranch origin/main
 
 $ git rev-parse --symbolic-full-name @{upstream}
-refs/remotes/origin/master
+refs/remotes/origin/main
 
 $ git rev-parse --symbolic-full-name @{push}
 refs/remotes/myfork/mybranch
@@ -139,7 +139,7 @@ thing no matter the case.
   '<rev>{caret}0' means the commit itself and is used when '<rev>' is the
   object name of a tag object that refers to a commit object.
 
-'<rev>{tilde}[<n>]', e.g. 'HEAD{tilde}, master{tilde}3'::
+'<rev>{tilde}[<n>]', e.g. 'HEAD{tilde}, main{tilde}3'::
   A suffix '{tilde}' to a revision parameter means the first parent of
   that commit object.
   A suffix '{tilde}<n>' to a revision parameter means the commit
@@ -196,7 +196,7 @@ existing tag object.
   Depending on the given text, the shell's word splitting rules might
   require additional quoting.
 
-'<rev>:<path>', e.g. 'HEAD:README', 'master:./README'::
+'<rev>:<path>', e.g. 'HEAD:README', 'main:./README'::
   A suffix ':' followed by a path names the blob or tree
   at the given path in the tree-ish object named by the part
   before the colon.

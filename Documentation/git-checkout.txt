@@ -369,15 +369,15 @@ For more details, see the 'pathspec' entry in linkgit:gitglossary[7].
 
 DETACHED HEAD
 -------------
-`HEAD` normally refers to a named branch (e.g. `master`). Meanwhile, each
+`HEAD` normally refers to a named branch (e.g. `main`). Meanwhile, each
 branch refers to a specific commit. Let's look at a repo with three
-commits, one of them tagged, and with branch `master` checked out:
+commits, one of them tagged, and with branch `main` checked out:
 
 ------------
-           HEAD (refers to branch 'master')
+           HEAD (refers to branch 'main')
             |
             v
-a---b---c  branch 'master' (refers to commit 'c')
+a---b---c  branch 'main' (refers to commit 'c')
     ^
     |
   tag 'v2.0' (refers to commit 'b')
@@ -385,17 +385,17 @@ a---b---c  branch 'master' (refers to commit 'c')
 
 When a commit is created in this state, the branch is updated to refer to
 the new commit. Specifically, 'git commit' creates a new commit `d`, whose
-parent is commit `c`, and then updates branch `master` to refer to new
-commit `d`. `HEAD` still refers to branch `master` and so indirectly now refers
+parent is commit `c`, and then updates branch `main` to refer to new
+commit `d`. `HEAD` still refers to branch `main` and so indirectly now refers
 to commit `d`:
 
 ------------
 $ edit; git add; git commit
 
-               HEAD (refers to branch 'master')
+               HEAD (refers to branch 'main')
                 |
                 v
-a---b---c---d  branch 'master' (refers to commit 'd')
+a---b---c---d  branch 'main' (refers to commit 'd')
     ^
     |
   tag 'v2.0' (refers to commit 'b')
@@ -408,12 +408,12 @@ checkout commit `b` (here we show two ways this may be done):
 
 ------------
 $ git checkout v2.0  # or
-$ git checkout master^^
+$ git checkout main^^
 
    HEAD (refers to commit 'b')
     |
     v
-a---b---c---d  branch 'master' (refers to commit 'd')
+a---b---c---d  branch 'main' (refers to commit 'd')
     ^
     |
   tag 'v2.0' (refers to commit 'b')
@@ -432,7 +432,7 @@ $ edit; git add; git commit
       v
       e
      /
-a---b---c---d  branch 'master' (refers to commit 'd')
+a---b---c---d  branch 'main' (refers to commit 'd')
     ^
     |
   tag 'v2.0' (refers to commit 'b')
@@ -449,22 +449,22 @@ $ edit; git add; git commit
 	  v
       e---f
      /
-a---b---c---d  branch 'master' (refers to commit 'd')
+a---b---c---d  branch 'main' (refers to commit 'd')
     ^
     |
   tag 'v2.0' (refers to commit 'b')
 ------------
 
 In fact, we can perform all the normal Git operations. But, let's look
-at what happens when we then checkout `master`:
+at what happens when we then checkout `main`:
 
 ------------
-$ git checkout master
+$ git checkout main
 
-               HEAD (refers to branch 'master')
+               HEAD (refers to branch 'main')
       e---f     |
      /          v
-a---b---c---d  branch 'master' (refers to commit 'd')
+a---b---c---d  branch 'main' (refers to commit 'd')
     ^
     |
   tag 'v2.0' (refers to commit 'b')
@@ -517,13 +517,13 @@ to checkout these paths out of the index.
 EXAMPLES
 --------
 
-. The following sequence checks out the `master` branch, reverts
+. The following sequence checks out the `main` branch, reverts
   the `Makefile` to two revisions back, deletes `hello.c` by
   mistake, and gets it back from the index.
 +
 ------------
-$ git checkout master             <1>
-$ git checkout master~2 Makefile  <2>
+$ git checkout main             <1>
+$ git checkout main~2 Makefile  <2>
 $ rm -f hello.c
 $ git checkout hello.c            <3>
 ------------

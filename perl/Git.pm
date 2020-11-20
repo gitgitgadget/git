@@ -91,7 +91,7 @@ of your process.)
 
 TODO: In the future, we might also do
 
-	my $remoterepo = $repo->remote_repository (Name => 'cogito', Branch => 'master');
+	my $remoterepo = $repo->remote_repository (Name => 'cogito', Branch => 'main');
 	$remoterepo ||= Git->remote_repository ('http://git.or.cz/cogito.git/');
 	my @refs = $remoterepo->refs();
 

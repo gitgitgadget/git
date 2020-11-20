@@ -14,9 +14,9 @@ test_expect_success PERL 'import module' '
 
 '
 
-test_expect_success PERL 'test branch master' '
+test_expect_success PERL 'test branch main' '
 
-	test_cmp_branch_tree master
+	test_cmp_branch_tree main
 
 '
 

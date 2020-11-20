@@ -27,7 +27,7 @@ linkgit:giteveryday[7] for a useful minimum set of
 commands.  The link:user-manual.html[Git User's Manual] has a more
 in-depth introduction.
 
-After you mastered the basic concepts, you can come back to this
+After you mained the basic concepts, you can come back to this
 page to learn what commands Git offers.  You can learn more about
 individual Git commands with "git help command".  linkgit:gitcli[7]
 manual page gives you an overview of the command-line command syntax.
@@ -179,6 +179,10 @@ If you just want to run git as if it was started in `<path>` then use
 --no-optional-locks::
 	Do not perform optional operations that require locks. This is
 	equivalent to setting the `GIT_OPTIONAL_LOCKS` to `0`.
+
+--[no-]restrict-to-sparse-paths::
+	Overrides the sparse.restrictCmds configuration (see
+	linkgit:git-config[1]) for this execution.
 
 --list-cmds=group[,group...]::
 	List commands by group. This is an internal/experimental

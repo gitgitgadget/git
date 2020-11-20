@@ -111,7 +111,7 @@ test_expect_success 'check detects leftover conflict markers' '
 	git checkout HEAD^ &&
 	echo binary >>b &&
 	git commit -m "side" b &&
-	test_must_fail git merge master &&
+	test_must_fail git merge main &&
 	git add b &&
 	test_expect_code 2 git --no-pager diff --cached --check >test.out &&
 	test 3 = $(grep "conflict marker" test.out | wc -l) &&

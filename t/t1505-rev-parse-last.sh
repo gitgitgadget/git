@@ -20,12 +20,12 @@ test_expect_success 'setup' '
 	make_commit 3 &&
 	git checkout side &&
 	make_commit 4 &&
-	git merge master &&
-	git checkout master
+	git merge main &&
+	git checkout main
 
 '
 
-# 1 -- 2 -- 3 master
+# 1 -- 2 -- 3 main
 #  \         \
 #   \         \
 #    --- 4 --- 5 side
@@ -49,7 +49,7 @@ test_expect_success '@{-1}@{1} works' '
 '
 
 test_expect_success '@{-2} works' '
-	test_cmp_rev master @{-2}
+	test_cmp_rev main @{-2}
 '
 
 test_expect_success '@{-3} fails' '

@@ -78,10 +78,10 @@ As a given feature goes from experimental to stable, it also
 * 'maint' tracks the commits that should go into the next "maintenance
   release", i.e., update of the last released stable version;
 
-* 'master' tracks the commits that should go into the next release;
+* 'main' tracks the commits that should go into the next release;
 
 * 'next' is intended as a testing branch for topics being tested for
-  stability for master.
+  stability for main.
 
 There is a fourth official branch that is used slightly differently:
 
@@ -93,7 +93,7 @@ Each of the four branches is usually a direct descendant of the one
 above it.
 
 Conceptually, the feature enters at an unstable branch (usually 'next'
-or 'seen'), and "graduates" to 'master' for the next release once it is
+or 'seen'), and "graduates" to 'main' for the next release once it is
 considered stable enough.
 
 
@@ -113,7 +113,7 @@ other.
 =====================================
 
 This gives a very controlled flow of fixes.  If you notice that you
-have applied a fix to e.g. 'master' that is also required in 'maint',
+have applied a fix to e.g. 'main' that is also required in 'maint',
 you will need to cherry-pick it (using linkgit:git-cherry-pick[1])
 downwards.  This will happen a few times and is nothing to worry about
 unless you do it very frequently.
@@ -217,33 +217,33 @@ Assuming you are using the merge approach discussed above, when you
 are releasing your project you will need to do some additional branch
 management work.
 
-A feature release is created from the 'master' branch, since 'master'
+A feature release is created from the 'main' branch, since 'main'
 tracks the commits that should go into the next feature release.
 
-The 'master' branch is supposed to be a superset of 'maint'. If this
+The 'main' branch is supposed to be a superset of 'maint'. If this
 condition does not hold, then 'maint' contains some commits that
-are not included on 'master'. The fixes represented by those commits
+are not included on 'main'. The fixes represented by those commits
 will therefore not be included in your feature release.
 
-To verify that 'master' is indeed a superset of 'maint', use git log:
+To verify that 'main' is indeed a superset of 'maint', use git log:
 
-.Verify 'master' is a superset of 'maint'
+.Verify 'main' is a superset of 'maint'
 [caption="Recipe: "]
 =====================================
-`git log master..maint`
+`git log main..maint`
 =====================================
 
 This command should not list any commits.  Otherwise, check out
-'master' and merge 'maint' into it.
+'main' and merge 'maint' into it.
 
 Now you can proceed with the creation of the feature release. Apply a
-tag to the tip of 'master' indicating the release version:
+tag to the tip of 'main' indicating the release version:
 
 .Release tagging
 [caption="Recipe: "]
-=====================================
-`git tag -s -m "Git X.Y.Z" vX.Y.Z master`
-=====================================
+===================================
+`git tag -s -m "Git X.Y.Z" vX.Y.Z main`
+===================================
 
 You need to push the new tag to a public Git server (see
 "DISTRIBUTED WORKFLOWS" below). This makes the tag available to
@@ -253,7 +253,7 @@ release tarballs and preformatted documentation pages.
 
 Similarly, for a maintenance release, 'maint' is tracking the commits
 to be released. Therefore, in the steps above simply tag and push
-'maint' rather than 'master'.
+'maint' rather than 'main'.
 
 
 Maintenance branch management after a feature release
@@ -282,7 +282,7 @@ code so that maintenance fixes can be tracked for the current release:
 [caption="Recipe: "]
 =====================================
 * `git checkout maint`
-* `git merge --ff-only master`
+* `git merge --ff-only main`
 =====================================
 
 If the merge fails because it is not a fast-forward, then it is
@@ -295,13 +295,13 @@ Branch management for next and seen after a feature release
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 After a feature release, the integration branch 'next' may optionally be
-rewound and rebuilt from the tip of 'master' using the surviving
+rewound and rebuilt from the tip of 'main' using the surviving
 topics on 'next':
 
 .Rewind and rebuild next
 [caption="Recipe: "]
 =====================================
-* `git switch -C next master`
+* `git switch -C next main`
 * `git merge ai/topic_in_next1`
 * `git merge ai/topic_in_next2`
 * ...

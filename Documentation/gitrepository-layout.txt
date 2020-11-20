@@ -130,7 +130,7 @@ HEAD::
 	(i.e. a 'bare' repository), but a valid Git repository
 	*must* have the HEAD file; some porcelains may use it to
 	guess the designated "default" branch of the repository
-	(usually 'master').  It is legal if the named branch
+	(usually 'main').  It is legal if the named branch
 	'name' does not (yet) exist.  In some legacy setups, it is
 	a symbolic link instead of a symref that points at the current
 	branch.

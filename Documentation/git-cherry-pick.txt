@@ -48,7 +48,7 @@ OPTIONS
 	default, as if the `--no-walk` option was specified, see
 	linkgit:git-rev-list[1]. Note that specifying a range will
 	feed all <commit>... arguments to a single revision walk
-	(see a later example that uses 'maint master..next').
+	(see a later example that uses 'maint main..next').
 
 -e::
 --edit::
@@ -167,36 +167,36 @@ include::sequencer.txt[]
 
 EXAMPLES
 --------
-`git cherry-pick master`::
+`git cherry-pick main`::
 
 	Apply the change introduced by the commit at the tip of the
-	master branch and create a new commit with this change.
+	main branch and create a new commit with this change.
 
-`git cherry-pick ..master`::
-`git cherry-pick ^HEAD master`::
+`git cherry-pick ..main`::
+`git cherry-pick ^HEAD main`::
 
 	Apply the changes introduced by all commits that are ancestors
-	of master but not of HEAD to produce new commits.
+	of main but not of HEAD to produce new commits.
 
-`git cherry-pick maint next ^master`::
-`git cherry-pick maint master..next`::
+`git cherry-pick maint next ^main`::
+`git cherry-pick maint main..next`::
 
 	Apply the changes introduced by all commits that are
-	ancestors of maint or next, but not master or any of its
+	ancestors of maint or next, but not main or any of its
 	ancestors.  Note that the latter does not mean `maint` and
-	everything between `master` and `next`; specifically,
-	`maint` will not be used if it is included in `master`.
+	everything between `main` and `next`; specifically,
+	`maint` will not be used if it is included in `main`.
 
-`git cherry-pick master~4 master~2`::
+`git cherry-pick main~4 main~2`::
 
 	Apply the changes introduced by the fifth and third last
-	commits pointed to by master and create 2 new commits with
+	commits pointed to by main and create 2 new commits with
 	these changes.
 
-`git cherry-pick -n master~1 next`::
+`git cherry-pick -n main~1 next`::
 
 	Apply to the working tree and the index the changes introduced
-	by the second last commit pointed to by master and by the last
+	by the second last commit pointed to by main and by the last
 	commit pointed to by next, but do not create any commit with
 	these changes.
 
@@ -208,9 +208,9 @@ EXAMPLES
 	are in next but not HEAD to the current branch, creating a new
 	commit for each new change.
 
-`git rev-list --reverse master -- README | git cherry-pick -n --stdin`::
+`git rev-list --reverse main -- README | git cherry-pick -n --stdin`::
 
-	Apply the changes introduced by all commits on the master
+	Apply the changes introduced by all commits on the main
 	branch that touched README to the working tree and index,
 	so the result can be inspected and made into a single new
 	commit if suitable.

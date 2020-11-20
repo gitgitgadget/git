@@ -271,7 +271,7 @@ test_expect_success 'cope with rcs keyword expansion damage' '
 		git commit -m "Zap an RCS kw line" &&
 		git p4 submit &&
 		git p4 rebase &&
-		git diff p4/master &&
+		git diff p4/main &&
 		git p4 commit &&
 		echo "try modifying in both" &&
 		cd "$cli" &&

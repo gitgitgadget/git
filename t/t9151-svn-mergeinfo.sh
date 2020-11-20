@@ -50,7 +50,7 @@ test_expect_success 'merging two branches in one commit is detected correctly' '
 	'
 
 test_expect_failure 'everything got merged in the end' '
-	unmerged=$(git rev-list --all --not master) &&
+	unmerged=$(git rev-list --all --not main) &&
 	[ -z "$unmerged" ]
 	'
 

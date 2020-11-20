@@ -124,7 +124,7 @@ inspect() {
 }
 
 test_expect_success 'submodule add' '
-	echo "refs/heads/master" >expect &&
+	echo "refs/heads/main" >expect &&
 
 	(
 		cd addtest &&
@@ -223,7 +223,7 @@ test_expect_success 'submodule add --branch' '
 	echo "refs/heads/initial" >expect-head &&
 	cat <<-\EOF >expect-heads &&
 	refs/heads/initial
-	refs/heads/master
+	refs/heads/main
 	EOF
 
 	(
@@ -241,7 +241,7 @@ test_expect_success 'submodule add --branch' '
 '
 
 test_expect_success 'submodule add with ./ in path' '
-	echo "refs/heads/master" >expect &&
+	echo "refs/heads/main" >expect &&
 
 	(
 		cd addtest &&
@@ -257,7 +257,7 @@ test_expect_success 'submodule add with ./ in path' '
 '
 
 test_expect_success 'submodule add with /././ in path' '
-	echo "refs/heads/master" >expect &&
+	echo "refs/heads/main" >expect &&
 
 	(
 		cd addtest &&
@@ -273,7 +273,7 @@ test_expect_success 'submodule add with /././ in path' '
 '
 
 test_expect_success 'submodule add with // in path' '
-	echo "refs/heads/master" >expect &&
+	echo "refs/heads/main" >expect &&
 
 	(
 		cd addtest &&
@@ -289,7 +289,7 @@ test_expect_success 'submodule add with // in path' '
 '
 
 test_expect_success 'submodule add with /.. in path' '
-	echo "refs/heads/master" >expect &&
+	echo "refs/heads/main" >expect &&
 
 	(
 		cd addtest &&
@@ -305,7 +305,7 @@ test_expect_success 'submodule add with /.. in path' '
 '
 
 test_expect_success 'submodule add with ./, /.. and // in path' '
-	echo "refs/heads/master" >expect &&
+	echo "refs/heads/main" >expect &&
 
 	(
 		cd addtest &&
@@ -335,7 +335,7 @@ test_expect_success !CYGWIN 'submodule add with \\ in path' '
 '
 
 test_expect_success 'submodule add in subdirectory' '
-	echo "refs/heads/master" >expect &&
+	echo "refs/heads/main" >expect &&
 
 	mkdir addtest/sub &&
 	(
@@ -557,7 +557,7 @@ test_expect_success 'status should be "up-to-date" after update' '
 
 test_expect_success 'checkout superproject with subproject already present' '
 	git checkout initial &&
-	git checkout master
+	git checkout main
 '
 
 test_expect_success 'apply submodule diff' '
@@ -574,7 +574,7 @@ test_expect_success 'apply submodule diff' '
 	git checkout second &&
 	git apply --index P.diff &&
 
-	git diff --cached master >staged &&
+	git diff --cached main >staged &&
 	test_must_be_empty staged
 '
 

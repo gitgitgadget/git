@@ -25,7 +25,7 @@ test_expect_success GPG 'create signed commits' '
 	echo 3 >elif && git add elif &&
 	test_tick && git commit -m "third on side" &&
 
-	git checkout master &&
+	git checkout main &&
 	test_tick && git merge -S side &&
 	git tag merge &&
 

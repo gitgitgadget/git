@@ -128,15 +128,15 @@ test_expect_success 'setup criss-cross' '
 	(cd criss-cross &&
 	 git init &&
 	 test_commit A &&
-	 git checkout -b xb master &&
+	 git checkout -b xb main &&
 	 test_commit B &&
-	 git checkout -b xc master &&
+	 git checkout -b xc main &&
 	 test_commit C &&
 	 git checkout -b xbc xb -- &&
 	 git merge xc &&
 	 git checkout -b xcb xc -- &&
 	 git merge xb &&
-	 git checkout master)
+	 git checkout main)
 '
 
 # no commits in bc descend from cb

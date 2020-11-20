@@ -3552,7 +3552,7 @@ sub parse_commit_text {
 					$title =~ s/(http|rsync):\/\///;
 				}
 				if (length($title) > 50) {
-					$title =~ s/(master|www|rsync)\.//;
+					$title =~ s/(main|www|rsync)\.//;
 				}
 				if (length($title) > 50) {
 					$title =~ s/kernel.org:?//;

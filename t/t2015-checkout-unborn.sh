@@ -11,7 +11,7 @@ test_expect_success 'setup' '
 	 git add file &&
 	 git commit -m base
 	) &&
-	git fetch parent master:origin
+	git fetch parent main:origin
 '
 
 test_expect_success 'checkout from unborn preserves untracked files' '

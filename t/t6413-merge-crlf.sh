@@ -24,7 +24,7 @@ test_expect_success setup '
 	echo line from b | append_cr >file &&
 	git commit -m "add line from b" file &&
 	git tag b &&
-	git checkout master
+	git checkout main
 '
 
 test_expect_success 'Check "ours" is CRLF' '
