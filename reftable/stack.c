@@ -212,7 +212,6 @@ static int reftable_stack_reload_once(struct reftable_stack *st, char **names,
 		goto done;
 
 	new_tables = NULL;
-	st->readers_len = new_readers_len;
 	if (st->merged != NULL) {
 		merged_table_release(st->merged);
 		reftable_merged_table_free(st->merged);
@@ -220,6 +219,7 @@ static int reftable_stack_reload_once(struct reftable_stack *st, char **names,
 	if (st->readers != NULL) {
 		reftable_free(st->readers);
 	}
+	st->readers_len = new_readers_len;
 	st->readers = new_readers;
 	new_readers = NULL;
 	new_readers_len = 0;
@@ -939,14 +939,6 @@ static int stack_compact_range(struct reftable_stack *st, int first, int last,
 	strbuf_addstr(&new_table_path, "/");
 	strbuf_addbuf(&new_table_path, &new_table_name);
 
-	if (!is_empty_table) {
-		err = rename(temp_tab_file_name.buf, new_table_path.buf);
-		if (err < 0) {
-			err = REFTABLE_IO_ERROR;
-			goto done;
-		}
-	}
-
 	for (i = 0; i < first; i++) {
 		strbuf_addstr(&ref_list_contents, st->readers[i]->name);
 		strbuf_addstr(&ref_list_contents, "\n");
@@ -958,6 +950,32 @@ static int stack_compact_range(struct reftable_stack *st, int first, int last,
 	for (i = last + 1; i < st->merged->stack_len; i++) {
 		strbuf_addstr(&ref_list_contents, st->readers[i]->name);
 		strbuf_addstr(&ref_list_contents, "\n");
+	}
+
+	/*
+	 * Now release the merged tables and readers
+	 */
+	if (st->merged != NULL) {
+		reftable_merged_table_free(st->merged);
+		st->merged = NULL;
+	}
+
+	if (st->readers != NULL) {
+		int i = 0;
+		for (i = 0; i < st->readers_len; i++) {
+			reader_close(st->readers[i]);
+			reftable_reader_free(st->readers[i]);
+		}
+		st->readers_len = 0;
+		FREE_AND_NULL(st->readers);
+	}
+
+	if (!is_empty_table) {
+		err = rename(temp_tab_file_name.buf, new_table_path.buf);
+		if (err < 0) {
+			err = REFTABLE_IO_ERROR;
+			goto done;
+		}
 	}
 
 	err = write(lock_file_fd, ref_list_contents.buf, ref_list_contents.len);
@@ -1242,6 +1260,7 @@ done:
 
 	free(refs);
 	reftable_iterator_destroy(&it);
+	reader_close(rd);
 	reftable_reader_free(rd);
 	return err;
 }

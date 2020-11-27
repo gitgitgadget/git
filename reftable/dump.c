@@ -82,7 +82,7 @@ static int dump_table(const char *tablename)
 static int compact_stack(const char *stackdir)
 {
 	struct reftable_stack *stack = NULL;
-	struct reftable_write_options cfg = {};
+	struct reftable_write_options cfg = { 0 };
 
 	int err = reftable_new_stack(&stack, stackdir, cfg);
 	if (err < 0)
@@ -101,7 +101,7 @@ done:
 static int dump_stack(const char *stackdir)
 {
 	struct reftable_stack *stack = NULL;
-	struct reftable_write_options cfg = {};
+	struct reftable_write_options cfg = { 0 };
 	struct reftable_iterator it = { NULL };
 	struct reftable_ref_record ref = { NULL };
 	struct reftable_log_record log = { NULL };
@@ -167,40 +167,34 @@ static void print_help(void)
 int reftable_dump_main(int argc, char *const *argv)
 {
 	int err = 0;
-	int opt;
 	int opt_dump_table = 0;
 	int opt_dump_stack = 0;
 	int opt_compact = 0;
-	const char *arg = NULL;
-	while ((opt = getopt(argc, argv, "2chts")) != -1) {
-		switch (opt) {
-		case '2':
+	const char *arg = NULL, *argv0 = argv[0];
+
+	for (; argc > 1; argv++, argc--)
+		if (*argv[1] != '-')
+			break;
+		else if (!strcmp("-2", argv[1]))
 			hash_id = 0x73323536;
-			break;
-		case 't':
+		else if (!strcmp("-t", argv[1]))
 			opt_dump_table = 1;
-			break;
-		case 's':
+		else if (!strcmp("-s", argv[1]))
 			opt_dump_stack = 1;
-			break;
-		case 'c':
+		else if (!strcmp("-c", argv[1]))
 			opt_compact = 1;
-			break;
-		case '?':
-		case 'h':
+		else if (!strcmp("-?", argv[1]) || !strcmp("-h", argv[1])) {
 			print_help();
 			return 2;
-			break;
 		}
-	}
 
-	if (argv[optind] == NULL) {
+	if (argc != 2) {
 		fprintf(stderr, "need argument\n");
 		print_help();
 		return 2;
 	}
 
-	arg = argv[optind];
+	arg = argv[1];
 
 	if (opt_dump_table) {
 		err = dump_table(arg);
@@ -211,7 +205,7 @@ int reftable_dump_main(int argc, char *const *argv)
 	}
 
 	if (err < 0) {
-		fprintf(stderr, "%s: %s: %s\n", argv[0], arg,
+		fprintf(stderr, "%s: %s: %s\n", argv0, arg,
 			reftable_error_str(err));
 		return 1;
 	}
