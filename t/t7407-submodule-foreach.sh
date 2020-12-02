@@ -80,6 +80,66 @@ test_expect_success 'test basic "submodule foreach" usage' '
 	test_i18ncmp expect actual
 '
 
+sub2sha1=$(cd super/sub2 && git rev-parse HEAD)
+
+cat > expect <<EOF
+Entering 'sub2'
+$pwd/clone-foo2-sub2-$sub2sha1
+EOF
+
+test_expect_success 'test "submodule--helper foreach --no-populated" usage' '
+	(
+		cd clone &&
+		git submodule--helper foreach --no-populated "echo \$toplevel-\$name-\$path-\$sha1" > ../actual
+	) &&
+	test_i18ncmp expect actual
+'
+
+cat > expect <<EOF
+Entering 'sub3'
+$pwd/clone-foo3-sub3-$sub3sha1
+EOF
+
+test_expect_success 'test "submodule--helper foreach --active" usage' '
+	test_when_finished "git -C clone config --unset submodule.foo1.active" &&
+	(
+		cd clone &&
+		git config --bool submodule.foo1.active "false" &&
+		git submodule--helper foreach --active "echo \$toplevel-\$name-\$path-\$sha1" > ../actual
+	) &&
+	test_i18ncmp expect actual
+'
+
+cat > expect <<EOF
+Entering 'sub1'
+$pwd/clone-foo1-sub1-$sub1sha1
+EOF
+
+test_expect_success 'test "submodule--helper foreach --no-active" usage' '
+	test_when_finished "git -C clone config --unset submodule.foo1.active" &&
+	(
+		cd clone &&
+		git config --bool submodule.foo1.active "false" &&
+		git submodule--helper foreach --no-active "echo \$toplevel-\$name-\$path-\$sha1" > ../actual
+	) &&
+	test_i18ncmp expect actual
+'
+
+cat > expect <<EOF
+Entering 'sub1'
+$pwd/clone-foo1-sub1-$sub1sha1
+EOF
+
+test_expect_success 'test "submodule--helper foreach --branch" usage' '
+	test_when_finished "git -C clone config  -f .gitmodules --unset submodule.foo1.branch" &&
+	(
+		cd clone &&
+		git config -f .gitmodules --add submodule.foo1.branch test &&
+		git submodule--helper foreach --branch test "echo \$toplevel-\$name-\$path-\$sha1" > ../actual
+	) &&
+	test_i18ncmp expect actual
+'
+
 cat >expect <<EOF
 Entering '../sub1'
 $pwd/clone-foo1-sub1-../sub1-$sub1sha1

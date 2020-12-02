@@ -450,13 +450,19 @@ struct foreach_cb {
 	const char *prefix;
 	int quiet;
 	int recursive;
+	int active_only;
+	int populated_only;
+	struct string_list remote_branch_filter;
 };
-#define FOREACH_CB_INIT { 0 }
 
-static void runcommand_in_submodule_cb(const struct cache_entry *list_item,
-				       void *cb_data)
+#define FOREACH_BOOL_FILTER_NOT_SET -1
+
+#define FOREACH_CB_INIT { .active_only = FOREACH_BOOL_FILTER_NOT_SET, \
+	.populated_only = 1, .remote_branch_filter = STRING_LIST_INIT_NODUP }
+
+static void runcommand_in_submodule(const struct cache_entry *list_item,
+				    struct foreach_cb *info)
 {
-	struct foreach_cb *info = cb_data;
 	const char *path = list_item->name;
 	const struct object_id *ce_oid = &list_item->oid;
 
@@ -471,9 +477,6 @@ static void runcommand_in_submodule_cb(const struct cache_entry *list_item,
 	if (!sub)
 		die(_("No url found for submodule path '%s' in .gitmodules"),
 			displaypath);
-
-	if (!is_submodule_populated_gently(path, NULL))
-		goto cleanup;
 
 	prepare_submodule_repo_env(&cp.env_array);
 
@@ -551,8 +554,37 @@ static void runcommand_in_submodule_cb(const struct cache_entry *list_item,
 				displaypath);
 	}
 
-cleanup:
 	free(displaypath);
+}
+
+static const char *remote_submodule_branch(const char *path);
+
+static void runcommand_in_submodule_filtered_cb(const struct cache_entry *list_item,
+						void *cb_data)
+{
+	const char *path = list_item->name;
+	struct foreach_cb *info = cb_data;
+	int is_active;
+	const char *branch;
+
+	if (info->active_only != FOREACH_BOOL_FILTER_NOT_SET) {
+		is_active = is_submodule_active(the_repository, path);
+		if (is_active != info->active_only)
+			return;
+	}
+
+	if (info->populated_only != is_submodule_populated_gently(path, NULL))
+		return;
+
+	if (info->remote_branch_filter.nr) {
+		branch = remote_submodule_branch(path);
+		if (!branch)
+			return;
+		if (!unsorted_string_list_has_string(&info->remote_branch_filter, branch))
+			return;
+	}
+
+	runcommand_in_submodule(list_item, info);
 }
 
 static int module_foreach(int argc, const char **argv, const char *prefix)
@@ -565,11 +597,17 @@ static int module_foreach(int argc, const char **argv, const char *prefix)
 		OPT__QUIET(&info.quiet, N_("Suppress output of entering each submodule command")),
 		OPT_BOOL(0, "recursive", &info.recursive,
 			 N_("Recurse into nested submodules")),
+		OPT_BOOL(0, "active", &info.active_only,
+			 N_("Call command depending on submodule active state")),
+		OPT_BOOL(0, "populated", &info.populated_only,
+			 N_("Call command depending on submodule populated state")),
+		OPT_STRING_LIST('b', "branch", &info.remote_branch_filter,
+			 N_("branch"), N_("Call command only if submodule remote branch is one of <branch> given")),
 		OPT_END()
 	};
 
 	const char *const git_submodule_helper_usage[] = {
-		N_("git submodule--helper foreach [--quiet] [--recursive] [--] <command>"),
+		N_("git submodule--helper foreach [--quiet] [--recursive] [--[no-]active] [--[no-]populated] [-b|--branch <branch>] [--] <command>"),
 		NULL
 	};
 
@@ -583,7 +621,9 @@ static int module_foreach(int argc, const char **argv, const char *prefix)
 	info.argv = argv;
 	info.prefix = prefix;
 
-	for_each_listed_submodule(&list, runcommand_in_submodule_cb, &info);
+	for_each_listed_submodule(&list, runcommand_in_submodule_filtered_cb, &info);
+
+	string_list_clear(&info.remote_branch_filter, 0);
 
 	return 0;
 }
