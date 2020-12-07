@@ -56,6 +56,9 @@ typedef int (*chunk_read_fn)(const unsigned char *chunk_start,
 struct read_chunk_info {
 	uint32_t id;
 	chunk_read_fn read_fn;
+
+	/* used internally */
+	unsigned found:1;
 };
 
 int read_table_of_contents(const unsigned char *mfile,

@@ -57,8 +57,12 @@ int read_table_of_contents(const unsigned char *mfile,
 			   int nr,
 			   void *data)
 {
+	int i;
 	uint32_t chunk_id;
 	const unsigned char *table_of_contents = mfile + toc_offset;
+
+	for (i = 0; i < nr; i++)
+		chunks[i].found = 0;
 
 	while (toc_length--) {
 		int i;
@@ -83,7 +87,16 @@ int read_table_of_contents(const unsigned char *mfile,
 		}
 		for (i = 0; i < nr; i++) {
 			if (chunks[i].id == chunk_id) {
-				int result = chunks[i].read_fn(
+				int result;
+
+				if (chunks[i].found) {
+					error(_("duplicate chunk ID %"PRIx32" found"),
+					      chunk_id);
+					return 1;
+				}
+
+				chunks[i].found = 1;
+				result = chunks[i].read_fn(
 						mfile + chunk_offset,
 						next_chunk_offset - chunk_offset,
 						data);
