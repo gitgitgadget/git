@@ -180,12 +180,13 @@ test_expect_success 'tag that cannot be exported' '
 	git p4 clone --dest="$git" //depot@all &&
 	(
 		cd "$git" &&
+		git branch -M main &&
 		git checkout -b a_branch &&
 		echo "hello" >main/f12 &&
 		git add main/f12 &&
 		git commit -m "adding f12" &&
 		git tag -m "tag on a_branch" GIT_TAG_ON_A_BRANCH &&
-		git checkout master &&
+		git checkout main &&
 		git p4 submit --export-labels
 	) &&
 	(

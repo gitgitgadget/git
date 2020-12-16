@@ -111,15 +111,16 @@ test_expect_success 'submit with allowSubmit' '
 	(
 		cd "$git" &&
 		test_commit "file5" &&
+		git branch -M main &&
 		git config git-p4.skipSubmitEdit true &&
 		git config git-p4.allowSubmit "nobranch" &&
 		test_must_fail git p4 submit &&
-		git config git-p4.allowSubmit "nobranch,master" &&
+		git config git-p4.allowSubmit "nobranch,main" &&
 		git p4 submit
 	)
 '
 
-test_expect_success 'submit with master branch name from argv' '
+test_expect_success 'submit with main branch name from argv' '
 	test_when_finished cleanup_git &&
 	git p4 clone --dest="$git" //depot &&
 	(

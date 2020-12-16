@@ -222,11 +222,12 @@ test_expect_success 'clone --bare should make a bare repository' '
 	test_when_finished cleanup_git &&
 	(
 		cd "$git" &&
+		git branch -M main &&
 		test_path_is_missing .git &&
 		git config --get --bool core.bare true &&
 		git rev-parse --verify refs/remotes/p4/master &&
 		git rev-parse --verify refs/remotes/p4/HEAD &&
-		git rev-parse --verify refs/heads/master &&
+		git rev-parse --verify refs/heads/main &&
 		git rev-parse --verify HEAD
 	)
 '

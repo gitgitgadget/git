@@ -66,8 +66,9 @@ test_expect_success 'import main, no branch detection' '
 	git p4 clone --dest="$git" //depot/main@all &&
 	(
 		cd "$git" &&
+		git branch -M main &&
 		git log --oneline --graph --decorate --all &&
-		git rev-list master -- >wc &&
+		git rev-list main -- >wc &&
 		test_line_count = 4 wc
 	)
 '
@@ -77,8 +78,9 @@ test_expect_success 'import branch1, no branch detection' '
 	git p4 clone --dest="$git" //depot/branch1@all &&
 	(
 		cd "$git" &&
+		git branch -M main &&
 		git log --oneline --graph --decorate --all &&
-		git rev-list master -- >wc &&
+		git rev-list main -- >wc &&
 		test_line_count = 2 wc
 	)
 '
@@ -88,8 +90,9 @@ test_expect_success 'import branch2, no branch detection' '
 	git p4 clone --dest="$git" //depot/branch2@all &&
 	(
 		cd "$git" &&
+		git branch -M main &&
 		git log --oneline --graph --decorate --all &&
-		git rev-list master -- >wc &&
+		git rev-list main -- >wc &&
 		test_line_count = 2 wc
 	)
 '
@@ -99,8 +102,9 @@ test_expect_success 'import depot, no branch detection' '
 	git p4 clone --dest="$git" //depot@all &&
 	(
 		cd "$git" &&
+		git branch -M main &&
 		git log --oneline --graph --decorate --all &&
-		git rev-list master -- >wc &&
+		git rev-list main -- >wc &&
 		test_line_count = 8 wc
 	)
 '
@@ -110,11 +114,12 @@ test_expect_success 'import depot, branch detection' '
 	git p4 clone --dest="$git" --detect-branches //depot@all &&
 	(
 		cd "$git" &&
+		git branch -M main &&
 
 		git log --oneline --graph --decorate --all &&
 
 		# 4 main commits
-		git rev-list master -- >wc &&
+		git rev-list main -- >wc &&
 		test_line_count = 4 wc &&
 
 		# 3 main, 1 integrate, 1 on branch2
@@ -133,11 +138,12 @@ test_expect_success 'import depot, branch detection, branchList branch definitio
 		cd "$git" &&
 		git config git-p4.branchList main:branch1 &&
 		git p4 clone --dest=. --detect-branches //depot@all &&
+		git branch -M main &&
 
 		git log --oneline --graph --decorate --all &&
 
 		# 4 main commits
-		git rev-list master -- >wc &&
+		git rev-list main -- >wc &&
 		test_line_count = 4 wc &&
 
 		# 3 main, 1 integrate, 1 on branch2
@@ -484,7 +490,7 @@ test_expect_success 'use-client-spec detect-branches files in top-level' '
 	(
 		cd "$git" &&
 		git p4 sync --detect-branches --use-client-spec //depot/usecs@all &&
-		git checkout -b master p4/usecs/b1 &&
+		git checkout -b main p4/usecs/b1 &&
 		test_path_is_file b1-file1 &&
 		test_path_is_missing b2-file2 &&
 		test_path_is_missing b1 &&
@@ -537,7 +543,7 @@ test_expect_success 'use-client-spec detect-branches skips files in branches' '
 	(
 		cd "$git" &&
 		git p4 sync --detect-branches --use-client-spec //depot/usecs@all &&
-		git checkout -b master p4/usecs/b3 &&
+		git checkout -b main p4/usecs/b3 &&
 		test_path_is_file b1-file1 &&
 		test_path_is_file b3-file3_2 &&
 		test_path_is_missing b3-file3_1

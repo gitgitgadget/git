@@ -27,20 +27,21 @@ test_expect_success 'clone no --git-dir' '
 	test_must_fail git p4 clone --git-dir=xx //depot
 '
 
-test_expect_success 'clone --branch should checkout master' '
+test_expect_success 'clone --branch should checkout main' '
 	git p4 clone --branch=refs/remotes/p4/sb --dest="$git" //depot &&
 	test_when_finished cleanup_git &&
 	(
 		cd "$git" &&
+		git branch -M main &&
 		git rev-parse refs/remotes/p4/sb >sb &&
-		git rev-parse refs/heads/master >master &&
-		test_cmp sb master &&
+		git rev-parse refs/heads/main >main &&
+		test_cmp sb main &&
 		git rev-parse HEAD >head &&
 		test_cmp sb head
 	)
 '
 
-test_expect_success 'sync when no master branch prints a nice error' '
+test_expect_success 'sync when no p4/master branch prints a nice error' '
 	test_when_finished cleanup_git &&
 	git p4 clone --branch=refs/remotes/p4/sb --dest="$git" //depot@2 &&
 	(
@@ -73,7 +74,7 @@ test_expect_success 'sync --branch builds the full ref name correctly' '
 
 # engages --detect-branches code, which will do filename filtering so
 # no sync to either b1 or b2
-test_expect_success 'sync when two branches but no master should noop' '
+test_expect_success 'sync when two branches but no p4/master should noop' '
 	test_when_finished cleanup_git &&
 	(
 		cd "$git" &&
@@ -155,14 +156,15 @@ test_expect_success 'clone/sync --import-local' '
 	test_when_finished cleanup_git &&
 	(
 		cd "$git" &&
-		git log --oneline refs/heads/master >lines &&
+		git branch -M main &&
+		git log --oneline refs/heads/main >lines &&
 		test_line_count = 2 lines &&
 		git log --oneline refs/heads/p4/master >lines &&
 		test_line_count = 2 lines &&
 		test_must_fail git p4 sync &&
 
 		git p4 sync --import-local &&
-		git log --oneline refs/heads/master >lines &&
+		git log --oneline refs/heads/main >lines &&
 		test_line_count = 2 lines &&
 		git log --oneline refs/heads/p4/master >lines &&
 		test_line_count = 3 lines
@@ -174,7 +176,8 @@ test_expect_success 'clone --max-changes' '
 	test_when_finished cleanup_git &&
 	(
 		cd "$git" &&
-		git log --oneline refs/heads/master >lines &&
+		git branch -M main &&
+		git log --oneline refs/heads/main >lines &&
 		test_line_count = 2 lines
 	)
 '
@@ -237,7 +240,7 @@ test_expect_success 'clone --use-client-spec' '
 			git init &&
 			git config git-p4.useClientSpec true &&
 			git p4 sync //depot/... &&
-			git checkout -b master p4/master &&
+			git checkout -b main p4/master &&
 			test_path_is_file bus/dir/f4 &&
 			test_path_is_missing file1
 		)
