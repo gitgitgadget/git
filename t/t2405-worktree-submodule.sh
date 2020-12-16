@@ -13,6 +13,7 @@ test_expect_success 'setup: create origin repos'  '
 	test_commit -C origin/main first &&
 	git -C origin/main submodule add ../sub &&
 	git -C origin/main commit -m "add sub" &&
+	git -C origin/main branch -M main &&
 	test_commit -C origin/sub "file1 updated" file1 file1updated file1updated &&
 	git -C origin/main/sub pull &&
 	git -C origin/main add sub &&
@@ -31,7 +32,7 @@ test_expect_success 'add superproject worktree' '
 '
 
 test_expect_failure 'submodule is checked out just after worktree add' '
-	git -C worktree diff --submodule master"^!" >out &&
+	git -C worktree diff --submodule main"^!" >out &&
 	grep "file1 updated" out
 '
 
@@ -41,7 +42,7 @@ test_expect_success 'add superproject worktree and initialize submodules' '
 '
 
 test_expect_success 'submodule is checked out just after submodule update in linked worktree' '
-	git -C worktree-submodule-update diff --submodule master"^!" >out &&
+	git -C worktree-submodule-update diff --submodule main"^!" >out &&
 	grep "file1 updated" out
 '
 
@@ -51,7 +52,7 @@ test_expect_success 'add superproject worktree and manually add submodule worktr
 '
 
 test_expect_success 'submodule is checked out after manually adding submodule worktree' '
-	git -C linked_submodule diff --submodule master"^!" >out &&
+	git -C linked_submodule diff --submodule main"^!" >out &&
 	grep "file1 updated" out
 '
 

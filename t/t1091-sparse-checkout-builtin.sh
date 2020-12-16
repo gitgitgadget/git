@@ -20,7 +20,7 @@ check_files() {
 }
 
 test_expect_success 'setup' '
-	git init repo &&
+	git init -b main repo &&
 	(
 		cd repo &&
 		echo "initial" >a &&
@@ -117,7 +117,7 @@ test_expect_success 'interaction with clone --no-checkout (unborn index)' '
 	test_path_is_missing clone_no_checkout/.git/index &&
 
 	# No branch is checked out until we manually switch to one
-	git -C clone_no_checkout switch master &&
+	git -C clone_no_checkout switch main &&
 	test_path_is_file clone_no_checkout/.git/index &&
 	check_files clone_no_checkout a folder1
 '

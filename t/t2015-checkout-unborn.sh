@@ -9,9 +9,10 @@ test_expect_success 'setup' '
 	 git init &&
 	 echo content >file &&
 	 git add file &&
-	 git commit -m base
+	 git commit -m base &&
+	 git branch -M main
 	) &&
-	git fetch parent master:origin
+	git fetch parent main:origin
 '
 
 test_expect_success 'checkout from unborn preserves untracked files' '

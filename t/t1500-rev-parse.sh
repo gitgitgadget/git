@@ -161,8 +161,10 @@ test_expect_success 'showing the superproject correctly' '
 
 	test_create_repo super &&
 	test_commit -C super test_commit &&
+	git -C super branch -M main &&
 	test_create_repo sub &&
 	test_commit -C sub test_commit &&
+	git -C sub branch -M main &&
 	git -C super submodule add ../sub dir/sub &&
 	echo $(pwd)/super >expect  &&
 	git -C super/dir/sub rev-parse --show-superproject-working-tree >out &&
@@ -174,8 +176,8 @@ test_expect_success 'showing the superproject correctly' '
 	test_commit -C super/dir/sub branch1_commit &&
 	git -C super add dir/sub &&
 	test_commit -C super branch1_commit &&
-	git -C super checkout -b branch2 master &&
-	git -C super/dir/sub checkout -b branch2 master &&
+	git -C super checkout -b branch2 main &&
+	git -C super/dir/sub checkout -b branch2 main &&
 	test_commit -C super/dir/sub branch2_commit &&
 	git -C super add dir/sub &&
 	test_commit -C super branch2_commit &&
