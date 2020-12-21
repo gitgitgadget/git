@@ -562,9 +562,9 @@ static int module_foreach(int argc, const char **argv, const char *prefix)
 	struct module_list list = MODULE_LIST_INIT;
 
 	struct option module_foreach_options[] = {
-		OPT__QUIET(&info.quiet, N_("Suppress output of entering each submodule command")),
+		OPT__QUIET(&info.quiet, N_("suppress output of entering each submodule command")),
 		OPT_BOOL(0, "recursive", &info.recursive,
-			 N_("Recurse into nested submodules")),
+			 N_("recurse into nested submodules")),
 		OPT_END()
 	};
 
@@ -706,7 +706,7 @@ static int module_init(int argc, const char **argv, const char *prefix)
 	int quiet = 0;
 
 	struct option module_init_options[] = {
-		OPT__QUIET(&quiet, N_("Suppress output for initializing a submodule")),
+		OPT__QUIET(&quiet, N_("suppress output for initializing a submodule")),
 		OPT_END()
 	};
 
@@ -883,8 +883,8 @@ static int module_status(int argc, const char **argv, const char *prefix)
 	int quiet = 0;
 
 	struct option module_status_options[] = {
-		OPT__QUIET(&quiet, N_("Suppress submodule status output")),
-		OPT_BIT(0, "cached", &info.flags, N_("Use commit stored in the index instead of the one stored in the submodule HEAD"), OPT_CACHED),
+		OPT__QUIET(&quiet, N_("suppress submodule status output")),
+		OPT_BIT(0, "cached", &info.flags, N_("use commit stored in the index instead of the one stored in the submodule HEAD"), OPT_CACHED),
 		OPT_BIT(0, "recursive", &info.flags, N_("recurse into nested submodules"), OPT_RECURSIVE),
 		OPT_END()
 	};
@@ -1482,9 +1482,9 @@ static int module_sync(int argc, const char **argv, const char *prefix)
 	int recursive = 0;
 
 	struct option module_sync_options[] = {
-		OPT__QUIET(&quiet, N_("Suppress output of synchronizing submodule url")),
+		OPT__QUIET(&quiet, N_("suppress output of synchronizing submodule url")),
 		OPT_BOOL(0, "recursive", &recursive,
-			N_("Recurse into nested submodules")),
+			N_("recurse into nested submodules")),
 		OPT_END()
 	};
 
@@ -1620,9 +1620,9 @@ static int module_deinit(int argc, const char **argv, const char *prefix)
 	int all = 0;
 
 	struct option module_deinit_options[] = {
-		OPT__QUIET(&quiet, N_("Suppress submodule status output")),
-		OPT__FORCE(&force, N_("Remove submodule working trees even if they contain local changes"), 0),
-		OPT_BOOL(0, "all", &all, N_("Unregister all submodules")),
+		OPT__QUIET(&quiet, N_("suppress submodule status output")),
+		OPT__FORCE(&force, N_("remove submodule working trees even if they contain local changes"), 0),
+		OPT_BOOL(0, "all", &all, N_("unregister all submodules")),
 		OPT_END()
 	};
 
@@ -1834,7 +1834,7 @@ static int module_clone(int argc, const char **argv, const char *prefix)
 		OPT_STRING(0, "depth", &depth,
 			   N_("string"),
 			   N_("depth for shallow clones")),
-		OPT__QUIET(&quiet, "Suppress output for cloning a submodule"),
+		OPT__QUIET(&quiet, "suppress output for cloning a submodule"),
 		OPT_BOOL(0, "progress", &progress,
 			   N_("force cloning progress")),
 		OPT_BOOL(0, "require-init", &require_init,
@@ -2678,7 +2678,7 @@ static int module_set_url(int argc, const char **argv, const char *prefix)
 	char *config_name;
 
 	struct option options[] = {
-		OPT__QUIET(&quiet, N_("Suppress output for setting url of a submodule")),
+		OPT__QUIET(&quiet, N_("suppress output for setting url of a submodule")),
 		OPT_END()
 	};
 	const char *const usage[] = {

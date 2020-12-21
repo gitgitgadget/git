@@ -177,7 +177,7 @@ static void cmd_log_init_finish(int argc, const char **argv, const char *prefix,
 	const struct option builtin_log_options[] = {
 		OPT__QUIET(&quiet, N_("suppress diff output")),
 		OPT_BOOL(0, "source", &source, N_("show source")),
-		OPT_BOOL(0, "use-mailmap", &mailmap, N_("Use mail map file")),
+		OPT_BOOL(0, "use-mailmap", &mailmap, N_("use mail map file")),
 		OPT_ALIAS(0, "mailmap", "use-mailmap"),
 		OPT_STRING_LIST(0, "decorate-refs", &decorate_refs_include,
 				N_("pattern"), N_("only decorate refs that match <pattern>")),
@@ -186,7 +186,7 @@ static void cmd_log_init_finish(int argc, const char **argv, const char *prefix,
 		OPT_CALLBACK_F(0, "decorate", NULL, NULL, N_("decorate options"),
 			       PARSE_OPT_OPTARG, decorate_callback),
 		OPT_CALLBACK('L', NULL, &line_cb, "range:file",
-			     N_("Trace the evolution of line range <start>,<end> or function :<funcname> in <file>"),
+			     N_("trace the evolution of line range <start>,<end> or function :<funcname> in <file>"),
 			     log_line_range_callback),
 		OPT_END()
 	};
