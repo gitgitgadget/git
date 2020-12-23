@@ -328,6 +328,22 @@ test_expect_success 'bisect run & skip: find first bad' '
 	grep "$HASH6 is the first bad commit" my_bisect_log.txt
 '
 
+test_expect_success 'bisect run --verify: script fails for good rev' '
+	git bisect reset &&
+	git bisect start $HASH7 $HASH1 &&
+	test_must_fail git bisect run --verify false >my_bisect_log3.txt 2>&1 &&
+	test_i18ngrep "aborting: run script fails for good rev" my_bisect_log3.txt
+'
+
+test_expect_success 'bisect run --verify: script passes for bad rev' '
+	git bisect reset &&
+	git bisect start &&
+	git bisect bad $HASH7 &&
+	git bisect good $HASH1 &&
+	test_must_fail git bisect run --verify true >my_bisect_log5.txt 2>&1 &&
+	test_i18ngrep "aborting: run script passes for bad rev" my_bisect_log5.txt
+'
+
 test_expect_success 'bisect skip only one range' '
 	git bisect reset &&
 	git bisect start $HASH7 $HASH1 &&

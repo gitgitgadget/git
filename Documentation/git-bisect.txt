@@ -26,7 +26,7 @@ on the subcommand:
  git bisect (visualize|view)
  git bisect replay <logfile>
  git bisect log
- git bisect run <cmd>...
+ git bisect run [--verify] <cmd>...
  git bisect help
 
 This command uses a binary search algorithm to find which commit in
@@ -92,7 +92,6 @@ to ask for the next commit that needs testing.
 Eventually there will be no more revisions left to inspect, and the
 command will print out a description of the first bad commit. The
 reference `refs/bisect/bad` will be left pointing at that commit.
-
 
 Bisect reset
 ~~~~~~~~~~~~
@@ -317,7 +316,7 @@ If you have a script that can tell if the current source code is good
 or bad, you can bisect by issuing the command:
 
 ------------
-$ git bisect run my_script arguments
+$ git bisect run [--verify] my_script arguments
 ------------
 
 Note that the script (`my_script` in the above example) should exit
@@ -375,6 +374,13 @@ ignored.
 +
 This option is particularly useful in avoiding false positives when a merged
 branch contained broken or non-buildable commits, but the merge itself was OK.
+
+--verify::
++
+Before the actual bisect run, check out the current bad revision and
+verify that the script exits with a code between 1 and 127 (inclusive),
+except 125, then check out the current good revision and verify that
+the script exits with code 0. If not, abort the bisect run.
 
 EXAMPLES
 --------
