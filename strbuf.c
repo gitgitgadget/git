@@ -81,8 +81,6 @@ void strbuf_release(struct strbuf *sb)
 char *strbuf_detach(struct strbuf *sb, size_t *sz)
 {
 	char *res;
-	if (sb->len && !sb->alloc)
-    		die("you should not use detach in a const_strbuf");
 
 	strbuf_grow(sb, 0);
 	res = sb->buf;
