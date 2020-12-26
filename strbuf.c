@@ -58,17 +58,32 @@ void strbuf_init(struct strbuf *sb, size_t hint)
 		strbuf_grow(sb, hint);
 }
 
+void strbuf_const_to_no_const(struct strbuf *sb)
+{
+	if (sb->len && !sb->alloc) {
+		char *new_buf = xstrdup(sb->buf);
+		int len = sb->len;
+		strbuf_init(sb, sb->len);
+		sb->buf = new_buf;
+		sb->len = len;
+		sb->buf[sb->len] = '\0';
+	}
+}
 void strbuf_release(struct strbuf *sb)
 {
 	if (sb->alloc) {
 		free(sb->buf);
 		strbuf_init(sb, 0);
-	}
+	}else if(sb->len)
+		strbuf_init(sb, 0);
 }
 
 char *strbuf_detach(struct strbuf *sb, size_t *sz)
 {
 	char *res;
+	if (sb->len && !sb->alloc)
+    		die("you should not use detach in a const_strbuf");
+
 	strbuf_grow(sb, 0);
 	res = sb->buf;
 	if (sz)
@@ -89,7 +104,9 @@ void strbuf_attach(struct strbuf *sb, void *buf, size_t len, size_t alloc)
 
 void strbuf_grow(struct strbuf *sb, size_t extra)
 {
-	int new_buf = !sb->alloc;
+	int new_buf;
+	strbuf_const_to_no_const(sb);
+	new_buf = !sb->alloc;
 	if (unsigned_add_overflows(extra, 1) ||
 	    unsigned_add_overflows(sb->len, extra + 1))
 		die("you want to use way too much memory");
@@ -108,6 +125,7 @@ void strbuf_trim(struct strbuf *sb)
 
 void strbuf_rtrim(struct strbuf *sb)
 {
+	strbuf_const_to_no_const(sb);
 	while (sb->len > 0 && isspace((unsigned char)sb->buf[sb->len - 1]))
 		sb->len--;
 	sb->buf[sb->len] = '\0';
@@ -115,6 +133,7 @@ void strbuf_rtrim(struct strbuf *sb)
 
 void strbuf_trim_trailing_dir_sep(struct strbuf *sb)
 {
+	strbuf_const_to_no_const(sb);
 	while (sb->len > 0 && is_dir_sep((unsigned char)sb->buf[sb->len - 1]))
 		sb->len--;
 	sb->buf[sb->len] = '\0';
@@ -122,6 +141,7 @@ void strbuf_trim_trailing_dir_sep(struct strbuf *sb)
 
 void strbuf_trim_trailing_newline(struct strbuf *sb)
 {
+	strbuf_const_to_no_const(sb);
 	if (sb->len > 0 && sb->buf[sb->len - 1] == '\n') {
 		if (--sb->len > 0 && sb->buf[sb->len - 1] == '\r')
 			--sb->len;
@@ -131,7 +151,9 @@ void strbuf_trim_trailing_newline(struct strbuf *sb)
 
 void strbuf_ltrim(struct strbuf *sb)
 {
-	char *b = sb->buf;
+	char *b;
+	strbuf_const_to_no_const(sb);
+	b = sb->buf;
 	while (sb->len > 0 && isspace(*b)) {
 		b++;
 		sb->len--;
@@ -158,7 +180,9 @@ int strbuf_reencode(struct strbuf *sb, const char *from, const char *to)
 
 void strbuf_tolower(struct strbuf *sb)
 {
-	char *p = sb->buf, *end = sb->buf + sb->len;
+	char *p,*end;
+	strbuf_const_to_no_const(sb);
+	p = sb->buf, end = sb->buf + sb->len;
 	for (; p < end; p++)
 		*p = tolower(*p);
 }
@@ -234,6 +258,7 @@ void strbuf_splice(struct strbuf *sb, size_t pos, size_t len,
 		die("`pos' is too far after the end of the buffer");
 	if (pos + len > sb->len)
 		die("`pos + len' is too far after the end of the buffer");
+	strbuf_const_to_no_const(sb);
 
 	if (dlen >= len)
 		strbuf_grow(sb, dlen - len);
