@@ -292,8 +292,10 @@ int cmd_mv(int argc, const char **argv, const char *prefix)
 			continue;
 
 		pos = cache_name_pos(src, strlen(src));
-		assert(pos >= 0);
-		rename_cache_entry_at(pos, dst);
+		if (pos >= 0)
+			rename_cache_entry_at(pos, dst);
+		else if (!ignore_errors)
+			die(_("bad source: source=%s, destination=%s"), src, dst);
 	}
 
 	if (gitmodules_modified)

@@ -152,6 +152,14 @@ test_expect_success \
     'move into "."' \
     'git mv path1/path2/ .'
 
+test_expect_success \
+    'fail to move file already in index under different cased name' \
+    'echo 1 > foo &&
+     git add foo &&
+     git commit -m add_file -- foo &&
+     git mv foo FOO &&
+     test_expect_code 128 git mv foo BAR'
+
 test_expect_success "Michael Cassar's test case" '
 	rm -fr .git papers partA &&
 	git init &&
