@@ -61,12 +61,9 @@ void strbuf_init(struct strbuf *sb, size_t hint)
 void strbuf_const_to_no_const(struct strbuf *sb)
 {
 	if (sb->len && !sb->alloc) {
-		char *new_buf = xstrdup(sb->buf);
-		int len = sb->len;
-		strbuf_init(sb, sb->len);
+		char *new_buf = xmalloc(sb->len+1);
+		memcpy(new_buf,sb->buf,sb->len+1);
 		sb->buf = new_buf;
-		sb->len = len;
-		sb->buf[sb->len] = '\0';
 	}
 }
 void strbuf_release(struct strbuf *sb)
@@ -82,7 +79,7 @@ char *strbuf_detach(struct strbuf *sb, size_t *sz)
 {
 	char *res;
 	if (sb->len && !sb->alloc)
-    		die("you should not use detach in a const_strbuf");
+		die("you should not use detach in a const_strbuf");
 
 	strbuf_grow(sb, 0);
 	res = sb->buf;
@@ -252,13 +249,13 @@ int strbuf_cmp(const struct strbuf *a, const struct strbuf *b)
 void strbuf_splice(struct strbuf *sb, size_t pos, size_t len,
 				   const void *data, size_t dlen)
 {
+	strbuf_const_to_no_const(sb);
 	if (unsigned_add_overflows(pos, len))
 		die("you want to use way too much memory");
 	if (pos > sb->len)
 		die("`pos' is too far after the end of the buffer");
 	if (pos + len > sb->len)
 		die("`pos + len' is too far after the end of the buffer");
-	strbuf_const_to_no_const(sb);
 
 	if (dlen >= len)
 		strbuf_grow(sb, dlen - len);
@@ -280,6 +277,7 @@ void strbuf_vinsertf(struct strbuf *sb, size_t pos, const char *fmt, va_list ap)
 	char save;
 	va_list cp;
 
+	strbuf_const_to_no_const(sb);
 	if (pos > sb->len)
 		die("`pos' is too far after the end of the buffer");
 	va_copy(cp, ap);
@@ -1182,6 +1180,7 @@ int strbuf_edit_interactively(struct strbuf *buffer, const char *path,
 {
 	char *path2 = NULL;
 	int fd, res = 0;
+	strbuf_const_to_no_const(buffer);
 
 	if (!is_absolute_path(path))
 		path = path2 = xstrdup(git_path("%s", path));
