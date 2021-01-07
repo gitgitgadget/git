@@ -592,7 +592,7 @@ static inline void hashmap_enable_item_counting(struct hashmap *map)
 const void *memintern(const void *data, size_t len);
 static inline const char *strintern(const char *string)
 {
-	return memintern(string, strlen(string));
+	return (const char *)memintern(string, strlen(string));
 }
 
 #endif

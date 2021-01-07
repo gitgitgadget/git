@@ -281,7 +281,7 @@ static inline void oidcpy_with_padding(struct object_id *dst,
 
 static inline struct object_id *oiddup(const struct object_id *src)
 {
-	struct object_id *dst = xmalloc(sizeof(struct object_id));
+	struct object_id *dst = (struct object_id *)xmalloc(sizeof(struct object_id));
 	oidcpy(dst, src);
 	return dst;
 }

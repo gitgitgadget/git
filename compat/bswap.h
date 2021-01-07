@@ -147,14 +147,14 @@ static inline uint64_t git_bswap64(uint64_t x)
 
 static inline uint16_t get_be16(const void *ptr)
 {
-	const unsigned char *p = ptr;
+	const unsigned char *p = (const unsigned char *)ptr;
 	return	(uint16_t)p[0] << 8 |
 		(uint16_t)p[1] << 0;
 }
 
 static inline uint32_t get_be32(const void *ptr)
 {
-	const unsigned char *p = ptr;
+	const unsigned char *p = (const unsigned char *)ptr;
 	return	(uint32_t)p[0] << 24 |
 		(uint32_t)p[1] << 16 |
 		(uint32_t)p[2] <<  8 |
@@ -163,14 +163,14 @@ static inline uint32_t get_be32(const void *ptr)
 
 static inline uint64_t get_be64(const void *ptr)
 {
-	const unsigned char *p = ptr;
+	const unsigned char *p = (const unsigned char *)ptr;
 	return	(uint64_t)get_be32(&p[0]) << 32 |
 		(uint64_t)get_be32(&p[4]) <<  0;
 }
 
 static inline void put_be32(void *ptr, uint32_t value)
 {
-	unsigned char *p = ptr;
+	unsigned char *p = (unsigned char *)ptr;
 	p[0] = value >> 24;
 	p[1] = value >> 16;
 	p[2] = value >>  8;
@@ -179,7 +179,7 @@ static inline void put_be32(void *ptr, uint32_t value)
 
 static inline void put_be64(void *ptr, uint64_t value)
 {
-	unsigned char *p = ptr;
+	unsigned char *p = (unsigned char *)ptr;
 	p[0] = value >> 56;
 	p[1] = value >> 48;
 	p[2] = value >> 40;
