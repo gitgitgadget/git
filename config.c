@@ -147,7 +147,7 @@ static int handle_path_include(const char *path, struct config_include_data *inc
 	 * based on the including config file.
 	 */
 	if (!is_absolute_path(path)) {
-		char *slash;
+		const char *slash;
 
 		if (!cf || !cf->path)
 			return error(_("relative config includes must come from files"));

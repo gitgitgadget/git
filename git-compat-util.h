@@ -396,7 +396,7 @@ static inline int git_offset_1st_component(const char *path)
 #endif
 
 #ifndef find_last_dir_sep
-static inline char *git_find_last_dir_sep(const char *path)
+static inline const char *git_find_last_dir_sep(const char *path)
 {
 	return strrchr(path, '/');
 }
