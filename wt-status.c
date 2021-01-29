@@ -1042,6 +1042,7 @@ static void wt_longstatus_print_verbose(struct wt_status *s)
 	repo_init_revisions(s->repo, &rev, NULL);
 	rev.diffopt.flags.allow_textconv = 1;
 	rev.diffopt.ita_invisible_in_index = 1;
+	rev.diffopt.use_color = s->use_color;
 
 	memset(&opt, 0, sizeof(opt));
 	opt.def = s->is_initial ? empty_tree_oid_hex() : s->reference;
