@@ -141,6 +141,37 @@ struct rename_info {
 	char *callback_data_traverse_path;
 
 	/*
+	 * cached_pairs: Caching of renames and deletions.
+	 *
+	 * These are mappings recording renames and deletions of individual
+	 * files (not directories).  They are thus a map from an old
+	 * filename to either NULL (for deletions) or a new filename (for
+	 * renames).
+	 */
+	struct strmap cached_pairs[3];
+
+	/*
+	 * cached_target_names: just the destinations from cached_pairs
+	 *
+	 * We sometimes want a fast lookup to determine if a given filename
+	 * is one of the destinations in cached_pairs.  cached_target_names
+	 * is thus duplicative information, but it provides a fast lookup.
+	 */
+	struct strset cached_target_names[3];
+
+	/*
+	 * cached_irrelevant: Caching of rename_sources that aren't relevant.
+	 *
+	 * cached_pairs records both renames and deletes.  Sometimes we
+	 * do not know if a path is a rename or a delete because we pass
+	 * RELEVANT_LOCATION to diffcore_rename_extended() and based on
+	 * various optimizations it returns without detecting whether that
+	 * path is actually a rename or a delete.  We need to cache such
+	 * paths too, but separately from cached_pairs.
+	 */
+	struct strset cached_irrelevant[3];
+
+	/*
 	 * needed_limit: value needed for inexact rename detection to run
 	 *
 	 * If the current rename limit wasn't high enough for inexact
@@ -382,6 +413,8 @@ static void clear_or_reinit_internal_opts(struct merge_options_internal *opti,
 		reinitialize ? strmap_partial_clear : strmap_clear;
 	void (*strintmap_func)(struct strintmap *) =
 		reinitialize ? strintmap_partial_clear : strintmap_clear;
+	void (*strset_func)(struct strset *) =
+		reinitialize ? strset_partial_clear : strset_clear;
 
 	/*
 	 * We marked opti->paths with strdup_strings = 0, so that we
@@ -425,6 +458,9 @@ static void clear_or_reinit_internal_opts(struct merge_options_internal *opti,
 		strmap_func(&renames->dir_renames[i], 0);
 
 		strintmap_func(&renames->relevant_sources[i]);
+		strset_func(&renames->cached_target_names[i]);
+		strmap_func(&renames->cached_pairs[i], 1);
+		strset_func(&renames->cached_irrelevant[i]);
 	}
 
 	if (!reinitialize) {
@@ -3667,6 +3703,12 @@ static void merge_start(struct merge_options *opt, struct merge_result *result)
 					 NULL, 0);
 		strintmap_init_with_options(&renames->relevant_sources[i],
 					    0, NULL, 0);
+		strmap_init_with_options(&renames->cached_pairs[i],
+					 NULL, 1);
+		strset_init_with_options(&renames->cached_irrelevant[i],
+					 NULL, 1);
+		strset_init_with_options(&renames->cached_target_names[i],
+					 NULL, 0);
 	}
 
 	/*
