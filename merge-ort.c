@@ -2333,6 +2333,65 @@ static void resolve_diffpair_statuses(struct diff_queue_struct *q)
 	}
 }
 
+static void possibly_cache_new_pair(struct rename_info *renames,
+				    struct diff_filepair *p,
+				    unsigned side,
+				    char *new_path)
+{
+	char *old_value;
+	int dir_renamed_side = 0;
+
+	if (new_path) {
+		/*
+		 * Directory renames happen on the other side of history from
+		 * the side that adds new files to the old directory.
+		 */
+		dir_renamed_side = 3 - side;
+	} else {
+		int val = strintmap_get(&renames->relevant_sources[side],
+					p->one->path);
+		if (val == RELEVANT_NO_MORE) {
+			assert(p->status == 'D');
+			strset_add(&renames->cached_irrelevant[side],
+				   p->one->path);
+		}
+		if (val <= 0)
+			return;
+	}
+
+	if (p->status == 'D') {
+		/*
+		 * If we already had this delete, we'll just set it's value
+		 * to NULL again, so no harm.
+		 */
+		strmap_put(&renames->cached_pairs[side], p->one->path, NULL);
+	} else if (p->status == 'R') {
+		if (new_path) {
+			new_path = xstrdup(new_path);
+			old_value = strmap_put(&renames->cached_pairs[dir_renamed_side],
+					       p->two->path, new_path);
+			strset_add(&renames->cached_target_names[dir_renamed_side],
+				   new_path);
+			assert(!old_value);
+		}
+		if (!new_path)
+			new_path = p->two->path;
+		new_path = xstrdup(new_path);
+		old_value = strmap_put(&renames->cached_pairs[side],
+				       p->one->path, new_path);
+		strset_add(&renames->cached_target_names[side],
+			   new_path);
+		free(old_value);
+	} else if (p->status == 'A' && new_path) {
+		new_path = xstrdup(new_path);
+		old_value = strmap_put(&renames->cached_pairs[dir_renamed_side],
+				       p->two->path, new_path);
+		strset_add(&renames->cached_target_names[dir_renamed_side],
+			   new_path);
+		assert(!old_value);
+	}
+}
+
 static int compare_pairs(const void *a_, const void *b_)
 {
 	const struct diff_filepair *a = *((const struct diff_filepair **)a_);
@@ -2415,6 +2474,7 @@ static int collect_renames(struct merge_options *opt,
 		char *new_path; /* non-NULL only with directory renames */
 
 		if (p->status != 'A' && p->status != 'R') {
+			possibly_cache_new_pair(renames, p, side_index, NULL);
 			diff_free_filepair(p);
 			continue;
 		}
@@ -2426,11 +2486,11 @@ static int collect_renames(struct merge_options *opt,
 						      &collisions,
 						      &clean);
 
+		possibly_cache_new_pair(renames, p, side_index, new_path);
 		if (p->status != 'R' && !new_path) {
 			diff_free_filepair(p);
 			continue;
 		}
-
 		if (new_path)
 			apply_directory_rename_modifications(opt, p, new_path);
 
@@ -3701,8 +3761,16 @@ static void merge_start(struct merge_options *opt, struct merge_result *result)
 					 NULL, 1);
 		strmap_init_with_options(&renames->dir_renames[i],
 					 NULL, 0);
+		/*
+		 * relevant_sources uses -1 for the default, because we need
+		 * to be able to distinguish not-in-strintmap from valid
+		 * relevant_source values from enum file_rename_relevance.
+		 * In particular, possibly_cache_new_pair() expects a negative
+		 * value for not-found entries.
+		 */
 		strintmap_init_with_options(&renames->relevant_sources[i],
-					    0, NULL, 0);
+					    -1 /* explicitly invalid */,
+					    NULL, 0);
 		strmap_init_with_options(&renames->cached_pairs[i],
 					 NULL, 1);
 		strset_init_with_options(&renames->cached_irrelevant[i],
