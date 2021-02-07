@@ -19,7 +19,12 @@ struct mem_pool {
 
 	/* The total amount of memory allocated by the pool. */
 	size_t pool_alloc;
+
+	/* The count of calling mem_pool_alloc .*/
+	size_t alloc_count;
 };
+
+#define BLOCK_GROWTH_SIZE 1024*1024 - sizeof(struct mp_block)
 
 /*
  * Initialize mem_pool with specified initial size.

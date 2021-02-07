@@ -36,65 +36,30 @@ struct alloc_state {
 	int slab_nr, slab_alloc;
 };
 
-struct alloc_state *allocate_alloc_state(void)
-{
-	return xcalloc(1, sizeof(struct alloc_state));
-}
-
-void clear_alloc_state(struct alloc_state *s)
-{
-	while (s->slab_nr > 0) {
-		s->slab_nr--;
-		free(s->slabs[s->slab_nr]);
-	}
-
-	FREE_AND_NULL(s->slabs);
-}
-
-static inline void *alloc_node(struct alloc_state *s, size_t node_size)
-{
-	void *ret;
-
-	if (!s->nr) {
-		s->nr = BLOCKING;
-		s->p = xmalloc(BLOCKING * node_size);
-
-		ALLOC_GROW(s->slabs, s->slab_nr + 1, s->slab_alloc);
-		s->slabs[s->slab_nr++] = s->p;
-	}
-	s->nr--;
-	s->count++;
-	ret = s->p;
-	s->p = (char *)s->p + node_size;
-	memset(ret, 0, node_size);
-
-	return ret;
-}
-
 void *alloc_blob_node(struct repository *r)
 {
-	struct blob *b = alloc_node(r->parsed_objects->blob_state, sizeof(struct blob));
+	struct blob *b = mem_pool_calloc(&r->parsed_objects->objects_pool, 1, sizeof(struct blob));
 	b->object.type = OBJ_BLOB;
 	return b;
 }
 
 void *alloc_tree_node(struct repository *r)
 {
-	struct tree *t = alloc_node(r->parsed_objects->tree_state, sizeof(struct tree));
+	struct tree *t = mem_pool_calloc(&r->parsed_objects->objects_pool, 1, sizeof(struct tree));
 	t->object.type = OBJ_TREE;
 	return t;
 }
 
 void *alloc_tag_node(struct repository *r)
 {
-	struct tag *t = alloc_node(r->parsed_objects->tag_state, sizeof(struct tag));
+	struct tag *t = mem_pool_calloc(&r->parsed_objects->objects_pool, 1, sizeof(struct tag));
 	t->object.type = OBJ_TAG;
 	return t;
 }
 
 void *alloc_object_node(struct repository *r)
 {
-	struct object *obj = alloc_node(r->parsed_objects->object_state, sizeof(union any_object));
+	struct object *obj = mem_pool_calloc(&r->parsed_objects->objects_pool, 1, sizeof(union any_object));
 	obj->type = OBJ_NONE;
 	return obj;
 }
@@ -118,26 +83,7 @@ void init_commit_node(struct commit *c)
 
 void *alloc_commit_node(struct repository *r)
 {
-	struct commit *c = alloc_node(r->parsed_objects->commit_state, sizeof(struct commit));
+	struct commit *c = mem_pool_calloc(&r->parsed_objects->objects_pool, 1, sizeof(struct commit));
 	init_commit_node(c);
 	return c;
-}
-
-static void report(const char *name, unsigned int count, size_t size)
-{
-	fprintf(stderr, "%10s: %8u (%"PRIuMAX" kB)\n",
-			name, count, (uintmax_t) size);
-}
-
-#define REPORT(name, type)	\
-    report(#name, r->parsed_objects->name##_state->count, \
-		  r->parsed_objects->name##_state->count * sizeof(type) >> 10)
-
-void alloc_report(struct repository *r)
-{
-	REPORT(blob, struct blob);
-	REPORT(tree, struct tree);
-	REPORT(commit, struct commit);
-	REPORT(tag, struct tag);
-	REPORT(object, union any_object);
 }

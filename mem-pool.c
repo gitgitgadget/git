@@ -5,7 +5,6 @@
 #include "cache.h"
 #include "mem-pool.h"
 
-#define BLOCK_GROWTH_SIZE 1024*1024 - sizeof(struct mp_block);
 
 /*
  * Allocate a new mp_block and insert it after the block specified in
@@ -69,6 +68,7 @@ void *mem_pool_alloc(struct mem_pool *pool, size_t len)
 	struct mp_block *p = NULL;
 	void *r;
 
+	pool->alloc_count++;
 	/* round up to a 'uintmax_t' alignment */
 	if (len & (sizeof(uintmax_t) - 1))
 		len += sizeof(uintmax_t) - (len & (sizeof(uintmax_t) - 1));
