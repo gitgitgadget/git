@@ -136,12 +136,26 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: git-for-windows/setup-git-for-windows-sdk@v0
-    - name: download vcpkg artifacts
+    - name: Determine the latest vcpkg build ID
+      id: vcpkg-build-id
       shell: bash
       run: |
         urlbase=https://dev.azure.com/git/git/_apis/build/builds
         id=$(curl "$urlbase?definitions=9&statusFilter=completed&resultFilter=succeeded&\$top=1" |
           jq -r '.value[0].id')
+        echo "::set-output name=id::$id"
+    - name: Cache vcpkg
+      id: cache-vcpkg
+      uses: actions/cache@v2
+      with:
+        path: compat/vcbuild/vcpkg
+        key: vcpkg-artifacts-${{ steps.vcpkg-build-id.outputs.id }}
+    - name: download vcpkg artifacts
+      if: steps.cache-vcpkg.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        urlbase=https://dev.azure.com/git/git/_apis/build/builds
+        id=${{ steps.vcpkg-build-id.outputs.id }}
         download_url=$(curl "$urlbase/$id/artifacts" |
           jq -r '.value[] | select(.name == "compat").resource.downloadUrl')
         curl -o compat.zip "$download_url"
