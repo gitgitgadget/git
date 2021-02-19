@@ -9,7 +9,7 @@ SYNOPSIS
 --------
 [verse]
 'git add' [--verbose | -v] [--dry-run | -n] [--force | -f] [--interactive | -i] [--patch | -p]
-	  [--edit | -e] [--[no-]all | --[no-]ignore-removal | [--update | -u]] [--sparse]
+	  [--edit | -e] [--[no-]all | --[no-]ignore-removal | [--update | -u]] [--sparse] [--no-filters]
 	  [--intent-to-add | -N] [--refresh] [--ignore-errors] [--ignore-missing] [--renormalize]
 	  [--chmod=(+|-)x] [--pathspec-from-file=<file> [--pathspec-file-nul]]
 	  [--] [<pathspec>...]
@@ -189,6 +189,14 @@ for "git add --no-all <pathspec>...", i.e. ignored removed files.
 	changing `core.autocrlf` configuration or the `text` attribute
 	in order to correct files added with wrong CRLF/LF line endings.
 	This option implies `-u`.
+
+--no-filters::
+	Add the contents as is, ignoring any input filter that would
+	have been chosen by the attributes mechanism, including the end-of-line
+	conversion. Note that this option is not intended for interactive use,
+	since files added this way will always show up as modified if Git were
+	to apply transformations to them, making the situation potentially
+	very confusing.
 
 --chmod=(+|-)x::
 	Override the executable bit of the added files.  The executable

@@ -2081,7 +2081,7 @@ static int index_mem(struct index_state *istate,
 	/*
 	 * Convert blobs to git internal format
 	 */
-	if ((type == OBJ_BLOB) && path) {
+	if ((type == OBJ_BLOB) && path && !(flags & HASH_RAW)) {
 		struct strbuf nbuf = STRBUF_INIT;
 		if (convert_to_git(istate, path, buf, size, &nbuf,
 				   get_conv_flags(flags))) {

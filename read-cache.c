@@ -757,6 +757,9 @@ int add_to_index(struct index_state *istate, const char *path, struct stat *st, 
 	if (flags & ADD_CACHE_RENORMALIZE)
 		hash_flags |= HASH_RENORMALIZE;
 
+	if (flags & ADD_CACHE_RAW)
+		hash_flags |= HASH_RAW;
+
 	if (!S_ISREG(st_mode) && !S_ISLNK(st_mode) && !S_ISDIR(st_mode))
 		return error(_("%s: can only add regular files, symbolic links or git-directories"), path);
 
