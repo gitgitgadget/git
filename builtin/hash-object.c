@@ -57,8 +57,7 @@ static void hash_object(const char *path, const char *type, const char *vpath,
 	hash_fd(fd, type, vpath, flags, literally);
 }
 
-static void hash_stdin_paths(const char *type, int no_filters, unsigned flags,
-			     int literally)
+static void hash_stdin_paths(const char *type, unsigned flags, int literally)
 {
 	struct strbuf buf = STRBUF_INIT;
 	struct strbuf unquoted = STRBUF_INIT;
@@ -70,8 +69,7 @@ static void hash_stdin_paths(const char *type, int no_filters, unsigned flags,
 				die("line is badly quoted");
 			strbuf_swap(&buf, &unquoted);
 		}
-		hash_object(buf.buf, type, no_filters ? NULL : buf.buf, flags,
-			    literally);
+		hash_object(buf.buf, type, buf.buf, flags, literally);
 	}
 	strbuf_release(&buf);
 	strbuf_release(&unquoted);
@@ -87,7 +85,6 @@ int cmd_hash_object(int argc, const char **argv, const char *prefix)
 	const char *type = blob_type;
 	int hashstdin = 0;
 	int stdin_paths = 0;
-	int no_filters = 0;
 	int literally = 0;
 	int nongit = 0;
 	unsigned flags = HASH_FORMAT_CHECK;
@@ -98,7 +95,8 @@ int cmd_hash_object(int argc, const char **argv, const char *prefix)
 			HASH_WRITE_OBJECT),
 		OPT_COUNTUP( 0 , "stdin", &hashstdin, N_("read the object from stdin")),
 		OPT_BOOL( 0 , "stdin-paths", &stdin_paths, N_("read file names from stdin")),
-		OPT_BOOL( 0 , "no-filters", &no_filters, N_("store file as is without filters")),
+		OPT_BIT(0, "no-filters", &flags, N_("store file as is without filters"),
+			HASH_RAW),
 		OPT_BOOL( 0, "literally", &literally, N_("just hash any random garbage to create corrupt objects for debugging Git")),
 		OPT_STRING( 0 , "path", &vpath, N_("file"), N_("process file as it were from this path")),
 		OPT_END()
@@ -130,7 +128,7 @@ int cmd_hash_object(int argc, const char **argv, const char *prefix)
 	else {
 		if (hashstdin > 1)
 			errstr = "Multiple --stdin arguments are not supported";
-		if (vpath && no_filters)
+		if (vpath && (flags & HASH_RAW))
 			errstr = "Can't use --path with --no-filters";
 	}
 
@@ -148,13 +146,12 @@ int cmd_hash_object(int argc, const char **argv, const char *prefix)
 
 		if (prefix)
 			arg = to_free = prefix_filename(prefix, arg);
-		hash_object(arg, type, no_filters ? NULL : vpath ? vpath : arg,
-			    flags, literally);
+		hash_object(arg, type, vpath ? vpath : arg, flags, literally);
 		free(to_free);
 	}
 
 	if (stdin_paths)
-		hash_stdin_paths(type, no_filters, flags, literally);
+		hash_stdin_paths(type, flags, literally);
 
 	return 0;
 }
