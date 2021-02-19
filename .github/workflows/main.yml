@@ -146,7 +146,7 @@ jobs:
         echo "::set-output name=id::$id"
     - name: Cache vcpkg
       id: cache-vcpkg
-      uses: actions/cache@v2
+      uses: actions/cache@v2.1.4
       with:
         path: compat/vcbuild/vcpkg
         key: vcpkg-artifacts-${{ steps.vcpkg-build-id.outputs.id }}
