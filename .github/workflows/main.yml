@@ -137,14 +137,16 @@ jobs:
     - uses: actions/checkout@v2
     - uses: git-for-windows/setup-git-for-windows-sdk@v0
     - name: download vcpkg artifacts
-      shell: powershell
+      shell: bash
       run: |
-        $urlbase = "https://dev.azure.com/git/git/_apis/build/builds"
-        $id = ((Invoke-WebRequest -UseBasicParsing "${urlbase}?definitions=9&statusFilter=completed&resultFilter=succeeded&`$top=1").content | ConvertFrom-JSON).value[0].id
-        $downloadUrl = ((Invoke-WebRequest -UseBasicParsing "${urlbase}/$id/artifacts").content | ConvertFrom-JSON).value[0].resource.downloadUrl
-        (New-Object Net.WebClient).DownloadFile($downloadUrl, "compat.zip")
-        Expand-Archive compat.zip -DestinationPath . -Force
-        Remove-Item compat.zip
+        urlbase=https://dev.azure.com/git/git/_apis/build/builds
+        id=$(curl "$urlbase?definitions=9&statusFilter=completed&resultFilter=succeeded&\$top=1" |
+          jq -r '.value[0].id')
+        download_url=$(curl "$urlbase/$id/artifacts" |
+          jq -r '.value[] | select(.name == "compat").resource.downloadUrl')
+        curl -o compat.zip "$download_url"
+        unzip compat.zip
+        rm compat.zip
     - name: add msbuild to PATH
       uses: microsoft/setup-msbuild@v1
     - name: copy dlls to root
