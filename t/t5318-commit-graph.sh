@@ -741,4 +741,17 @@ test_expect_success 'corrupt commit-graph write (missing tree)' '
 	)
 '
 
+test_expect_success 'warn about incompatibilities (only) when writing' '
+	git init warn &&
+	test_commit -C warn initial &&
+	test_commit -C warn second &&
+	git -C warn replace --graft second &&
+	test_config -C warn gc.writecommitgraph true &&
+
+	git -C warn gc 2>err &&
+	test_i18ngrep "skipping commit-graph" err &&
+	git -C warn rev-list -1 second 2>err &&
+	test_i18ngrep ! "skipping commit-graph" err
+'
+
 test_done

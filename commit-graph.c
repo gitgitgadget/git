@@ -198,7 +198,7 @@ static struct commit_graph *alloc_commit_graph(void)
 
 extern int read_replace_refs;
 
-static int commit_graph_compatible(struct repository *r)
+static int commit_graph_compatible(struct repository *r, int quiet)
 {
 	if (!r->gitdir)
 		return 0;
@@ -206,8 +206,9 @@ static int commit_graph_compatible(struct repository *r)
 	if (read_replace_refs) {
 		prepare_replace_object(r);
 		if (hashmap_get_size(&r->objects->replace_map->map)) {
-			warning(_("repository contains replace objects; "
-			       "skipping commit-graph"));
+			if (!quiet)
+				warning(_("repository contains replace "
+					  "objects; skipping commit-graph"));
 			return 0;
 		}
 	}
@@ -215,12 +216,15 @@ static int commit_graph_compatible(struct repository *r)
 	prepare_commit_graft(r);
 	if (r->parsed_objects &&
 	    (r->parsed_objects->grafts_nr || r->parsed_objects->substituted_parent)) {
-		warning(_("repository contains (deprecated) grafts; "
-		       "skipping commit-graph"));
+		if (!quiet)
+			warning(_("repository contains (deprecated) grafts; "
+			       "skipping commit-graph"));
 		return 0;
 	}
 	if (is_repository_shallow(r)) {
-		warning(_("repository is shallow; skipping commit-graph"));
+		if (!quiet)
+			warning(_("repository is shallow; skipping "
+				  "commit-graph"));
 		return 0;
 	}
 
@@ -652,7 +656,7 @@ static int prepare_commit_graph(struct repository *r)
 		 */
 		return 0;
 
-	if (!commit_graph_compatible(r))
+	if (!commit_graph_compatible(r, 1))
 		return 0;
 
 	prepare_alt_odb(r);
@@ -2123,7 +2127,7 @@ int write_commit_graph(struct object_directory *odb,
 		warning(_("attempting to write a commit-graph, but 'core.commitGraph' is disabled"));
 		return 0;
 	}
-	if (!commit_graph_compatible(the_repository))
+	if (!commit_graph_compatible(the_repository, 0))
 		return 0;
 
 	ctx = xcalloc(1, sizeof(struct write_commit_graph_context));
