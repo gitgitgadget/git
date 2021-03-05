@@ -971,6 +971,8 @@ struct write_commit_graph_context {
 	int progress_done;
 	uint64_t progress_cnt;
 
+	int *extra_edge_values;
+
 	char *base_graph_name;
 	int num_commit_graphs_before;
 	int num_commit_graphs_after;
@@ -1046,6 +1048,26 @@ static const struct object_id *commit_to_oid(size_t index, const void *table)
 	return &commits[index]->object.oid;
 }
 
+static int extra_edge_value(const struct write_commit_graph_context *ctx, struct commit *c)
+{
+	int edge_value = oid_pos(&c->object.oid,
+			     ctx->commits.list,
+			     ctx->commits.nr,
+			     commit_to_oid);
+
+	if (edge_value >= 0)
+		edge_value += ctx->new_num_commits_in_base;
+	else if (ctx->new_base_graph) {
+		uint32_t pos;
+		if (find_commit_in_graph(c,
+					 ctx->new_base_graph,
+					 &pos))
+			edge_value = pos;
+	}
+
+	return edge_value;
+}
+
 static int write_graph_chunk_data(struct hashfile *f,
 				  void *data)
 {
@@ -1072,20 +1094,7 @@ static int write_graph_chunk_data(struct hashfile *f,
 		if (!parent)
 			edge_value = GRAPH_PARENT_NONE;
 		else {
-			edge_value = oid_pos(&parent->item->object.oid,
-					     ctx->commits.list,
-					     ctx->commits.nr,
-					     commit_to_oid);
-
-			if (edge_value >= 0)
-				edge_value += ctx->new_num_commits_in_base;
-			else if (ctx->new_base_graph) {
-				uint32_t pos;
-				if (find_commit_in_graph(parent->item,
-							 ctx->new_base_graph,
-							 &pos))
-					edge_value = pos;
-			}
+			edge_value = extra_edge_value(ctx, parent->item);
 
 			if (edge_value < 0)
 				BUG("missing parent %s for commit %s",
@@ -1103,20 +1112,7 @@ static int write_graph_chunk_data(struct hashfile *f,
 		else if (parent->next)
 			edge_value = GRAPH_EXTRA_EDGES_NEEDED | num_extra_edges;
 		else {
-			edge_value = oid_pos(&parent->item->object.oid,
-					     ctx->commits.list,
-					     ctx->commits.nr,
-					     commit_to_oid);
-
-			if (edge_value >= 0)
-				edge_value += ctx->new_num_commits_in_base;
-			else if (ctx->new_base_graph) {
-				uint32_t pos;
-				if (find_commit_in_graph(parent->item,
-							 ctx->new_base_graph,
-							 &pos))
-					edge_value = pos;
-			}
+			edge_value = extra_edge_value(ctx, parent->item);
 
 			if (edge_value < 0)
 				BUG("missing parent %s for commit %s",
@@ -1128,6 +1124,16 @@ static int write_graph_chunk_data(struct hashfile *f,
 
 		if (edge_value & GRAPH_EXTRA_EDGES_NEEDED) {
 			do {
+				edge_value = extra_edge_value(ctx, parent->item);
+
+				if (edge_value < 0)
+					BUG("missing parent %s for commit %s",
+					    oid_to_hex(&parent->item->object.oid),
+					    oid_to_hex(&(*list)->object.oid));
+				else if (!parent->next)
+					edge_value |= GRAPH_LAST_EDGE;
+
+				ctx->extra_edge_values[num_extra_edges] = edge_value;
 				num_extra_edges++;
 				parent = parent->next;
 			} while (parent);
@@ -1196,52 +1202,10 @@ static int write_graph_chunk_extra_edges(struct hashfile *f,
 					 void *data)
 {
 	struct write_commit_graph_context *ctx = data;
-	struct commit **list = ctx->commits.list;
-	struct commit **last = ctx->commits.list + ctx->commits.nr;
-	struct commit_list *parent;
-
-	while (list < last) {
-		int num_parents = 0;
-
+	int i;
+	for (i = 0; i < ctx->num_extra_edges; i++) {
+		hashwrite_be32(f, ctx->extra_edge_values[i]);
 		display_progress(ctx->progress, ++ctx->progress_cnt);
-
-		for (parent = (*list)->parents; num_parents < 3 && parent;
-		     parent = parent->next)
-			num_parents++;
-
-		if (num_parents <= 2) {
-			list++;
-			continue;
-		}
-
-		/* Since num_parents > 2, this initializer is safe. */
-		for (parent = (*list)->parents->next; parent; parent = parent->next) {
-			int edge_value = oid_pos(&parent->item->object.oid,
-						 ctx->commits.list,
-						 ctx->commits.nr,
-						 commit_to_oid);
-
-			if (edge_value >= 0)
-				edge_value += ctx->new_num_commits_in_base;
-			else if (ctx->new_base_graph) {
-				uint32_t pos;
-				if (find_commit_in_graph(parent->item,
-							 ctx->new_base_graph,
-							 &pos))
-					edge_value = pos;
-			}
-
-			if (edge_value < 0)
-				BUG("missing parent %s for commit %s",
-				    oid_to_hex(&parent->item->object.oid),
-				    oid_to_hex(&(*list)->object.oid));
-			else if (!parent->next)
-				edge_value |= GRAPH_LAST_EDGE;
-
-			hashwrite_be32(f, edge_value);
-		}
-
-		list++;
 	}
 
 	return 0;
@@ -1775,6 +1739,11 @@ static int write_graph_chunk_base(struct hashfile *f,
 	return 0;
 }
 
+static int write_commit_graph_progress_nr_commits(const struct write_commit_graph_context *ctx, struct chunkfile *cf)
+{
+	return (get_num_chunks(cf) - 1) * ctx->commits.nr + ctx->num_extra_edges;
+}
+
 static int write_commit_graph_file(struct write_commit_graph_context *ctx)
 {
 	uint32_t i;
@@ -1882,7 +1851,7 @@ static int write_commit_graph_file(struct write_commit_graph_context *ctx)
 			    get_num_chunks(cf));
 		ctx->progress = start_delayed_progress(
 			progress_title.buf,
-			get_num_chunks(cf) * ctx->commits.nr);
+			write_commit_graph_progress_nr_commits(ctx, cf));
 	}
 
 	write_chunkfile(cf, ctx);
@@ -2247,6 +2216,7 @@ int write_commit_graph(struct object_directory *odb,
 	ctx->opts = opts;
 	ctx->total_bloom_filter_data_size = 0;
 	ctx->write_generation_data = 1;
+	ctx->extra_edge_values = NULL;
 	ctx->num_generation_data_overflows = 0;
 
 	bloom_settings.bits_per_entry = git_env_ulong("GIT_TEST_BLOOM_SETTINGS_BITS_PER_ENTRY",
@@ -2364,6 +2334,9 @@ int write_commit_graph(struct object_directory *odb,
 	if (ctx->changed_paths)
 		compute_bloom_filters(ctx);
 
+	if (ctx->num_extra_edges)
+		ALLOC_ARRAY(ctx->extra_edge_values, ctx->num_extra_edges);
+
 	res = write_commit_graph_file(ctx);
 
 	if (ctx->split)
@@ -2374,6 +2347,7 @@ int write_commit_graph(struct object_directory *odb,
 cleanup:
 	free(ctx->graph_name);
 	free(ctx->commits.list);
+	free(ctx->extra_edge_values);
 	oid_array_clear(&ctx->oids);
 	clear_topo_level_slab(&topo_levels);
 
