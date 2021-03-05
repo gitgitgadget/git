@@ -573,19 +573,18 @@ static int validate_mixed_generation_chain(struct commit_graph *g)
 	struct commit_graph *p = g;
 
 	while (read_generation_data && p) {
-		read_generation_data = p->read_generation_data;
+		if (!p->chunk_generation_data)
+			read_generation_data = 0;
+
 		p = p->base_graph;
 	}
 
-	if (read_generation_data)
-		return 1;
-
 	while (g) {
-		g->read_generation_data = 0;
+		g->read_generation_data = read_generation_data;
 		g = g->base_graph;
 	}
 
-	return 0;
+	return read_generation_data;
 }
 
 struct commit_graph *read_commit_graph_one(struct repository *r,
@@ -1169,6 +1168,20 @@ static int write_graph_chunk_generation_data(struct hashfile *f,
 		display_progress(ctx->progress, ++ctx->progress_cnt);
 
 		if (offset > GENERATION_NUMBER_V2_OFFSET_MAX) {
+			if (num_generation_data_overflows == ctx->num_generation_data_overflows) {
+				/*
+				 * Facts:
+				 * - No commit overflowed when computing generation data, old-2 should have!
+				 * - Corrected commit date at the end is 2^31 rather than 2^31 + 1 as calculated
+				 * - No commit with the given index was seen while computing generation data - meaning
+				 *   newly allocated commit?
+				 * - There is an overflow chunk already but disappears on this
+				 *
+				 * Need to know the original date and corrected commit date to figure out why no one
+				 * commit overflowed then.
+				 */
+				die(_("magically overflowing commits"));
+			}
 			offset = CORRECTED_COMMIT_DATE_OFFSET_OVERFLOW | num_generation_data_overflows;
 			num_generation_data_overflows++;
 		}
@@ -1431,12 +1444,10 @@ static void compute_generation_numbers(struct write_commit_graph_context *ctx)
 					_("Computing commit graph generation numbers"),
 					ctx->commits.nr);
 
-	if (!ctx->trust_generation_numbers) {
-		for (i = 0; i < ctx->commits.nr; i++) {
-			struct commit *c = ctx->commits.list[i];
-			repo_parse_commit(ctx->r, c);
-			commit_graph_data_at(c)->generation = GENERATION_NUMBER_ZERO;
-		}
+	for (i = 0; i < ctx->commits.nr; i++) {
+		struct commit *c = ctx->commits.list[i];
+		repo_parse_commit(ctx->r, c);
+		commit_graph_data_at(c)->generation = GENERATION_NUMBER_ZERO;
 	}
 
 	for (i = 0; i < ctx->commits.nr; i++) {
