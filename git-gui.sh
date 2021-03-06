@@ -46,12 +46,41 @@ catch {rename send {}} ; # What an evil concept...
 
 ######################################################################
 ##
+## platform detection
+
+set _iscygwin {}
+
+proc is_Cygwin {} {
+	global _iscygwin
+	if {$_iscygwin eq {}} {
+		if {$::tcl_platform(platform) eq {windows}} {
+			if {[catch {set p [exec cygpath --windir]} err]} {
+				set _iscygwin 0
+			} else {
+				set _iscygwin 1
+			}
+		} else {
+			set _iscygwin 0
+		}
+	}
+	return $_iscygwin
+}
+
+######################################################################
+##
 ## locate our library
 
 if { [info exists ::env(GIT_GUI_LIB_DIR) ] } {
 	set oguilib $::env(GIT_GUI_LIB_DIR)
 } else {
-	set oguilib {@@GITGUI_LIBDIR@@}
+	if {[is_Cygwin]} {
+		set oguilib [exec cygpath \
+			--windows \
+			--absolute \
+			@@GITGUI_LIBDIR@@]
+	} else {
+		set oguilib {@@GITGUI_LIBDIR@@}
+	}
 }
 set oguirel {@@GITGUI_RELATIVE@@}
 if {$oguirel eq {1}} {
@@ -163,7 +192,6 @@ set _isbare {}
 set _gitexec {}
 set _githtmldir {}
 set _reponame {}
-set _iscygwin {}
 set _search_path {}
 set _shellpath {@@SHELL_PATH@@}
 
@@ -264,26 +292,6 @@ proc is_Windows {} {
 		return 1
 	}
 	return 0
-}
-
-proc is_Cygwin {} {
-	global _iscygwin
-	if {$_iscygwin eq {}} {
-		if {$::tcl_platform(platform) eq {windows}} {
-			if {[catch {set p [exec cygpath --windir]} err]} {
-				set _iscygwin 0
-			} else {
-				set _iscygwin 1
-				# Handle MSys2 which is only cygwin when MSYSTEM is MSYS.
-				if {[info exists ::env(MSYSTEM)] && $::env(MSYSTEM) ne "MSYS"} {
-					set _iscygwin 0
-				}
-			}
-		} else {
-			set _iscygwin 0
-		}
-	}
-	return $_iscygwin
 }
 
 proc is_enabled {option} {
