@@ -1,4 +1,5 @@
 #include "git-compat-util.h"
+#include "approximate-picks.h"
 #include "config.h"
 #include "environment.h"
 #include "gettext.h"
@@ -1469,6 +1470,20 @@ static int limit_list(struct rev_info *revs)
 			obj->flags |= UNINTERESTING;
 		if (process_parents(revs, commit, &original_list, NULL) < 0)
 			return -1;
+		if (revs->remerge_diff_only) {
+			int revert;
+			struct commit *pick, *base;
+			struct commit_list *parents;
+
+			parents = get_saved_parents(revs, commit);
+			if (!parents)
+				continue;
+			if (parents && !parents->next) {
+				get_message_pick(commit, &revert, &pick, &base);
+				if (!pick)
+					continue;
+			}
+		}
 		if (obj->flags & UNINTERESTING) {
 			mark_parents_uninteresting(revs, commit);
 			slop = still_interesting(original_list, date, slop, &interesting_cache);

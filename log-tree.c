@@ -1,4 +1,5 @@
 #include "git-compat-util.h"
+#include "approximate-picks.h"
 #include "commit-reach.h"
 #include "config.h"
 #include "diff.h"
@@ -1065,6 +1066,94 @@ static int do_remerge_diff(struct rev_info *opt,
 	return !opt->loginfo;
 }
 
+static int do_repicked_remerge_diff(struct rev_info *opt,
+				    struct commit_list *parents,
+				    struct object_id *oid,
+				    struct commit *commit)
+{
+	struct merge_options o;
+	struct merge_result res;
+	struct commit *base, *side1, *side2;
+	struct tree *base_tree, *side1_tree, *side2_tree;
+	struct strbuf base_label = STRBUF_INIT;
+	struct strbuf side1_label = STRBUF_INIT;
+	struct strbuf side2_label = STRBUF_INIT;
+	struct pretty_print_context ctx = {0};
+	int is_revert;
+
+	/* side1 is the commit on which the cherry-pick or revert was built */
+	side1 = parents->item;
+	parse_commit_or_die(side1);
+	/* get side2 and base */
+	get_message_pick(commit, &is_revert, &side2, &base);
+	if (!side2) {
+		show_log(opt);
+		fprintf(opt->diffopt.file,
+			"diff: warning: Could not find cherry-pick or revert "
+			"information for\n               commit %s .\n",
+			oid_to_hex(&commit->object.oid));
+		return !opt->loginfo;
+	}
+
+	/* Convert commits to trees */
+	base_tree = base ? repo_get_commit_tree(the_repository, base) :
+			lookup_tree(the_repository, the_hash_algo->empty_tree);
+	side1_tree = repo_get_commit_tree(the_repository, side1);
+	side2_tree = repo_get_commit_tree(the_repository, side2);
+
+	/* Revert implemented as cherry-pick with base and side2 swapped */
+	if (is_revert) {
+		SWAP(base, side2);
+		SWAP(base_tree, side2_tree);
+	}
+
+	/* Setup merge options */
+	init_merge_options(&o, the_repository);
+	memset(&res, 0, sizeof(res));
+	o.show_rename_progress = 0;
+	o.record_conflict_msgs_as_headers = 1;
+	o.msg_header_prefix = "remerge";
+	ctx.abbrev = DEFAULT_ABBREV;
+	if (base)
+		repo_format_commit_message(the_repository, base,  "%h (%s)",
+					   &base_label, &ctx);
+	else
+		strbuf_addstr(&base_label, "empty tree");
+	repo_format_commit_message(the_repository, side1, "%h (%s)",
+				   &side1_label, &ctx);
+	if (side2)
+		repo_format_commit_message(the_repository, side2, "%h (%s)",
+					   &side2_label, &ctx);
+	else
+		strbuf_addstr(&side2_label, "empty tree");
+	o.ancestor = base_label.buf;
+	o.branch1 = side1_label.buf;
+	o.branch2 = side2_label.buf;
+
+	/* Redo the merge */
+	merge_incore_nonrecursive(&o, base_tree, side1_tree, side2_tree, &res);
+
+	/* Diff against the merge */
+	setup_additional_headers(&opt->diffopt, res.path_messages);
+	diff_tree_oid(&res.tree->object.oid, oid, "", &opt->diffopt);
+	log_tree_diff_flush(opt);
+
+	/* Release resources */
+	cleanup_additional_headers(&opt->diffopt);
+	merge_finalize(&o, &res);
+	strbuf_release(&base_label);
+	strbuf_release(&side1_label);
+	strbuf_release(&side2_label);
+
+	/* Clean up the contents of the temporary object directory */
+	if (opt->remerge_objdir)
+		tmp_objdir_discard_objects(opt->remerge_objdir);
+	else
+		BUG("did a remerge diff without remerge_objdir?!?");
+
+	return !opt->loginfo;
+}
+
 /*
  * Show the diff of a commit.
  *
@@ -1077,6 +1166,7 @@ static int log_tree_diff(struct rev_info *opt, struct commit *commit, struct log
 	struct object_id *oid;
 	int is_merge;
 	int all_need_diff = opt->diff || opt->diffopt.flags.exit_with_status;
+	int remerge_wanted = (opt->remerge_diff || opt->remerge_diff_only);
 
 	if (!all_need_diff && !opt->merges_need_diff)
 		return 0;
@@ -1091,6 +1181,13 @@ static int log_tree_diff(struct rev_info *opt, struct commit *commit, struct log
 
 	/* Root commit? */
 	if (!parents) {
+		if (opt->remerge_diff_only) {
+			show_log(opt);
+			fprintf(opt->diffopt.file,
+				"diff: warning: No remerge-diffs for root "
+				"commits.\n");
+			return 1;
+		}
 		if (opt->show_root_diff) {
 			diff_root_tree_oid(oid, "", &opt->diffopt);
 			log_tree_diff_flush(opt);
@@ -1101,7 +1198,7 @@ static int log_tree_diff(struct rev_info *opt, struct commit *commit, struct log
 	if (is_merge) {
 		int octopus = (parents->next->next != NULL);
 
-		if (opt->remerge_diff) {
+		if (remerge_wanted) {
 			if (octopus) {
 				show_log(opt);
 				fprintf(opt->diffopt.file,
@@ -1120,7 +1217,8 @@ static int log_tree_diff(struct rev_info *opt, struct commit *commit, struct log
 			}
 		} else
 			return 0;
-	}
+	} else if (opt->remerge_diff_only)
+		return do_repicked_remerge_diff(opt, parents, oid, commit);
 
 	showed_log = 0;
 	for (;;) {
