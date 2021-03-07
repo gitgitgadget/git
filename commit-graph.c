@@ -971,6 +971,7 @@ struct write_commit_graph_context {
 	uint64_t progress_cnt;
 
 	int *extra_edge_values;
+	timestamp_t *generation_data_overflows;
 
 	char *base_graph_name;
 	int num_commit_graphs_before;
@@ -1168,21 +1169,8 @@ static int write_graph_chunk_generation_data(struct hashfile *f,
 		display_progress(ctx->progress, ++ctx->progress_cnt);
 
 		if (offset > GENERATION_NUMBER_V2_OFFSET_MAX) {
-			if (num_generation_data_overflows == ctx->num_generation_data_overflows) {
-				/*
-				 * Facts:
-				 * - No commit overflowed when computing generation data, old-2 should have!
-				 * - Corrected commit date at the end is 2^31 rather than 2^31 + 1 as calculated
-				 * - No commit with the given index was seen while computing generation data - meaning
-				 *   newly allocated commit?
-				 * - There is an overflow chunk already but disappears on this
-				 *
-				 * Need to know the original date and corrected commit date to figure out why no one
-				 * commit overflowed then.
-				 */
-				die(_("magically overflowing commits"));
-			}
 			offset = CORRECTED_COMMIT_DATE_OFFSET_OVERFLOW | num_generation_data_overflows;
+			ctx->generation_data_overflows[num_generation_data_overflows] = commit_graph_data_at(c)->generation;
 			num_generation_data_overflows++;
 		}
 
@@ -1197,15 +1185,12 @@ static int write_graph_chunk_generation_data_overflow(struct hashfile *f,
 {
 	struct write_commit_graph_context *ctx = data;
 	int i;
-	for (i = 0; i < ctx->commits.nr; i++) {
-		struct commit *c = ctx->commits.list[i];
-		timestamp_t offset = commit_graph_data_at(c)->generation - c->date;
+	for (i = 0; i < ctx->num_generation_data_overflows; i++) {
+		timestamp_t corrected_commit_date = ctx->generation_data_overflows[i];
 		display_progress(ctx->progress, ++ctx->progress_cnt);
 
-		if (offset > GENERATION_NUMBER_V2_OFFSET_MAX) {
-			hashwrite_be32(f, offset >> 32);
-			hashwrite_be32(f, (uint32_t) offset);
-		}
+		hashwrite_be32(f, corrected_commit_date >> 32);
+		hashwrite_be32(f, (uint32_t)corrected_commit_date);
 	}
 
 	return 0;
@@ -1752,7 +1737,7 @@ static int write_graph_chunk_base(struct hashfile *f,
 
 static int write_commit_graph_progress_nr_commits(const struct write_commit_graph_context *ctx, struct chunkfile *cf)
 {
-	return (get_num_chunks(cf) - 1) * ctx->commits.nr + ctx->num_extra_edges;
+	return (get_num_chunks(cf) - 2) * ctx->commits.nr + ctx->num_extra_edges + ctx->num_generation_data_overflows;
 }
 
 static int write_commit_graph_file(struct write_commit_graph_context *ctx)
@@ -2348,6 +2333,9 @@ int write_commit_graph(struct object_directory *odb,
 	if (ctx->num_extra_edges)
 		ALLOC_ARRAY(ctx->extra_edge_values, ctx->num_extra_edges);
 
+	if (ctx->num_generation_data_overflows)
+		ALLOC_ARRAY(ctx->generation_data_overflows, ctx->num_generation_data_overflows);
+
 	res = write_commit_graph_file(ctx);
 
 	if (ctx->split)
@@ -2359,6 +2347,7 @@ cleanup:
 	free(ctx->graph_name);
 	free(ctx->commits.list);
 	free(ctx->extra_edge_values);
+	free(ctx->generation_data_overflows);
 	oid_array_clear(&ctx->oids);
 	clear_topo_level_slab(&topo_levels);
 
