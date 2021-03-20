@@ -426,6 +426,8 @@ static void print_ref_list(struct ref_filter *filter, struct ref_sorting *sortin
 	memset(&array, 0, sizeof(array));
 
 	filter_refs(&array, filter, filter->kind | FILTER_REFS_INCLUDE_BROKEN);
+	if (!array.nr)
+		die(_("no branches found"));
 
 	if (filter->verbose)
 		maxwidth = calc_maxwidth(&array, strlen(remote_prefix));
