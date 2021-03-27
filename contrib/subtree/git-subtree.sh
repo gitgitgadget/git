@@ -9,12 +9,15 @@ then
 	set -- -h
 fi
 OPTS_SPEC="\
-git subtree add   --prefix=<prefix> <commit>
-git subtree add   --prefix=<prefix> <repository> <ref>
-git subtree merge --prefix=<prefix> <commit>
-git subtree pull  --prefix=<prefix> <repository> <ref>
-git subtree push  --prefix=<prefix> <repository> <ref>
-git subtree split --prefix=<prefix> <commit>
+git subtree add    --prefix=<prefix> <commit>
+git subtree add    --prefix=<prefix> <repository> <ref>
+git subtree merge  --prefix=<prefix> <commit>
+git subtree pull   --prefix=<prefix> <repository> <ref>
+git subtree push   --prefix=<prefix> <repository> <ref>
+git subtree split  --prefix=<prefix> <commit>
+git subtree map    --prefix=<prefix> <mainline> <subtree>
+git subtree ignore --prefix=<prefix> <commit>
+git subtree use    --prefix=<prefix> <commit>
 --
 h,help        show the help
 q             quiet
@@ -27,6 +30,7 @@ b,branch=     create a new branch from the split subtree
 ignore-joins  ignore prior --rejoin commits
 onto=         try connecting new tree to an existing one
 rejoin        merge the new branch back into HEAD
+clear-cache   reset the subtree mapping cache
  options for 'add', 'merge', and 'pull'
 squash        merge subtree changes as a single commit
 "
@@ -48,6 +52,7 @@ annotate=
 squash=
 message=
 prefix=
+clearcache=
 
 debug () {
 	if test -n "$debug"
@@ -131,6 +136,9 @@ do
 	--no-rejoin)
 		rejoin=
 		;;
+	--clear-cache)
+		clearcache=1
+		;;
 	--ignore-joins)
 		ignore_joins=1
 		;;
@@ -156,7 +164,7 @@ command="$1"
 shift
 
 case "$command" in
-add|merge|pull)
+add|merge|pull|map|ignore|use)
 	default=
 	;;
 split|push)
@@ -187,7 +195,8 @@ dir="$(dirname "$prefix/.")"
 
 if test "$command" != "pull" &&
 		test "$command" != "add" &&
-		test "$command" != "push"
+		test "$command" != "push" &&
+		test "$command" != "map"
 then
 	revs=$(git rev-parse $default --revs-only "$@") || exit $?
 	dirs=$(git rev-parse --no-revs --no-flags "$@") || exit $?
@@ -206,13 +215,15 @@ debug "opts: {$*}"
 debug
 
 cache_setup () {
-	cachedir="$GIT_DIR/subtree-cache/$$"
-	rm -rf "$cachedir" ||
-		die "Can't delete old cachedir: $cachedir"
+	cachedir="$GIT_DIR/subtree-cache/$prefix"
+	if test -n "$clearcache"
+	then
+		debug "Clearing cache"
+		rm -rf "$cachedir" ||
+			die "Can't delete old cachedir: $cachedir"
+	fi
 	mkdir -p "$cachedir" ||
 		die "Can't create new cachedir: $cachedir"
-	mkdir -p "$cachedir/notree" ||
-		die "Can't create new cachedir: $cachedir/notree"
 	debug "Using cachedir: $cachedir" >&2
 }
 
@@ -238,20 +249,13 @@ cache_miss () {
 }
 
 check_parents () {
-	missed=$(cache_miss "$1")
+	missed=$(cache_miss $1)
 	local indent=$(($2 + 1))
 	for miss in $missed
 	do
-		if ! test -r "$cachedir/notree/$miss"
-		then
-			debug "  incorrect order: $miss"
-			process_split_commit "$miss" "" "$indent"
-		fi
+		debug "  unprocessed parent commit: $miss ($indent)"
+		process_split_commit "$miss" "" "$indent"
 	done
-}
-
-set_notree () {
-	echo "1" > "$cachedir/notree/$1"
 }
 
 cache_set () {
@@ -262,6 +266,16 @@ cache_set () {
 		test -e "$cachedir/$oldrev"
 	then
 		die "cache for $oldrev already exists!"
+	fi
+	echo "$newrev" >"$cachedir/$oldrev"
+}
+
+cache_set_if_unset () {
+	oldrev="$1"
+	newrev="$2"
+	if test -e "$cachedir/$oldrev"
+	then
+		return
 	fi
 	echo "$newrev" >"$cachedir/$oldrev"
 }
@@ -375,13 +389,13 @@ find_existing_splits () {
 			then
 				# squash commits refer to a subtree
 				debug "  Squash: $sq from $sub"
-				cache_set "$sq" "$sub"
+				cache_set_if_unset "$sq" "$sub"
 			fi
 			if test -n "$main" -a -n "$sub"
 			then
 				debug "  Prior: $main -> $sub"
-				cache_set $main $sub
-				cache_set $sub $sub
+				cache_set_if_unset $main $sub
+				cache_set_if_unset $sub $sub
 				try_remove_previous "$main"
 				try_remove_previous "$sub"
 			fi
@@ -390,6 +404,36 @@ find_existing_splits () {
 			;;
 		esac
 	done
+}
+
+find_mainline_ref () {
+	debug "Looking for first split..."
+	dir="$1"
+	revs="$2"
+
+	git log --reverse --grep="^git-subtree-dir: $dir/*\$" \
+		--no-show-signature --pretty=format:'START %H%n%s%n%n%b%nEND%n' $revs |
+	while read a b junk
+	do
+		case "$a" in
+		git-subtree-mainline:)
+			echo "$b"
+			return
+			;;
+		esac
+	done
+}
+
+exclude_processed_refs () {
+		if test -r "$cachedir/processed"
+		then
+			cat "$cachedir/processed" |
+			while read rev
+			do
+				debug "read $rev"
+				echo "^$rev"
+			done
+		fi
 }
 
 copy_commit () {
@@ -646,9 +690,9 @@ process_split_commit () {
 
 	progress "$revcount/$revmax ($createcount) [$extracount]"
 
-	debug "Processing commit: $rev"
+	debug "Processing commit: $rev ($indent)"
 	exists=$(cache_get "$rev")
-	if test -n "$exists"
+	if test -z "$(cache_miss "$rev")"
 	then
 		debug "  prior: $exists"
 		return
@@ -666,10 +710,19 @@ process_split_commit () {
 	# vs. a mainline commit?  Does it matter?
 	if test -z "$tree"
 	then
-		set_notree "$rev"
 		if test -n "$newparents"
 		then
-			cache_set "$rev" "$rev"
+			if test "$newparents" = "$parents"
+			then
+				# if all parents were subtrees, this can be a subtree commit
+				cache_set "$rev" "$rev"
+			else
+				# a mainline commit with tree missing is equivalent to the initial commit
+				cache_set "$rev" ""
+			fi
+		else
+			# no parents with valid subtree mappings means a commit prior to subtree add
+			cache_set "$rev" ""
 		fi
 		return
 	fi
@@ -754,6 +807,61 @@ cmd_add_commit () {
 	say "Added dir '$dir'"
 }
 
+cmd_map () {
+
+	if test -z "$1"
+	then
+		die "You must provide a revision to map"
+	fi
+
+	oldrev=$(git rev-parse --revs-only "$1") || exit $?
+	newrev=
+
+	if test -n "$2"
+	then
+		newrev=$(git rev-parse --revs-only "$2") || exit $?
+	fi
+
+	cache_setup || exit $?
+	cache_set "$oldrev" "$newrev"
+
+	say "Mapped $oldrev => $newrev"
+}
+
+cmd_ignore () {
+	revs=$(git rev-parse $default --revs-only "$@") || exit $?
+	ensure_single_rev $revs
+
+	say "Ignoring $revs"
+
+	cache_setup || exit $?
+
+	git rev-list $revs |
+	while read rev
+	do
+		cache_set "$rev" ""
+	done
+
+	echo "$revs" >>"$cachedir/processed"
+}
+
+cmd_use () {
+	revs=$(git rev-parse $default --revs-only "$@") || exit $?
+	ensure_single_rev $revs
+
+	say "Using existing subtree $revs"
+
+	cache_setup || exit $?
+
+	git rev-list $revs |
+	while read rev
+	do
+		cache_set "$rev" "$rev"
+	done
+
+	echo "$revs" >>"$cachedir/processed"
+}
+
 cmd_split () {
 	debug "Splitting $dir..."
 	cache_setup || exit $?
@@ -767,11 +875,22 @@ cmd_split () {
 			# the 'onto' history is already just the subdir, so
 			# any parent we find there can be used verbatim
 			debug "  cache: $rev"
-			cache_set "$rev" "$rev"
+			cache_set_if_unset "$rev" "$rev"
 		done
 	fi
 
-	unrevs="$(find_existing_splits "$dir" "$revs")"
+	unrevs="$(find_existing_splits "$dir" "$revs") $(exclude_processed_refs)"
+
+	mainline="$(find_mainline_ref "$dir" "$revs")"
+	if test -n "$mainline"
+	then
+		debug "Mainline $mainline predates subtree add"
+		git rev-list --topo-order --skip=1 $mainline |
+		while read rev
+		do
+			cache_set_if_unset "$rev" ""
+		done || exit $?
+	fi
 
 	# We can't restrict rev-list to only $dir here, because some of our
 	# parents have the $dir contents the root, and those won't match.

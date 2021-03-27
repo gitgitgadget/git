@@ -52,6 +52,12 @@ useful elsewhere, you can extract its entire history and publish
 that as its own git repository, without accidentally
 intermingling the history of your application project.
 
+Although the relationship between subtree and mainline commits is stored
+in regular git history, it is also cached between subtree runs. In most
+cases this is merely a performance improvement, but for projects with
+large and complex histories the cache can be manipulated directly
+with the use, ignore and map commands.
+
 [TIP]
 In order to keep your commit messages clean, we recommend that
 people split their commits between the subtrees and the main
@@ -120,6 +126,21 @@ and friends will work as expected.
 Note that if you use '--squash' when you merge, you should usually not
 just '--rejoin' when you split.
 
+ignore::
+	Mark a commit and all of its history as irrelevant to subtree split.
+	In most cases this would be handled automatically based on metadata
+	from subtree join commits. Intended for improving performance on
+	extremely large repos and excluding complex history that turns out
+	to be otherwise problematic.
+
+use::
+	Mark a commit and all of its history as part of an existing subtree.
+	In normal circumstances this would be handled based on the metadata
+	from the subtree join commit. Similar to the --onto option of split.
+
+map::
+	Manually override the normal output of split for a particular commit.
+	Extreme flexibility for advanced troubleshooting purposes only.
 
 OPTIONS
 -------
@@ -142,6 +163,9 @@ OPTIONS
 	This option is only valid for add, merge, pull, and split --rejoin.
 	Specify <message> as the commit message for the merge commit.
 
+--clear-cache::
+	Reset the subtree cache and recalculate all subtree mappings from the
+	commit history
 
 OPTIONS FOR add, merge, and pull
 --------------------------------
