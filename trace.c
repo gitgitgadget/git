@@ -367,9 +367,9 @@ static const char *quote_crnl(const char *path)
 	return new_path.buf;
 }
 
-/* FIXME: move prefix to startup_info struct and get rid of this arg */
-void trace_repo_setup(const char *prefix)
+void trace_repo_setup(void)
 {
+	const char *prefix = startup_info->prefix;
 	const char *git_work_tree;
 	char *cwd;
 
