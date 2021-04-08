@@ -1,0 +1,8 @@
+(comment ;; RIGHT rich comment
+
+
+;; ignore comment
+
+
+    (do-something "ChangeMe"))
+

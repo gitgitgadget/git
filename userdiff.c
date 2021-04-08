@@ -44,6 +44,17 @@ PATTERNS("bash",
 	 /* -- */
 	 /* Characters not in the default $IFS value */
 	 "[^ \t]+"),
+PATTERNS("clojure",
+	 /* Ignore comments */
+	 "!^;.*\n"
+	 /* Top level forms */
+	 "^[^ \t].*$",
+	 /* Atoms, Keywords, Symbols */
+	 "[#@:]?[^0-9][a-zA-Z0-9*+!-_'?<>=/.]+"
+	 /* Numbers */
+	 "|[-]?[0-9a-fA-Frxb/MN]+"
+	 /* Characters */
+	 "|[\\0-9a-fA-F]+"),
 PATTERNS("dts",
 	 "!;\n"
 	 "!=\n"

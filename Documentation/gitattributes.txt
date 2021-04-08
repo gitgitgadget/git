@@ -807,6 +807,8 @@ patterns are available:
 
 - `bibtex` suitable for files with BibTeX coded references.
 
+- `clojure` suitable for source code in the Clojure language.
+
 - `cpp` suitable for source code in the C and C++ languages.
 
 - `csharp` suitable for source code in the C# language.

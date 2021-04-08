@@ -29,6 +29,7 @@ diffpatterns="
 	ada
 	bash
 	bibtex
+	clojure
 	cpp
 	csharp
 	css
