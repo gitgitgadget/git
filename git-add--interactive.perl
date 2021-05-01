@@ -313,6 +313,7 @@ sub list_modified {
 				$data{$file} = +{
 					INDEX => __('unchanged'),
 					BINARY => 0,
+					FILE => __('nothing'),
 				};
 			}
 			if ($1 eq 'U') {
