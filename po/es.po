@@ -15469,7 +15469,7 @@ msgstr "Vea \"git help gc\" para limpieza manual.\n"
 msgid ""
 "gc is already running on machine '%s' pid %<PRIuMAX> (use --force if not)"
 msgstr ""
-"gc ya está ejecutándose en la máquina '%s' pid %<PRIuMAX> (use --force so no "
+"gc ya está ejecutándose en la máquina '%s' pid %<PRIuMAX> (use --force si no "
 "es así)"
 
 #: builtin/gc.c:705
