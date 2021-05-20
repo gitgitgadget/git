@@ -5,6 +5,7 @@
 #include "refs.h"
 #include "commit.h"
 #include "parse-options.h"
+#include "notes.h"
 
 /* Quoting styles */
 #define QUOTE_NONE 0
@@ -84,6 +85,12 @@ struct ref_format {
 };
 
 #define REF_FORMAT_INIT { NULL, 0, -1 }
+
+struct notes_info {
+	int show_notes;
+	int show_notes_given;
+	struct display_notes_opt notes_option;
+};
 
 /*  Macros for checking --merged and --no-merged options */
 #define _OPT_MERGED_NO_MERGED(option, filter, h) \

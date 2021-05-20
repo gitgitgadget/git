@@ -14,6 +14,26 @@ static char const * const for_each_ref_usage[] = {
 	NULL
 };
 
+extern struct notes_info notes_info;
+
+int parse_opt_notes(const struct option *opt, const char *arg, int unset)
+{
+	struct notes_info *ni = opt->value;
+
+	if (unset) {
+		disable_display_notes(&ni->notes_option, &ni->show_notes);
+		return 0;
+	}
+
+	if (!arg)
+		return -1;
+
+	enable_ref_display_notes(&ni->notes_option, &ni->show_notes, arg);
+	ni->notes_option.use_default_notes = 0;
+
+	return 0;
+}
+
 int cmd_for_each_ref(int argc, const char **argv, const char *prefix)
 {
 	int i;
@@ -38,6 +58,8 @@ int cmd_for_each_ref(int argc, const char **argv, const char *prefix)
 		OPT_GROUP(""),
 		OPT_INTEGER( 0 , "count", &maxcount, N_("show only <n> matched refs")),
 		OPT_STRING(  0 , "format", &format.format, N_("format"), N_("format to use for the output")),
+		OPT_CALLBACK(0, "notes", &notes_info, N_("notes"), N_("the notes associated"
+			     "with the object pointed at by the ref"), parse_opt_notes),
 		OPT__COLOR(&format.use_color, N_("respect format colors")),
 		OPT_REF_SORT(sorting_tail),
 		OPT_CALLBACK(0, "points-at", &filter.points_at,
@@ -50,6 +72,9 @@ int cmd_for_each_ref(int argc, const char **argv, const char *prefix)
 		OPT_BOOL(0, "ignore-case", &icase, N_("sorting and filtering are case insensitive")),
 		OPT_END(),
 	};
+
+	init_display_notes(&notes_info.notes_option);
+	enable_default_display_notes(&notes_info.notes_option, &notes_info.show_notes);
 
 	memset(&array, 0, sizeof(array));
 	memset(&filter, 0, sizeof(filter));
@@ -97,5 +122,6 @@ int cmd_for_each_ref(int argc, const char **argv, const char *prefix)
 	free_commit_list(filter.with_commit);
 	free_commit_list(filter.no_commit);
 	UNLEAK(sorting);
+	string_list_clear(&notes_info.notes_option.extra_notes_refs, 0);
 	return 0;
 }

@@ -84,6 +84,8 @@ static struct expand_data {
 	struct object_info info;
 } oi, oi_deref;
 
+struct notes_info notes_info;
+
 struct ref_to_worktree_entry {
 	struct hashmap_entry ent;
 	struct worktree *wt; /* key is wt->head_ref */
@@ -292,6 +294,16 @@ static int deltabase_atom_parser(const struct ref_format *format, struct used_at
 		oi_deref.info.delta_base_oid = &oi_deref.delta_base_oid;
 	else
 		oi.info.delta_base_oid = &oi.delta_base_oid;
+	return 0;
+}
+
+static int notes_atom_parser(const struct ref_format *format, struct used_atom *atom,
+				 const char *arg, struct strbuf *err)
+{
+	if(!notes_info.show_notes_given && notes_info.show_notes) {
+			load_display_notes(&notes_info.notes_option);
+			notes_info.show_notes_given = 1;
+	}
 	return 0;
 }
 
@@ -506,6 +518,7 @@ static struct {
 	{ "objectsize", SOURCE_OTHER, FIELD_ULONG, objectsize_atom_parser },
 	{ "objectname", SOURCE_OTHER, FIELD_STR, oid_atom_parser },
 	{ "deltabase", SOURCE_OTHER, FIELD_STR, deltabase_atom_parser },
+	{ "notes", SOURCE_OTHER, FIELD_STR, notes_atom_parser },
 	{ "tree", SOURCE_OBJ, FIELD_STR, oid_atom_parser },
 	{ "parent", SOURCE_OBJ, FIELD_STR, oid_atom_parser },
 	{ "numparent", SOURCE_OBJ, FIELD_ULONG },
@@ -953,6 +966,17 @@ static int grab_oid(const char *name, const char *field, const struct object_id 
 	return 0;
 }
 
+static void grab_notes(const struct object_id *oid, struct atom_value *v)
+{
+	struct strbuf notebuf = STRBUF_INIT;
+
+	if (notes_info.show_notes)
+			format_display_notes(oid, &notebuf,
+			     get_log_output_encoding(), 1);
+	strbuf_trim_trailing_newline(&notebuf);
+	v->s = strbuf_detach(&notebuf, NULL);
+}
+
 /* See grab_values */
 static void grab_common_values(struct atom_value *val, int deref, struct expand_data *oi)
 {
@@ -975,8 +999,12 @@ static void grab_common_values(struct atom_value *val, int deref, struct expand_
 			v->s = xstrfmt("%"PRIuMAX , (uintmax_t)oi->size);
 		} else if (!strcmp(name, "deltabase"))
 			v->s = xstrdup(oid_to_hex(&oi->delta_base_oid));
-		else if (deref)
-			grab_oid(name, "objectname", &oi->oid, v, &used_atom[i]);
+		else if (deref) {
+			if (!strcmp(name, "notes"))
+				grab_notes(&oi->oid, v);
+			else
+				grab_oid(name, "objectname", &oi->oid, v, &used_atom[i]);
+		}
 	}
 }
 
@@ -1766,6 +1794,9 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 			}
 			continue;
 		} else if (!deref && grab_oid(name, "objectname", &ref->objectname, v, atom)) {
+			continue;
+		} else if (!deref && !strcmp(name, "notes")) {
+			grab_notes(&ref->objectname, v);
 			continue;
 		} else if (!strcmp(name, "HEAD")) {
 			if (atom->u.head && !strcmp(ref->refname, atom->u.head))

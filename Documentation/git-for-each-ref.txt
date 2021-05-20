@@ -13,6 +13,7 @@ SYNOPSIS
 		   [--points-at=<object>]
 		   [--merged[=<object>]] [--no-merged[=<object>]]
 		   [--contains[=<object>]] [--no-contains[=<object>]]
+		   [--no-notes | --notes=<ref>]
 
 DESCRIPTION
 -----------
@@ -56,6 +57,15 @@ OPTIONS
 	are hex digits interpolates to character with hex code
 	`xx`; for example `%00` interpolates to `\0` (NUL),
 	`%09` to `\t` (TAB) and `%0a` to `\n` (LF).
+
+--notes=<ref>::
+	Show the notes that annotate the object. With an optional '<ref>' argument,
+	use the ref to find the notes to display.
+	(see linkgit:git-notes[1] and linkgit:pretty-options.txt[])
+--no-notes::
+	Do not show notes. This negates the above `--notes` option, by
+	resetting the list of notes refs from which notes are shown.
+	(see linkgit:git-notes[1] and linkgit:pretty-options.txt[])
 
 --color[=<when>]::
 	Respect any colors specified in the `--format` option. The
@@ -138,6 +148,9 @@ deltabase::
 	This expands to the object name of the delta base for the
 	given object, if it is stored as a delta.  Otherwise it
 	expands to the null object name (all zeroes).
+
+notes::
+	The notes associated with the object pointed at by the ref.
 
 upstream::
 	The name of a local ref which can be considered ``upstream''
@@ -302,6 +315,7 @@ git for-each-ref --count=3 --sort='-*authordate' \
 Subject: %(*subject)
 Date: %(*authordate)
 Ref: %(*refname)
+Notes: %(*notes)
 
 %(*body)
 ' 'refs/tags'

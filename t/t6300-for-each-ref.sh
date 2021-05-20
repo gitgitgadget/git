@@ -32,8 +32,12 @@ test_expect_success setup '
 	git add one &&
 	git commit -m "Initial" &&
 	git branch -M main &&
+	git notes add -m "commit-notes" HEAD &&
+	git notes --ref=refs/notes/sky-walker add \
+	    -m "sky-notes" HEAD &&
 	setdate_and_increment &&
 	git tag -a -m "Tagging at $datestamp" testtag &&
+	git notes add -m "tag-notes" testtag &&
 	git update-ref refs/remotes/origin/main main &&
 	git remote add origin nowhere &&
 	git config branch.main.remote origin &&
@@ -162,6 +166,7 @@ test_atom head contents:signature ''
 test_atom head contents 'Initial
 '
 test_atom head HEAD '*'
+test_atom head notes $(git notes show refs/heads/main)
 
 test_atom tag refname refs/tags/testtag
 test_atom tag refname:short testtag
@@ -220,6 +225,8 @@ test_atom tag contents:signature ''
 test_atom tag contents 'Tagging at 1151968727
 '
 test_atom tag HEAD ' '
+test_atom tag notes $(git notes show refs/tags/testtag)
+test_atom tag "*notes" $(git notes show refs/heads/main)
 
 test_expect_success 'Check invalid atoms names are errors' '
 	test_must_fail git for-each-ref --format="%(INVALID)" refs/heads
@@ -380,6 +387,8 @@ test_expect_success 'exercise strftime with odd fields' '
 
 cat >expected <<\EOF
 refs/heads/main
+refs/notes/commits
+refs/notes/sky-walker
 refs/remotes/origin/main
 refs/tags/testtag
 EOF
@@ -393,6 +402,8 @@ test_expect_success 'Verify ascending sort' '
 cat >expected <<\EOF
 refs/tags/testtag
 refs/remotes/origin/main
+refs/notes/sky-walker
+refs/notes/commits
 refs/heads/main
 EOF
 
@@ -429,6 +440,8 @@ test_expect_success 'exercise glob patterns with prefixes' '
 
 cat >expected <<\EOF
 'refs/heads/main'
+'refs/notes/commits'
+'refs/notes/sky-walker'
 'refs/remotes/origin/main'
 'refs/tags/testtag'
 EOF
@@ -450,6 +463,8 @@ test_expect_success 'Quoting style: python' '
 
 cat >expected <<\EOF
 "refs/heads/main"
+"refs/notes/commits"
+"refs/notes/sky-walker"
 "refs/remotes/origin/main"
 "refs/tags/testtag"
 EOF
@@ -509,6 +524,8 @@ test_expect_success 'Check for invalid refname format' '
 test_expect_success 'set up color tests' '
 	cat >expected.color <<-EOF &&
 	$(git rev-parse --short refs/heads/main) <GREEN>main<RESET>
+	$(git rev-parse --short refs/notes/commits) <GREEN>notes/commits<RESET>
+	$(git rev-parse --short refs/notes/sky-walker) <GREEN>notes/sky-walker<RESET>
 	$(git rev-parse --short refs/remotes/myfork/main) <GREEN>myfork/main<RESET>
 	$(git rev-parse --short refs/remotes/origin/main) <GREEN>origin/main<RESET>
 	$(git rev-parse --short refs/tags/testtag) <GREEN>testtag<RESET>
@@ -1005,6 +1022,53 @@ test_expect_success 'trailer parsing not fooled by --- line' '
 
 test_expect_success 'Add symbolic ref for the following tests' '
 	git symbolic-ref refs/heads/sym refs/heads/main
+'
+
+test_expect_success 'for-each-ref --notes and --no-notes' '
+	cat >expected <<-\EOF &&
+	sky-notes
+	EOF
+	git for-each-ref --format="%(notes)" --notes=refs/notes/sky-walker \
+	    refs/heads/ambiguous >actual &&
+	test_cmp expected actual &&
+	git for-each-ref --format="%(notes)" --notes=sky-walker refs/heads/ambiguous >actual &&
+	test_cmp expected actual &&
+	git for-each-ref --format="%(notes)" --notes=sky-walker --notes=commits \
+	    --no-notes --notes=sky-walker refs/heads/ambiguous >actual &&
+	test_cmp expected actual &&
+	cat >expected <<-\EOF &&
+	commit-notes
+	EOF
+	git for-each-ref --format="%(notes)" --notes=commits refs/heads/ambiguous >actual &&
+	cat >expected <<-\EOF &&
+	sky-notes
+	commit-notes
+	EOF
+	git for-each-ref --format="%(notes)" --notes=sky-walker --notes=commits \
+	    refs/heads/ambiguous >actual &&
+	test_cmp expected actual &&
+	cat >expected <<-\EOF &&
+	commit-notes
+	sky-notes
+	EOF
+	git for-each-ref --format="%(notes)" --notes=commits --notes=sky-walker \
+	    refs/heads/ambiguous >actual &&
+	test_cmp expected actual &&
+	cat >expected <<-\EOF &&
+
+	EOF
+	git for-each-ref --format="%(notes)" --notes=sky-walker --notes=commits --no-notes \
+	    refs/heads/ambiguous >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'for-each-ref --notes with remote ref' '
+	cat >expected <<-\EOF &&
+	refs/remotes/origin/main sky-notes
+	EOF
+	git for-each-ref --format="%(refname) %(notes)" --notes=refs/notes/sky-walker \
+	    refs/remotes/origin/main >actual &&
+	test_cmp expected actual
 '
 
 cat >expected <<EOF
