@@ -772,4 +772,31 @@ test_expect_success '--left-only/--right-only' '
 	test_cmp expect actual
 '
 
+test_expect_success 'format-patch --range-diff --left-only' '
+	rm -fr repo &&
+	git init repo &&
+	cd repo &&
+	git branch -M main &&
+	echo "base" >base &&
+	git add base &&
+	git commit -m "base" &&
+	git checkout -b my-feature &&
+	echo "feature" >feature &&
+	git add feature &&
+	git commit -m "feature" &&
+	base="$(git rev-parse main)" &&
+	old="$(git rev-parse my-feature)" &&
+	git checkout main &&
+	echo "other" >>base &&
+	git add base &&
+	git commit -m "new" &&
+	git checkout my-feature &&
+	git rebase $base --onto main &&
+	tip="$(git rev-parse my-feature)" &&
+	git format-patch --range-diff $base..$old $base..$tip --cover-letter  &&
+	grep "> 1: .* new$" 0000-cover-letter.patch &&
+	git format-patch --range-diff $base..$old $base..$tip --left-only --cover-letter &&
+	! grep "> 1: .* feature$" 0000-cover-letter.patch
+'
+
 test_done
