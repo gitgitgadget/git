@@ -35,6 +35,8 @@ static int fetch_objects(struct repository *repo,
 		die(_("promisor-remote: unable to fork off fetch subprocess"));
 	child_in = xfdopen(child.in, "w");
 
+	trace2_data_intmax("promisor", repo, "fetch_count", oid_nr);
+
 	for (i = 0; i < oid_nr; i++) {
 		if (fputs(oid_to_hex(&oids[i]), child_in) < 0)
 			die_errno(_("promisor-remote: could not write to fetch subprocess"));
