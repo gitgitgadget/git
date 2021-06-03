@@ -72,6 +72,13 @@ struct strbuf {
 extern char strbuf_slopbuf[];
 #define STRBUF_INIT  { .alloc = 0, .len = 0, .buf = strbuf_slopbuf }
 
+#define STRBUF_INIT_CONST(str)  { .alloc = 0, .len = strlen(str), .buf = str }
+
+/*
+ *  Through this function, we can turn a constant buffer into a non-constant buffer
+ */
+void strbuf_const_to_no_const(struct strbuf *sb);
+
 /*
  * Predeclare this here, since cache.h includes this file before it defines the
  * struct.
@@ -159,6 +166,7 @@ void strbuf_grow(struct strbuf *sb, size_t amount);
  */
 static inline void strbuf_setlen(struct strbuf *sb, size_t len)
 {
+	strbuf_const_to_no_const(sb);
 	if (len > (sb->alloc ? sb->alloc - 1 : 0))
 		die("BUG: strbuf_setlen() beyond buffer");
 	sb->len = len;
