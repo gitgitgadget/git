@@ -11,14 +11,20 @@
 #include "git-compat-util.h"
 #include "builtin.h"
 #include "diff.h"
+#include "parse-options.h"
 
-static const char builtin_merge_ours_usage[] =
-	"git merge-ours <base>... -- HEAD <remote>...";
+static const char * const merge_ours_usage[] = {
+	N_("git merge-ours [<base>...] -- <head> <merge-head>..."),
+	NULL,
+};
 
 int cmd_merge_ours(int argc, const char **argv, const char *prefix)
 {
-	if (argc == 2 && !strcmp(argv[1], "-h"))
-		usage(builtin_merge_ours_usage);
+	struct option options[] = {
+		OPT_END()
+	};
+
+	argc = parse_options(argc, argv, prefix, options, merge_ours_usage, 0);
 
 	/*
 	 * The contents of the current index becomes the tree we
