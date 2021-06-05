@@ -340,6 +340,20 @@ test_expect_success 'git branch --format option' '
 	test_cmp expect actual
 '
 
+test_expect_success 'git branch with --format and --rest option' '
+	cat >expect <<-\EOF &&
+	@Refname is (HEAD detached from fromtag)
+	@Refname is refs/heads/ambiguous
+	@Refname is refs/heads/branch-one
+	@Refname is refs/heads/branch-two
+	@Refname is refs/heads/main
+	@Refname is refs/heads/ref-to-branch
+	@Refname is refs/heads/ref-to-remote
+	EOF
+	git branch --rest="@" --format="%(rest)Refname is %(refname)" >actual &&
+	test_cmp expect actual
+'
+
 test_expect_success 'worktree colors correct' '
 	cat >expect <<-EOF &&
 	* <GREEN>(HEAD detached from fromtag)<RESET>

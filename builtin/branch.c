@@ -439,6 +439,10 @@ static void print_ref_list(struct ref_filter *filter, struct ref_sorting *sortin
 	if (verify_ref_format(format))
 		die(_("unable to parse format string"));
 
+	if (format->use_rest)
+		for (i = 0; i < array.nr; i++)
+			array.items[i]->rest = format->rest;
+
 	ref_array_sort(sorting, &array);
 
 	for (i = 0; i < array.nr; i++) {
@@ -670,6 +674,7 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 			N_("print only branches of the object"), parse_opt_object_name),
 		OPT_BOOL('i', "ignore-case", &icase, N_("sorting and filtering are case insensitive")),
 		OPT_STRING(  0 , "format", &format.format, N_("format"), N_("format to use for the output")),
+		OPT_STRING(0, "rest", &format.rest, N_("rest"), N_("specify %(rest) contents")),
 		OPT_END(),
 	};
 

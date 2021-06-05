@@ -1998,6 +1998,16 @@ test_expect_success '--format should list tags as per format given' '
 	test_cmp expect actual
 '
 
+test_expect_success 'tag -l with --format and --rest' '
+	cat >expect <<-\EOF &&
+	#refname : refs/tags/v1.0
+	#refname : refs/tags/v1.0.1
+	#refname : refs/tags/v1.1.3
+	EOF
+	git tag -l --rest="#" --format="%(rest)refname : %(refname)" "v1*" >actual &&
+	test_cmp expect actual
+'
+
 test_expect_success "set up color tests" '
 	echo "<RED>v1.0<RESET>" >expect.color &&
 	echo "v1.0" >expect.bare &&

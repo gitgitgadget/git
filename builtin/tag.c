@@ -63,6 +63,11 @@ static int list_tags(struct ref_filter *filter, struct ref_sorting *sorting,
 		die(_("unable to parse format string"));
 	filter->with_commit_tag_algo = 1;
 	filter_refs(&array, filter, FILTER_REFS_TAGS);
+
+	if (format->use_rest)
+		for (i = 0; i < array.nr; i++)
+			array.items[i]->rest = format->rest;
+
 	ref_array_sort(sorting, &array);
 
 	for (i = 0; i < array.nr; i++) {
@@ -146,7 +151,7 @@ static int verify_tag(const char *name, const char *ref,
 		      const struct object_id *oid, void *cb_data)
 {
 	int flags;
-	const struct ref_format *format = cb_data;
+	struct ref_format *format = cb_data;
 	flags = GPG_VERIFY_VERBOSE;
 
 	if (format->format)
@@ -481,6 +486,7 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 		OPT_STRING(  0 , "format", &format.format, N_("format"),
 			   N_("format to use for the output")),
 		OPT__COLOR(&format.use_color, N_("respect format colors")),
+		OPT_STRING(0, "rest", &format.rest, N_("rest"), N_("specify %(rest) contents")),
 		OPT_BOOL('i', "ignore-case", &icase, N_("sorting and filtering are case insensitive")),
 		OPT_END()
 	};

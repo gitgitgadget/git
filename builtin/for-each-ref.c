@@ -5,6 +5,7 @@
 #include "object.h"
 #include "parse-options.h"
 #include "ref-filter.h"
+#include "userdiff.h"
 
 static char const * const for_each_ref_usage[] = {
 	N_("git for-each-ref [<options>] [<pattern>]"),
@@ -13,6 +14,14 @@ static char const * const for_each_ref_usage[] = {
 	N_("git for-each-ref [--contains [<commit>]] [--no-contains [<commit>]]"),
 	NULL
 };
+
+static int git_for_each_ref_config(const char *var, const char *value, void *cb)
+{
+	if (userdiff_config(var, value) < 0)
+		return -1;
+
+	return git_default_config(var, value, cb);
+}
 
 int cmd_for_each_ref(int argc, const char **argv, const char *prefix)
 {
@@ -37,6 +46,7 @@ int cmd_for_each_ref(int argc, const char **argv, const char *prefix)
 
 		OPT_GROUP(""),
 		OPT_INTEGER( 0 , "count", &maxcount, N_("show only <n> matched refs")),
+		OPT_STRING(  0 , "rest", &format.rest, N_("rest"), N_("specify %(rest) contents")),
 		OPT_STRING(  0 , "format", &format.format, N_("format"), N_("format to use for the output")),
 		OPT__COLOR(&format.use_color, N_("respect format colors")),
 		OPT_REF_SORT(sorting_tail),
@@ -56,7 +66,7 @@ int cmd_for_each_ref(int argc, const char **argv, const char *prefix)
 
 	format.format = "%(objectname) %(objecttype)\t%(refname)";
 
-	git_config(git_default_config, NULL);
+	git_config(git_for_each_ref_config, NULL);
 
 	parse_options(argc, argv, prefix, opts, for_each_ref_usage, 0);
 	if (maxcount < 0) {
@@ -78,6 +88,11 @@ int cmd_for_each_ref(int argc, const char **argv, const char *prefix)
 	filter.name_patterns = argv;
 	filter.match_as_path = 1;
 	filter_refs(&array, &filter, FILTER_REFS_ALL | FILTER_REFS_INCLUDE_BROKEN);
+
+	if (format.use_rest)
+		for (i = 0; i < array.nr; i++)
+			array.items[i]->rest = format.rest;
+
 	ref_array_sort(sorting, &array);
 
 	if (!maxcount || array.nr < maxcount)

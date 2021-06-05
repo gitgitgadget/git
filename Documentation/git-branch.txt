@@ -15,7 +15,7 @@ SYNOPSIS
 	[--contains [<commit>]] [--no-contains [<commit>]]
 	[--points-at <object>] [--format=<format>]
 	[(-r | --remotes) | (-a | --all)]
-	[--list] [<pattern>...]
+	[--list] [<pattern>...] [--rest=<rest>]
 'git branch' [--track | --no-track] [-f] <branchname> [<start-point>]
 'git branch' (--set-upstream-to=<upstream> | -u <upstream>) [<branchname>]
 'git branch' --unset-upstream [<branchname>]
@@ -297,6 +297,10 @@ start-point is either a local or remote-tracking branch.
 	A string that interpolates `%(fieldname)` from a branch ref being shown
 	and the object it points at.  The format is the same as
 	that of linkgit:git-for-each-ref[1].
+
+--rest=<rest>::
+	If given, the `%(rest)` placeholders in the `--format` option
+	will be replaced.
 
 CONFIGURATION
 -------------

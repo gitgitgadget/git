@@ -194,6 +194,14 @@ test_expect_success GPG 'verifying tag with --format' '
 	test_cmp expect actual
 '
 
+test_expect_success GPG 'verifying tag with --format and --rest' '
+	cat >expect <<-\EOF &&
+	#tagname : fourth-signed
+	EOF
+	git verify-tag --rest="#" --format="%(rest)tagname : %(tag)" "fourth-signed" >actual &&
+	test_cmp expect actual
+'
+
 test_expect_success GPG 'verifying a forged tag with --format should fail silently' '
 	test_must_fail git verify-tag --format="tagname : %(tag)" $(cat forged1.tag) >actual-forged &&
 	test_must_be_empty actual-forged
