@@ -217,7 +217,7 @@ static void batch_object_write(const char *obj_name,
 			       struct expand_data *data)
 {
 	int ret;
-	struct ref_array_item item = { data->oid, data->rest };
+	struct ref_array_item item = { data->oid, data->rest, opt->cmdmode };
 
 	strbuf_reset(scratch);
 	strbuf_reset(err);

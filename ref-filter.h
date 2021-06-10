@@ -39,6 +39,7 @@ struct ref_sorting {
 struct ref_array_item {
 	struct object_id objectname;
 	const char *rest;
+	int cat_file_cmdmode;
 	int flag;
 	unsigned int kind;
 	const char *symref;
