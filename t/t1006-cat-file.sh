@@ -607,5 +607,256 @@ test_expect_success 'cat-file --batch="batman" with --batch-all-objects will wor
 	git -C all-two cat-file --batch-all-objects --batch="batman" >actual &&
 	cmp expect actual
 '
+. "$TEST_DIRECTORY"/lib-gpg.sh
+. "$TEST_DIRECTORY"/lib-terminal.sh
+
+test_expect_success 'cat-file --batch|--batch-check setup' '
+	echo 1>blob1 &&
+	printf "a\0b\0\c" >blob2 &&
+	git add blob1 blob2 &&
+	git commit -m "Commit Message" &&
+	git branch -M main &&
+	git tag -a -m "v0.0.0" testtag &&
+	git update-ref refs/myblobs/blob1 HEAD:blob1 &&
+	git update-ref refs/myblobs/blob2 HEAD:blob2 &&
+	git update-ref refs/mytrees/tree1 HEAD^{tree}
+'
+
+batch_test_atom() {
+	if test "$3" = "fail"
+	then
+		test_expect_${4:-success} $PREREQ "basic atom: $1 $2 must fail" "
+			test_must_fail git cat-file --batch-check='$2' >bad <<-EOF
+			$1
+			EOF
+		"
+	else
+		test_expect_${4:-success} $PREREQ "basic atom: $1 $2" "
+			git for-each-ref --format='$2' $1 >expected &&
+			git cat-file --batch-check='$2' >actual <<-EOF &&
+			$1
+			EOF
+			sanitize_pgp <actual >actual.clean &&
+			cmp expected actual.clean
+		"
+	fi
+}
+
+batch_test_atom refs/heads/main '%(refname)' fail
+batch_test_atom refs/heads/main '%(refname:)' fail
+batch_test_atom refs/heads/main '%(refname:short)' fail
+batch_test_atom refs/heads/main '%(refname:lstrip=1)' fail
+batch_test_atom refs/heads/main '%(refname:lstrip=2)' fail
+batch_test_atom refs/heads/main '%(refname:lstrip=-1)' fail
+batch_test_atom refs/heads/main '%(refname:lstrip=-2)' fail
+batch_test_atom refs/heads/main '%(refname:rstrip=1)' fail
+batch_test_atom refs/heads/main '%(refname:rstrip=2)' fail
+batch_test_atom refs/heads/main '%(refname:rstrip=-1)' fail
+batch_test_atom refs/heads/main '%(refname:rstrip=-2)' fail
+batch_test_atom refs/heads/main '%(refname:strip=1)' fail
+batch_test_atom refs/heads/main '%(refname:strip=2)' fail
+batch_test_atom refs/heads/main '%(refname:strip=-1)' fail
+batch_test_atom refs/heads/main '%(refname:strip=-2)' fail
+batch_test_atom refs/heads/main '%(upstream)' fail
+batch_test_atom refs/heads/main '%(upstream:short)' fail
+batch_test_atom refs/heads/main '%(upstream:lstrip=2)' fail
+batch_test_atom refs/heads/main '%(upstream:lstrip=-2)' fail
+batch_test_atom refs/heads/main '%(upstream:rstrip=2)' fail
+batch_test_atom refs/heads/main '%(upstream:rstrip=-2)' fail
+batch_test_atom refs/heads/main '%(upstream:strip=2)' fail
+batch_test_atom refs/heads/main '%(upstream:strip=-2)' fail
+batch_test_atom refs/heads/main '%(push)' fail
+batch_test_atom refs/heads/main '%(push:short)' fail
+batch_test_atom refs/heads/main '%(push:lstrip=1)' fail
+batch_test_atom refs/heads/main '%(push:lstrip=-1)' fail
+batch_test_atom refs/heads/main '%(push:rstrip=1)' fail
+batch_test_atom refs/heads/main '%(push:rstrip=-1)' fail
+batch_test_atom refs/heads/main '%(push:strip=1)' fail
+batch_test_atom refs/heads/main '%(push:strip=-1)' fail
+batch_test_atom refs/heads/main '%(objecttype)'
+batch_test_atom refs/heads/main '%(objectsize)'
+batch_test_atom refs/heads/main '%(objectsize:disk)'
+batch_test_atom refs/heads/main '%(deltabase)'
+batch_test_atom refs/heads/main '%(objectname)'
+batch_test_atom refs/heads/main '%(objectname:short)'
+batch_test_atom refs/heads/main '%(objectname:short=1)'
+batch_test_atom refs/heads/main '%(objectname:short=10)'
+batch_test_atom refs/heads/main '%(tree)'
+batch_test_atom refs/heads/main '%(tree:short)'
+batch_test_atom refs/heads/main '%(tree:short=1)'
+batch_test_atom refs/heads/main '%(tree:short=10)'
+batch_test_atom refs/heads/main '%(parent)'
+batch_test_atom refs/heads/main '%(parent:short)'
+batch_test_atom refs/heads/main '%(parent:short=1)'
+batch_test_atom refs/heads/main '%(parent:short=10)'
+batch_test_atom refs/heads/main '%(numparent)'
+batch_test_atom refs/heads/main '%(object)'
+batch_test_atom refs/heads/main '%(type)'
+batch_test_atom refs/heads/main '%(raw)'
+batch_test_atom refs/heads/main '%(*objectname)'
+batch_test_atom refs/heads/main '%(*objecttype)'
+batch_test_atom refs/heads/main '%(author)'
+batch_test_atom refs/heads/main '%(authorname)'
+batch_test_atom refs/heads/main '%(authoremail)'
+batch_test_atom refs/heads/main '%(authoremail:trim)'
+batch_test_atom refs/heads/main '%(authoremail:localpart)'
+batch_test_atom refs/heads/main '%(authordate)'
+batch_test_atom refs/heads/main '%(committer)'
+batch_test_atom refs/heads/main '%(committername)'
+batch_test_atom refs/heads/main '%(committeremail)'
+batch_test_atom refs/heads/main '%(committeremail:trim)'
+batch_test_atom refs/heads/main '%(committeremail:localpart)'
+batch_test_atom refs/heads/main '%(committerdate)'
+batch_test_atom refs/heads/main '%(tag)'
+batch_test_atom refs/heads/main '%(tagger)'
+batch_test_atom refs/heads/main '%(taggername)'
+batch_test_atom refs/heads/main '%(taggeremail)'
+batch_test_atom refs/heads/main '%(taggeremail:trim)'
+batch_test_atom refs/heads/main '%(taggeremail:localpart)'
+batch_test_atom refs/heads/main '%(taggerdate)'
+batch_test_atom refs/heads/main '%(creator)'
+batch_test_atom refs/heads/main '%(creatordate)'
+batch_test_atom refs/heads/main '%(subject)'
+batch_test_atom refs/heads/main '%(subject:sanitize)'
+batch_test_atom refs/heads/main '%(contents:subject)'
+batch_test_atom refs/heads/main '%(body)'
+batch_test_atom refs/heads/main '%(contents:body)'
+batch_test_atom refs/heads/main '%(contents:signature)'
+batch_test_atom refs/heads/main '%(contents)'
+batch_test_atom refs/heads/main '%(HEAD)' fail
+batch_test_atom refs/heads/main '%(upstream:track)' fail
+batch_test_atom refs/heads/main '%(upstream:trackshort)' fail
+batch_test_atom refs/heads/main '%(upstream:track,nobracket)' fail
+batch_test_atom refs/heads/main '%(upstream:nobracket,track)' fail
+batch_test_atom refs/heads/main '%(push:track)' fail
+batch_test_atom refs/heads/main '%(push:trackshort)' fail
+batch_test_atom refs/heads/main '%(worktreepath)' fail
+batch_test_atom refs/heads/main '%(symref)' fail
+batch_test_atom refs/heads/main '%(flag)' fail
+
+batch_test_atom refs/tags/testtag '%(refname)' fail
+batch_test_atom refs/tags/testtag '%(refname:short)' fail
+batch_test_atom refs/tags/testtag '%(upstream)' fail
+batch_test_atom refs/tags/testtag '%(push)' fail
+batch_test_atom refs/tags/testtag '%(objecttype)'
+batch_test_atom refs/tags/testtag '%(objectsize)'
+batch_test_atom refs/tags/testtag '%(objectsize:disk)'
+batch_test_atom refs/tags/testtag '%(*objectsize:disk)'
+batch_test_atom refs/tags/testtag '%(deltabase)'
+batch_test_atom refs/tags/testtag '%(*deltabase)'
+batch_test_atom refs/tags/testtag '%(objectname)'
+batch_test_atom refs/tags/testtag '%(objectname:short)'
+batch_test_atom refs/tags/testtag '%(tree)'
+batch_test_atom refs/tags/testtag '%(tree:short)'
+batch_test_atom refs/tags/testtag '%(tree:short=1)'
+batch_test_atom refs/tags/testtag '%(tree:short=10)'
+batch_test_atom refs/tags/testtag '%(parent)'
+batch_test_atom refs/tags/testtag '%(parent:short)'
+batch_test_atom refs/tags/testtag '%(parent:short=1)'
+batch_test_atom refs/tags/testtag '%(parent:short=10)'
+batch_test_atom refs/tags/testtag '%(numparent)'
+batch_test_atom refs/tags/testtag '%(object)'
+batch_test_atom refs/tags/testtag '%(type)'
+batch_test_atom refs/tags/testtag '%(*objectname)'
+batch_test_atom refs/tags/testtag '%(*objecttype)'
+batch_test_atom refs/tags/testtag '%(author)'
+batch_test_atom refs/tags/testtag '%(authorname)'
+batch_test_atom refs/tags/testtag '%(authoremail)'
+batch_test_atom refs/tags/testtag '%(authoremail:trim)'
+batch_test_atom refs/tags/testtag '%(authoremail:localpart)'
+batch_test_atom refs/tags/testtag '%(authordate)'
+batch_test_atom refs/tags/testtag '%(committer)'
+batch_test_atom refs/tags/testtag '%(committername)'
+batch_test_atom refs/tags/testtag '%(committeremail)'
+batch_test_atom refs/tags/testtag '%(committeremail:trim)'
+batch_test_atom refs/tags/testtag '%(committeremail:localpart)'
+batch_test_atom refs/tags/testtag '%(committerdate)'
+batch_test_atom refs/tags/testtag '%(tag)'
+batch_test_atom refs/tags/testtag '%(tagger)'
+batch_test_atom refs/tags/testtag '%(taggername)'
+batch_test_atom refs/tags/testtag '%(taggeremail)'
+batch_test_atom refs/tags/testtag '%(taggeremail:trim)'
+batch_test_atom refs/tags/testtag '%(taggeremail:localpart)'
+batch_test_atom refs/tags/testtag '%(taggerdate)'
+batch_test_atom refs/tags/testtag '%(creator)'
+batch_test_atom refs/tags/testtag '%(creatordate)'
+batch_test_atom refs/tags/testtag '%(subject)'
+batch_test_atom refs/tags/testtag '%(subject:sanitize)'
+batch_test_atom refs/tags/testtag '%(contents:subject)'
+batch_test_atom refs/tags/testtag '%(body)'
+batch_test_atom refs/tags/testtag '%(contents:body)'
+batch_test_atom refs/tags/testtag '%(contents:signature)'
+batch_test_atom refs/tags/testtag '%(contents)'
+batch_test_atom refs/tags/testtag '%(HEAD)' fail
+
+batch_test_atom refs/myblobs/blob1 '%(refname)' fail
+batch_test_atom refs/myblobs/blob1 '%(upstream)' fail
+batch_test_atom refs/myblobs/blob1 '%(push)' fail
+batch_test_atom refs/myblobs/blob1 '%(HEAD)' fail
+
+batch_test_atom refs/myblobs/blob1 '%(objectname)'
+batch_test_atom refs/myblobs/blob1 '%(objecttype)'
+batch_test_atom refs/myblobs/blob1 '%(objectsize)'
+batch_test_atom refs/myblobs/blob1 '%(objectsize:disk)'
+batch_test_atom refs/myblobs/blob1 '%(deltabase)'
+
+batch_test_atom refs/myblobs/blob1 '%(contents)'
+batch_test_atom refs/myblobs/blob2 '%(contents)'
+
+batch_test_atom refs/myblobs/blob1 '%(raw)'
+batch_test_atom refs/myblobs/blob2 '%(raw)'
+batch_test_atom refs/mytrees/tree1 '%(raw)'
+
+batch_test_atom refs/myblobs/blob1 '%(raw:size)'
+batch_test_atom refs/myblobs/blob2 '%(raw:size)'
+batch_test_atom refs/mytrees/tree1 '%(raw:size)'
+
+batch_test_atom refs/myblobs/blob1 '%(if:equals=blob)%(objecttype)%(then)commit%(else)not commit%(end)'
+batch_test_atom refs/myblobs/blob2 '%(if:equals=blob)%(objecttype)%(then)commit%(else)not commit%(end)'
+batch_test_atom refs/mytrees/tree1 '%(if:equals=tree)%(objecttype)%(then)tree%(else)not tree%(end)'
+
+batch_test_atom refs/heads/main '%(align:60) objectname is %(objectname)%(end)|%(objectname)'
+batch_test_atom refs/heads/main '%(align:left,60) objectname is %(objectname)%(end)|%(objectname)'
+batch_test_atom refs/heads/main '%(align:middle,60) objectname is %(objectname)%(end)|%(objectname)'
+batch_test_atom refs/heads/main '%(align:60,right) objectname is %(objectname)%(end)|%(objectname)'
+
+batch_test_atom refs/heads/main 'VALID'
+batch_test_atom refs/heads/main '%(INVALID)' fail
+batch_test_atom refs/heads/main '%(authordate:INVALID)' fail
+
+test_expect_success '%(rest) works with both a branch and a tag' '
+	cat >expected <<-EOF &&
+	123 commit 123
+	456 tag 456
+	EOF
+	git cat-file --batch-check="%(rest) %(objecttype) %(rest)" >actual <<-EOF &&
+	refs/heads/main 123
+	refs/tags/testtag 456
+	EOF
+	test_cmp expected actual
+'
+
+batch_test_atom refs/heads/main '%(objectname) %(objecttype) %(objectsize)
+%(raw)'
+batch_test_atom refs/tags/testtag '%(objectname) %(objecttype) %(objectsize)
+%(raw)'
+batch_test_atom refs/myblobs/blob1 '%(objectname) %(objecttype) %(objectsize)
+%(raw)'
+batch_test_atom refs/myblobs/blob2 '%(objectname) %(objecttype) %(objectsize)
+%(raw)'
+
+
+test_expect_success 'cat-file --batch equals to --batch-check with atoms' '
+	git cat-file --batch-check="%(objectname) %(objecttype) %(objectsize)
+%(raw)" >expected <<-EOF &&
+	refs/heads/main
+	refs/tags/testtag
+	EOF
+	git cat-file --batch >actual <<-EOF &&
+	refs/heads/main
+	refs/tags/testtag
+	EOF
+	cmp expected actual
+'
 
 test_done
