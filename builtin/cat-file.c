@@ -380,6 +380,12 @@ static int batch_objects(struct batch_options *batch, const struct option *optio
 	if (batch->print_contents)
 		strbuf_addstr(&format, "\n%(raw)");
 	batch->format.format = format.buf;
+
+	if (batch->cmdmode == 'c')
+		batch->format.use_textconv = 1;
+	else if (batch->cmdmode == 'w')
+		batch->format.use_filters = 1;
+
 	if (verify_ref_format(&batch->format))
 		usage_with_options(cat_file_usage, options);
 
