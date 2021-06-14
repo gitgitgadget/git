@@ -1,5 +1,6 @@
 #include "cache.h"
 #include "urlmatch.h"
+#include "config.h"
 
 #define URL_ALPHA "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
 #define URL_DIGIT "0123456789"
@@ -106,6 +107,18 @@ static int match_host(const struct url_info *url_info,
 	return (!url_len && !pat_len);
 }
 
+static void die_if_username_password_not_allowed(void)
+{
+	int opt_in = 0;
+	if (!git_config_get_bool("core.allowusernamepasswordurls", &opt_in) &&
+	    opt_in)
+		return;
+
+	die(_("attempted to parse a URL with a plain-text username and password! "
+	      "This is insecure! "
+	      "Enable core.allowUsernamePasswordUrls to avoid this error"));
+}
+
 static char *url_normalize_1(const char *url, struct url_info *out_info, char allow_globs)
 {
 	/*
@@ -191,6 +204,7 @@ static char *url_normalize_1(const char *url, struct url_info *out_info, char al
 			}
 			colon_ptr = strchr(norm.buf + scheme_len + 3, ':');
 			if (colon_ptr) {
+				die_if_username_password_not_allowed();
 				passwd_off = (colon_ptr + 1) - norm.buf;
 				passwd_len = norm.len - passwd_off;
 				user_len = (passwd_off - 1) - (scheme_len + 3);

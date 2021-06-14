@@ -6,6 +6,10 @@ test_description='urlmatch URL normalization'
 # The base name of the test url files
 tu="$TEST_DIRECTORY/t0110/url"
 
+test_expect_success 'enable username:password urls' '
+	git config --global core.allowUsernamePasswordUrls true
+'
+
 # Note that only file: URLs should be allowed without a host
 
 test_expect_success 'url scheme' '

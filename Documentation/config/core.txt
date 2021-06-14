@@ -628,3 +628,10 @@ core.abbrev::
 	If set to "no", no abbreviation is made and the object names
 	are shown in their full length.
 	The minimum length is 4.
+
+core.allowUsernamePasswordUrls::
+	If enabled, allow parsing URLs that contain plain-text usernames
+	and passwords using `username:password@<url>` text. Defaults to
+	`false`, and will cause Git to fail when parsing such a URL.
+	*WARNING:* Storing passwords and tokens in plaintext is insecure
+	and should be avoided if at all possible.

@@ -81,7 +81,8 @@ test_expect_success 'cloning password-protected repository can fail' '
 
 test_expect_success 'http auth can use user/pass in URL' '
 	set_askpass wrong &&
-	git clone "$HTTPD_URL_USER_PASS/auth/dumb/repo.git" clone-auth-none &&
+	git -c core.allowUsernamePasswordUrls=true clone \
+		"$HTTPD_URL_USER_PASS/auth/dumb/repo.git" clone-auth-none &&
 	expect_askpass none
 '
 

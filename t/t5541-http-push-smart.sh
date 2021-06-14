@@ -460,6 +460,7 @@ test_expect_success GPG 'push with post-receive to inspect certificate' '
 
 test_expect_success 'push status output scrubs password' '
 	cd "$ROOT_PATH/test_repo_clone" &&
+	git config core.allowUsernamePasswordUrls true &&
 	git push --porcelain \
 		"$HTTPD_URL_USER_PASS/smart/test_repo.git" \
 		+HEAD:scrub >status &&
@@ -469,9 +470,11 @@ test_expect_success 'push status output scrubs password' '
 
 test_expect_success 'clone/fetch scrubs password from reflogs' '
 	cd "$ROOT_PATH" &&
-	git clone "$HTTPD_URL_USER_PASS/smart/test_repo.git" \
+	git -c core.allowUsernamePasswordUrls=true clone \
+		"$HTTPD_URL_USER_PASS/smart/test_repo.git" \
 		reflog-test &&
 	cd reflog-test &&
+	git config core.allowUsernamePasswordUrls true &&
 	test_commit prepare-for-force-fetch &&
 	git switch -c away &&
 	git fetch "$HTTPD_URL_USER_PASS/smart/test_repo.git" \
@@ -484,8 +487,10 @@ test_expect_success 'clone/fetch scrubs password from reflogs' '
 
 test_expect_success 'Non-ASCII branch name can be used with --force-with-lease' '
 	cd "$ROOT_PATH" &&
-	git clone "$HTTPD_URL_USER_PASS/smart/test_repo.git" non-ascii &&
+	git -c core.allowUsernamePasswordUrls=true clone \
+		"$HTTPD_URL_USER_PASS/smart/test_repo.git" non-ascii &&
 	cd non-ascii &&
+	git config core.allowUsernamePasswordUrls true &&
 	git checkout -b rama-de-árbol &&
 	test_commit F &&
 	git push --force-with-lease origin rama-de-árbol &&

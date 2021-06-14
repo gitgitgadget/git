@@ -71,6 +71,11 @@ test_expect_success 'clone respects GIT_WORK_TREE' '
 
 '
 
+test_expect_success 'clone fails when using username:password' '
+	test_must_fail git clone https://username:password@bogus.url 2>err &&
+	test_i18ngrep "attempted to parse a URL with a plain-text username and password" err
+'
+
 test_expect_success 'clone from hooks' '
 
 	test_create_repo r0 &&
