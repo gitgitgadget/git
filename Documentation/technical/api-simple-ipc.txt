@@ -70,10 +70,11 @@ the simple-ipc routines.  For example, the server might decide to
 shutdown when idle or only upon explicit request.
 
 
-Simple-IPC protocol
--------------------
+Simple-IPC protocol (V1)
+------------------------
 
-The Simple-IPC protocol consists of a single request message from the
+In its original form,
+the Simple-IPC protocol consists of a single request message from the
 client and an optional response message from the server.  Both the
 client and server messages are unlimited in length and are terminated
 with a flush packet.
@@ -93,13 +94,27 @@ content within.  It is the job of the calling application layer to
 understand the contents of the request and response messages.
 
 
+Simple-IPC protocol (V2)
+------------------------
+
+The protocol was updated to allow additional messages to be exchanged
+after the first round trip.  This is similar to an HTTP keepalive.
+The server defers closing/resetting its pipe/socket handle until the
+client closes their handle.  This allows the client to send another
+message if it chooses to.
+
+This feature should be used with care since the server handle and the
+associated server thread are bound to the client until the client
+closes its handle.  It may be necessary to increase the number of
+server threads to keep it responsive.
+
+
 Summary
 -------
 
 Conceptually, the Simple-IPC protocol is similar to an HTTP REST
 request.  Clients connect, make an application-specific and
 stateless request, receive an application-specific
-response, and disconnect.  It is a one round trip facility for
-querying the server.  The Simple-IPC routines hide the socket,
+response, and disconnect.  The Simple-IPC routines hide the socket,
 named pipe, and thread pool details and allow the application
 layer to focus on the application at hand.
