@@ -241,7 +241,7 @@ raw:size::
 	The raw data size of the object.
 
 Note that `--format=%(raw)` can not be used with `--python`, `--shell`, `--tcl`,
-`--perl` because such language may not support arbitrary binary data in their
+because such language may not support arbitrary binary data in their
 string variable type.
 
 The message in a commit or a tag object is `contents`, from which
