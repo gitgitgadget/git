@@ -15,7 +15,7 @@ There are several built-in formats, and you can define
 additional formats by setting a pretty.<name>
 config option to either another format name, or a
 'format:' string, as described below (see
-linkgit:git-config[1]). Here are the details of the
+linkgit:git-config[1]).  Here are the details of the
 built-in formats:
 
 * 'oneline'
@@ -96,15 +96,15 @@ stored in the commit object.  Notably, the hashes are
 displayed in full, regardless of whether --abbrev or
 --no-abbrev are used, and 'parents' information show the
 true parent commits, without taking grafts or history
-simplification into account. Note that this format affects the way
-commits are displayed, but not the way the diff is shown e.g. with
-`git log --raw`. To get full object names in a raw diff format,
+simplification into account.  Note that this format affects the way
+commits are displayed, but not the way the diff is shown, e.g., with
+`git log --raw`.  To get full object names in a raw diff format,
 use `--no-abbrev`.
 
 * 'format:<string>'
 +
 The 'format:<string>' format allows you to specify which information
-you want to show. It works a little bit like printf format,
+you want to show.  It works a little bit like printf format,
 with the notable exception that you get a newline with '%n'
 instead of '\n'.
 +
@@ -134,13 +134,13 @@ The placeholders are:
 	    default, colors are shown only when enabled for log output
 	    (by `color.diff`, `color.ui`, or `--color`, and respecting
 	    the `auto` settings of the former if we are going to a
-	    terminal). `%C(auto,...)` is accepted as a historical
-	    synonym for the default (e.g., `%C(auto,red)`). Specifying
+	    terminal).  `%C(auto,...)` is accepted as a historical
+	    synonym for the default (e.g., `%C(auto,red)`).  Specifying
 	    `%C(always,...)` will show the colors even when color is
 	    not otherwise enabled (though consider just using
 	    `--color=always` to enable color for the whole output,
 	    including this format and anything else git might color).
-	    `auto` alone (i.e. `%C(auto)`) will turn on auto coloring
+	    `auto` alone (i.e., `%C(auto)`) will turn on auto coloring
 	    on the next placeholders until the color is switched
 	    again.
 '%m':: left (`<`), right (`>`) or boundary (`-`) mark
@@ -165,7 +165,7 @@ The placeholders are:
 			  spaces
 '%><(<N>)', '%><|(<N>)':: similar to '%<(<N>)', '%<|(<N>)'
 			  respectively, but padding both sides
-			  (i.e. the text is centered)
+			  (i.e., the text is centered)
 
 - Placeholders that expand to information extracted from the commit:
 '%H':: commit hash
@@ -242,7 +242,7 @@ endif::git-rev-list[]
 	"X" for a good signature that has expired,
 	"Y" for a good signature made by an expired key,
 	"R" for a good signature made by a revoked key,
-	"E" if the signature cannot be checked (e.g. missing key)
+	"E" if the signature cannot be checked (e.g., missing key)
 	and "N" for no signature
 '%GS':: show the name of the signer for a signed commit
 '%GK':: show the key used to sign a signed commit
@@ -252,7 +252,7 @@ endif::git-rev-list[]
 '%GT':: show the trust level for the key used to sign a signed commit
 '%gD':: reflog selector, e.g., `refs/stash@{1}` or `refs/stash@{2
 	minutes ago}`; the format follows the rules described for the
-	`-g` option. The portion before the `@` is the refname as
+	`-g` option.  The portion before the `@` is the refname as
 	given on the command line (so `git log -g refs/heads/master`
 	would yield `refs/heads/master@{0}`).
 '%gd':: shortened reflog selector; same as `%gD`, but the refname
@@ -267,49 +267,49 @@ endif::git-rev-list[]
 '%gs':: reflog subject
 '%(trailers[:options])':: display the trailers of the body as
 			  interpreted by
-			  linkgit:git-interpret-trailers[1]. The
+			  linkgit:git-interpret-trailers[1].  The
 			  `trailers` string may be followed by a colon
 			  and zero or more comma-separated options.
 			  If any option is provided multiple times the
 			  last occurrence wins.
 +
-The boolean options accept an optional value `[=<BOOL>]`. The values
-`true`, `false`, `on`, `off` etc. are all accepted. See the "boolean"
-sub-section in "EXAMPLES" in linkgit:git-config[1]. If a boolean
+The boolean options accept an optional value `[=<BOOL>]`.  The values
+`true`, `false`, `on`, `off`, etc., are all accepted.  See the "boolean"
+sub-section in "EXAMPLES" in linkgit:git-config[1].  If a boolean
 option is given with no value, it's enabled.
 +
-** 'key=<K>': only show trailers with specified key. Matching is done
-   case-insensitively and trailing colon is optional. If option is
+** 'key=<K>': only show trailers with specified key.  Matching is done
+   case-insensitively and trailing colon is optional.  If option is
    given multiple times trailer lines matching any of the keys are
-   shown. This option automatically enables the `only` option so that
-   non-trailer lines in the trailer block are hidden. If that is not
+   shown.  This option automatically enables the `only` option so that
+   non-trailer lines in the trailer block are hidden.  If that is not
    desired it can be disabled with `only=false`.  E.g.,
    `%(trailers:key=Reviewed-by)` shows trailer lines with key
    `Reviewed-by`.
 ** 'only[=<BOOL>]': select whether non-trailer lines from the trailer
    block should be included.
 ** 'separator=<SEP>': specify a separator inserted between trailer
-   lines. When this option is not given each trailer line is
-   terminated with a line feed character. The string SEP may contain
-   the literal formatting codes described above. To use comma as
+   lines.  When this option is not given each trailer line is
+   terminated with a line feed character.  The string SEP may contain
+   the literal formatting codes described above.  To use comma as
    separator one must use `%x2C` as it would otherwise be parsed as
-   next option. E.g., `%(trailers:key=Ticket,separator=%x2C )`
+   next option.  E.g., `%(trailers:key=Ticket,separator=%x2C )`
    shows all trailer lines whose key is "Ticket" separated by a comma
    and a space.
 ** 'unfold[=<BOOL>]': make it behave as if interpret-trailer's `--unfold`
-   option was given. E.g.,
+   option was given.  E.g.,
    `%(trailers:only,unfold=true)` unfolds and shows all trailer lines.
 ** 'keyonly[=<BOOL>]': only show the key part of the trailer.
 ** 'valueonly[=<BOOL>]': only show the value part of the trailer.
 ** 'key_value_separator=<SEP>': specify a separator inserted between
-   trailer lines. When this option is not given each trailer key-value
-   pair is separated by ": ". Otherwise it shares the same semantics
+   trailer lines.  When this option is not given each trailer key-value
+   pair is separated by ": ".  Otherwise it shares the same semantics
    as 'separator=<SEP>' above.
 
 NOTE: Some placeholders may depend on other options given to the
-revision traversal engine. For example, the `%g*` reflog options will
+revision traversal engine.  For example, the `%g*` reflog options will
 insert an empty string unless we are traversing reflog entries (e.g., by
-`git log -g`). The `%d` and `%D` placeholders will use the "short"
+`git log -g`).  The `%d` and `%D` placeholders will use the "short"
 decoration format if `--decorate` was not already provided on the command
 line.
 
@@ -328,7 +328,7 @@ placeholder expands to a non-empty string.
 * 'tformat:'
 +
 The 'tformat:' format works exactly like 'format:', except that it
-provides "terminator" semantics instead of "separator" semantics. In
+provides "terminator" semantics instead of "separator" semantics.  In
 other words, each commit has the message terminator character (usually a
 newline) appended, rather than a separator placed between entries.
 This means that the final entry of a single-line format will be properly
