@@ -249,15 +249,28 @@ static int verify_hostname(X509 *cert, const char *hostname)
 	/* try the DNS subjectAltNames */
 	found = 0;
 	if ((subj_alt_names = X509_get_ext_d2i(cert, NID_subject_alt_name, NULL, NULL))) {
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+		int num_subj_alt_names = OPENSSL_sk_num(subj_alt_names);
+#else
 		int num_subj_alt_names = sk_GENERAL_NAME_num(subj_alt_names);
+#endif
 		for (i = 0; !found && i < num_subj_alt_names; i++) {
+			
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+			GENERAL_NAME *subj_alt_name = OPENSSL_sk_value(subj_alt_names, i);
+#else
 			GENERAL_NAME *subj_alt_name = sk_GENERAL_NAME_value(subj_alt_names, i);
+#endif
 			if (subj_alt_name->type == GEN_DNS &&
 			    strlen((const char *)subj_alt_name->d.ia5->data) == (size_t)subj_alt_name->d.ia5->length &&
 			    host_matches(hostname, (const char *)(subj_alt_name->d.ia5->data)))
 				found = 1;
 		}
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+		OPENSSL_sk_pop_free(subj_alt_names, GENERAL_NAME_free);
+#else
 		sk_GENERAL_NAME_pop_free(subj_alt_names, GENERAL_NAME_free);
+#endif
 	}
 	if (found)
 		return 0;
@@ -284,12 +297,22 @@ static int ssl_socket_connect(struct imap_socket *sock, int use_tls_only, int ve
 	int ret;
 	X509 *cert;
 
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+        OPENSSL_init_ssl(0, NULL);
+
+	meth = TLS_method();
+#else
 	SSL_library_init();
 	SSL_load_error_strings();
 
 	meth = SSLv23_method();
+#endif
 	if (!meth) {
+#if (OPENSSL_VERSION_NUMBER >= 0x10100000L)
+		ssl_socket_perror("TLS_method");
+#else
 		ssl_socket_perror("SSLv23_method");
+#endif
 		return -1;
 	}
 
