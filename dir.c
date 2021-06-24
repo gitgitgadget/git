@@ -2703,7 +2703,8 @@ void remove_untracked_cache(struct index_state *istate)
 
 static struct untracked_cache_dir *validate_untracked_cache(struct dir_struct *dir,
 						      int base_len,
-						      const struct pathspec *pathspec)
+						      const struct pathspec *pathspec,
+						      struct index_state *istate)
 {
 	struct untracked_cache_dir *root;
 	static int untracked_cache_disabled = -1;
@@ -2767,8 +2768,15 @@ static struct untracked_cache_dir *validate_untracked_cache(struct dir_struct *d
 		return NULL;
 	}
 
-	if (!dir->untracked->root)
+	if (!dir->untracked->root) {
 		FLEX_ALLOC_STR(dir->untracked->root, name, "");
+		/*
+		 * If we've had to initialize the root, then what we had was an
+		 * empty uninitialized untracked cache structure. We will be
+		 * populating it now, so we should trigger an index write.
+		 */
+		istate->cache_changed |= UNTRACKED_CHANGED;
+	}
 
 	/* Validate $GIT_DIR/info/exclude and core.excludesfile */
 	root = dir->untracked->root;
@@ -2838,7 +2846,7 @@ int read_directory(struct dir_struct *dir, struct index_state *istate,
 		return dir->nr;
 	}
 
-	untracked = validate_untracked_cache(dir, len, pathspec);
+	untracked = validate_untracked_cache(dir, len, pathspec, istate);
 	if (!untracked)
 		/*
 		 * make sure untracked cache code path is disabled,

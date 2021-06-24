@@ -13,6 +13,10 @@ clean_repo () {
 	git clean -fd
 }
 
+avoid_racy() {
+	sleep 1
+}
+
 dirty_repo () {
 	: >untracked &&
 	: >dir1/untracked &&
@@ -332,8 +336,10 @@ test_expect_success UNTRACKED_CACHE 'ignore .git changes when invalidating UNTR'
 		: >dir2/modified &&
 		write_integration_script &&
 		git config core.fsmonitor .git/hooks/fsmonitor-test &&
+		avoid_racy &&
 		git update-index --untracked-cache &&
 		git update-index --fsmonitor &&
+		git status &&
 		GIT_TRACE2_PERF="$TRASH_DIRECTORY/trace-before" \
 		git status &&
 		test-tool dump-untracked-cache >../before
