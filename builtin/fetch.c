@@ -230,8 +230,18 @@ static void unlock_pack(void)
 		transport_unlock_pack(gsecondary);
 }
 
+static void send_signo_to_index_pack(int signo)
+{
+	if (gtransport && gtransport->index_pack_pid > 0)
+		kill(gtransport->index_pack_pid, signo);
+
+	if (gsecondary && gsecondary->index_pack_pid > 0)
+		kill(gsecondary->index_pack_pid, signo);
+}
+
 static void unlock_pack_on_signal(int signo)
 {
+	send_signo_to_index_pack(signo);
 	unlock_pack();
 	sigchain_pop(signo);
 	raise(signo);

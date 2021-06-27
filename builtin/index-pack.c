@@ -15,9 +15,12 @@
 #include "packfile.h"
 #include "object-store.h"
 #include "promisor-remote.h"
+#include "sigchain.h"
 
 static const char index_pack_usage[] =
 "git index-pack [-v] [-o <index-file>] [--keep | --keep=<msg>] [--[no-]rev-index] [--verify] [--strict] (<pack-file> | --stdin [--fix-thin] [<pack-file>])";
+
+static const char *tmp_pack_name;
 
 struct object_entry {
 	struct pack_idx_entry idx;
@@ -337,6 +340,7 @@ static const char *open_pack_file(const char *pack_name)
 			output_fd = odb_mkstemp(&tmp_file,
 						"pack/tmp_pack_XXXXXX");
 			pack_name = strbuf_detach(&tmp_file, NULL);
+			tmp_pack_name = pack_name;
 		} else {
 			output_fd = open(pack_name, O_CREAT|O_EXCL|O_RDWR, 0600);
 			if (output_fd < 0)
@@ -352,6 +356,19 @@ static const char *open_pack_file(const char *pack_name)
 	}
 	the_hash_algo->init_fn(&input_ctx);
 	return pack_name;
+}
+
+static void remove_tmp_pack(void)
+{
+	if (tmp_pack_name) 
+		unlink_or_warn(tmp_pack_name);
+}
+
+static void remove_tmp_pack_on_signal(int signo)
+{
+	remove_tmp_pack();
+	sigchain_pop(signo);
+	raise(signo);
 }
 
 static void parse_pack_header(void)
@@ -1896,6 +1913,7 @@ int cmd_index_pack(int argc, const char **argv, const char *prefix)
 	}
 
 	curr_pack = open_pack_file(pack_name);
+	sigchain_push_common(remove_tmp_pack_on_signal);
 	parse_pack_header();
 	CALLOC_ARRAY(objects, st_add(nr_objects, 1));
 	if (show_stat)

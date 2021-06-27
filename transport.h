@@ -125,6 +125,12 @@ struct transport {
 	enum transport_family family;
 
 	const struct git_hash_algo *hash_algo;
+
+	/*
+	 * Record the pid of the index_pack sub-process
+	 * used to send the signal to this sub-process after the main fetch process receives the signal
+	 */
+	pid_t index_pack_pid;
 };
 
 #define TRANSPORT_PUSH_ALL			(1<<0)
