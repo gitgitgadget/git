@@ -28,9 +28,7 @@ struct command {
 	unsigned int skip_update:1,
 		     did_not_exist:1;
 	int index;
-	struct object_id old_oid;
-	struct object_id new_oid;
-	char ref_name[FLEX_ARRAY]; /* more */
+	char line[FLEX_ARRAY]; /* more */
 };
 
 static void proc_receive_verison(struct packet_reader *reader) {
@@ -91,16 +89,7 @@ static void proc_receive_read_commands(struct packet_reader *reader,
 		if (die_read_commands)
 			die("die with the --die-read-commands option");
 
-		if (parse_oid_hex(reader->line, &old_oid, &p) ||
-		    *p++ != ' ' ||
-		    parse_oid_hex(p, &new_oid, &p) ||
-		    *p++ != ' ')
-			die("protocol error: expected 'old new ref', got '%s'",
-			    reader->line);
-		refname = p;
-		FLEX_ALLOC_STR(cmd, ref_name, refname);
-		oidcpy(&cmd->old_oid, &old_oid);
-		oidcpy(&cmd->new_oid, &new_oid);
+		FLEX_ALLOC_STR(cmd, line, reader->line);
 
 		*tail = cmd;
 		tail = &cmd->next;
@@ -169,17 +158,30 @@ int cmd__proc_receive(int argc, const char **argv)
 
 	if (verbose) {
 		struct command *cmd;
+		size_t hexsz = reader.hash_algo->hexsz;
 
 		if (use_push_options || use_atomic)
 			fprintf(stderr, "proc-receive:%s%s\n",
 				use_atomic? " atomic": "",
 				use_push_options ? " push_options": "");
 
-		for (cmd = commands; cmd; cmd = cmd->next)
-			fprintf(stderr, "proc-receive< %s %s %s\n",
-				oid_to_hex(&cmd->old_oid),
-				oid_to_hex(&cmd->new_oid),
-				cmd->ref_name);
+		for (cmd = commands; cmd; cmd = cmd->next) {
+			size_t reflen = strlen(cmd->line) - 2 * hexsz - 2;
+			char old[hexsz], new[hexsz], refname[reflen];
+			memset(old, 0, hexsz);
+			memset(new, 0, hexsz);
+			memset(refname, 0, strlen(cmd->line) - reflen);
+
+			memcpy(old, cmd->line, hexsz);
+			memcpy(new, cmd->line + hexsz + 1, hexsz);
+			memcpy(refname, cmd->line + 2 * hexsz + 2, reflen);
+
+			old[hexsz] = '\0';
+			new[hexsz] = '\0';
+			refname[reflen] = '\0';
+
+			fprintf(stderr, "proc-receive< %s %s %s\n", old, new, refname);
+		}
 
 		if (push_options.nr > 0)
 			for_each_string_list_item(item, &push_options)
