@@ -42,6 +42,7 @@ test_tool_sources = [
   'test-partial-clone.c',
   'test-path-utils.c',
   'test-path-walk.c',
+  'test-pathspec.c',
   'test-pcre2-config.c',
   'test-pkt-line.c',
   'test-proc-receive.c',

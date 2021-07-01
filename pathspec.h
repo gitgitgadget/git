@@ -2,6 +2,7 @@
 #define PATHSPEC_H
 
 struct index_state;
+struct pathspec;
 
 /* Pathspec magic */
 #define PATHSPEC_FROMTOP	(1<<0)
@@ -21,6 +22,28 @@ struct index_state;
 	 PATHSPEC_ATTR)
 
 #define PATHSPEC_ONESTAR 1	/* the pathspec pattern satisfies GFNM_ONESTAR */
+
+struct pathspec_trie {
+	struct pathspec_trie **entries;
+	int nr, alloc;
+	unsigned terminal:1,
+		 must_be_dir:1;
+	char path[FLEX_ARRAY];
+};
+
+/*
+ * Build a pathspec_trie for the given pathspec.
+ */
+struct pathspec_trie *pathspec_trie_build(const struct pathspec *);
+
+/*
+ * Do a binary search on one level of the pathspec_trie. If found,
+ * returns the offset of the item in the entry list. If not found,
+ * return a negative value encoding the offset where it would be inserted
+ * (you can recover the true offset with "-pos - 1").
+ */
+int pathspec_trie_lookup(const struct pathspec_trie *pst,
+			 const char *path, size_t len);
 
 /**
  * See glossary-content.txt for the syntax of pathspec.
