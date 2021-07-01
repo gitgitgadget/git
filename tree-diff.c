@@ -120,7 +120,8 @@ static void ll_diff_tree_paths(
 	struct combine_diff_path ***tail, const struct object_id *oid,
 	const struct object_id **parents_oid, int nparent,
 	struct strbuf *base, struct diff_options *opt,
-	int depth);
+	int depth, struct pathspec_trie *pst);
+
 static void ll_diff_tree_oid(const struct object_id *old_oid,
 			     const struct object_id *new_oid,
 			     struct strbuf *base, struct diff_options *opt);
@@ -205,7 +206,7 @@ static int emit_diff_first_parent_only(struct diff_options *opt, struct combine_
 static void emit_path(struct combine_diff_path ***tail,
 		      struct strbuf *base, struct diff_options *opt,
 		      int nparent, struct tree_desc *t, struct tree_desc *tp,
-		      int imin, int depth)
+		      int imin, int depth, struct pathspec_trie *pst)
 {
 	unsigned short mode;
 	const char *path;
@@ -309,23 +310,95 @@ static void emit_path(struct combine_diff_path ***tail,
 			parents_oid[i] = tpi_valid ? &tp[i].entry.oid : NULL;
 		}
 
+		/*
+		 * As we recurse through the tree objects, move through
+		 * our pathspec trie, as well. The one exception is if
+		 * we already hit a terminal node. This means we have a strict
+		 * prefix match (e.g., "foo/" matched, and we are in
+		 * "foo/bar"). We don't have to bother with checking the
+		 * pathspec at all anymore in that case.
+		 *
+		 * Note that the "pos < 0" case should not happen here,
+		 * as we would have skipped the tree entry as uninteresting
+		 * earlier. As a safety measure, we turn off the trie
+		 * optimization and fall back to doing regular pathspec
+		 * matching in this case.
+		 */
+		if (pst && !pst->terminal) {
+			int pos = pathspec_trie_lookup(pst, path, pathlen);
+			if (pos < 0)
+				pst = NULL;
+			else
+				pst = pst->entries[pos];
+		}
+
 		strbuf_add(base, path, pathlen);
 		strbuf_addch(base, '/');
 		ll_diff_tree_paths(tail, oid, parents_oid, nparent, base, opt,
-				   depth + 1);
+				   depth + 1, pst);
 		FAST_ARRAY_FREE(parents_oid, nparent);
 	}
 
 	strbuf_setlen(base, old_baselen);
 }
 
+static enum interesting match_pathspec_trie_entry(struct pathspec_trie *pst,
+						  const struct name_entry *entry)
+{
+	int pos;
+
+	/*
+	 * If our base directory is matched, then everything below is
+	 * interesting (i.e., a prefix match).
+	 */
+	if (pst->terminal)
+		return entry_interesting;
+
+	/*
+	 * Otherwise, look up the actual entry. If we don't mention it at all,
+	 * it's definitely uninteresting. But furthermore, if we're at the
+	 * end of our sorted list, we know that nothing after it is
+	 * interesting, either.
+	 *
+	 * XXX It seems like we should have to make special consideration here
+	 * for the sort order of trees. But tree_entry_interesting does not
+	 * seem to. Is it OK, is tree_entry_interesting buggy too, or am I
+	 * reading it wrong? This optimization gives substantial speedups, so
+	 * we really need to keep it or something like it.
+	 */
+	pos = pathspec_trie_lookup(pst, entry->path, tree_entry_len(entry));
+	if (pos < 0) {
+		if (-pos - 1 == pst->nr)
+			return all_entries_not_interesting;
+		else
+			return entry_not_interesting;
+	}
+
+	/*
+	 * We definitely have the entry. First we have to resolve any directory
+	 * restrictions; if there aren't any, then it's definitely interesting.
+	 *
+	 * Note that we do not need to check the "terminal" flag of the
+	 * resulting trie node. If it is not set, then this particular entry
+	 * does not match our pathspec, but we do still need to traverse
+	 * through it to get to the interesting things inside. It's interesting
+	 * either way.
+	 */
+	if (pst->entries[pos]->must_be_dir)
+		return !!S_ISDIR(entry->mode);
+	return entry_interesting;
+}
+
 static void skip_uninteresting(struct tree_desc *t, struct strbuf *base,
-			       struct diff_options *opt)
+			       struct diff_options *opt,
+			       struct pathspec_trie *pst)
 {
 	enum interesting match;
 
 	while (t->size) {
-		match = tree_entry_interesting(opt->repo->index, &t->entry,
+		match = pst ?
+			match_pathspec_trie_entry(pst, &t->entry) :
+			tree_entry_interesting(opt->repo->index, &t->entry,
 					       base, &opt->pathspec);
 		if (match) {
 			if (match == all_entries_not_interesting)
@@ -433,7 +506,7 @@ static void ll_diff_tree_paths(
 	struct combine_diff_path ***tail, const struct object_id *oid,
 	const struct object_id **parents_oid, int nparent,
 	struct strbuf *base, struct diff_options *opt,
-	int depth)
+	int depth, struct pathspec_trie *pst)
 {
 	struct tree_desc t, *tp;
 	void *ttree, **tptree;
@@ -468,9 +541,9 @@ static void ll_diff_tree_paths(
 			break;
 
 		if (opt->pathspec.nr) {
-			skip_uninteresting(&t, base, opt);
+			skip_uninteresting(&t, base, opt, pst);
 			for (i = 0; i < nparent; i++)
-				skip_uninteresting(&tp[i], base, opt);
+				skip_uninteresting(&tp[i], base, opt, pst);
 		}
 
 		/* comparing is finished when all trees are done */
@@ -535,7 +608,7 @@ static void ll_diff_tree_paths(
 
 			/* D += {δ(t,pi) if pi=p[imin];  "+a" if pi > p[imin]} */
 			emit_path(tail, base, opt, nparent,
-				  &t, tp, imin, depth);
+				  &t, tp, imin, depth, pst);
 
 		skip_emit_t_tp:
 			/* t↓,  ∀ pi=p[imin]  pi↓ */
@@ -547,7 +620,7 @@ static void ll_diff_tree_paths(
 		else if (cmp < 0) {
 			/* D += "+t" */
 			emit_path(tail, base, opt, nparent,
-				  &t, /*tp=*/NULL, -1, depth);
+				  &t, /*tp=*/NULL, -1, depth, pst);
 
 			/* t↓ */
 			update_tree_entry(&t);
@@ -563,7 +636,7 @@ static void ll_diff_tree_paths(
 			}
 
 			emit_path(tail, base, opt, nparent,
-				  /*t=*/NULL, tp, imin, depth);
+				  /*t=*/NULL, tp, imin, depth, pst);
 
 		skip_emit_tp:
 			/* ∀ pi=p[imin]  pi↓ */
@@ -584,7 +657,8 @@ struct combine_diff_path *diff_tree_paths(
 	struct strbuf *base, struct diff_options *opt)
 {
 	struct combine_diff_path *head = NULL, **tail = &head;
-	ll_diff_tree_paths(&tail, oid, parents_oid, nparent, base, opt, 0);
+	ll_diff_tree_paths(&tail, oid, parents_oid, nparent, base, opt,
+			   0, opt->pathspec.trie);
 	return head;
 }
 
