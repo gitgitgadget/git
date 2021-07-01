@@ -63,7 +63,6 @@ static int cmd_trie(const char **argv)
 {
 	const char **specs, **paths;
 	struct pathspec pathspec;
-	struct pathspec_trie *trie;
 
 	paths = specs = argv;
 	while (*paths && strcmp(*paths, "--"))
@@ -72,12 +71,11 @@ static int cmd_trie(const char **argv)
 		*paths++ = NULL;
 
 	parse_pathspec(&pathspec, 0, 0, "", specs);
-	trie = pathspec_trie_build(&pathspec);
-	if (!trie)
+	if (!pathspec.trie)
 		die("unable to make trie from pathspec");
 
 	for (; *paths; paths++) {
-		if (trie_match(trie, *paths))
+		if (trie_match(pathspec.trie, *paths))
 			printf("yes\n");
 		else
 			printf("no\n");

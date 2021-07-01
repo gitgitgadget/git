@@ -117,6 +117,19 @@ struct pathspec_trie *pathspec_trie_build(const struct pathspec *pathspec)
 	return ret;
 }
 
+static void pathspec_trie_clear(struct pathspec_trie *t)
+{
+	if (t) {
+		for (size_t i = 0; i < t->nr; i++) {
+			pathspec_trie_clear(t->entries[i]);
+			FREE_AND_NULL(t->entries[i]);
+		}
+
+		t->nr = 0;
+		FREE_AND_NULL(t->entries);
+	}
+}
+
 int pathspec_trie_lookup(const struct pathspec_trie *parent,
 			 const char *path, size_t len)
 {
@@ -799,6 +812,8 @@ void parse_pathspec(struct pathspec *pathspec,
 			BUG("PATHSPEC_MAXDEPTH_VALID and PATHSPEC_KEEP_ORDER are incompatible");
 		QSORT(pathspec->items, pathspec->nr, pathspec_item_cmp);
 	}
+
+	pathspec->trie = pathspec_trie_build(pathspec);
 }
 
 void parse_pathspec_file(struct pathspec *pathspec, unsigned magic_mask,
@@ -859,6 +874,8 @@ void copy_pathspec(struct pathspec *dst, const struct pathspec *src)
 
 		d->attr_check = attr_check_dup(s->attr_check);
 	}
+
+	dst->trie = pathspec_trie_build(dst);
 }
 
 void clear_pathspec(struct pathspec *pathspec)
@@ -877,6 +894,8 @@ void clear_pathspec(struct pathspec *pathspec)
 			attr_check_free(pathspec->items[i].attr_check);
 	}
 
+	pathspec_trie_clear(pathspec->trie);
+	FREE_AND_NULL(pathspec->trie);
 	FREE_AND_NULL(pathspec->items);
 	pathspec->nr = 0;
 }
