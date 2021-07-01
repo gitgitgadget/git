@@ -94,6 +94,11 @@ else
 fi
 test "$GIT_EDITOR" = : && source="$source (no editor)"
 
+if read -r line
+then
+	source="$source $line"
+fi
+
 if test $rebasing = 1
 then
 	echo "$source $(get_last_cmd)" >"$1"
@@ -113,6 +118,15 @@ test_expect_success 'with hook (-m)' '
 	git add file &&
 	git commit -m "more" &&
 	test "$(git log -1 --pretty=format:%s)" = "message (no editor)"
+
+'
+
+test_expect_success 'with hook (-m and input)' '
+
+	echo "more" >>file &&
+	git add file &&
+	echo "user input" | git commit -m "more" &&
+	test "$(git log -1 --pretty=format:%s)" = "message (no editor) user input"
 
 '
 
