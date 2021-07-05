@@ -244,6 +244,7 @@ test_expect_success 'git archive with --output, override inferred format' '
 
 test_expect_success GZIP 'git archive with --output and --remote creates .tgz' '
 	git archive --output=d5.tgz --remote=. HEAD &&
+	ls -l d5.tgz &&
 	gzip -d -c <d5.tgz >d5.tar &&
 	test_cmp_bin b.tar d5.tar
 '
@@ -327,23 +328,29 @@ test_expect_success 'only enabled filters are available remotely' '
 	test_cmp_bin remote.bar config.bar
 '
 
-test_expect_success GZIP 'git archive --format=tgz' '
+test_expect_success 'git archive --format=tgz' '
 	git archive --format=tgz HEAD >j.tgz
 '
 
-test_expect_success GZIP 'git archive --format=tar.gz' '
+test_expect_success 'git archive --format=tar.gz' '
 	git archive --format=tar.gz HEAD >j1.tar.gz &&
 	test_cmp_bin j.tgz j1.tar.gz
 '
 
-test_expect_success GZIP 'infer tgz from .tgz filename' '
+test_expect_success 'infer tgz from .tgz filename' '
 	git archive --output=j2.tgz HEAD &&
 	test_cmp_bin j.tgz j2.tgz
 '
 
-test_expect_success GZIP 'infer tgz from .tar.gz filename' '
+test_expect_success 'infer tgz from .tar.gz filename' '
 	git archive --output=j3.tar.gz HEAD &&
 	test_cmp_bin j.tgz j3.tar.gz
+'
+
+test_expect_success 'use `archive.tgz.command=:internal-gzip:` explicitly' '
+	git -c archive.tgz.command=:internal-gzip: archive --output=j4.tgz \
+		HEAD &&
+	test_cmp_bin j.tgz j4.tgz
 '
 
 test_expect_success GZIP 'extract tgz file' '
@@ -351,12 +358,12 @@ test_expect_success GZIP 'extract tgz file' '
 	test_cmp_bin b.tar j.tar
 '
 
-test_expect_success GZIP 'remote tar.gz is allowed by default' '
+test_expect_success 'remote tar.gz is allowed by default' '
 	git archive --remote=. --format=tar.gz HEAD >remote.tar.gz &&
 	test_cmp_bin j.tgz remote.tar.gz
 '
 
-test_expect_success GZIP 'remote tar.gz can be disabled' '
+test_expect_success 'remote tar.gz can be disabled' '
 	git config tar.tar.gz.remote false &&
 	test_must_fail git archive --remote=. --format=tar.gz HEAD \
 		>remote.tar.gz

@@ -122,7 +122,8 @@ tar.<format>.command::
 	format is given.
 +
 The "tar.gz" and "tgz" formats are defined automatically and default to
-`gzip -cn`. You may override them with custom commands.
+`:internal-gzip:`, triggering an in-process gzip compression. You may
+override them with custom commands, e.g. `gzip -cn` or `pigz -cn`.
 
 tar.<format>.remote::
 	If true, enable `<format>` for use by remote clients via

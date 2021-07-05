@@ -17,6 +17,8 @@ static unsigned long offset;
 
 static int tar_umask = 002;
 
+static gzFile gzip;
+
 static int write_tar_filter_archive(const struct archiver *ar,
 				    struct archiver_args *args);
 
@@ -38,11 +40,21 @@ static int write_tar_filter_archive(const struct archiver *ar,
 #define USTAR_MAX_MTIME 077777777777ULL
 #endif
 
+static int out_fd = 1, nr_threads = 0;
+
+/* writes out the whole block, or dies if fails */
+static void write_block_or_die(const char *block) {
+	if (!gzip)
+		write_or_die(out_fd, block, BLOCKSIZE);
+	else if (gzwrite(gzip, block, (unsigned) BLOCKSIZE) != BLOCKSIZE)
+		die(_("gzwrite failed"));
+}
+
 /* writes out the whole block, but only if it is full */
 static void write_if_needed(void)
 {
 	if (offset == BLOCKSIZE) {
-		write_or_die(1, block, BLOCKSIZE);
+		write_block_or_die(block);
 		offset = 0;
 	}
 }
@@ -66,7 +78,7 @@ static void do_write_blocked(const void *data, unsigned long size)
 		write_if_needed();
 	}
 	while (size >= BLOCKSIZE) {
-		write_or_die(1, buf, BLOCKSIZE);
+		write_block_or_die(buf);
 		size -= BLOCKSIZE;
 		buf += BLOCKSIZE;
 	}
@@ -101,10 +113,10 @@ static void write_trailer(void)
 {
 	int tail = BLOCKSIZE - offset;
 	memset(block + offset, 0, tail);
-	write_or_die(1, block, BLOCKSIZE);
+	write_block_or_die(block);
 	if (tail < 2 * RECORDSIZE) {
 		memset(block, 0, offset);
-		write_or_die(1, block, BLOCKSIZE);
+		write_block_or_die(block);
 	}
 }
 
@@ -400,6 +412,13 @@ static int tar_filter_config(const char *var, const char *value, void *data)
 
 static int git_tar_config(const char *var, const char *value, void *cb)
 {
+	if (!strcmp(var, "pack.threads")) {
+		nr_threads = git_config_int(var, value);
+		if (nr_threads < 0)
+			nr_threads = 1; /* fall back to single-threaded */
+		return 0;
+	}
+
 	if (!strcmp(var, "tar.umask")) {
 		if (value && !strcmp(value, "user")) {
 			tar_umask = umask(0);
@@ -425,6 +444,31 @@ static int write_tar_archive(const struct archiver *ar,
 	return err;
 }
 
+static int internal_gzip(int in, int out, void *data)
+{
+	gzip = gzdopen(1, "wb");
+	if (!gzip)
+		return error(_("gzdopen failed"));
+	if (gzsetparams(gzip, *(int *)data, Z_DEFAULT_STRATEGY) != Z_OK)
+		return error(_("unable to set compression level"));
+
+	for (;;) {
+		char buf[BLOCKSIZE];
+		ssize_t read = xread(in, buf, sizeof(buf));
+		if (read < 0)
+			die_errno(_("read failed"));
+		if (read == 0)
+			break;
+		if (gzwrite(gzip, buf, read) != read)
+			die(_("gzwrite failed"));
+	}
+
+	close(in);
+	if (gzclose(gzip) != Z_OK)
+		return error(_("gzclose failed"));
+	return 0;
+}
+
 static int write_tar_filter_archive(const struct archiver *ar,
 				    struct archiver_args *args)
 {
@@ -436,6 +480,28 @@ static int write_tar_filter_archive(const struct archiver *ar,
 	if (!ar->data)
 		BUG("tar-filter archiver called with no filter defined");
 
+	if (!strcmp(ar->data, ":internal-gzip:") &&
+	    /* use separate thread? */
+	    (nr_threads > 1 || (nr_threads == 0 && online_cpus() > 1))) {
+		struct async filter = {
+			.proc = internal_gzip,
+			.data = &args->compression_level,
+			.in = -1
+		};
+
+		if (start_async(&filter))
+			return error(_("unable to fork off internal gzip"));
+		out_fd = filter.in;
+
+		r = write_tar_archive(ar, args);
+
+		close(out_fd);
+		if (finish_async(&filter))
+			return error(_("error in internal gzip"));
+
+		return r;
+	}
+
 	strbuf_addstr(&cmd, ar->data);
 	if (args->compression_level >= 0)
 		strbuf_addf(&cmd, " -%d", args->compression_level);
@@ -446,18 +512,37 @@ static int write_tar_filter_archive(const struct archiver *ar,
 	filter.use_shell = 1;
 	filter.in = -1;
 
-	if (start_command(&filter) < 0)
-		die_errno(_("unable to start '%s' filter"), argv[0]);
-	close(1);
-	if (dup2(filter.in, 1) < 0)
-		die_errno(_("unable to redirect descriptor"));
-	close(filter.in);
+	if (!strcmp(":internal-gzip:", ar->data)) {
+		gzip = gzdopen(fileno(stdout), "wb");
+		if (!gzip)
+			die(_("Could not gzdopen stdout"));
+		if (args->compression_level >= 0 &&
+		    gzsetparams(gzip, args->compression_level,
+				Z_DEFAULT_STRATEGY) != Z_OK)
+			die(_("unable to set compression level %d"),
+			    args->compression_level);
+	} else {
+		if (start_command(&filter) < 0)
+			die_errno(_("unable to start '%s' filter"), argv[0]);
+		close(1);
+		if (dup2(filter.in, 1) < 0)
+			die_errno(_("unable to redirect descriptor"));
+		close(filter.in);
+	}
 
 	r = write_tar_archive(ar, args);
 
-	close(1);
-	if (finish_command(&filter) != 0)
-		die(_("'%s' filter reported error"), argv[0]);
+	if (gzip) {
+		int ret = gzclose(gzip);
+		if (ret == Z_ERRNO)
+			die_errno(_("gzclose failed"));
+		else if (ret != Z_OK)
+			die(_("gzclose failed (%d)"), ret);
+	} else {
+		close(1);
+		if (finish_command(&filter) != 0)
+			die(_("'%s' filter reported error"), argv[0]);
+	}
 
 	strbuf_release(&cmd);
 	return r;
@@ -474,9 +559,9 @@ void init_tar_archiver(void)
 	int i;
 	register_archiver(&tar_archiver);
 
-	tar_filter_config("tar.tgz.command", "gzip -cn", NULL);
+	tar_filter_config("tar.tgz.command", ":internal-gzip:", NULL);
 	tar_filter_config("tar.tgz.remote", "true", NULL);
-	tar_filter_config("tar.tar.gz.command", "gzip -cn", NULL);
+	tar_filter_config("tar.tar.gz.command", ":internal-gzip:", NULL);
 	tar_filter_config("tar.tar.gz.remote", "true", NULL);
 	git_config(git_tar_config, NULL);
 	for (i = 0; i < nr_tar_filters; i++) {
