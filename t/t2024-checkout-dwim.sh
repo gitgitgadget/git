@@ -156,6 +156,33 @@ test_expect_success 'checkout of branch from a single remote succeeds #2' '
 	test_branch_upstream baz repo_b baz
 '
 
+test_expect_success 'checkout of branch from a single remote succeeds with --' '
+	git checkout -B master &&
+	test_might_fail git branch -D baz &&
+
+	git checkout baz -- &&
+	status_uno_is_clean &&
+	test_branch baz &&
+	test_cmp_rev remotes/other_b/baz HEAD &&
+	test_branch_upstream baz repo_b baz
+'
+
+test_expect_success 'dont DWIM with pathspec #1' '
+	git checkout -B master &&
+	test_might_fail git branch -D baz &&
+
+	test_must_fail git checkout baz nonExistingFile 2>err &&
+	test_i18ngrep "did not match any file(s) known to git" err
+'
+
+test_expect_success 'dont DWIM with pathspec #2' '
+	git checkout -B master &&
+	test_might_fail git branch -D baz &&
+
+	test_must_fail git checkout baz -- nonExistingFile 2>err &&
+	test_i18ngrep "fatal: invalid reference: baz" err
+'
+
 test_expect_success '--no-guess suppresses branch auto-vivification' '
 	git checkout -B main &&
 	status_uno_is_clean &&
