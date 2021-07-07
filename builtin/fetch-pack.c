@@ -57,8 +57,6 @@ int cmd_fetch_pack(int argc, const char **argv, const char *prefix)
 	struct packet_reader reader;
 	enum protocol_version version;
 
-	fetch_if_missing = 0;
-
 	packet_trace_identity("fetch-pack");
 
 	memset(&args, 0, sizeof(args));
