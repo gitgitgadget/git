@@ -119,6 +119,7 @@
 /git-patch-id
 /git-prune
 /git-prune-packed
+/git-psuh
 /git-pull
 /git-push
 /git-quiltimport
