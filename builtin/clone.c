@@ -68,6 +68,7 @@ static struct string_list option_config = STRING_LIST_INIT_NODUP;
 static struct string_list option_required_reference = STRING_LIST_INIT_NODUP;
 static struct string_list option_optional_reference = STRING_LIST_INIT_NODUP;
 static int option_dissociate;
+static int option_repack;
 static int max_jobs = -1;
 static struct string_list option_recurse_submodules = STRING_LIST_INIT_NODUP;
 static struct list_objects_filter_options filter_options;
@@ -121,6 +122,8 @@ static struct option builtin_clone_options[] = {
 			N_("repo"), N_("reference repository")),
 	OPT_BOOL(0, "dissociate", &option_dissociate,
 		 N_("use --reference only while cloning")),
+	OPT_BOOL(0, "repack", &option_repack,
+		 N_("repack the repository after cloning")),
 	OPT_STRING('o', "origin", &option_origin, N_("name"),
 		   N_("use <name> instead of 'origin' to track upstream")),
 	OPT_STRING('b', "branch", &option_branch, N_("branch"),
@@ -947,14 +950,26 @@ static void write_refspec_config(const char *src_ref_prefix,
 	strbuf_release(&value);
 }
 
+static void post_clone_repack(int do_delete)
+{
+	struct strvec argv = STRVEC_INIT;
+	if (do_delete)
+		strvec_pushl(&argv, "repack", "-a", "-d", NULL);
+	else
+		strvec_pushl(&argv, "repack", "-a", NULL);
+
+	if (run_command_v_opt(argv.v, RUN_GIT_CMD|RUN_COMMAND_NO_STDIN))
+		die(_("cannot repack to clean up"));
+
+	strvec_clear(&argv);
+}
+
 static void dissociate_from_references(void)
 {
-	static const char* argv[] = { "repack", "-a", "-d", NULL };
 	char *alternates = git_pathdup("objects/info/alternates");
 
 	if (!access(alternates, F_OK)) {
-		if (run_command_v_opt(argv, RUN_GIT_CMD|RUN_COMMAND_NO_STDIN))
-			die(_("cannot repack to clean up"));
+		post_clone_repack(1);
 		if (unlink(alternates) && errno != ENOENT)
 			die_errno(_("cannot unlink temporary alternates file"));
 	}
@@ -1403,7 +1418,8 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 	if (option_dissociate) {
 		close_object_store(the_repository->objects);
 		dissociate_from_references();
-	}
+	} else if (option_repack)
+		post_clone_repack(0);
 
 	junk_mode = JUNK_LEAVE_REPO;
 	err = checkout(submodule_progress);

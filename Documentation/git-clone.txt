@@ -119,7 +119,12 @@ objects from the source repository into a pack in the cloned repository.
 	repository that already borrows objects from another
 	repository--the new repository will borrow objects from the
 	same repository, and this option can be used to stop the
-	borrowing.
+	borrowing. This implies `--repack`.
+
+--repack::
+	Repack the repository for optimal diskspace usage after
+	cloning.  This option will make cloning the repository slower
+	but ensure the final storage size on-disk is the most optimal.
 
 -q::
 --quiet::
