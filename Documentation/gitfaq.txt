@@ -395,6 +395,13 @@ following on an otherwise clean working tree:
 ----
 $ git add --renormalize .
 ----
++
+Another situation where perpetually modified may appear on any platform is when
+a file has been committed without running any filters (including the end-of-line
+conversion), but the `.gitattributes` file states that this file requires a
+conversion.  In this case, you can either renormalize the files if this happened
+by mistake, or modify `.gitattributes` or `$GIT_DIR/info/attributes` as described
+above to exempt the file from the conversion if this was intentional.
 
 [[recommended-storage-settings]]
 What's the recommended way to store files in Git?::
