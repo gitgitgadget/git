@@ -9683,7 +9683,7 @@ msgstr ""
 #, c-format
 msgid "  (use \"git %s <file>...\" to include in what will be committed)"
 msgstr ""
-"  (usa \"git %s <archivo>...\" para incluirlo a lo que se será confirmado)"
+"  (usa \"git %s <archivo>...\" para incluirlo a lo que será confirmado)"
 
 #: wt-status.c:266
 msgid "both deleted:"
