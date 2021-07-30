@@ -41,6 +41,7 @@ struct ref_array_item {
 	const char *rest;
 	int cat_file_cmdmode;
 	int flag;
+	int can_skip_parse_buffer;
 	unsigned int kind;
 	const char *symref;
 	struct commit *commit;
@@ -83,12 +84,12 @@ struct ref_format {
 	int quote_style;
 	int use_rest;
 	int use_color;
-
+	int can_skip_parse_buffer;
 	/* Internal state to ref-filter */
 	int need_color_reset_at_eol;
 };
 
-#define REF_FORMAT_INIT { .use_color = -1 }
+#define REF_FORMAT_INIT { .use_color = -1, .can_skip_parse_buffer = 1 }
 
 /*  Macros for checking --merged and --no-merged options */
 #define _OPT_MERGED_NO_MERGED(option, filter, h) \
