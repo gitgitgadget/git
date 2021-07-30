@@ -1025,6 +1025,20 @@ static int reject_atom(int cat_file_mode, enum atom_type atom_type)
 	}
 }
 
+static int need_parse_buffer(enum atom_type atom_type) {
+	switch (atom_type) {
+	case ATOM_TAG:
+	case ATOM_TYPE:
+	case ATOM_OBJECT:
+	case ATOM_TREE:
+	case ATOM_NUMPARENT:
+	case ATOM_PARENT:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
 /*
  * Make sure the format string is well formed, and parse out
  * the used atoms.
@@ -1045,6 +1059,8 @@ int verify_ref_format(struct ref_format *format)
 		at = parse_ref_filter_atom(format, sp + 2, ep, &err);
 		if (at < 0)
 			die("%s", err.buf);
+		if (need_parse_buffer(used_atom[at].atom_type))
+			format->can_skip_parse_buffer = 0;
 		if (reject_atom(format->cat_file_mode, used_atom[at].atom_type))
 			die(_("this command reject atom %%(%.*s)"), (int)(ep - sp - 2), sp + 2);
 
@@ -1532,14 +1548,16 @@ static void grab_values(struct atom_value *val, int deref, struct object *obj, s
 {
 	void *buf = data->content;
 
-	switch (obj->type) {
+	switch (data->type) {
 	case OBJ_TAG:
-		grab_tag_values(val, deref, obj);
+		if (obj)
+			grab_tag_values(val, deref, obj);
 		grab_sub_body_contents(val, deref, data);
 		grab_person("tagger", val, deref, buf);
 		break;
 	case OBJ_COMMIT:
-		grab_commit_values(val, deref, obj);
+		if (obj)
+			grab_commit_values(val, deref, obj);
 		grab_sub_body_contents(val, deref, data);
 		grab_person("author", val, deref, buf);
 		grab_person("committer", val, deref, buf);
@@ -1792,16 +1810,23 @@ static int get_object(struct ref_array_item *ref, int deref, struct object **obj
 				actual_oi = &act_oi;
 			}
 		}
-		*obj = parse_object_buffer(the_repository, &actual_oi->oid, actual_oi->type, actual_oi->size, actual_oi->content, &eaten);
-		if (!*obj) {
-			if (!eaten)
-				free(actual_oi->content);
-			if (actual_oi != oi)
-				free(oi->content);
-			return strbuf_addf_ret(err, -1, _("parse_object_buffer failed on %s for %s"),
-					       oid_to_hex(&oi->oid), ref->refname);
+		if (ref->can_skip_parse_buffer &&
+		    ((!deref &&
+		     (!need_tagged || oi->type != OBJ_TAG)) ||
+		    deref)) {
+			grab_values(ref->value, deref, NULL, actual_oi);
+		} else {
+			*obj = parse_object_buffer(the_repository, &actual_oi->oid, actual_oi->type, actual_oi->size, actual_oi->content, &eaten);
+			if (!*obj) {
+				if (!eaten)
+					free(actual_oi->content);
+				if (actual_oi != oi)
+					free(oi->content);
+				return strbuf_addf_ret(err, -1, _("parse_object_buffer failed on %s for %s"),
+						       oid_to_hex(&oi->oid), ref->refname);
+			}
+			grab_values(ref->value, deref, *obj, actual_oi);
 		}
-		grab_values(ref->value, deref, *obj, actual_oi);
 	}
 
 	grab_common_values(ref->value, deref, oi);
@@ -2029,7 +2054,7 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 	 * If there is no atom that wants to know about tagged
 	 * object, we are done.
 	 */
-	if (!need_tagged || (obj->type != OBJ_TAG))
+	if (!need_tagged || (oi.type != OBJ_TAG))
 		return 0;
 
 	/*
@@ -2651,7 +2676,7 @@ int format_ref_array_item(struct ref_array_item *info,
 
 	state.quote_style = format->quote_style;
 	push_stack_element(&state.stack);
-
+	info->can_skip_parse_buffer = format->can_skip_parse_buffer;
 	for (cp = format->format; *cp && (sp = find_next(cp)); cp = ep + 1) {
 		struct atom_value *atomv;
 		int pos;
