@@ -1307,50 +1307,13 @@ static void grab_date(const char *buf, struct atom_value *v, const char *atomnam
 }
 
 /* See grab_values */
-static void grab_person(const char *who, struct atom_value *val, int deref, void *buf)
+static void grab_person(enum atom_type type, struct atom_value *val, int deref, void *buf)
 {
 	int i;
+	const char *who = valid_atom[type].name;
 	int wholen = strlen(who);
 	const char *wholine = NULL;
 
-	for (i = 0; i < used_atom_cnt; i++) {
-		const char *name = used_atom[i].name;
-		struct atom_value *v = &val[i];
-		if (!!deref != (*name == '*'))
-			continue;
-		if (deref)
-			name++;
-		if (strncmp(who, name, wholen))
-			continue;
-		if (name[wholen] != 0 &&
-		    strcmp(name + wholen, "name") &&
-		    !starts_with(name + wholen, "email") &&
-		    !starts_with(name + wholen, "date"))
-			continue;
-		if (!wholine)
-			wholine = find_wholine(who, wholen, buf);
-		if (!wholine)
-			return; /* no point looking for it */
-		if (name[wholen] == 0)
-			v->s = copy_line(wholine);
-		else if (!strcmp(name + wholen, "name"))
-			v->s = copy_name(wholine);
-		else if (starts_with(name + wholen, "email"))
-			v->s = copy_email(wholine, &used_atom[i]);
-		else if (starts_with(name + wholen, "date"))
-			grab_date(wholine, v, name);
-	}
-
-	/*
-	 * For a tag or a commit object, if "creator" or "creatordate" is
-	 * requested, do something special.
-	 */
-	if (strcmp(who, "tagger") && strcmp(who, "committer"))
-		return; /* "author" for commit object is not wanted */
-	if (!wholine)
-		wholine = find_wholine(who, wholen, buf);
-	if (!wholine)
-		return;
 	for (i = 0; i < used_atom_cnt; i++) {
 		const char *name = used_atom[i].name;
 		enum atom_type atom_type = used_atom[i].atom_type;
@@ -1359,11 +1322,27 @@ static void grab_person(const char *who, struct atom_value *val, int deref, void
 			continue;
 		if (deref)
 			name++;
-
-		if (atom_type == ATOM_CREATORDATE)
-			grab_date(wholine, v, name);
-		else if (atom_type == ATOM_CREATOR)
+		if ((atom_type < type || atom_type > type + 3) &&
+		    /*
+		    * For a tag or a commit object, if "creator" or "creatordate" is
+		    * requested, do something special.
+		    */
+		    ((atom_type != ATOM_CREATOR && atom_type != ATOM_CREATORDATE) ||
+		     ((atom_type == ATOM_CREATOR || atom_type == ATOM_CREATORDATE) &&
+		      type != ATOM_TAGGER && type != ATOM_COMMITTER)))
+			continue;
+		if (!wholine)
+			wholine = find_wholine(who, wholen, buf);
+		if (!wholine)
+			return; /* no point looking for it */
+		if (atom_type == type || atom_type == ATOM_CREATOR)
 			v->s = copy_line(wholine);
+		else if (atom_type == type + 1)
+			v->s = copy_name(wholine);
+		else if (atom_type == type + 2)
+			v->s = copy_email(wholine, &used_atom[i]);
+		else if (atom_type == type + 3 || atom_type == ATOM_CREATORDATE)
+			grab_date(wholine, v, name);
 	}
 }
 
@@ -1553,14 +1532,14 @@ static void grab_values(struct atom_value *val, int deref, struct object *obj, s
 		if (obj)
 			grab_tag_values(val, deref, obj);
 		grab_sub_body_contents(val, deref, data);
-		grab_person("tagger", val, deref, buf);
+		grab_person(ATOM_TAGGER, val, deref, buf);
 		break;
 	case OBJ_COMMIT:
 		if (obj)
 			grab_commit_values(val, deref, obj);
 		grab_sub_body_contents(val, deref, data);
-		grab_person("author", val, deref, buf);
-		grab_person("committer", val, deref, buf);
+		grab_person(ATOM_AUTHOR, val, deref, buf);
+		grab_person(ATOM_COMMITTER, val, deref, buf);
 		break;
 	case OBJ_TREE:
 		/* grab_tree_values(val, deref, obj, buf, sz); */
