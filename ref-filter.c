@@ -1313,7 +1313,7 @@ static void grab_person(enum atom_type type, struct atom_value *val, int deref, 
 	}
 }
 
-static void find_subpos(const char *buf,
+static void find_subpos(const char *buf, size_t buf_size,
 			const char **sub, size_t *sublen,
 			const char **body, size_t *bodylen,
 			size_t *nonsiglen,
@@ -1321,12 +1321,12 @@ static void find_subpos(const char *buf,
 {
 	struct strbuf payload = STRBUF_INIT;
 	struct strbuf signature = STRBUF_INIT;
+	const char *begin = buf;
 	const char *eol;
-	const char *end = buf + strlen(buf);
 	const char *sigstart;
 
 	/* parse signature first; we might not even have a subject line */
-	parse_signature(buf, end - buf, &payload, &signature);
+	parse_signature(buf, buf_size, &payload, &signature);
 
 	/* skip past header until we hit empty line */
 	while (*buf && *buf != '\n') {
@@ -1339,7 +1339,7 @@ static void find_subpos(const char *buf,
 	while (*buf == '\n')
 		buf++;
 	*sig = strbuf_detach(&signature, siglen);
-	sigstart = buf + parse_signed_buffer(buf, strlen(buf));
+	sigstart = buf + parse_signed_buffer(buf, buf_size - (buf - begin));
 
 	/* subject is first non-empty line */
 	*sub = buf;
@@ -1362,7 +1362,7 @@ static void find_subpos(const char *buf,
 	while (*buf == '\n' || *buf == '\r')
 		buf++;
 	*body = buf;
-	*bodylen = strlen(buf);
+	*bodylen = buf_size - (buf - begin);
 	*nonsiglen = sigstart - buf;
 }
 
@@ -1429,7 +1429,7 @@ static void grab_sub_body_contents(struct atom_value *val, int deref, struct exp
 		     !starts_with(name, "contents")))
 			continue;
 		if (!subpos)
-			find_subpos(buf,
+			find_subpos(buf, data->size,
 				    &subpos, &sublen,
 				    &bodypos, &bodylen, &nonsiglen,
 				    &sigpos, &siglen);
