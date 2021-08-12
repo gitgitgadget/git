@@ -481,6 +481,13 @@ static int person_email_atom_parser(struct ref_format *format, struct used_atom 
 	return 0;
 }
 
+static int symref_atom_parser(struct ref_format *format, struct used_atom *atom,
+			       const char *arg, struct strbuf *err)
+{
+	need_symref = 1;
+	return refname_atom_parser_internal(&atom->u.refname, arg, atom->name, err);
+}
+
 static int refname_atom_parser(struct ref_format *format, struct used_atom *atom,
 			       const char *arg, struct strbuf *err)
 {
@@ -620,7 +627,7 @@ static struct {
 	[ATOM_RAW] = { "raw", SOURCE_OBJ, FIELD_STR, raw_atom_parser },
 	[ATOM_UPSTREAM] = { "upstream", SOURCE_NONE, FIELD_STR, remote_ref_atom_parser },
 	[ATOM_PUSH] = { "push", SOURCE_NONE, FIELD_STR, remote_ref_atom_parser },
-	[ATOM_SYMREF] = { "symref", SOURCE_NONE, FIELD_STR, refname_atom_parser },
+	[ATOM_SYMREF] = { "symref", SOURCE_NONE, FIELD_STR, symref_atom_parser },
 	[ATOM_FLAG] = { "flag", SOURCE_NONE },
 	[ATOM_HEAD] = { "HEAD", SOURCE_NONE, FIELD_STR, head_atom_parser },
 	[ATOM_COLOR] = { "color", SOURCE_NONE, FIELD_STR, color_atom_parser },
@@ -748,8 +755,6 @@ static int parse_ref_filter_atom(struct ref_format *format,
 		return -1;
 	if (deref)
 		need_tagged = 1;
-	if (i == ATOM_SYMREF)
-		need_symref = 1;
 	return at;
 }
 
