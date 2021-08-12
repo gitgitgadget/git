@@ -92,10 +92,11 @@ struct ref_format {
 	int can_skip_parse_buffer;
 	/* Internal state to ref-filter */
 	int need_color_reset_at_eol;
+	int can_reuse_final_buffer;
 	struct list_head parsed_atom_head;
 };
 
-#define REF_FORMAT_INIT { .use_color = -1, .can_skip_parse_buffer = 1 }
+#define REF_FORMAT_INIT { .use_color = -1, .can_skip_parse_buffer = 1, .can_reuse_final_buffer = 1 }
 
 /*  Macros for checking --merged and --no-merged options */
 #define _OPT_MERGED_NO_MERGED(option, filter, h) \

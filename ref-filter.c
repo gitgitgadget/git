@@ -1022,6 +1022,19 @@ static int need_parse_buffer(enum atom_type atom_type) {
 	}
 }
 
+static int can_reuse_final_buffer(enum atom_type atom_type) {
+	switch (atom_type) {
+	case ATOM_ALIGN:
+	case ATOM_END:
+	case ATOM_IF:
+	case ATOM_THEN:
+	case ATOM_ELSE:
+		return 0;
+	default:
+		return 1;
+	}
+}
+
 /*
  * Make sure the format string is well formed, and parse out
  * the used atoms.
@@ -1053,6 +1066,7 @@ int verify_ref_format(struct ref_format *format)
 			format->can_skip_parse_buffer = 0;
 		if (reject_atom(used_atom[at].atom_type))
 			die(_("this command reject atom %%(%.*s)"), (int)(ep - sp - 2), sp + 2);
+		format->can_reuse_final_buffer = can_reuse_final_buffer(used_atom[at].atom_type);
 
 		if ((format->quote_style == QUOTE_PYTHON ||
 		     format->quote_style == QUOTE_SHELL ||
@@ -2622,7 +2636,14 @@ int format_ref_array_item(struct ref_array_item *info,
 	struct ref_formatting_state state = REF_FORMATTING_STATE_INIT;
 
 	state.quote_style = format->quote_style;
-	push_stack_element(&state.stack);
+	if (format->can_reuse_final_buffer) {
+		struct ref_formatting_stack *s = xmalloc(sizeof(struct ref_formatting_stack));
+		s->output = *final_buf;
+		s->prev = state.stack;
+		state.stack = s;
+	} else {
+		push_stack_element(&state.stack);
+	}
 	info->can_skip_parse_buffer = format->can_skip_parse_buffer;
 
 	cp = format->format;
@@ -2636,7 +2657,8 @@ int format_ref_array_item(struct ref_array_item *info,
 			append_literal(cp, e->beg - 2, &state);
 		if (get_ref_atom_value(info, e->at, &atomv, error_buf) ||
 		    atomv->handler(atomv, &state, error_buf)) {
-			pop_stack_element(&state.stack);
+			if (!format->can_reuse_final_buffer)
+				pop_stack_element(&state.stack);
 			return -1;
 		}
 		cp = e->end + 1;
@@ -2651,16 +2673,23 @@ int format_ref_array_item(struct ref_array_item *info,
 		struct atom_value resetv = ATOM_VALUE_INIT;
 		resetv.s = GIT_COLOR_RESET;
 		if (append_atom(&resetv, &state, error_buf)) {
-			pop_stack_element(&state.stack);
+			if (!format->can_reuse_final_buffer)
+				pop_stack_element(&state.stack);
 			return -1;
 		}
 	}
 	if (state.stack->prev) {
+		assert(!format->can_reuse_final_buffer);
 		pop_stack_element(&state.stack);
 		return strbuf_addf_ret(error_buf, -1, _("format: %%(end) atom missing"));
 	}
-	strbuf_addbuf(final_buf, &state.stack->output);
-	pop_stack_element(&state.stack);
+	if(format->can_reuse_final_buffer) {
+		*final_buf = state.stack->output;
+		free(state.stack);
+	} else {
+		strbuf_addbuf(final_buf, &state.stack->output);
+		pop_stack_element(&state.stack);
+	}
 	return 0;
 }
 
