@@ -216,7 +216,7 @@ static struct used_atom {
 		char *head;
 	} u;
 } *used_atom;
-static int used_atom_cnt, need_tagged, need_symref;
+static int used_atom_cnt, need_tagged, need_symref, need_get_object_info;
 
 /*
  * Expand string, append it to strbuf *sb, then return error code ret.
@@ -322,10 +322,13 @@ static int objecttype_atom_parser(struct ref_format *format, struct used_atom *a
 {
 	if (arg)
 		return strbuf_addf_ret(err, -1, _("%%(objecttype) does not take arguments"));
-	if (atom->deref)
+	if (atom->deref) {
 		oi_deref.info.typep = &oi_deref.type;
-	else
+		need_get_object_info = 1;
+	} else {
 		oi.info.typep = &oi.type;
+		need_get_object_info = 1;
+	}
 	return 0;
 }
 
@@ -334,16 +337,23 @@ static int objectsize_atom_parser(struct ref_format *format, struct used_atom *a
 {
 	if (!arg) {
 		atom->u.objectsize.option = O_SIZE;
-		if (atom->deref)
+		if (atom->deref) {
 			oi_deref.info.sizep = &oi_deref.size;
-		else
+			need_get_object_info = 1;
+		} else {
 			oi.info.sizep = &oi.size;
+			need_get_object_info = 1;
+		}
 	} else if (!strcmp(arg, "disk")) {
 		atom->u.objectsize.option = O_SIZE_DISK;
-		if (atom->deref)
+		if (atom->deref) {
 			oi_deref.info.disk_sizep = &oi_deref.disk_size;
-		else
+			need_get_object_info = 1;
+		}
+		else {
 			oi.info.disk_sizep = &oi.disk_size;
+			need_get_object_info = 1;
+		}
 	} else
 		return strbuf_addf_ret(err, -1, _("unrecognized %%(objectsize) argument: %s"), arg);
 	return 0;
@@ -358,6 +368,7 @@ static int deltabase_atom_parser(struct ref_format *format, struct used_atom *at
 		oi_deref.info.delta_base_oid = &oi_deref.delta_base_oid;
 	else
 		oi.info.delta_base_oid = &oi.delta_base_oid;
+	need_get_object_info = 1;
 	return 0;
 }
 
@@ -735,6 +746,7 @@ static int parse_ref_filter_atom(struct ref_format *format,
 	used_atom[at].type = valid_atom[i].cmp_type;
 	used_atom[at].source = valid_atom[i].source;
 	if (used_atom[at].source == SOURCE_OBJ) {
+		need_get_object_info = 1;
 		if (deref)
 			oi_deref.info.contentp = &oi_deref.content;
 		else
@@ -1917,7 +1929,6 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 	struct object *obj;
 	int i;
 	int ret;
-	struct object_info empty = OBJECT_INFO_INIT;
 
 	CALLOC_ARRAY(ref->value, used_atom_cnt);
 
@@ -2085,10 +2096,11 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 					       oid_to_hex(&ref->objectname), ref->refname);
 	}
 
-	if (need_tagged)
+	if (need_tagged) {
 		oi.info.contentp = &oi.content;
-	if (!memcmp(&oi.info, &empty, sizeof(empty)) &&
-	    !memcmp(&oi_deref.info, &empty, sizeof(empty)))
+		need_get_object_info = 1;
+	}
+	if (!need_get_object_info)
 		return 0;
 
 
