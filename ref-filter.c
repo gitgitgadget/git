@@ -1115,10 +1115,10 @@ static void grab_common_values(struct atom_value *val, int deref, struct expand_
 		else if (atom_type == ATOM_OBJECTSIZE) {
 			if (used_atom[i].u.objectsize.option == O_SIZE_DISK) {
 				v->value = oi->disk_size;
-				v->s = xstrfmt("%"PRIuMAX, (uintmax_t)oi->disk_size);
+				v->s = xstrfmt_len(&v->s_size, "%"PRIuMAX, (uintmax_t)oi->disk_size);
 			} else if (used_atom[i].u.objectsize.option == O_SIZE) {
 				v->value = oi->size;
-				v->s = xstrfmt("%"PRIuMAX , (uintmax_t)oi->size);
+				v->s = xstrfmt_len(&v->s_size, "%"PRIuMAX , (uintmax_t)oi->size);
 			}
 		} else if (atom_type == ATOM_DELTABASE)
 			v->s = xstrdup(oid_to_hex(&oi->delta_base_oid));
@@ -1171,7 +1171,7 @@ static void grab_commit_values(struct atom_value *val, int deref, struct object 
 		}
 		if (atom_type == ATOM_NUMPARENT) {
 			v->value = commit_list_count(commit->parents);
-			v->s = xstrfmt("%lu", (unsigned long)v->value);
+			v->s = xstrfmt_len(&v->s_size, "%lu", (unsigned long)v->value);
 		}
 		else if (atom_type == ATOM_PARENT) {
 			struct commit_list *parents;
@@ -1449,7 +1449,7 @@ static void grab_sub_body_contents(struct atom_value *val, int deref, struct exp
 				v->s = xmemdupz(buf, buf_size);
 				v->s_size = buf_size;
 			} else if (atom->u.raw_data.option == RAW_LENGTH) {
-				v->s = xstrfmt("%"PRIuMAX, (uintmax_t)buf_size);
+				v->s = xstrfmt_len(&v->s_size, "%"PRIuMAX, (uintmax_t)buf_size);
 			}
 			continue;
 		}
@@ -1476,7 +1476,7 @@ static void grab_sub_body_contents(struct atom_value *val, int deref, struct exp
 		} else if (atom->u.contents.option == C_BODY_DEP)
 			v->s = xmemdupz(bodypos, bodylen);
 		else if (atom->u.contents.option == C_LENGTH)
-			v->s = xstrfmt("%"PRIuMAX, (uintmax_t)strlen(subpos));
+			v->s = xstrfmt_len(&v->s_size, "%"PRIuMAX, (uintmax_t)strlen(subpos));
 		else if (atom->u.contents.option == C_BODY)
 			v->s = xmemdupz(bodypos, nonsiglen);
 		else if (atom->u.contents.option == C_SIG)
@@ -1645,56 +1645,56 @@ static const char *show_ref(struct refname_atom *atom, const char *refname)
 }
 
 static void fill_remote_ref_details(struct used_atom *atom, const char *refname,
-				    struct branch *branch, const char **s)
+				    struct branch *branch, struct atom_value *v)
 {
 	int num_ours, num_theirs;
 	if (atom->u.remote_ref.option == RR_REF)
-		*s = show_ref(&atom->u.remote_ref.refname, refname);
+		v->s = show_ref(&atom->u.remote_ref.refname, refname);
 	else if (atom->u.remote_ref.option == RR_TRACK) {
 		if (stat_tracking_info(branch, &num_ours, &num_theirs,
 				       NULL, atom->u.remote_ref.push,
 				       AHEAD_BEHIND_FULL) < 0) {
-			*s = xstrdup(msgs.gone);
+			v->s = xstrdup(msgs.gone);
 		} else if (!num_ours && !num_theirs)
-			*s = xstrdup("");
+			v->s = xstrdup("");
 		else if (!num_ours)
-			*s = xstrfmt(msgs.behind, num_theirs);
+			v->s = xstrfmt_len(&v->s_size, msgs.behind, num_theirs);
 		else if (!num_theirs)
-			*s = xstrfmt(msgs.ahead, num_ours);
+			v->s = xstrfmt_len(&v->s_size, msgs.ahead, num_ours);
 		else
-			*s = xstrfmt(msgs.ahead_behind,
+			v->s= xstrfmt_len(&v->s_size, msgs.ahead_behind,
 				     num_ours, num_theirs);
-		if (!atom->u.remote_ref.nobracket && *s[0]) {
-			const char *to_free = *s;
-			*s = xstrfmt("[%s]", *s);
+		if (!atom->u.remote_ref.nobracket && v->s[0]) {
+			const char *to_free = v->s;
+			v->s = xstrfmt_len(&v->s_size, "[%s]", v->s);
 			free((void *)to_free);
 		}
 	} else if (atom->u.remote_ref.option == RR_TRACKSHORT) {
 		if (stat_tracking_info(branch, &num_ours, &num_theirs,
 				       NULL, atom->u.remote_ref.push,
 				       AHEAD_BEHIND_FULL) < 0) {
-			*s = xstrdup("");
+			v->s = xstrdup("");
 			return;
 		}
 		if (!num_ours && !num_theirs)
-			*s = xstrdup("=");
+			v->s = xstrdup("=");
 		else if (!num_ours)
-			*s = xstrdup("<");
+			v->s = xstrdup("<");
 		else if (!num_theirs)
-			*s = xstrdup(">");
+			v->s = xstrdup(">");
 		else
-			*s = xstrdup("<>");
+			v->s = xstrdup("<>");
 	} else if (atom->u.remote_ref.option == RR_REMOTE_NAME) {
 		int explicit;
 		const char *remote = atom->u.remote_ref.push ?
 			pushremote_for_branch(branch, &explicit) :
 			remote_for_branch(branch, &explicit);
-		*s = xstrdup(explicit ? remote : "");
+		v->s = xstrdup(explicit ? remote : "");
 	} else if (atom->u.remote_ref.option == RR_REMOTE_REF) {
 		const char *merge;
 
 		merge = remote_ref_for_branch(branch, atom->u.remote_ref.push);
-		*s = xstrdup(merge ? merge : "");
+		v->s = xstrdup(merge ? merge : "");
 	} else
 		BUG("unhandled RR_* enum");
 }
@@ -1922,7 +1922,7 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 
 			refname = branch_get_upstream(branch, NULL);
 			if (refname)
-				fill_remote_ref_details(atom, refname, branch, &v->s);
+				fill_remote_ref_details(atom, refname, branch, v);
 			else
 				v->s = xstrdup("");
 			continue;
@@ -1943,7 +1943,7 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 			}
 			/* We will definitely re-init v->s on the next line. */
 			free((char *)v->s);
-			fill_remote_ref_details(atom, refname, branch, &v->s);
+			fill_remote_ref_details(atom, refname, branch, v);
 			continue;
 		} else if (atom_type == ATOM_COLOR) {
 			v->s = xstrdup(atom->u.color);
@@ -2006,7 +2006,7 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 		if (!deref)
 			v->s = xstrdup(refname);
 		else
-			v->s = xstrfmt("%s^{}", refname);
+			v->s = xstrfmt_len(&v->s_size, "%s^{}", refname);
 		free((char *)refname);
 	}
 

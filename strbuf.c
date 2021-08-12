@@ -982,6 +982,15 @@ char *xstrvfmt(const char *fmt, va_list ap)
 	return strbuf_detach(&buf, NULL);
 }
 
+char *xstrvfmt_len(ssize_t *len, const char *fmt, va_list ap)
+{
+	struct strbuf buf = STRBUF_INIT;
+	strbuf_vaddf(&buf, fmt, ap);
+	if (len)
+		*len = buf.len;
+	return strbuf_detach(&buf, NULL);
+}
+
 char *xstrfmt(const char *fmt, ...)
 {
 	va_list ap;
@@ -989,6 +998,18 @@ char *xstrfmt(const char *fmt, ...)
 
 	va_start(ap, fmt);
 	ret = xstrvfmt(fmt, ap);
+	va_end(ap);
+
+	return ret;
+}
+
+char *xstrfmt_len(ssize_t *len, const char *fmt, ...)
+{
+	va_list ap;
+	char *ret;
+
+	va_start(ap, fmt);
+	ret = xstrvfmt_len(len ,fmt, ap);
 	va_end(ap);
 
 	return ret;

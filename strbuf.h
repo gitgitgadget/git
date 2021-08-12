@@ -738,4 +738,10 @@ char *xstrvfmt(const char *fmt, va_list ap);
 __attribute__((format (printf, 1, 2)))
 char *xstrfmt(const char *fmt, ...);
 
+
+__attribute__((format (printf, 2, 0)))
+char *xstrvfmt_len(ssize_t *len, const char *fmt, va_list ap);
+__attribute__((format (printf, 2, 3)))
+char *xstrfmt_len(ssize_t *len, const char *fmt, ...);
+
 #endif /* STRBUF_H */
