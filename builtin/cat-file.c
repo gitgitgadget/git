@@ -421,6 +421,7 @@ static int batch_objects(struct batch_options *batch, const struct option *optio
 		strbuf_release(&output);
 		free_global_resource();
 		strbuf_release(&err);
+		clear_parsed_atom_list(&batch->format.parsed_atom_head);
 		return 0;
 	}
 
@@ -457,6 +458,7 @@ static int batch_objects(struct batch_options *batch, const struct option *optio
 	strbuf_release(&output);
 	free_global_resource();
 	strbuf_release(&err);
+	clear_parsed_atom_list(&batch->format.parsed_atom_head);
 	warn_on_object_refname_ambiguity = save_warning;
 	return retval;
 }
@@ -534,6 +536,7 @@ int cmd_cat_file(int argc, const char **argv, const char *prefix)
 
 	batch.buffer_output = -1;
 	batch.format.cat_file_mode = 1;
+	INIT_LIST_HEAD(&batch.format.parsed_atom_head);
 	argc = parse_options(argc, argv, prefix, options, cat_file_usage, 0);
 
 	if (opt) {

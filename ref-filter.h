@@ -73,6 +73,13 @@ struct ref_filter {
 		verbose;
 };
 
+struct parsed_atom_list {
+	const char *beg;
+	const char *end;
+	int at;
+	struct list_head list;
+};
+
 struct ref_format {
 	/*
 	 * Set these to define the format; make sure you call
@@ -87,6 +94,7 @@ struct ref_format {
 	int can_skip_parse_buffer;
 	/* Internal state to ref-filter */
 	int need_color_reset_at_eol;
+	struct list_head parsed_atom_head;
 };
 
 #define REF_FORMAT_INIT { .use_color = -1, .can_skip_parse_buffer = 1 }
@@ -118,6 +126,9 @@ void ref_array_clear(struct ref_array *array);
 void free_global_resource(void);
 /* Free ref_array_item's value */
 void free_ref_array_item_value(struct ref_array_item *item);
+/* Clear the parsed_atom_list in ref_format*/
+void clear_parsed_atom_list(struct list_head *parsed_atom_head);
+
 /*  Used to verify if the given format is correct and to parse out the used atoms */
 int verify_ref_format(struct ref_format *format);
 /*  Sort the given ref_array as per the ref_sorting provided */

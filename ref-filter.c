@@ -1051,6 +1051,7 @@ int verify_ref_format(struct ref_format *format)
 	for (cp = format->format; *cp && (sp = find_next(cp)); ) {
 		struct strbuf err = STRBUF_INIT;
 		const char *color, *ep = strchr(sp, ')');
+		struct parsed_atom_list *e;
 		int at;
 
 		if (!ep)
@@ -1059,6 +1060,12 @@ int verify_ref_format(struct ref_format *format)
 		at = parse_ref_filter_atom(format, sp + 2, ep, &err);
 		if (at < 0)
 			die("%s", err.buf);
+		e = xmalloc(sizeof(*e));
+		e->beg = sp + 2;
+		e->end = ep;
+		e->at = at;
+		list_add_tail(&e->list, &format->parsed_atom_head);
+
 		if (need_parse_buffer(used_atom[at].atom_type))
 			format->can_skip_parse_buffer = 0;
 		if (reject_atom(format->cat_file_mode, used_atom[at].atom_type))
@@ -2649,26 +2656,32 @@ int format_ref_array_item(struct ref_array_item *info,
 			  struct strbuf *final_buf,
 			  struct strbuf *error_buf)
 {
-	const char *cp, *sp, *ep;
+	const char *cp, *sp;
+	struct list_head *item;
 	struct ref_formatting_state state = REF_FORMATTING_STATE_INIT;
 	int ret;
 
 	state.quote_style = format->quote_style;
 	push_stack_element(&state.stack);
 	info->can_skip_parse_buffer = format->can_skip_parse_buffer;
-	for (cp = format->format; *cp && (sp = find_next(cp)); cp = ep + 1) {
-		struct atom_value *atomv;
-		int pos;
 
-		ep = strchr(sp, ')');
-		if (cp < sp)
-			append_literal(cp, sp, &state);
-		pos = parse_ref_filter_atom(format, sp + 2, ep, error_buf);
-		if (pos < 0 || (ret = get_ref_atom_value(info, pos, &atomv, error_buf)) ||
+	cp = format->format;
+
+	list_for_each(item, &format->parsed_atom_head) {
+		struct atom_value *atomv;
+		struct parsed_atom_list *e =
+			list_entry(item, struct parsed_atom_list, list);
+
+		if (cp < e->beg - 2)
+			append_literal(cp, e->beg - 2, &state);
+		if ((ret = get_ref_atom_value(info, e->at, &atomv, error_buf)) ||
 		    atomv->handler(atomv, &state, error_buf)) {
 			pop_stack_element(&state.stack);
 			return ret ? ret : -1;
 		}
+		cp = e->end + 1;
+		if (!*cp)
+			break;
 	}
 	if (*cp) {
 		sp = cp + strlen(cp);
@@ -2716,10 +2729,12 @@ static int parse_sorting_atom(const char *atom)
 	 * This parses an atom using a dummy ref_format, since we don't
 	 * actually care about the formatting details.
 	 */
+	int res;
 	struct ref_format dummy = REF_FORMAT_INIT;
 	const char *end = atom + strlen(atom);
 	struct strbuf err = STRBUF_INIT;
-	int res = parse_ref_filter_atom(&dummy, atom, end, &err);
+
+	res = parse_ref_filter_atom(&dummy, atom, end, &err);
 	if (res < 0)
 		die("%s", err.buf);
 	strbuf_release(&err);
@@ -2791,4 +2806,16 @@ int parse_opt_merge_filter(const struct option *opt, const char *arg, int unset)
 		commit_list_insert(merge_commit, &rf->reachable_from);
 
 	return 0;
+}
+
+void clear_parsed_atom_list(struct list_head *parsed_atom_head)
+{
+	struct list_head *pos, *tmp;
+	struct parsed_atom_list *item;
+
+	list_for_each_safe(pos, tmp, parsed_atom_head) {
+		item = list_entry(pos, struct parsed_atom_list, list);
+		list_del(pos);
+		free(item);
+	}
 }
