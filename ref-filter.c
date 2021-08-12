@@ -174,6 +174,7 @@ enum atom_type {
  * array.
  */
 static struct used_atom {
+	unsigned int deref : 1;
 	enum atom_type atom_type;
 	const char *name;
 	cmp_type type;
@@ -321,7 +322,7 @@ static int objecttype_atom_parser(struct ref_format *format, struct used_atom *a
 {
 	if (arg)
 		return strbuf_addf_ret(err, -1, _("%%(objecttype) does not take arguments"));
-	if (*atom->name == '*')
+	if (atom->deref)
 		oi_deref.info.typep = &oi_deref.type;
 	else
 		oi.info.typep = &oi.type;
@@ -333,13 +334,13 @@ static int objectsize_atom_parser(struct ref_format *format, struct used_atom *a
 {
 	if (!arg) {
 		atom->u.objectsize.option = O_SIZE;
-		if (*atom->name == '*')
+		if (atom->deref)
 			oi_deref.info.sizep = &oi_deref.size;
 		else
 			oi.info.sizep = &oi.size;
 	} else if (!strcmp(arg, "disk")) {
 		atom->u.objectsize.option = O_SIZE_DISK;
-		if (*atom->name == '*')
+		if (atom->deref)
 			oi_deref.info.disk_sizep = &oi_deref.disk_size;
 		else
 			oi.info.disk_sizep = &oi.disk_size;
@@ -353,7 +354,7 @@ static int deltabase_atom_parser(struct ref_format *format, struct used_atom *at
 {
 	if (arg)
 		return strbuf_addf_ret(err, -1, _("%%(deltabase) does not take arguments"));
-	if (*atom->name == '*')
+	if (atom->deref)
 		oi_deref.info.delta_base_oid = &oi_deref.delta_base_oid;
 	else
 		oi.info.delta_base_oid = &oi.delta_base_oid;
@@ -675,10 +676,13 @@ static int parse_ref_filter_atom(struct ref_format *format,
 	const char *sp;
 	const char *arg;
 	int i, at, atom_len;
+	int deref = 0;
 
 	sp = atom;
-	if (*sp == '*' && sp < ep)
+	if (*sp == '*' && sp < ep) {
 		sp++; /* deref */
+		deref = 1;
+	}
 	if (ep <= sp)
 		return strbuf_addf_ret(err, -1, _("malformed field name: %.*s"),
 				       (int)(ep-atom), atom);
@@ -695,7 +699,7 @@ static int parse_ref_filter_atom(struct ref_format *format,
 	/* Do we have the atom already used elsewhere? */
 	for (i = 0; i < used_atom_cnt; i++) {
 		int len = strlen(used_atom[i].name);
-		if (len == ep - atom && !memcmp(used_atom[i].name, atom, len))
+		if (len == ep - sp && !memcmp(used_atom[i].name, sp, len))
 			return i;
 	}
 
@@ -719,17 +723,18 @@ static int parse_ref_filter_atom(struct ref_format *format,
 	used_atom_cnt++;
 	REALLOC_ARRAY(used_atom, used_atom_cnt);
 	used_atom[at].atom_type = i;
-	used_atom[at].name = xmemdupz(atom, ep - atom);
+	used_atom[at].deref = deref;
+	used_atom[at].name = xmemdupz(sp, ep - sp);
 	used_atom[at].type = valid_atom[i].cmp_type;
 	used_atom[at].source = valid_atom[i].source;
 	if (used_atom[at].source == SOURCE_OBJ) {
-		if (*atom == '*')
+		if (deref)
 			oi_deref.info.contentp = &oi_deref.content;
 		else
 			oi.info.contentp = &oi.content;
 	}
 	if (arg) {
-		arg = used_atom[at].name + (arg - atom) + 1;
+		arg = used_atom[at].name + (arg - sp) + 1;
 		if (!*arg) {
 			/*
 			 * Treat empty sub-arguments list as NULL (i.e.,
@@ -741,7 +746,7 @@ static int parse_ref_filter_atom(struct ref_format *format,
 	memset(&used_atom[at].u, 0, sizeof(used_atom[at].u));
 	if (valid_atom[i].parser && valid_atom[i].parser(format, &used_atom[at], arg, err))
 		return -1;
-	if (*atom == '*')
+	if (deref)
 		need_tagged = 1;
 	if (i == ATOM_SYMREF)
 		need_symref = 1;
@@ -1112,13 +1117,10 @@ static void grab_common_values(struct atom_value *val, int deref, struct expand_
 	int i;
 
 	for (i = 0; i < used_atom_cnt; i++) {
-		const char *name = used_atom[i].name;
 		enum atom_type atom_type = used_atom[i].atom_type;
 		struct atom_value *v = &val[i];
-		if (!!deref != (*name == '*'))
+		if (!!deref != used_atom[i].deref)
 			continue;
-		if (deref)
-			name++;
 		if (atom_type == ATOM_OBJECTTYPE)
 			v->s = xstrdup(type_name(oi->type));
 		else if (atom_type == ATOM_OBJECTSIZE) {
@@ -1144,13 +1146,10 @@ static void grab_tag_values(struct atom_value *val, int deref, struct object *ob
 	struct tag *tag = (struct tag *) obj;
 
 	for (i = 0; i < used_atom_cnt; i++) {
-		const char *name = used_atom[i].name;
 		enum atom_type atom_type = used_atom[i].atom_type;
 		struct atom_value *v = &val[i];
-		if (!!deref != (*name == '*'))
+		if (!!deref != used_atom[i].deref)
 			continue;
-		if (deref)
-			name++;
 		if (atom_type == ATOM_TAG)
 			v->s = xstrdup(tag->tag);
 		else if (atom_type == ATOM_TYPE && tag->tagged)
@@ -1167,13 +1166,10 @@ static void grab_commit_values(struct atom_value *val, int deref, struct object 
 	struct commit *commit = (struct commit *) obj;
 
 	for (i = 0; i < used_atom_cnt; i++) {
-		const char *name = used_atom[i].name;
 		enum atom_type atom_type = used_atom[i].atom_type;
 		struct atom_value *v = &val[i];
-		if (!!deref != (*name == '*'))
+		if (!!deref != used_atom[i].deref)
 			continue;
-		if (deref)
-			name++;
 		if (atom_type == ATOM_TREE) {
 			v->s = xstrdup(do_grab_oid("tree", get_commit_tree_oid(commit), &used_atom[i]));
 			continue;
@@ -1327,10 +1323,8 @@ static void grab_person(enum atom_type type, struct atom_value *val, int deref, 
 		const char *name = used_atom[i].name;
 		enum atom_type atom_type = used_atom[i].atom_type;
 		struct atom_value *v = &val[i];
-		if (!!deref != (*name == '*'))
+		if (!!deref != used_atom[i].deref)
 			continue;
-		if (deref)
-			name++;
 		if ((atom_type < type || atom_type > type + 3) &&
 		    /*
 		    * For a tag or a commit object, if "creator" or "creatordate" is
@@ -1446,10 +1440,8 @@ static void grab_sub_body_contents(struct atom_value *val, int deref, struct exp
 		struct atom_value *v = &val[i];
 		enum atom_type atom_type = atom->atom_type;
 
-		if (!!deref != (*name == '*'))
+		if (!!deref != used_atom[i].deref)
 			continue;
-		if (deref)
-			name++;
 
 		if (atom_type == ATOM_RAW) {
 			unsigned long buf_size = data->size;
@@ -1895,18 +1887,13 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 		enum atom_type atom_type = atom->atom_type;
 		const char *name = used_atom[i].name;
 		struct atom_value *v = &ref->value[i];
-		int deref = 0;
+		int deref = atom->deref;
 		const char *refname;
 		struct branch *branch = NULL;
 
 		v->s_size = ATOM_SIZE_UNSPECIFIED;
 		v->handler = append_atom;
 		v->atom = atom;
-
-		if (*name == '*') {
-			deref = 1;
-			name++;
-		}
 
 		if (atom_type == ATOM_REFNAME)
 			refname = get_refname(atom, ref);
