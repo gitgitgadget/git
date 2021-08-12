@@ -78,6 +78,7 @@ static int list_tags(struct ref_filter *filter, struct ref_sorting *sorting,
 	strbuf_release(&output);
 	ref_array_clear(&array);
 	free(to_free);
+	clear_parsed_atom_list(&format->parsed_atom_head);
 
 	return 0;
 }
@@ -493,6 +494,7 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 	memset(&filter, 0, sizeof(filter));
 	filter.lines = -1;
 	opt.sign = -1;
+	INIT_LIST_HEAD(&format.parsed_atom_head);
 
 	argc = parse_options(argc, argv, prefix, options, git_tag_usage, 0);
 

@@ -39,6 +39,7 @@ int cmd_verify_tag(int argc, const char **argv, const char *prefix)
 		OPT_END()
 	};
 
+	INIT_LIST_HEAD(&format.parsed_atom_head);
 	git_config(git_verify_tag_config, NULL);
 
 	argc = parse_options(argc, argv, prefix, verify_tag_options,
@@ -73,5 +74,6 @@ int cmd_verify_tag(int argc, const char **argv, const char *prefix)
 		if (format.format)
 			pretty_print_ref(name, &oid, &format);
 	}
+	clear_parsed_atom_list(&format.parsed_atom_head);
 	return had_error;
 }
