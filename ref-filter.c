@@ -1930,7 +1930,7 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 	int i;
 	int ret;
 
-	CALLOC_ARRAY(ref->value, used_atom_cnt);
+	ALLOC_ARRAY(ref->value, used_atom_cnt);
 
 	if (need_symref && (ref->flag & REF_ISSYMREF) && !ref->symref) {
 		ref->symref = resolve_refdup(ref->refname, RESOLVE_REF_READING,
@@ -1949,6 +1949,7 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 		const char *refname;
 		struct branch *branch = NULL;
 
+		v->s = NULL;
 		v->s_size = ATOM_SIZE_UNSPECIFIED;
 		v->handler = append_atom;
 		v->atom = atom;
