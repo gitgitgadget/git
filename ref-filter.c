@@ -1486,7 +1486,7 @@ static void append_lines(struct strbuf *out, const char *buf, unsigned long size
 }
 
 /* See grab_values */
-static void grab_sub_body_contents(struct atom_value *val, int deref, struct expand_data *data)
+static void grab_sub_body_contents(struct atom_value *val, int deref, struct expand_data *data, int eaten)
 {
 	int i;
 	const char *subpos = NULL, *bodypos = NULL, *sigpos = NULL;
@@ -1506,7 +1506,10 @@ static void grab_sub_body_contents(struct atom_value *val, int deref, struct exp
 			unsigned long buf_size = data->size;
 
 			if (atom->u.raw_data.option == RAW_BARE) {
-				v->s = xmemdupz(buf, buf_size);
+				if (eaten)
+					v->s = xmemdupz(buf, buf_size);
+				else
+					v->s = buf;
 				v->s_size = buf_size;
 			} else if (atom->u.raw_data.option == RAW_LENGTH) {
 				v->s = xstrfmt_len(&v->s_size, "%"PRIuMAX, (uintmax_t)buf_size);
@@ -1583,7 +1586,7 @@ static void fill_missing_values(struct atom_value *val)
  * pointed at by the ref itself; otherwise it is the object the
  * ref (which is a tag) refers to.
  */
-static void grab_values(struct atom_value *val, int deref, struct object *obj, struct expand_data *data)
+static void grab_values(struct atom_value *val, int deref, struct object *obj, struct expand_data *data, int eaten)
 {
 	void *buf = data->content;
 
@@ -1591,23 +1594,23 @@ static void grab_values(struct atom_value *val, int deref, struct object *obj, s
 	case OBJ_TAG:
 		if (obj)
 			grab_tag_values(val, deref, obj);
-		grab_sub_body_contents(val, deref, data);
+		grab_sub_body_contents(val, deref, data, eaten);
 		grab_person(ATOM_TAGGER, val, deref, buf);
 		break;
 	case OBJ_COMMIT:
 		if (obj)
 			grab_commit_values(val, deref, obj);
-		grab_sub_body_contents(val, deref, data);
+		grab_sub_body_contents(val, deref, data, eaten);
 		grab_person(ATOM_AUTHOR, val, deref, buf);
 		grab_person(ATOM_COMMITTER, val, deref, buf);
 		break;
 	case OBJ_TREE:
 		/* grab_tree_values(val, deref, obj, buf, sz); */
-		grab_sub_body_contents(val, deref, data);
+		grab_sub_body_contents(val, deref, data, eaten);
 		break;
 	case OBJ_BLOB:
 		/* grab_blob_values(val, deref, obj, buf, sz); */
-		grab_sub_body_contents(val, deref, data);
+		grab_sub_body_contents(val, deref, data, eaten);
 		break;
 	default:
 		die("Eh?  Object of type %d?", obj->type);
@@ -1853,7 +1856,7 @@ static int get_object(struct ref_array_item *ref, int deref, struct object **obj
 		    ((!deref &&
 		     (!need_tagged || oi->type != OBJ_TAG)) ||
 		    deref)) {
-			grab_values(ref->value, deref, NULL, actual_oi);
+			grab_values(ref->value, deref, NULL, actual_oi, 0);
 		} else {
 			*obj = parse_object_buffer(the_repository, &actual_oi->oid, actual_oi->type, actual_oi->size, actual_oi->content, &eaten);
 			if (!*obj) {
@@ -1864,13 +1867,11 @@ static int get_object(struct ref_array_item *ref, int deref, struct object **obj
 				return strbuf_addf_ret(err, -1, _("parse_object_buffer failed on %s for %s"),
 						       oid_to_hex(&oi->oid), ref->refname);
 			}
-			grab_values(ref->value, deref, *obj, actual_oi);
+			grab_values(ref->value, deref, *obj, actual_oi, eaten);
 		}
 	}
 
 	grab_common_values(ref->value, deref, oi);
-	if (!eaten)
-		free(actual_oi->content);
 	if (actual_oi != oi)
 		free(oi->content);
 	return 0;
