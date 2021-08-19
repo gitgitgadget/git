@@ -53,8 +53,8 @@ int cmd_for_each_ref(int argc, const char **argv, const char *prefix)
 
 	memset(&array, 0, sizeof(array));
 	memset(&filter, 0, sizeof(filter));
-
 	format.format = "%(objectname) %(objecttype)\t%(refname)";
+	INIT_LIST_HEAD(&format.parsed_atom_head);
 
 	git_config(git_default_config, NULL);
 
@@ -96,6 +96,7 @@ int cmd_for_each_ref(int argc, const char **argv, const char *prefix)
 	ref_array_clear(&array);
 	free_commit_list(filter.with_commit);
 	free_commit_list(filter.no_commit);
+	clear_parsed_atom_list(&format.parsed_atom_head);
 	UNLEAK(sorting);
 	return 0;
 }

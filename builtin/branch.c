@@ -459,6 +459,7 @@ static void print_ref_list(struct ref_filter *filter, struct ref_sorting *sortin
 	strbuf_release(&err);
 	strbuf_release(&out);
 	ref_array_clear(&array);
+	clear_parsed_atom_list(&format->parsed_atom_head);
 	free(to_free);
 }
 
@@ -678,6 +679,7 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 	memset(&filter, 0, sizeof(filter));
 	filter.kind = FILTER_REFS_BRANCHES;
 	filter.abbrev = -1;
+	INIT_LIST_HEAD(&format.parsed_atom_head);
 
 	if (argc == 2 && !strcmp(argv[1], "-h"))
 		usage_with_options(builtin_branch_usage, options);

@@ -38,7 +38,10 @@ struct ref_sorting {
 
 struct ref_array_item {
 	struct object_id objectname;
+	const char *rest;
+	int cat_file_cmdmode;
 	int flag;
+	int can_skip_parse_buffer;
 	unsigned int kind;
 	const char *symref;
 	struct commit *commit;
@@ -70,20 +73,32 @@ struct ref_filter {
 		verbose;
 };
 
+struct parsed_atom_list {
+	const char *beg;
+	const char *end;
+	int at;
+	struct list_head list;
+};
+
 struct ref_format {
 	/*
 	 * Set these to define the format; make sure you call
 	 * verify_ref_format() afterwards to finalize.
 	 */
 	const char *format;
+	const char *rest;
+	int cat_file_mode;
 	int quote_style;
+	int use_rest;
 	int use_color;
-
+	int can_skip_parse_buffer;
 	/* Internal state to ref-filter */
 	int need_color_reset_at_eol;
+	int can_reuse_final_buffer;
+	struct list_head parsed_atom_head;
 };
 
-#define REF_FORMAT_INIT { NULL, 0, -1 }
+#define REF_FORMAT_INIT { .use_color = -1, .can_skip_parse_buffer = 1, .can_reuse_final_buffer = 1 }
 
 /*  Macros for checking --merged and --no-merged options */
 #define _OPT_MERGED_NO_MERGED(option, filter, h) \
@@ -108,6 +123,12 @@ struct ref_format {
 int filter_refs(struct ref_array *array, struct ref_filter *filter, unsigned int type);
 /*  Clear all memory allocated to ref_array */
 void ref_array_clear(struct ref_array *array);
+/* Free global memory allocated resource */
+void free_global_resource(void);
+/* Free ref_array_item's value */
+void free_ref_array_item_value(struct ref_array_item *item);
+/* Clear the parsed_atom_list in ref_format */
+void clear_parsed_atom_list(struct list_head *parsed_atom_head);
 /*  Used to verify if the given format is correct and to parse out the used atoms */
 int verify_ref_format(struct ref_format *format);
 /*  Sort the given ref_array as per the ref_sorting provided */
@@ -116,7 +137,7 @@ void ref_array_sort(struct ref_sorting *sort, struct ref_array *array);
 void ref_sorting_set_sort_flags_all(struct ref_sorting *sorting, unsigned int mask, int on);
 /*  Based on the given format and quote_style, fill the strbuf */
 int format_ref_array_item(struct ref_array_item *info,
-			  const struct ref_format *format,
+			  struct ref_format *format,
 			  struct strbuf *final_buf,
 			  struct strbuf *error_buf);
 /*  Parse a single sort specifier and add it to the list */
@@ -137,7 +158,7 @@ void setup_ref_filter_porcelain_msg(void);
  * name must be a fully qualified refname.
  */
 void pretty_print_ref(const char *name, const struct object_id *oid,
-		      const struct ref_format *format);
+		      struct ref_format *format);
 
 /*
  * Push a single ref onto the array; this can be used to construct your own
