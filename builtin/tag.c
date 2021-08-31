@@ -62,13 +62,13 @@ static int list_tags(struct ref_filter *filter, struct ref_sorting *sorting,
 	if (verify_ref_format(format))
 		die(_("unable to parse format string"));
 	filter->with_commit_tag_algo = 1;
-	filter_refs(&array, filter, FILTER_REFS_TAGS);
+	filter_refs(&array, filter, format, FILTER_REFS_TAGS);
 	ref_array_sort(sorting, &array);
 
 	for (i = 0; i < array.nr; i++) {
 		strbuf_reset(&output);
 		strbuf_reset(&err);
-		if (format_ref_array_item(array.items[i], format, &output, &err))
+		if (format_ref_array_item(array.items[i], &output, &err))
 			die("%s", err.buf);
 		fwrite(output.buf, 1, output.len, stdout);
 		putchar('\n');
@@ -178,7 +178,7 @@ static const char tag_template_nocleanup[] =
 static int git_tag_config(const char *var, const char *value, void *cb)
 {
 	int status;
-	struct ref_sorting **sorting_tail = (struct ref_sorting **)cb;
+	struct ref_sorting *sorting_tail = (struct ref_sorting *)cb;
 
 	if (!strcmp(var, "tag.gpgsign")) {
 		config_sign_tag = git_config_bool(var, value);
@@ -438,7 +438,7 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 	struct ref_transaction *transaction;
 	struct strbuf err = STRBUF_INIT;
 	struct ref_filter filter;
-	static struct ref_sorting *sorting = NULL, **sorting_tail = &sorting;
+	struct ref_sorting sorting;
 	struct ref_format format = REF_FORMAT_INIT;
 	int icase = 0;
 	int edit_flag = 0;
@@ -472,7 +472,7 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 		OPT_WITHOUT(&filter.no_commit, N_("print only tags that don't contain the commit")),
 		OPT_MERGED(&filter, N_("print only tags that are merged")),
 		OPT_NO_MERGED(&filter, N_("print only tags that are not merged")),
-		OPT_REF_SORT(sorting_tail),
+		OPT_REF_SORT(&sorting),
 		{
 			OPTION_CALLBACK, 0, "points-at", &filter.points_at, N_("object"),
 			N_("print only tags of the object"), PARSE_OPT_LASTARG_DEFAULT,
@@ -487,7 +487,8 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 
 	setup_ref_filter_porcelain_msg();
 
-	git_config(git_tag_config, sorting_tail);
+	INIT_LIST_HEAD(&sorting.list);
+	git_config(git_tag_config, &sorting);
 
 	memset(&opt, 0, sizeof(opt));
 	memset(&filter, 0, sizeof(filter));
@@ -526,9 +527,10 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 			die(_("--column and -n are incompatible"));
 		colopts = 0;
 	}
-	if (!sorting)
-		sorting = ref_default_sorting();
-	ref_sorting_set_sort_flags_all(sorting, REF_SORTING_ICASE, icase);
+	if (list_empty(&sorting.list))
+		ref_default_sorting(&sorting);
+	parse_ref_sorting_list(&sorting, &format);
+	ref_sorting_set_sort_flags_all(&sorting, REF_SORTING_ICASE, icase);
 	filter.ignore_case = icase;
 	if (cmdmode == 'l') {
 		int ret;
@@ -539,11 +541,13 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 			run_column_filter(colopts, &copts);
 		}
 		filter.name_patterns = argv;
-		ret = list_tags(&filter, sorting, &format);
+		ret = list_tags(&filter, &sorting, &format);
 		if (column_active(colopts))
 			stop_column_filter();
 		return ret;
 	}
+	free_ref_sorting_list(&sorting);
+
 	if (filter.lines != -1)
 		die(_("-n option is only allowed in list mode"));
 	if (filter.with_commit)

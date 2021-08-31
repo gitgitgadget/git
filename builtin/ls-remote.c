@@ -49,12 +49,13 @@ int cmd_ls_remote(int argc, const char **argv, const char *prefix)
 		TRANSPORT_LS_REFS_OPTIONS_INIT;
 	int i;
 	struct string_list server_options = STRING_LIST_INIT_DUP;
+	struct ref_format dummy = REF_FORMAT_INIT;
 
 	struct remote *remote;
 	struct transport *transport;
 	const struct ref *ref;
 	struct ref_array ref_array;
-	static struct ref_sorting *sorting = NULL, **sorting_tail = &sorting;
+	static struct ref_sorting sorting;
 
 	struct option options[] = {
 		OPT__QUIET(&quiet, N_("do not print remote URL")),
@@ -68,7 +69,7 @@ int cmd_ls_remote(int argc, const char **argv, const char *prefix)
 		OPT_BIT(0, "refs", &flags, N_("do not show peeled tags"), REF_NORMAL),
 		OPT_BOOL(0, "get-url", &get_url,
 			 N_("take url.<base>.insteadOf into account")),
-		OPT_REF_SORT(sorting_tail),
+		OPT_REF_SORT(&sorting),
 		OPT_SET_INT_F(0, "exit-code", &status,
 			      N_("exit with exit code 2 if no matching refs are found"),
 			      2, PARSE_OPT_NOCOMPLETE),
@@ -79,12 +80,11 @@ int cmd_ls_remote(int argc, const char **argv, const char *prefix)
 	};
 
 	memset(&ref_array, 0, sizeof(ref_array));
+	INIT_LIST_HEAD(&sorting.list);
 
 	argc = parse_options(argc, argv, prefix, options, ls_remote_usage,
 			     PARSE_OPT_STOP_AT_NON_OPTION);
 	dest = argv[0];
-
-	UNLEAK(sorting);
 
 	if (argc > 1) {
 		int i;
@@ -133,13 +133,14 @@ int cmd_ls_remote(int argc, const char **argv, const char *prefix)
 			continue;
 		if (!tail_match(pattern, ref->name))
 			continue;
-		item = ref_array_push(&ref_array, ref->name, &ref->old_oid);
+		item = ref_array_push(&ref_array, ref->name, &ref->old_oid, &dummy);
 		item->symref = xstrdup_or_null(ref->symref);
 	}
 
-	if (sorting)
-		ref_array_sort(sorting, &ref_array);
-
+	if (!list_empty(&sorting.list)) {
+		parse_ref_sorting_list(&sorting, &dummy);
+		ref_array_sort(&sorting, &ref_array);
+	}
 	for (i = 0; i < ref_array.nr; i++) {
 		const struct ref_array_item *ref = ref_array.items[i];
 		if (show_symref_target && ref->symref)
@@ -149,6 +150,7 @@ int cmd_ls_remote(int argc, const char **argv, const char *prefix)
 	}
 
 	ref_array_clear(&ref_array);
+	free_ref_sorting_list(&sorting);
 	if (transport_disconnect(transport))
 		return 1;
 	return status;

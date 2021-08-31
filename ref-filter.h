@@ -26,8 +26,9 @@
 struct atom_value;
 
 struct ref_sorting {
-	struct ref_sorting *next;
+	struct list_head list;
 	int atom; /* index into used_atom array (internal) */
+	const char *arg;
 	enum {
 		REF_SORTING_REVERSE = 1<<0,
 		REF_SORTING_ICASE = 1<<1,
@@ -44,6 +45,7 @@ struct ref_array_item {
 	const char *symref;
 	struct commit *commit;
 	struct atom_value *value;
+	struct ref_format *format;
 	char refname[FLEX_ARRAY];
 };
 
@@ -84,6 +86,8 @@ struct ref_format {
 
 	/* Internal state to ref-filter */
 	int need_color_reset_at_eol;
+	int need_tagged;
+	int need_symref;
 };
 
 #define REF_FORMAT_INIT { .use_color = -1 }
@@ -108,7 +112,7 @@ struct ref_format {
  * as per the given ref_filter structure and finally store the
  * filtered refs in the ref_array structure.
  */
-int filter_refs(struct ref_array *array, struct ref_filter *filter, unsigned int type);
+int filter_refs(struct ref_array *array, struct ref_filter *filter, struct ref_format *format, unsigned int type);
 /*  Clear all memory allocated to ref_array */
 void ref_array_clear(struct ref_array *array);
 /*  Used to verify if the given format is correct and to parse out the used atoms */
@@ -119,15 +123,18 @@ void ref_array_sort(struct ref_sorting *sort, struct ref_array *array);
 void ref_sorting_set_sort_flags_all(struct ref_sorting *sorting, unsigned int mask, int on);
 /*  Based on the given format and quote_style, fill the strbuf */
 int format_ref_array_item(struct ref_array_item *info,
-			  struct ref_format *format,
 			  struct strbuf *final_buf,
 			  struct strbuf *error_buf);
 /*  Parse a single sort specifier and add it to the list */
-void parse_ref_sorting(struct ref_sorting **sorting_tail, const char *atom);
+void parse_ref_sorting(struct ref_sorting *sorting_list, const char *arg);
 /*  Callback function for parsing the sort option */
 int parse_opt_ref_sorting(const struct option *opt, const char *arg, int unset);
 /*  Default sort option based on refname */
-struct ref_sorting *ref_default_sorting(void);
+void ref_default_sorting(struct ref_sorting *sorting_list);
+/* Parse every sort atom of ref_sorting list */
+void parse_ref_sorting_list(struct ref_sorting *sorting_list, struct ref_format *format);
+/* Free all ref_sorting items in sorting list */
+void free_ref_sorting_list(struct ref_sorting *sorting_list);
 /*  Function to parse --merged and --no-merged options */
 int parse_opt_merge_filter(const struct option *opt, const char *arg, int unset);
 /*  Get the current HEAD's description */
@@ -148,6 +155,7 @@ void pretty_print_ref(const char *name, const struct object_id *oid,
  */
 struct ref_array_item *ref_array_push(struct ref_array *array,
 				      const char *refname,
-				      const struct object_id *oid);
+				      const struct object_id *oid,
+				      struct ref_format *format);
 
 #endif /*  REF_FILTER_H  */

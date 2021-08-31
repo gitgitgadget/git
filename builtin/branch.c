@@ -77,7 +77,7 @@ define_list_config_array(color_branch_slots);
 static int git_branch_config(const char *var, const char *value, void *cb)
 {
 	const char *slot_name;
-	struct ref_sorting **sorting_tail = (struct ref_sorting **)cb;
+	struct ref_sorting *sorting_tail = (struct ref_sorting *)cb;
 
 	if (!strcmp(var, "branch.sort")) {
 		if (!value)
@@ -427,7 +427,7 @@ static void print_ref_list(struct ref_filter *filter, struct ref_sorting *sortin
 
 	memset(&array, 0, sizeof(array));
 
-	filter_refs(&array, filter, filter->kind | FILTER_REFS_INCLUDE_BROKEN);
+	filter_refs(&array, filter, format, filter->kind | FILTER_REFS_INCLUDE_BROKEN);
 
 	if (filter->verbose)
 		maxwidth = calc_maxwidth(&array, strlen(remote_prefix));
@@ -444,7 +444,8 @@ static void print_ref_list(struct ref_filter *filter, struct ref_sorting *sortin
 	for (i = 0; i < array.nr; i++) {
 		strbuf_reset(&err);
 		strbuf_reset(&out);
-		if (format_ref_array_item(array.items[i], format, &out, &err))
+		array.items[i]->format = format;
+		if (format_ref_array_item(array.items[i], &out, &err))
 			die("%s", err.buf);
 		if (column_active(colopts)) {
 			assert(!filter->verbose && "--column and --verbose are incompatible");
@@ -624,7 +625,7 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 	enum branch_track track;
 	struct ref_filter filter;
 	int icase = 0;
-	static struct ref_sorting *sorting = NULL, **sorting_tail = &sorting;
+	struct ref_sorting sorting;
 	struct ref_format format = REF_FORMAT_INIT;
 
 	struct option options[] = {
@@ -665,7 +666,7 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 		OPT_MERGED(&filter, N_("print only branches that are merged")),
 		OPT_NO_MERGED(&filter, N_("print only branches that are not merged")),
 		OPT_COLUMN(0, "column", &colopts, N_("list branches in columns")),
-		OPT_REF_SORT(sorting_tail),
+		OPT_REF_SORT(&sorting),
 		OPT_CALLBACK(0, "points-at", &filter.points_at, N_("object"),
 			N_("print only branches of the object"), parse_opt_object_name),
 		OPT_BOOL('i', "ignore-case", &icase, N_("sorting and filtering are case insensitive")),
@@ -678,11 +679,12 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 	memset(&filter, 0, sizeof(filter));
 	filter.kind = FILTER_REFS_BRANCHES;
 	filter.abbrev = -1;
+	INIT_LIST_HEAD(&sorting.list);
 
 	if (argc == 2 && !strcmp(argv[1], "-h"))
 		usage_with_options(builtin_branch_usage, options);
 
-	git_config(git_branch_config, sorting_tail);
+	git_config(git_branch_config, &sorting);
 
 	track = git_branch_track;
 
@@ -748,12 +750,13 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 		 * local branches 'refs/heads/...' and finally remote-tracking
 		 * branches 'refs/remotes/...'.
 		 */
-		if (!sorting)
-			sorting = ref_default_sorting();
-		ref_sorting_set_sort_flags_all(sorting, REF_SORTING_ICASE, icase);
+		if (list_empty(&sorting.list))
+			ref_default_sorting(&sorting);
+		parse_ref_sorting_list(&sorting, &format);
+		ref_sorting_set_sort_flags_all(&sorting, REF_SORTING_ICASE, icase);
 		ref_sorting_set_sort_flags_all(
-			sorting, REF_SORTING_DETACHED_HEAD_FIRST, 1);
-		print_ref_list(&filter, sorting, &format);
+			&sorting, REF_SORTING_DETACHED_HEAD_FIRST, 1);
+		print_ref_list(&filter, &sorting, &format);
 		print_columns(&output, colopts, NULL);
 		string_list_clear(&output, 0);
 		return 0;
@@ -864,5 +867,6 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 	} else
 		usage_with_options(builtin_branch_usage, options);
 
+	free_ref_sorting_list(&sorting);
 	return 0;
 }
