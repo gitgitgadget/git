@@ -1694,9 +1694,12 @@ int unpack_trees(unsigned len, struct tree_desc *t, struct unpack_trees_options 
 	static struct cache_entry *dfc;
 	struct pattern_list pl;
 	int free_pattern_list = 0;
+	struct dir_struct dir = DIR_INIT;
 
 	if (len > MAX_UNPACK_TREES)
 		die("unpack_trees takes at most %d trees", MAX_UNPACK_TREES);
+	if (o->dir)
+		BUG("o->dir is for internal use only");
 
 	trace_performance_enter();
 	trace2_region_enter("unpack_trees", "unpack_trees", the_repository);
@@ -1708,7 +1711,7 @@ int unpack_trees(unsigned len, struct tree_desc *t, struct unpack_trees_options 
 	}
 
 	if (!o->preserve_ignored) {
-		CALLOC_ARRAY(o->dir, 1);
+		o->dir = &dir;
 		o->dir->flags |= DIR_SHOW_IGNORED;
 		setup_standard_excludes(o->dir);
 	}
@@ -1876,7 +1879,7 @@ done:
 		clear_pattern_list(&pl);
 	if (o->dir) {
 		dir_clear(o->dir);
-		FREE_AND_NULL(o->dir);
+		o->dir = NULL;
 	}
 	trace2_region_leave("unpack_trees", "unpack_trees", the_repository);
 	trace_performance_leave("unpack_trees");
