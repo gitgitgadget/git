@@ -1158,7 +1158,7 @@ static void make_cover_letter(struct rev_info *rev, int use_separate_file,
 			      struct commit *origin,
 			      int nr, struct commit **list,
 			      const char *branch_name,
-			      int quiet)
+			      int quiet, int left_only)
 {
 	const char *committer;
 	struct shortlog log;
@@ -1233,7 +1233,8 @@ static void make_cover_letter(struct rev_info *rev, int use_separate_file,
 			.creation_factor = rev->creation_factor,
 			.dual_color = 1,
 			.diffopt = &opts,
-			.other_arg = &other_arg
+			.other_arg = &other_arg,
+			.left_only = left_only
 		};
 
 		diff_setup(&opts);
@@ -1743,6 +1744,7 @@ int cmd_format_patch(int argc, const char **argv, const char *prefix)
 	struct strbuf rdiff2 = STRBUF_INIT;
 	struct strbuf rdiff_title = STRBUF_INIT;
 	int creation_factor = -1;
+	int left_only = 0;
 
 	const struct option builtin_format_patch_options[] = {
 		OPT_CALLBACK_F('n', "numbered", &numbered, NULL,
@@ -1825,6 +1827,8 @@ int cmd_format_patch(int argc, const char **argv, const char *prefix)
 			     parse_opt_object_name),
 		OPT_STRING(0, "range-diff", &rdiff_prev, N_("refspec"),
 			   N_("show changes against <refspec> in cover letter or single patch")),
+		OPT_BOOL(0, "left-only", &left_only,
+			 N_("only emit output related to the first range")),
 		OPT_INTEGER(0, "creation-factor", &creation_factor,
 			    N_("percentage by which creation is weighted")),
 		OPT_END()
@@ -2094,10 +2098,15 @@ int cmd_format_patch(int argc, const char **argv, const char *prefix)
 					     _("Interdiff against v%d:"));
 	}
 
+	if (!rdiff_prev) {
+		if (creation_factor >= 0)
+			die(_("--creation-factor requires --range-diff"));
+		if (left_only)
+			die(_("--left-only requires --range-diff"));
+	}
+
 	if (creation_factor < 0)
 		creation_factor = RANGE_DIFF_CREATION_FACTOR_DEFAULT;
-	else if (!rdiff_prev)
-		die(_("--creation-factor requires --range-diff"));
 
 	if (rdiff_prev) {
 		if (!cover_letter && total != 1)
@@ -2145,7 +2154,8 @@ int cmd_format_patch(int argc, const char **argv, const char *prefix)
 		if (thread)
 			gen_message_id(&rev, "cover");
 		make_cover_letter(&rev, !!output_directory,
-				  origin, nr, list, branch_name, quiet);
+				  origin, nr, list, branch_name, quiet,
+				  left_only);
 		print_bases(&bases, rev.diffopt.file);
 		print_signature(rev.diffopt.file);
 		total++;

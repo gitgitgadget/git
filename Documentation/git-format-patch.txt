@@ -27,7 +27,7 @@ SYNOPSIS
 		   [--[no-]encode-email-headers]
 		   [--no-notes | --notes[=<ref>]]
 		   [--interdiff=<previous>]
-		   [--range-diff=<previous> [--creation-factor=<percent>]]
+		   [--range-diff=<previous> [--creation-factor=<percent>] [--left-only]]
 		   [--filename-max-length=<n>]
 		   [--progress]
 		   [<common diff options>]
@@ -322,6 +322,23 @@ material (this may change in the future).
 	between the previous and current series of patches by adjusting the
 	creation/deletion cost fudge factor. See linkgit:git-range-diff[1])
 	for details.
+
+--left-only:
+	Used with `--range-diff`, only emit output related to the first range.
+	This option only can be used in this situation: The first iteration `t1`
+	based on the upstream commit `b1`, the second iteration `t2` based on the
+	upstream commit `b2`, `b2` inherited from the `b1`, then If the user want
+	output the range-diff between this two iterations (t1 and t2) in cover-letter,
+	and just use `b1` as the same base for `--range-diff`, but they don't want the
+	upstream range `b1..b2` included on the right side of the range-diff output.
+	By using `git format-patch --range-diff=b1..t1 b1..t2 --cover-letter --left-only`,
+	all content on the right side will be removed, leaving only the range
+	`b1..t1` on the left side.
++
+Note that this `--left-only` is just a lazy way to let user use same base
+and avoid outputting upstream commits in cover-letter, and the side effect
+is that `b2..t2` on the right side will not be outputted.
+
 
 --notes[=<ref>]::
 --no-notes::
