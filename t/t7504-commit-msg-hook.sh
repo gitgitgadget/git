@@ -297,5 +297,20 @@ test_expect_success 'hook is called for reword during `rebase -i`' '
 
 '
 
+# now a hook that accepts input and writes it as the commit message
+cat >"$HOOK" <<'EOF'
+#!/bin/sh
+! read -r line || echo "$line" >"$1"
+EOF
+chmod +x "$HOOK"
+
+test_expect_success 'hook with user input' '
+
+	echo "additional" >>file &&
+	git add file &&
+	echo "user input" | git commit -m "additional" &&
+	commit_msg_is "user input"
+
+'
 
 test_done

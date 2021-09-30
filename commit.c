@@ -1698,7 +1698,7 @@ size_t ignore_non_trailer(const char *buf, size_t len)
 }
 
 int run_commit_hook(int editor_is_used, const char *index_file,
-		    const char *name, ...)
+		    unsigned flags, const char *name, ...)
 {
 	struct strvec hook_env = STRVEC_INIT;
 	va_list args;
@@ -1713,7 +1713,7 @@ int run_commit_hook(int editor_is_used, const char *index_file,
 		strvec_push(&hook_env, "GIT_EDITOR=:");
 
 	va_start(args, name);
-	ret = run_hook_ve(hook_env.v, name, args);
+	ret = run_hook_ve(hook_env.v, flags, name, args);
 	va_end(args);
 	strvec_clear(&hook_env);
 

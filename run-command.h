@@ -231,22 +231,29 @@ int run_command(struct child_process *);
  */
 const char *find_hook(const char *name);
 
+#define RUN_HOOK_ALLOW_STDIN 1
+
 /**
  * Run a hook.
- * The first argument is a pathname to an index file, or NULL
- * if the hook uses the default index file or no index is needed.
- * The second argument is the name of the hook.
+ * The env argument is an array of environment variables, or NULL
+ * if the hook uses the default environment and doesn't require
+ * additional variables.
+ * The flags argument is an OR'ed collection of feature bits like
+ * RUN_HOOK_ALLOW_STDIN defined above, which enables
+ * stdin for the child process (the default is no_stdin).
+ * The name argument is the name of the hook.
  * The further arguments correspond to the hook arguments.
  * The last argument has to be NULL to terminate the arguments list.
  * If the hook does not exist or is not executable, the return
  * value will be zero.
  * If it is executable, the hook will be executed and the exit
  * status of the hook is returned.
- * On execution, .stdout_to_stderr and .no_stdin will be set.
+ * On execution, .stdout_to_stderr will be set, and .no_stdin will be
+ * set unless RUN_HOOK_ALLOW_STDIN flag is requested.
  */
 LAST_ARG_MUST_BE_NULL
 int run_hook_le(const char *const *env, const char *name, ...);
-int run_hook_ve(const char *const *env, const char *name, va_list args);
+int run_hook_ve(const char *const *env, unsigned flags, const char *name, va_list args);
 
 /*
  * Trigger an auto-gc

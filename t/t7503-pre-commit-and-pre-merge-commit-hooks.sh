@@ -10,6 +10,7 @@ export GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME
 HOOKDIR="$(git rev-parse --git-dir)/hooks"
 PRECOMMIT="$HOOKDIR/pre-commit"
 PREMERGE="$HOOKDIR/pre-merge-commit"
+POSTCOMMIT="$HOOKDIR/post-commit"
 
 # Prepare sample scripts that write their $0 to actual_hooks
 test_expect_success 'sample script setup' '
@@ -31,10 +32,13 @@ test_expect_success 'sample script setup' '
 	echo $0 >>actual_hooks
 	test $GIT_PREFIX = "success/"
 	EOF
-	write_script "$HOOKDIR/check-author.sample" <<-\EOF
+	write_script "$HOOKDIR/check-author.sample" <<-\EOF &&
 	echo $0 >>actual_hooks
 	test "$GIT_AUTHOR_NAME" = "New Author" &&
 	test "$GIT_AUTHOR_EMAIL" = "newauthor@example.com"
+	EOF
+	write_script "$HOOKDIR/user-input.sample" <<-\EOF
+	! read -r line || echo "$line" >hook_input
 	EOF
 '
 
@@ -279,6 +283,46 @@ test_expect_success 'check the author in hook' '
 		--allow-empty -m "by new.author via command line" &&
 	git show -s &&
 	test_cmp expected_hooks actual_hooks
+'
+
+test_expect_success 'with user input' '
+	test_when_finished "rm -f \"$PRECOMMIT\" user_input hook_input" &&
+	cp "$HOOKDIR/user-input.sample" "$PRECOMMIT" &&
+	echo "user input" >user_input &&
+	echo "more" >>file &&
+	git add file &&
+	git commit -m "more" <user_input &&
+	test_cmp user_input hook_input
+'
+
+test_expect_success 'with user input combined with -F -' '
+	test_when_finished "rm -f \"$PRECOMMIT\" user_input hook_input" &&
+	cp "$HOOKDIR/user-input.sample" "$PRECOMMIT" &&
+	echo "user input" >user_input &&
+	echo "more" >>file &&
+	git add file &&
+	git commit -F - <user_input &&
+	! test_path_is_file hook_input
+'
+
+test_expect_success 'post-commit with user input' '
+	test_when_finished "rm -f \"$POSTCOMMIT\" user_input hook_input" &&
+	cp "$HOOKDIR/user-input.sample" "$POSTCOMMIT" &&
+	echo "user input" >user_input &&
+	echo "more" >>file &&
+	git add file &&
+	git commit -m "more" <user_input &&
+	test_cmp user_input hook_input
+'
+
+test_expect_success 'with user input (merge)' '
+	test_when_finished "rm -f \"$PREMERGE\" user_input hook_input" &&
+	cp "$HOOKDIR/user-input.sample" "$PREMERGE" &&
+	echo "user input" >user_input &&
+	git checkout side &&
+	git merge -m "merge master" master <user_input &&
+	git checkout master &&
+	test_cmp user_input hook_input
 '
 
 test_done
