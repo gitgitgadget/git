@@ -43,6 +43,7 @@ static const char *alternate_shallow_file;
 static struct fsck_options fsck_options = FSCK_OPTIONS_MISSING_GITMODULES;
 static struct strbuf fsck_msg_types = STRBUF_INIT;
 static struct string_list uri_protocols = STRING_LIST_INIT_DUP;
+static pid_t *curr_index_pack_pid;
 
 /* Remember to update object flag allocation in object.h */
 #define COMPLETE	(1U << 0)
@@ -960,6 +961,7 @@ static int get_pack(struct fetch_pack_args *args,
 	cmd.git_cmd = 1;
 	if (start_command(&cmd))
 		die(_("fetch-pack: unable to fork off %s"), cmd_name);
+	*curr_index_pack_pid = cmd.pid;
 	if (do_keep && (pack_lockfiles || fsck_objects)) {
 		int is_well_formed;
 		char *pack_lockfile = index_pack_lockfile(cmd.out, &is_well_formed);
@@ -1934,12 +1936,13 @@ struct ref *fetch_pack(struct fetch_pack_args *args,
 		       struct ref **sought, int nr_sought,
 		       struct oid_array *shallow,
 		       struct string_list *pack_lockfiles,
-		       enum protocol_version version)
+		       enum protocol_version version,
+		       pid_t *index_pack_pid)
 {
 	struct ref *ref_cpy;
 	struct shallow_info si;
 	struct oid_array shallows_scratch = OID_ARRAY_INIT;
-
+	curr_index_pack_pid = index_pack_pid;
 	fetch_pack_setup();
 	if (nr_sought)
 		nr_sought = remove_duplicates_in_refs(sought, nr_sought);

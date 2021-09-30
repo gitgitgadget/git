@@ -56,6 +56,7 @@ int cmd_fetch_pack(int argc, const char **argv, const char *prefix)
 	struct string_list deepen_not = STRING_LIST_INIT_DUP;
 	struct packet_reader reader;
 	enum protocol_version version;
+	pid_t index_pack_pid = -1;
 
 	fetch_if_missing = 0;
 
@@ -232,7 +233,7 @@ int cmd_fetch_pack(int argc, const char **argv, const char *prefix)
 	}
 
 	ref = fetch_pack(&args, fd, ref, sought, nr_sought,
-			 &shallow, pack_lockfiles_ptr, version);
+			 &shallow, pack_lockfiles_ptr, version, &index_pack_pid);
 	if (pack_lockfiles.nr) {
 		int i;
 
