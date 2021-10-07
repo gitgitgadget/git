@@ -750,7 +750,7 @@ NORETURN void help_unknown_ref(const char *ref, const char *cmd,
 
 	if (suggested_refs.nr > 0) {
 		fprintf_ln(stderr,
-			   Q_("\nDid you mean this? (see help.autocorrect for command autocorrection)",
+			   Q_("\nDid you mean this? (see help.autocorrect to run automatically)",
 			      "\nDid you mean one of these?",
 			      suggested_refs.nr));
 		for (i = 0; i < suggested_refs.nr; i++)
