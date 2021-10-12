@@ -168,7 +168,8 @@ void ipc_client_close_connection(struct ipc_client_connection *connection)
 
 int ipc_client_send_command_to_connection(
 	struct ipc_client_connection *connection,
-	const char *message, struct strbuf *answer)
+	const char *message, size_t message_len,
+	struct strbuf *answer)
 {
 	int ret = 0;
 
@@ -176,7 +177,7 @@ int ipc_client_send_command_to_connection(
 
 	trace2_region_enter("ipc-client", "send-command", NULL);
 
-	if (write_packetized_from_buf_no_flush(message, strlen(message),
+	if (write_packetized_from_buf_no_flush(message, message_len,
 					       connection->fd) < 0 ||
 	    packet_flush_gently(connection->fd) < 0) {
 		ret = error(_("could not send IPC command"));
@@ -197,7 +198,8 @@ done:
 
 int ipc_client_send_command(const char *path,
 			    const struct ipc_client_connect_options *options,
-			    const char *message, struct strbuf *answer)
+			    const char *message, size_t message_len,
+			    struct strbuf *answer)
 {
 	int ret = -1;
 	enum ipc_active_state state;
@@ -208,7 +210,9 @@ int ipc_client_send_command(const char *path,
 	if (state != IPC_STATE__LISTENING)
 		return ret;
 
-	ret = ipc_client_send_command_to_connection(connection, message, answer);
+	ret = ipc_client_send_command_to_connection(connection,
+						    message, message_len,
+						    answer);
 
 	ipc_client_close_connection(connection);
 
@@ -423,7 +427,7 @@ static int do_io_reply_callback(struct ipc_server_reply_data *reply_data,
  * data), our use of the pkt-line read routines will spew an error
  * message.
  *
- * Return -1 if the client hung up.
+ * Return -1 if the client hung up (or we are in a shutdown).
  * Return 0 if data (possibly incomplete) is ready.
  */
 static int worker_thread__wait_for_io_start(
@@ -442,7 +446,7 @@ static int worker_thread__wait_for_io_start(
 		if (result < 0) {
 			if (errno == EINTR)
 				continue;
-			goto cleanup;
+			return -1;
 		}
 
 		if (result == 0) {
@@ -459,22 +463,18 @@ static int worker_thread__wait_for_io_start(
 			 * client has not started talking yet, just drop it.
 			 */
 			if (in_shutdown)
-				goto cleanup;
+				return -1;
 			continue;
 		}
 
 		if (pollfd[0].revents & POLLHUP)
-			goto cleanup;
+			return -1;
 
 		if (pollfd[0].revents & POLLIN)
 			return 0;
 
-		goto cleanup;
+		return -1; /* should not happen */
 	}
-
-cleanup:
-	close(fd);
-	return -1;
 }
 
 /*
@@ -503,7 +503,7 @@ static int worker_thread__do_io(
 	if (ret >= 0) {
 		ret = worker_thread_data->server_data->application_cb(
 			worker_thread_data->server_data->application_data,
-			buf.buf, do_io_reply_callback, &reply_data);
+			buf.buf, buf.len, do_io_reply_callback, &reply_data);
 
 		packet_flush_gently(reply_data.fd);
 	}
@@ -515,7 +515,6 @@ static int worker_thread__do_io(
 	}
 
 	strbuf_release(&buf);
-	close(reply_data.fd);
 
 	return ret;
 }
@@ -566,38 +565,49 @@ static void *worker_thread_proc(void *_worker_thread_data)
 
 	thread_block_sigpipe(&old_set);
 
+top:
 	for (;;) {
 		fd = worker_thread__wait_for_connection(worker_thread_data);
-		if (fd == -1)
-			break; /* in shutdown */
+		if (fd == -1) {
+			/* shutdown already requested */
+			goto shutdown;
+		}
 
-		io = worker_thread__wait_for_io_start(worker_thread_data, fd);
-		if (io == -1)
-			continue; /* client hung up without sending anything */
+		for (;;) {
+			io = worker_thread__wait_for_io_start(worker_thread_data, fd);
+			if (io == -1) {
+				/* client hung up without sending anything */
+				close(fd);
+				goto top;
+			}
 
-		ret = worker_thread__do_io(worker_thread_data, fd);
+			ret = worker_thread__do_io(worker_thread_data, fd);
 
-		if (ret == SIMPLE_IPC_QUIT) {
-			trace2_data_string("ipc-worker", NULL, "queue_stop_async",
-					   "application_quit");
-			/*
-			 * The application layer is telling the ipc-server
-			 * layer to shutdown.
-			 *
-			 * We DO NOT have a response to send to the client.
-			 *
-			 * Queue an async stop (to stop the other threads) and
-			 * allow this worker thread to exit now (no sense waiting
-			 * for the thread-pool shutdown signal).
-			 *
-			 * Other non-idle worker threads are allowed to finish
-			 * responding to their current clients.
-			 */
-			ipc_server_stop_async(server_data);
-			break;
+			if (ret == SIMPLE_IPC_QUIT)
+				goto quit;
 		}
 	}
 
+quit:
+	trace2_data_string("ipc-worker", NULL, "queue_stop_async",
+			   "application_quit");
+	/*
+	 * The application layer is telling the ipc-server
+	 * layer to shutdown.
+	 *
+	 * We DO NOT have a response to send to the client.
+	 *
+	 * Queue an async stop (to stop the other threads) and
+	 * allow this worker thread to exit now (no sense waiting
+	 * for the thread-pool shutdown signal).
+	 *
+	 * Other non-idle worker threads are allowed to finish
+	 * responding to their current clients.
+	 */
+	ipc_server_stop_async(server_data);
+	goto shutdown;
+
+shutdown:
 	trace2_thread_exit();
 	return NULL;
 }

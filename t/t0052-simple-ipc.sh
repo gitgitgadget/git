@@ -113,6 +113,15 @@ test_expect_success 'stress test threads' '
 	test_cmp expect_a actual_a
 '
 
+# Test keepalive feature.  Have client open a single connection
+# and exchange a series of requests/responses over it.
+#
+test_expect_success 'keepalive' '
+	test-tool simple-ipc keepalive >actual &&
+	grep "pong" actual >actual_pong &&
+	test_line_count = 10 actual_pong
+'
+
 test_expect_success 'stop-daemon works' '
 	test-tool simple-ipc stop-daemon &&
 	test_must_fail test-tool simple-ipc is-active &&
