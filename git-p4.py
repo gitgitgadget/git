@@ -3279,6 +3279,27 @@ class P4Sync(Command, P4UserMap):
                 .format(details['change']))
             return
 
+        self.useClientSpec = False
+        if gitConfigBool("git-p4.useclientspec"):
+            self.useClientSpec = True
+        if self.useClientSpec:
+            self.clientSpecDirs = getClientSpec()
+
+        if self.clientSpecDirs:
+            self.clientSpecDirs.update_client_spec_path_cache(files)
+
+        # Check for the existence of P4 branches
+        branchesDetected = (len(p4BranchesInGit().keys()) > 1)
+
+        if self.useClientSpec and not branchesDetected:
+            # all files are relative to the client spec
+            self.clientPath = getClientRoot()
+        else:
+            self.clientPath = p4Where(self.depotPath)
+
+        if self.clientPath == "":
+            die("Error: Cannot locate perforce checkout of %s in client view" % self.depotPath)
+
         self.gitStream.write("commit %s\n" % branch)
         self.gitStream.write("mark :%s\n" % details["change"])
         self.committedChanges.add(int(details["change"]))
