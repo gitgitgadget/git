@@ -52,6 +52,12 @@
  * feature with Sun compiler 5.8, 2009-06-08), this version cannot handle
  * flexible array members.
  */
+#elif defined(_MSC_VER)
+/*
+ * MSVC handles flexible array members, but only if it is the last member. In
+ * the Windows-specific fork of Git, we have a construct in the FSCache code
+ * where that is not true.
+ */
 #elif defined(__GNUC__)
 # if (__GNUC__ >= 3)
 #  define FLEX_ARRAY /* empty */
