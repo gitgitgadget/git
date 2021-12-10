@@ -270,4 +270,89 @@ test_expect_success 'checkout -b rejects an extra path argument' '
 	test_i18ngrep "Cannot update paths and switch to branch" err
 '
 
+test_expect_success 'checkout -w with oid' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		git branch -M main &&
+		test_commit initial file1 &&
+		HEAD1=$(git rev-parse --verify HEAD) &&
+		git switch -c dev &&
+		test_commit step2 file2 &&
+		HEAD2=$(git rev-parse --verify HEAD) &&
+
+		git checkout -w $HEAD1 &&
+
+		echo "refs/heads/main" >ref.expect &&
+		git rev-parse --symbolic-full-name HEAD >ref.actual &&
+		test_cmp ref.expect ref.actual &&
+
+		echo "$HEAD1" >oid.expect &&
+		git rev-parse --verify HEAD >oid.actual &&
+		test_cmp oid.expect oid.actual &&
+
+		git checkout -w $HEAD2 &&
+
+		echo "refs/heads/dev" >ref.expect &&
+		git rev-parse --symbolic-full-name HEAD >ref.actual &&
+		test_cmp ref.expect ref.actual &&
+
+		echo "$HEAD2" >oid.expect &&
+		git rev-parse --verify HEAD >oid.actual &&
+		test_cmp oid.expect oid.actual
+	)
+'
+
+test_expect_success 'checkout -w with tag' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		git branch -M main &&
+		test_commit initial file1 &&
+		git tag v1 &&
+		HEAD1=$(git rev-parse --verify HEAD) &&
+		git switch -c dev &&
+		test_commit step2 file2 &&
+		git tag v2 &&
+		HEAD2=$(git rev-parse --verify HEAD) &&
+
+		git checkout -w v1 &&
+
+		echo "refs/heads/main" >ref.expect &&
+		git rev-parse --symbolic-full-name HEAD >ref.actual &&
+		test_cmp ref.expect ref.actual &&
+
+		echo "$HEAD1" >oid.expect &&
+		git rev-parse --verify HEAD >oid.actual &&
+		test_cmp oid.expect oid.actual &&
+
+		git checkout -w v2 &&
+
+		echo "refs/heads/dev" >ref.expect &&
+		git rev-parse --symbolic-full-name HEAD >ref.actual &&
+		test_cmp ref.expect ref.actual &&
+
+		echo "$HEAD2" >oid.expect &&
+		git rev-parse --verify HEAD >oid.actual &&
+		test_cmp oid.expect oid.actual
+	)
+'
+
+test_expect_success 'checkout -w with branches' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		git branch -M main &&
+		test_commit initial file1 &&
+		HEAD1=$(git rev-parse --verify HEAD) &&
+		git tag v1 &&
+		git branch dev &&
+		test_must_fail git checkout -w $HEAD1 &&
+		test_must_fail git checkout -w dev
+	)
+'
+
 test_done

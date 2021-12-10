@@ -2021,6 +2021,7 @@ test_expect_success 'double dash "git checkout"' '
 	--orphan=Z
 	--ours Z
 	--theirs Z
+	--to-branch Z
 	--merge Z
 	--conflict=Z
 	--patch Z

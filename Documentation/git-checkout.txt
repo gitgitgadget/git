@@ -10,7 +10,7 @@ SYNOPSIS
 [verse]
 'git checkout' [-q] [-f] [-m] [<branch>]
 'git checkout' [-q] [-f] [-m] --detach [<branch>]
-'git checkout' [-q] [-f] [-m] [--detach] <commit>
+'git checkout' [-q] [-f] [-m] [--detach] [-w|--to-branch] <commit>
 'git checkout' [-q] [-f] [-m] [[-b|-B|--orphan] <new_branch>] [<start_point>]
 'git checkout' [-f|--ours|--theirs|-m|--conflict=<style>] [<tree-ish>] [--] <pathspec>...
 'git checkout' [-f|--ours|--theirs|-m|--conflict=<style>] [<tree-ish>] --pathspec-from-file=<file> [--pathspec-file-nul]
@@ -209,6 +209,12 @@ variable.
 	This is the default behavior of `git checkout <commit>` when
 	`<commit>` is not a branch name.  See the "DETACHED HEAD" section
 	below for details.
+
+-w::
+--to-branch::
+	Rather than checking out a commit to work on it, checkout out
+	to the unique branch on it. If there are multiple branches on
+	the commit, the checkout will fail.
 
 --orphan <new_branch>::
 	Create a new 'orphan' branch, named `<new_branch>`, started from
