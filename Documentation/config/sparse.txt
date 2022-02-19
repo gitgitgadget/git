@@ -1,0 +1,16 @@
+sparse.expectFilesOutsideOfPatterns::
+	Typically with sparse checkouts, we expect files outside the
+	sparsity patterns to be marked as SKIP_WORKTREE and be missing
+	from the working tree.  There are a few edge cases where this
+	can be violated and cause confusion, so in a sparse checkout,
+	Git will check whether SKIP_WORKTREE files are present and clear
+	the SKIP_WORKTREE bit if they are.  However, a special virtual
+	file system (VFS) can turn the normal expectation on its head:
+	all files are considered present in the working copy, though
+	they are not vivified until actually accessed.  With such a
+	virtual file system (VFS) layer, most of the files do not match
+	the sparsity patterns at first, and the VFS layer automatically
+	updates the sparsity patterns to add more files whenever files
+	are written.  This option can be set to true to tell Git to
+	avoid checking whether SKIP_WORKTREE files are present in a
+	sparse checkout.

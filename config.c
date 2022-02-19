@@ -1520,6 +1520,11 @@ static int git_default_core_config(const char *var, const char *value, void *cb)
 		return 0;
 	}
 
+	if (!strcmp(var, "sparse.expectfilesoutsideofpatterns")) {
+		sparse_expect_files_outside_of_patterns = git_config_bool(var, value);
+		return 0;
+	}
+
 	if (!strcmp(var, "core.precomposeunicode")) {
 		precomposed_unicode = git_config_bool(var, value);
 		return 0;
@@ -1631,7 +1636,8 @@ static int git_default_mailmap_config(const char *var, const char *value)
 
 int git_default_config(const char *var, const char *value, void *cb)
 {
-	if (starts_with(var, "core."))
+	if (starts_with(var, "core.") ||
+	    starts_with(var, "sparse."))
 		return git_default_core_config(var, value, cb);
 
 	if (starts_with(var, "user.") ||
