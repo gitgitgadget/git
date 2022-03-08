@@ -75,19 +75,26 @@ static int list_cmds(const char *spec)
 
 	while (*spec) {
 		const char *sep = strchrnul(spec, ',');
-		int len = sep - spec;
 
-		if (match_token(spec, len, "builtins"))
+		int len = sep - spec;
+                int spec_matches_builtins_token = match_token(spec, len, "builtins");
+                int spec_matches_main_token = match_token(spec, len, "main");
+                int spec_matches_others_token = match_token(spec, len, "others");
+                int spec_matches_nohelpers_token = match_token(spec, len, "nohelpers");
+                int spec_matches_alias_token = match_token(spec, len, "alias");
+                int spec_matches_config_token = match_token(spec, len, "config");
+
+		if (spec_matches_builtins_token)
 			list_builtins(&list, 0);
-		else if (match_token(spec, len, "main"))
+		else if (spec_matches_main_token)
 			list_all_main_cmds(&list);
-		else if (match_token(spec, len, "others"))
+		else if (spec_matches_others_token)
 			list_all_other_cmds(&list);
-		else if (match_token(spec, len, "nohelpers"))
+		else if (spec_matches_nohelpers_token)
 			exclude_helpers_from_list(&list);
-		else if (match_token(spec, len, "alias"))
+		else if (spec_matches_alias_token)
 			list_aliases(&list);
-		else if (match_token(spec, len, "config"))
+		else if (spec_matches_config_token)
 			list_cmds_by_config(&list);
 		else if (len > 5 && !strncmp(spec, "list-", 5)) {
 			struct strbuf sb = STRBUF_INIT;
