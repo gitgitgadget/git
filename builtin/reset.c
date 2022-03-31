@@ -301,7 +301,7 @@ static void set_reflog_message(struct strbuf *sb, const char *action,
 static void die_if_unmerged_cache(int reset_type)
 {
 	if (is_merge() || unmerged_cache())
-		die(_("Cannot do a %s reset in the middle of a merge."),
+		die(_("cannot do a %s reset in the middle of a merge."),
 		    _(reset_type_names[reset_type]));
 
 }
@@ -447,18 +447,18 @@ int cmd_reset(int argc, const char **argv, const char *prefix)
 	} else if (!pathspec.nr && !patch_mode) {
 		struct commit *commit;
 		if (get_oid_committish(rev, &oid))
-			die(_("Failed to resolve '%s' as a valid revision."), rev);
+			die(_("failed to resolve '%s' as a valid revision"), rev);
 		commit = lookup_commit_reference(the_repository, &oid);
 		if (!commit)
-			die(_("Could not parse object '%s'."), rev);
+			die(_("could not parse object '%s'"), rev);
 		oidcpy(&oid, &commit->object.oid);
 	} else {
 		struct tree *tree;
 		if (get_oid_treeish(rev, &oid))
-			die(_("Failed to resolve '%s' as a valid tree."), rev);
+			die(_("failed to resolve '%s' as a valid tree"), rev);
 		tree = parse_tree_indirect(&oid);
 		if (!tree)
-			die(_("Could not parse object '%s'."), rev);
+			die(_("could not parse object '%s'"), rev);
 		oidcpy(&oid, &tree->object.oid);
 	}
 
@@ -476,7 +476,7 @@ int cmd_reset(int argc, const char **argv, const char *prefix)
 		if (reset_type == MIXED)
 			warning(_("--mixed with paths is deprecated; use 'git reset -- <paths>' instead."));
 		else if (reset_type != NONE)
-			die(_("Cannot do %s reset with paths."),
+			die(_("cannot do %s reset with paths"),
 					_(reset_type_names[reset_type]));
 	}
 	if (reset_type == NONE)
@@ -543,12 +543,12 @@ int cmd_reset(int argc, const char **argv, const char *prefix)
 			if (reset_type == KEEP && !err)
 				err = reset_index(ref, &oid, MIXED, quiet);
 			if (err)
-				die(_("Could not reset index file to revision '%s'."), rev);
+				die(_("could not reset index file to revision '%s'"), rev);
 			free(ref);
 		}
 
 		if (write_locked_index(&the_index, &lock, COMMIT_LOCK))
-			die(_("Could not write new index file."));
+			die(_("could not write new index file"));
 	}
 
 	if (!pathspec.nr && !unborn) {

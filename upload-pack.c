@@ -950,7 +950,7 @@ static int process_deepen(const char *line, int *depth)
 		char *end = NULL;
 		*depth = (int)strtol(arg, &end, 0);
 		if (!end || *end || *depth <= 0)
-			die("Invalid deepen: %s", line);
+			die("invalid deepen: %s", line);
 		return 1;
 	}
 
@@ -966,7 +966,7 @@ static int process_deepen_since(const char *line, timestamp_t *deepen_since, int
 		if (!end || *end || !deepen_since ||
 		    /* revisions.c's max_age -1 is special */
 		    *deepen_since == -1)
-			die("Invalid deepen-since: %s", line);
+			die("invalid deepen-since: %s", line);
 		*deepen_rev_list = 1;
 		return 1;
 	}

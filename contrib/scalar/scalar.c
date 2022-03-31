@@ -216,7 +216,7 @@ static int add_or_remove_enlistment(int add)
 	int res;
 
 	if (!the_repository->worktree)
-		die(_("Scalar enlistments require a worktree"));
+		die(_("scalar enlistments require a worktree"));
 
 	res = run_git("config", "--global", "--get", "--fixed-value",
 		      "scalar.repo", the_repository->worktree, NULL);

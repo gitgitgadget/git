@@ -91,7 +91,7 @@ static int cmd_bundle_create(int argc, const char **argv, const char *prefix) {
 		strvec_push(&pack_opts, "--all-progress-implied");
 
 	if (!startup_info->have_repository)
-		die(_("Need a repository to create a bundle."));
+		die(_("need a repository to create a bundle."));
 	ret = !!create_bundle(the_repository, bundle_file, argc, argv, &pack_opts, version);
 	strvec_clear(&pack_opts);
 	free(bundle_file);
@@ -180,7 +180,7 @@ static int cmd_bundle_unbundle(int argc, const char **argv, const char *prefix) 
 		goto cleanup;
 	}
 	if (!startup_info->have_repository)
-		die(_("Need a repository to unbundle."));
+		die(_("need a repository to unbundle."));
 	if (progress)
 		strvec_pushl(&extra_index_pack_args, "-v", "--progress-title",
 			     _("Unbundling objects"), NULL);

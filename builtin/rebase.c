@@ -765,7 +765,7 @@ static int run_specific_rebase(struct rebase_options *opts, enum action action)
 		strbuf_addstr(&dir, opts->state_dir);
 		remove_dir_recursively(&dir, 0);
 		strbuf_release(&dir);
-		die("Nothing to do");
+		die("nothing to do");
 	}
 
 	return status ? -1 : 0;
@@ -1174,7 +1174,7 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 	strbuf_reset(&buf);
 	strbuf_addf(&buf, "%s/applying", apply_dir());
 	if(file_exists(buf.buf))
-		die(_("It looks like 'git am' is in progress. Cannot rebase."));
+		die(_("it looks like 'git am' is in progress. Cannot rebase."));
 
 	if (is_directory(apply_dir())) {
 		options.type = REBASE_APPLY;
@@ -1254,7 +1254,7 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 
 		/* Sanity check */
 		if (get_oid("HEAD", &head))
-			die(_("Cannot read HEAD"));
+			die(_("cannot read HEAD"));
 
 		fd = hold_locked_index(&lock_file, 0);
 		if (repo_read_index(the_repository) < 0)
@@ -1421,7 +1421,7 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 		else if (!strcmp("rebase-cousins", rebase_merges))
 			options.rebase_cousins = 1;
 		else if (strcmp("no-rebase-cousins", rebase_merges))
-			die(_("Unknown mode: %s"), rebase_merges);
+			die(_("unknown mode: %s"), rebase_merges);
 		options.rebase_merges = 1;
 		imply_merge(&options, "--rebase-merges");
 	}
@@ -1568,7 +1568,7 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 		if (!options.onto_name) {
 			if (commit_tree("", 0, the_hash_algo->empty_tree, NULL,
 					&squash_onto, NULL, NULL) < 0)
-				die(_("Could not create new root commit"));
+				die(_("could not create new root commit"));
 			options.squash_onto = &squash_onto;
 			options.onto_name = squash_onto_name =
 				xstrdup(oid_to_hex(&squash_onto));
@@ -1606,7 +1606,7 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 		options.onto =
 			lookup_commit_reference_by_name(options.onto_name);
 		if (!options.onto)
-			die(_("Does not point to a valid commit '%s'"),
+			die(_("does not point to a valid commit '%s'"),
 				options.onto_name);
 	}
 
@@ -1655,7 +1655,7 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 			branch_name = "HEAD";
 		}
 		if (get_oid("HEAD", &options.orig_head))
-			die(_("Could not resolve HEAD to a revision"));
+			die(_("could not resolve HEAD to a revision"));
 	} else
 		BUG("unexpected number of arguments left to parse");
 
@@ -1731,7 +1731,7 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 	if (!ok_to_skip_pre_rebase &&
 	    run_hooks_l("pre-rebase", options.upstream_arg,
 			argc ? argv[0] : NULL, NULL))
-		die(_("The pre-rebase hook refused to rebase."));
+		die(_("the pre-rebase hook refused to rebase."));
 
 	if (options.flags & REBASE_DIFFSTAT) {
 		struct diff_options opts;
@@ -1778,7 +1778,7 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 	ropts.head_msg = msg.buf;
 	ropts.default_reflog_action = DEFAULT_REFLOG_ACTION;
 	if (reset_head(the_repository, &ropts))
-		die(_("Could not detach HEAD"));
+		die(_("could not detach HEAD"));
 	strbuf_release(&msg);
 
 	/*

@@ -1033,7 +1033,7 @@ static void fill_origin_blob(struct diff_options *opt,
 		file->size = file_size;
 
 		if (!file->ptr)
-			die("Cannot read blob %s for path %s",
+			die("cannot read blob %s for path %s",
 			    oid_to_hex(&o->blob_oid),
 			    o->path);
 		o->file = *file;
@@ -2667,9 +2667,9 @@ static struct commit *find_single_final(struct rev_info *revs,
 			continue;
 		obj = deref_tag(revs->repo, obj, NULL, 0);
 		if (!obj || obj->type != OBJ_COMMIT)
-			die("Non commit %s?", revs->pending.objects[i].name);
+			die("non commit %s?", revs->pending.objects[i].name);
 		if (found)
-			die("More than one commit to dig from %s and %s?",
+			die("more than one commit to dig from %s and %s?",
 			    revs->pending.objects[i].name, name);
 		found = (struct commit *)obj;
 		name = revs->pending.objects[i].name;
@@ -2734,9 +2734,9 @@ static struct commit *find_single_initial(struct rev_info *revs,
 			continue;
 		obj = deref_tag(revs->repo, obj, NULL, 0);
 		if (!obj || obj->type != OBJ_COMMIT)
-			die("Non commit %s?", revs->pending.objects[i].name);
+			die("non commit %s?", revs->pending.objects[i].name);
 		if (found)
-			die("More than one commit to dig up from, %s and %s?",
+			die("more than one commit to dig up from, %s and %s?",
 			    revs->pending.objects[i].name, name);
 		found = (struct commit *) obj;
 		name = revs->pending.objects[i].name;
@@ -2745,7 +2745,7 @@ static struct commit *find_single_initial(struct rev_info *revs,
 	if (!name)
 		found = dwim_reverse_initial(revs, &name);
 	if (!name)
-		die("No commit to dig up from?");
+		die("no commit to dig up from?");
 
 	if (name_p)
 		*name_p = xstrdup(name);

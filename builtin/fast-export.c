@@ -307,7 +307,7 @@ static void export_blob(const struct object_id *oid)
 	}
 
 	if (!object)
-		die("Could not read blob %s", oid_to_hex(oid));
+		die("could not read blob %s", oid_to_hex(oid));
 
 	mark_next_object(object);
 
@@ -479,7 +479,7 @@ static void show_filemodify(struct diff_queue_struct *q,
 			break;
 
 		default:
-			die("Unexpected comparison status '%c' for %s, %s",
+			die("unexpected comparison status '%c' for %s, %s",
 				q->queue[i]->status,
 				ospec->path ? ospec->path : "none",
 				spec->path ? spec->path : "none");
@@ -840,7 +840,7 @@ static void handle_tag(const char *name, struct tag *tag)
 			return;
 		case REWRITE:
 			if (tagged->type == OBJ_TAG && !mark_tags) {
-				die(_("Error: Cannot export nested tags unless --mark-tags is specified."));
+				die(_("error: cannot export nested tags unless --mark-tags is specified."));
 			} else if (tagged->type == OBJ_COMMIT) {
 				p = rewrite_commit((struct commit *)tagged);
 				if (!p) {

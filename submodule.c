@@ -112,11 +112,11 @@ int update_path_in_gitmodules(const char *oldpath, const char *newpath)
 		return -1;
 
 	if (is_gitmodules_unmerged(the_repository->index))
-		die(_("Cannot change unmerged .gitmodules, resolve merge conflicts first"));
+		die(_("cannot change unmerged .gitmodules, resolve merge conflicts first"));
 
 	submodule = submodule_from_path(the_repository, null_oid(), oldpath);
 	if (!submodule || !submodule->name) {
-		warning(_("Could not find section in .gitmodules where path=%s"), oldpath);
+		warning(_("could not find section in .gitmodules where path=%s"), oldpath);
 		return -1;
 	}
 	strbuf_addstr(&entry, "submodule.");
@@ -374,7 +374,7 @@ void die_path_inside_submodule(struct index_state *istate,
 			if (item->len == ce_len + 1)
 				continue;
 
-			die(_("Pathspec '%s' is in submodule '%.*s'"),
+			die(_("pathspec '%s' is in submodule '%.*s'"),
 			    item->original, ce_len, ce->name);
 		}
 	}
@@ -1066,7 +1066,7 @@ static int submodule_needs_pushing(struct repository *r,
 		cp.out = -1;
 		cp.dir = path;
 		if (start_command(&cp))
-			die(_("Could not run 'git rev-list <commits> --not --remotes -n 1' command in submodule %s"),
+			die(_("could not run 'git rev-list <commits> --not --remotes -n 1' command in submodule %s"),
 					path);
 		if (strbuf_read(&buf, cp.out, the_hash_algo->hexsz + 1))
 			needs_pushing = 1;
@@ -1218,7 +1218,7 @@ int push_unpushed_submodules(struct repository *r,
 
 		head = resolve_refdup("HEAD", 0, &head_oid, NULL);
 		if (!head)
-			die(_("Failed to resolve HEAD as a valid ref."));
+			die(_("failed to resolve HEAD as a valid ref."));
 
 		for (i = 0; i < needs_pushing.nr; i++)
 			submodule_push_check(needs_pushing.items[i].string,

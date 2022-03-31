@@ -162,9 +162,9 @@ static NORETURN void die_push_simple(struct branch *branch,
 	 */
 	if (push_default == PUSH_DEFAULT_UNSPECIFIED)
 		advice_maybe = _("\n"
-				 "To choose either option permanently, "
+				 "to choose either option permanently, "
 				 "see push.default in 'git help config'.");
-	die(_("The upstream branch of your current branch does not match\n"
+	die(_("the upstream branch of your current branch does not match\n"
 	      "the name of your current branch.  To push to the upstream branch\n"
 	      "on the remote, use\n"
 	      "\n"
@@ -188,15 +188,15 @@ static const char message_detached_head_die[] =
 static const char *get_upstream_ref(struct branch *branch, const char *remote_name)
 {
 	if (!branch->merge_nr || !branch->merge || !branch->remote_name)
-		die(_("The current branch %s has no upstream branch.\n"
-		    "To push the current branch and set the remote as upstream, use\n"
+		die(_("the current branch %s has no upstream branch.\n"
+		    "to push the current branch and set the remote as upstream, use\n"
 		    "\n"
 		    "    git push --set-upstream %s %s\n"),
 		    branch->name,
 		    remote_name,
 		    branch->name);
 	if (branch->merge_nr != 1)
-		die(_("The current branch %s has multiple upstream branches, "
+		die(_("the current branch %s has multiple upstream branches, "
 		    "refusing to push."), branch->name);
 
 	return branch->merge[0]->src;
@@ -214,7 +214,7 @@ static void setup_default_push_refspecs(struct remote *remote)
 		return;
 
 	case PUSH_DEFAULT_NOTHING:
-		die(_("You didn't specify any refspecs to push, and "
+		die(_("you didn't specify any refspecs to push, and "
 		    "push.default is \"nothing\"."));
 		return;
 	default:
@@ -240,7 +240,7 @@ static void setup_default_push_refspecs(struct remote *remote)
 
 	case PUSH_DEFAULT_UPSTREAM:
 		if (!same_remote)
-			die(_("You are pushing to remote '%s', which is not the upstream of\n"
+			die(_("you are pushing to remote '%s', which is not the upstream of\n"
 			      "your current branch '%s', without telling me what to push\n"
 			      "to update which remote branch."),
 			    remote->name, branch->name);
@@ -612,8 +612,8 @@ int cmd_push(int argc, const char **argv, const char *prefix)
 	if (!remote) {
 		if (repo)
 			die(_("bad repository '%s'"), repo);
-		die(_("No configured push destination.\n"
-		    "Either specify the URL from the command-line or configure a remote repository using\n"
+		die(_("no configured push destination.\n"
+		    "either specify the URL from the command-line or configure a remote repository using\n"
 		    "\n"
 		    "    git remote add <name> <url>\n"
 		    "\n"
