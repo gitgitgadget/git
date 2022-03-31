@@ -1044,7 +1044,7 @@ int cmd_pull(int argc, const char **argv, const char *prefix)
 			opt_autostash = config_autostash;
 
 		if (is_null_oid(&orig_head) && !is_cache_unborn())
-			die(_("Updating an unborn branch with changes added to the index."));
+			die(_("updating an unborn branch with changes added to the index."));
 
 		if (!opt_autostash)
 			require_clean_work_tree(the_repository,
@@ -1080,8 +1080,8 @@ int cmd_pull(int argc, const char **argv, const char *prefix)
 
 		if (checkout_fast_forward(the_repository, &orig_head,
 					  &curr_head, 0))
-			die(_("Cannot fast-forward your working tree.\n"
-				"After making sure that you saved anything precious from\n"
+			die(_("cannot fast-forward your working tree.\n"
+				"after making sure that you saved anything precious from\n"
 				"$ git diff %s\n"
 				"output, run\n"
 				"$ git reset --hard\n"
@@ -1095,14 +1095,14 @@ int cmd_pull(int argc, const char **argv, const char *prefix)
 
 	if (is_null_oid(&orig_head)) {
 		if (merge_heads.nr > 1)
-			die(_("Cannot merge multiple branches into empty head."));
+			die(_("cannot merge multiple branches into empty head."));
 		return pull_into_void(merge_heads.oid, &curr_head);
 	}
 	if (merge_heads.nr > 1) {
 		if (opt_rebase)
-			die(_("Cannot rebase onto multiple branches."));
+			die(_("cannot rebase onto multiple branches."));
 		if (opt_ff && !strcmp(opt_ff, "--ff-only"))
-			die(_("Cannot fast-forward to multiple branches."));
+			die(_("cannot fast-forward to multiple branches."));
 	}
 
 	can_ff = get_can_ff(&orig_head, &merge_heads);
@@ -1117,7 +1117,7 @@ int cmd_pull(int argc, const char **argv, const char *prefix)
 	/* If no action specified and we can't fast forward, then warn. */
 	if (!opt_ff && rebase_unspecified && divergent) {
 		show_advice_pull_non_ff();
-		die(_("Need to specify how to reconcile divergent branches."));
+		die(_("need to specify how to reconcile divergent branches."));
 	}
 
 	if (opt_rebase) {

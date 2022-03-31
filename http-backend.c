@@ -696,7 +696,7 @@ static char* getdir(void)
 	} else if (path && *path) {
 		return xstrdup(path);
 	} else
-		die("No GIT_PROJECT_ROOT or PATH_TRANSLATED from server");
+		die("no GIT_PROJECT_ROOT or PATH_TRANSLATED from server");
 	return NULL;
 }
 
@@ -750,7 +750,7 @@ int cmd_main(int argc, const char **argv)
 	set_die_is_recursing_routine(die_webcgi_recursing);
 
 	if (!method)
-		die("No REQUEST_METHOD from server");
+		die("no REQUEST_METHOD from server");
 	if (!strcmp(method, "HEAD"))
 		method = "GET";
 	dir = getdir();
@@ -761,7 +761,7 @@ int cmd_main(int argc, const char **argv)
 		regmatch_t out[1];
 
 		if (regcomp(&re, c->pattern, REG_EXTENDED))
-			die("Bogus regex in service table: %s", c->pattern);
+			die("bogus regex in service table: %s", c->pattern);
 		if (!regexec(&re, dir, 1, out, 0)) {
 			size_t n;
 

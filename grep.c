@@ -281,7 +281,7 @@ static void compile_pcre2_pattern(struct grep_pat *p, const struct grep_opt *opt
 	p->pcre2_general_context = pcre2_general_context_create(
 		pcre2_malloc, pcre2_free, NULL);
 	if (!p->pcre2_general_context)
-		die("Couldn't allocate PCRE2 general context");
+		die("couldn't allocate PCRE2 general context");
 
 	if (opt->ignore_case) {
 		if (!opt->ignore_locale && has_non_ascii(p->pattern)) {
@@ -308,7 +308,7 @@ static void compile_pcre2_pattern(struct grep_pat *p, const struct grep_opt *opt
 	if (p->pcre2_pattern) {
 		p->pcre2_match_data = pcre2_match_data_create_from_pattern(p->pcre2_pattern, p->pcre2_general_context);
 		if (!p->pcre2_match_data)
-			die("Couldn't allocate PCRE2 match data");
+			die("couldn't allocate PCRE2 match data");
 	} else {
 		pcre2_get_error_message(error, errbuf, sizeof(errbuf));
 		compile_regexp_failed(p, (const char *)&errbuf);
@@ -318,7 +318,7 @@ static void compile_pcre2_pattern(struct grep_pat *p, const struct grep_opt *opt
 	if (p->pcre2_jit_on) {
 		jitret = pcre2_jit_compile(p->pcre2_pattern, PCRE2_JIT_COMPLETE);
 		if (jitret)
-			die("Couldn't JIT the PCRE2 pattern '%s', got '%d'\n", p->pattern, jitret);
+			die("couldn't JIT the PCRE2 pattern '%s', got '%d'\n", p->pattern, jitret);
 
 		/*
 		 * The pcre2_config(PCRE2_CONFIG_JIT, ...) call just
@@ -972,7 +972,7 @@ static int match_expr_eval(struct grep_opt *opt, struct grep_expr *x,
 	int h = 0;
 
 	if (!x)
-		die("Not a valid grep expression");
+		die("not a valid grep expression");
 	switch (x->node) {
 	case GREP_NODE_TRUE:
 		h = 1;
@@ -1028,7 +1028,7 @@ static int match_expr_eval(struct grep_opt *opt, struct grep_expr *x,
 				     icol, collect_hits);
 		break;
 	default:
-		die("Unexpected node type (internal error) %d", x->node);
+		die("unexpected node type (internal error) %d", x->node);
 	}
 	if (collect_hits)
 		x->hit |= h;

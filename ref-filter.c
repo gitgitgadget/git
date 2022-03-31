@@ -1546,7 +1546,7 @@ static void grab_values(struct atom_value *val, int deref, struct object *obj, s
 		grab_sub_body_contents(val, deref, data);
 		break;
 	default:
-		die("Eh?  Object of type %d?", obj->type);
+		die("eh?  Object of type %d?", obj->type);
 	}
 }
 

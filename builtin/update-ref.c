@@ -516,7 +516,7 @@ int cmd_update_ref(int argc, const char **argv, const char *prefix)
 	argc = parse_options(argc, argv, prefix, options, git_update_ref_usage,
 			     0);
 	if (msg && !*msg)
-		die("Refusing to perform update with empty message.");
+		die("refusing to perform update with empty message.");
 
 	create_reflog_flag = create_reflog ? REF_FORCE_CREATE_REFLOG : 0;
 
