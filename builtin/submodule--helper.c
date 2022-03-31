@@ -40,14 +40,14 @@ static char *repo_get_default_remote(struct repository *repo)
 						      NULL);
 
 	if (!refname)
-		die(_("No such ref: %s"), "HEAD");
+		die(_("no such ref: %s"), "HEAD");
 
 	/* detached HEAD */
 	if (!strcmp(refname, "HEAD"))
 		return xstrdup("origin");
 
 	if (!skip_prefix(refname, "refs/heads/", &refname))
-		die(_("Expecting a full ref name, got %s"), refname);
+		die(_("expecting a full ref name, got %s"), refname);
 
 	strbuf_addf(&sb, "branch.%s.remote", refname);
 	if (repo_config_get_string(repo, sb.buf, &dest))
@@ -473,7 +473,7 @@ static void runcommand_in_submodule_cb(const struct cache_entry *list_item,
 	sub = submodule_from_path(the_repository, null_oid(), path);
 
 	if (!sub)
-		die(_("No url found for submodule path '%s' in .gitmodules"),
+		die(_("no url found for submodule path '%s' in .gitmodules"),
 			displaypath);
 
 	if (!is_submodule_populated_gently(path, NULL))
@@ -614,7 +614,7 @@ static void init_submodule(const char *path, const char *prefix,
 	sub = submodule_from_path(the_repository, null_oid(), path);
 
 	if (!sub)
-		die(_("No url found for submodule path '%s' in .gitmodules"),
+		die(_("no url found for submodule path '%s' in .gitmodules"),
 			displaypath);
 
 	/*
@@ -637,7 +637,7 @@ static void init_submodule(const char *path, const char *prefix,
 	strbuf_addf(&sb, "submodule.%s.url", sub->name);
 	if (git_config_get_string(sb.buf, &url)) {
 		if (!sub->url)
-			die(_("No url found for submodule path '%s' in .gitmodules"),
+			die(_("no url found for submodule path '%s' in .gitmodules"),
 				displaypath);
 
 		url = xstrdup(sub->url);
@@ -651,7 +651,7 @@ static void init_submodule(const char *path, const char *prefix,
 		}
 
 		if (git_config_set_gently(sb.buf, url))
-			die(_("Failed to register url for submodule path '%s'"),
+			die(_("failed to register url for submodule path '%s'"),
 			    displaypath);
 		if (!(flags & OPT_QUIET))
 			fprintf(stderr,
@@ -672,7 +672,7 @@ static void init_submodule(const char *path, const char *prefix,
 			upd = xstrdup(submodule_strategy_to_string(&sub->update_strategy));
 
 		if (git_config_set_gently(sb.buf, upd))
-			die(_("Failed to register update mode for submodule path '%s'"), displaypath);
+			die(_("failed to register update mode for submodule path '%s'"), displaypath);
 	}
 	strbuf_release(&sb);
 	free(displaypath);
@@ -1527,7 +1527,7 @@ static void deinit_submodule(const char *path, const char *prefix,
 				     path, NULL);
 
 			if (run_command(&cp_rm))
-				die(_("Submodule work tree '%s' contains local "
+				die(_("submodule work tree '%s' contains local "
 				      "modifications; use '-f' to discard them"),
 				      displaypath);
 		}
@@ -1535,9 +1535,9 @@ static void deinit_submodule(const char *path, const char *prefix,
 		strbuf_addstr(&sb_rm, path);
 
 		if (!remove_dir_recursively(&sb_rm, 0))
-			format = _("Cleared directory '%s'\n");
+			format = _("cleared directory '%s'\n");
 		else
-			format = _("Could not remove submodule work tree '%s'\n");
+			format = _("could not remove submodule work tree '%s'\n");
 
 		if (!(flags & OPT_QUIET))
 			printf(format, displaypath);
@@ -1613,7 +1613,7 @@ static int module_deinit(int argc, const char **argv, const char *prefix)
 	}
 
 	if (!argc && !all)
-		die(_("Use '--all' if you really want to deinitialize all submodules"));
+		die(_("use '--all' if you really want to deinitialize all submodules"));
 
 	if (module_list_compute(argc, argv, prefix, &pathspec, &list) < 0)
 		return 1;
@@ -1743,14 +1743,14 @@ static void prepare_possible_alternates(const char *sm_name,
 	else if (!strcmp(error_strategy, "ignore"))
 		sas.error_mode = SUBMODULE_ALTERNATE_ERROR_IGNORE;
 	else
-		die(_("Value '%s' for submodule.alternateErrorStrategy is not recognized"), error_strategy);
+		die(_("value '%s' for submodule.alternateErrorStrategy is not recognized"), error_strategy);
 
 	if (!strcmp(sm_alternate, "superproject"))
 		foreach_alt_odb(add_possible_reference_from_superproject, &sas);
 	else if (!strcmp(sm_alternate, "no"))
 		; /* do nothing */
 	else
-		die(_("Value '%s' for submodule.alternateLocation is not recognized"), sm_alternate);
+		die(_("value '%s' for submodule.alternateLocation is not recognized"), sm_alternate);
 
 	free(sm_alternate);
 	free(error_strategy);
@@ -1937,11 +1937,11 @@ static void determine_submodule_update_strategy(struct repository *r,
 
 	if (update) {
 		if (parse_submodule_update_strategy(update, out) < 0)
-			die(_("Invalid update mode '%s' for submodule path '%s'"),
+			die(_("invalid update mode '%s' for submodule path '%s'"),
 				update, path);
 	} else if (!repo_config_get_string_tmp(r, key, &val)) {
 		if (parse_submodule_update_strategy(val, out) < 0)
-			die(_("Invalid update mode '%s' configured for submodule path '%s'"),
+			die(_("invalid update mode '%s' configured for submodule path '%s'"),
 				val, path);
 	} else if (sub->update_strategy.type != SM_UPDATE_UNSPECIFIED) {
 		if (sub->update_strategy.type == SM_UPDATE_COMMAND)
@@ -2449,7 +2449,7 @@ static int do_run_update_procedure(struct update_data *ud)
 		 */
 		if (!is_tip_reachable(ud->sm_path, &ud->oid) &&
 		    fetch_in_submodule(ud->sm_path, ud->depth, ud->quiet, &ud->oid))
-			die(_("Fetched in submodule path '%s', but it did not "
+			die(_("fetched in submodule path '%s', but it did not "
 			      "contain %s. Direct fetching of that commit failed."),
 			    ud->displaypath, oid_to_hex(&ud->oid));
 	}
@@ -2708,16 +2708,16 @@ static const char *remote_submodule_branch(const char *path)
 		const char *refname = resolve_ref_unsafe("HEAD", 0, NULL, NULL);
 
 		if (!refname)
-			die(_("No such ref: %s"), "HEAD");
+			die(_("no such ref: %s"), "HEAD");
 
 		/* detached HEAD */
 		if (!strcmp(refname, "HEAD"))
-			die(_("Submodule (%s) branch configured to inherit "
+			die(_("submodule (%s) branch configured to inherit "
 			      "branch from superproject, but the superproject "
 			      "is not on any branch"), sub->name);
 
 		if (!skip_prefix(refname, "refs/heads/", &refname))
-			die(_("Expecting a full ref name, got %s"), refname);
+			die(_("expecting a full ref name, got %s"), refname);
 		return refname;
 	}
 
@@ -2746,7 +2746,7 @@ static int push_check(int argc, const char **argv, const char *prefix)
 	/* Get the submodule's head ref and determine if it is detached */
 	head = resolve_refdup("HEAD", 0, &head_oid, NULL);
 	if (!head)
-		die(_("Failed to resolve HEAD as a valid ref."));
+		die(_("failed to resolve HEAD as a valid ref."));
 	if (!strcmp(head, "HEAD"))
 		detached_head = 1;
 
@@ -3055,7 +3055,7 @@ static int update_submodule2(struct update_data *update_data)
 	if (update_data->just_cloned)
 		oidcpy(&update_data->suboid, null_oid());
 	else if (resolve_gitlink_ref(update_data->sm_path, "HEAD", &update_data->suboid))
-		die(_("Unable to find current revision in submodule path '%s'"),
+		die(_("unable to find current revision in submodule path '%s'"),
 			update_data->displaypath);
 
 	if (update_data->remote) {
@@ -3066,12 +3066,12 @@ static int update_submodule2(struct update_data *update_data)
 		if (!update_data->nofetch) {
 			if (fetch_in_submodule(update_data->sm_path, update_data->depth,
 					      0, NULL))
-				die(_("Unable to fetch in submodule path '%s'"),
+				die(_("unable to fetch in submodule path '%s'"),
 				    update_data->sm_path);
 		}
 
 		if (resolve_gitlink_ref(update_data->sm_path, remote_ref, &update_data->oid))
-			die(_("Unable to find %s revision in submodule path '%s'"),
+			die(_("unable to find %s revision in submodule path '%s'"),
 			    remote_ref, update_data->sm_path);
 
 		free(remote_ref);
@@ -3245,16 +3245,16 @@ static void configure_added_submodule(struct add_data *add_data)
 	strvec_pushl(&add_submod.args, "--", add_data->sm_path, NULL);
 
 	if (run_command(&add_submod))
-		die(_("Failed to add submodule '%s'"), add_data->sm_path);
+		die(_("failed to add submodule '%s'"), add_data->sm_path);
 
 	if (config_submodule_in_gitmodules(add_data->sm_name, "path", add_data->sm_path) ||
 	    config_submodule_in_gitmodules(add_data->sm_name, "url", add_data->repo))
-		die(_("Failed to register submodule '%s'"), add_data->sm_path);
+		die(_("failed to register submodule '%s'"), add_data->sm_path);
 
 	if (add_data->branch) {
 		if (config_submodule_in_gitmodules(add_data->sm_name,
 						   "branch", add_data->branch))
-			die(_("Failed to register submodule '%s'"), add_data->sm_path);
+			die(_("failed to register submodule '%s'"), add_data->sm_path);
 	}
 
 	add_gitmodules.git_cmd = 1;
@@ -3262,7 +3262,7 @@ static void configure_added_submodule(struct add_data *add_data)
 		     "add", "--force", "--", ".gitmodules", NULL);
 
 	if (run_command(&add_gitmodules))
-		die(_("Failed to register submodule '%s'"), add_data->sm_path);
+		die(_("failed to register submodule '%s'"), add_data->sm_path);
 
 	/*
 	 * NEEDSWORK: In a multi-working-tree world this needs to be
@@ -3395,7 +3395,7 @@ static int module_add(int argc, const char **argv, const char *prefix)
 	if (starts_with_dot_dot_slash(add_data.repo) ||
 	    starts_with_dot_slash(add_data.repo)) {
 		if (prefix)
-			die(_("Relative path can only be used from the toplevel "
+			die(_("relative path can only be used from the toplevel "
 			      "of the working tree"));
 
 		/* dereference source url relative to parent's url */

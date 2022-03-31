@@ -76,7 +76,7 @@ static int nfvasprintf(char **strp, const char *fmt, va_list ap)
 
 	len = vsnprintf(tmp, sizeof(tmp), fmt, ap);
 	if (len < 0)
-		die("Fatal: Out of memory");
+		die("fatal: Out of memory");
 	if (len >= sizeof(tmp))
 		die("imap command overflow!");
 	*strp = xmemdupz(tmp, len);
@@ -907,7 +907,7 @@ static char *cram(const char *challenge_64, const char *user, const char *pass)
 
 static char *cram(const char *challenge_64, const char *user, const char *pass)
 {
-	die("If you want to use CRAM-MD5 authenticate method, "
+	die("if you want to use CRAM-MD5 authenticate method, "
 	    "you have to build git-imap-send with OpenSSL library.");
 }
 

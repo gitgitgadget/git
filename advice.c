@@ -203,7 +203,7 @@ int error_resolve_conflict(const char *me)
 void NORETURN die_resolve_conflict(const char *me)
 {
 	error_resolve_conflict(me);
-	die(_("Exiting because of an unresolved conflict."));
+	die(_("exiting because of an unresolved conflict."));
 }
 
 void NORETURN die_conclude_merge(void)
@@ -211,12 +211,12 @@ void NORETURN die_conclude_merge(void)
 	error(_("You have not concluded your merge (MERGE_HEAD exists)."));
 	if (advice_enabled(ADVICE_RESOLVE_CONFLICT))
 		advise(_("Please, commit your changes before merging."));
-	die(_("Exiting because of unfinished merge."));
+	die(_("exiting because of unfinished merge."));
 }
 
 void NORETURN die_ff_impossible(void)
 {
-	die(_("Not possible to fast-forward, aborting."));
+	die(_("not possible to fast-forward, aborting."));
 }
 
 void advise_on_updating_sparse_paths(struct string_list *pathspec_list)

@@ -1046,11 +1046,11 @@ static struct ref *do_fetch_pack(struct fetch_pack_args *args,
 	if (server_supports("shallow"))
 		print_verbose(args, _("Server supports %s"), "shallow");
 	else if (args->depth > 0 || is_repository_shallow(r))
-		die(_("Server does not support shallow clients"));
+		die(_("server does not support shallow clients"));
 	if (args->depth > 0 || args->deepen_since || args->deepen_not)
 		args->deepen = 1;
 	if (server_supports("multi_ack_detailed")) {
-		print_verbose(args, _("Server supports %s"), "multi_ack_detailed");
+		print_verbose(args, _("server supports %s"), "multi_ack_detailed");
 		multi_ack = 2;
 		if (server_supports("no-done")) {
 			print_verbose(args, _("Server supports %s"), "no-done");
@@ -1106,18 +1106,18 @@ static struct ref *do_fetch_pack(struct fetch_pack_args *args,
 		print_verbose(args, _("Server supports %s"), "deepen-since");
 		deepen_since_ok = 1;
 	} else if (args->deepen_since)
-		die(_("Server does not support --shallow-since"));
+		die(_("server does not support --shallow-since"));
 	if (server_supports("deepen-not")) {
 		print_verbose(args, _("Server supports %s"), "deepen-not");
 		deepen_not_ok = 1;
 	} else if (args->deepen_not)
-		die(_("Server does not support --shallow-exclude"));
+		die(_("server does not support --shallow-exclude"));
 	if (server_supports("deepen-relative"))
 		print_verbose(args, _("Server supports %s"), "deepen-relative");
 	else if (args->deepen_relative)
-		die(_("Server does not support --deepen"));
+		die(_("server does not support --deepen"));
 	if (!server_supports_hash(the_hash_algo->name, NULL))
-		die(_("Server does not support this repository's object format"));
+		die(_("server does not support this repository's object format"));
 
 	mark_complete_and_common_ref(negotiator, args, &ref);
 	filter_refs(args, &ref, sought, nr_sought);

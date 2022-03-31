@@ -476,7 +476,7 @@ static int checkout_paths(const struct checkout_opts *opts,
 		    opts->ignore_unmerged_opt, "-m");
 
 	if (opts->new_branch)
-		die(_("Cannot update paths and switch to branch '%s' at the same time."),
+		die(_("cannot update paths and switch to branch '%s' at the same time."),
 		    opts->new_branch);
 
 	if (!opts->checkout_worktree && !opts->checkout_index)

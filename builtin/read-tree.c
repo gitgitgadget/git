@@ -29,7 +29,7 @@ static int list_tree(struct object_id *oid)
 	struct tree *tree;
 
 	if (nr_trees >= MAX_UNPACK_TREES)
-		die("I cannot read more than %d trees", MAX_UNPACK_TREES);
+		die("i cannot read more than %d trees", MAX_UNPACK_TREES);
 	tree = parse_tree_indirect(oid);
 	if (!tree)
 		return -1;
@@ -162,11 +162,11 @@ int cmd_read_tree(int argc, const char **argv, const char *cmd_prefix)
 
 	prefix_set = opts.prefix ? 1 : 0;
 	if (1 < opts.merge + opts.reset + prefix_set)
-		die("Which one? -m, --reset, or --prefix?");
+		die("which one? -m, --reset, or --prefix?");
 
 	/* Prefix should not start with a directory separator */
 	if (opts.prefix && opts.prefix[0] == '/')
-		die("Invalid prefix, prefix cannot start with '/'");
+		die("invalid prefix, prefix cannot start with '/'");
 
 	if (opts.reset)
 		opts.reset = UNPACK_RESET_OVERWRITE_UNTRACKED;
@@ -196,7 +196,7 @@ int cmd_read_tree(int argc, const char **argv, const char *cmd_prefix)
 		const char *arg = argv[i];
 
 		if (get_oid(arg, &oid))
-			die("Not a valid object name %s", arg);
+			die("not a valid object name %s", arg);
 		if (list_tree(&oid) < 0)
 			die("failed to unpack tree object %s", arg);
 		stage++;
