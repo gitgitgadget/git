@@ -612,7 +612,7 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 	else if (!strcmp(cleanup_arg, "whitespace"))
 		opt.cleanup_mode = CLEANUP_SPACE;
 	else
-		die(_("Invalid cleanup mode %s"), cleanup_arg);
+		die(_("invalid cleanup mode %s"), cleanup_arg);
 
 	create_reflog_msg(&object, &reflog_msg);
 

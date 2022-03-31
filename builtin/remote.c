@@ -364,7 +364,7 @@ static int get_ref_states(const struct ref *remote_refs, struct ref_states *stat
 
 	for (i = 0; i < states->remote->fetch.nr; i++)
 		if (get_fetch_map(remote_refs, &states->remote->fetch.items[i], &tail, 1))
-			die(_("Could not get fetch map for refspec %s"),
+			die(_("could not get fetch map for refspec %s"),
 				states->remote->fetch.raw[i]);
 
 	for (ref = fetch_map; ref; ref = ref->next) {
@@ -1697,7 +1697,7 @@ static int set_url(int argc, const char **argv)
 
 	/* Old URL specified. Demand that one matches. */
 	if (regcomp(&old_regex, oldurl, REG_EXTENDED))
-		die(_("Invalid old URL pattern: %s"), oldurl);
+		die(_("invalid old URL pattern: %s"), oldurl);
 
 	for (i = 0; i < urlset_nr; i++)
 		if (!regexec(&old_regex, urlset[i], 0, NULL, 0))
@@ -1705,9 +1705,9 @@ static int set_url(int argc, const char **argv)
 		else
 			negative_matches++;
 	if (!delete_mode && !matches)
-		die(_("No such URL found: %s"), oldurl);
+		die(_("no such URL found: %s"), oldurl);
 	if (delete_mode && !negative_matches && !push_mode)
-		die(_("Will not delete all non-push URLs"));
+		die(_("will not delete all non-push URLs"));
 
 	regfree(&old_regex);
 

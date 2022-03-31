@@ -981,7 +981,7 @@ static int prepare_to_commit(const char *index_file, const char *prefix,
 		const char *parent = "HEAD";
 
 		if (!active_nr && read_cache() < 0)
-			die(_("Cannot read index"));
+			die(_("cannot read index"));
 
 		if (amend)
 			parent = "HEAD^1";
@@ -1139,7 +1139,7 @@ static void handle_ignored_arg(struct wt_status *s)
 	else if (!strcmp(ignored_arg, "matching"))
 		s->show_ignored_mode = SHOW_MATCHING_IGNORED;
 	else
-		die(_("Invalid ignored mode '%s'"), ignored_arg);
+		die(_("invalid ignored mode '%s'"), ignored_arg);
 }
 
 static void handle_untracked_files_arg(struct wt_status *s)
@@ -1157,7 +1157,7 @@ static void handle_untracked_files_arg(struct wt_status *s)
 	 * git-completion.bash when you add new options
 	 */
 	else
-		die(_("Invalid untracked files mode '%s'"), untracked_files_arg);
+		die(_("invalid untracked files mode '%s'"), untracked_files_arg);
 }
 
 static const char *read_commit_message(const char *name)
@@ -1228,9 +1228,9 @@ static void finalize_deferred_config(struct wt_status *s)
 static void check_fixup_reword_options(int argc, const char *argv[]) {
 	if (whence != FROM_COMMIT) {
 		if (whence == FROM_MERGE)
-			die(_("You are in the middle of a merge -- cannot reword."));
+			die(_("you are in the middle of a merge -- cannot reword."));
 		else if (is_from_cherry_pick(whence))
-			die(_("You are in the middle of a cherry-pick -- cannot reword."));
+			die(_("you are in the middle of a cherry-pick -- cannot reword."));
 	}
 	if (argc)
 		die(_("reword option of '%s' and path '%s' cannot be used together"), "--fixup", *argv);
@@ -1260,14 +1260,14 @@ static int parse_and_validate_options(int argc, const char *argv[],
 
 	/* Sanity check options */
 	if (amend && !current_head)
-		die(_("You have nothing to amend."));
+		die(_("you have nothing to amend."));
 	if (amend && whence != FROM_COMMIT) {
 		if (whence == FROM_MERGE)
-			die(_("You are in the middle of a merge -- cannot amend."));
+			die(_("you are in the middle of a merge -- cannot amend."));
 		else if (is_from_cherry_pick(whence))
-			die(_("You are in the middle of a cherry-pick -- cannot amend."));
+			die(_("you are in the middle of a cherry-pick -- cannot amend."));
 		else if (whence == FROM_REBASE_PICK)
-			die(_("You are in the middle of a rebase -- cannot amend."));
+			die(_("you are in the middle of a rebase -- cannot amend."));
 	}
 	if (fixup_message && squash_message)
 		die(_("options '%s' and '%s' cannot be used together"), "--squash", "--fixup");
@@ -1534,7 +1534,7 @@ int cmd_status(int argc, const char **argv, const char *prefix)
 
 	if (s.show_ignored_mode == SHOW_MATCHING_IGNORED &&
 	    s.show_untracked_files == SHOW_NO_UNTRACKED_FILES)
-		die(_("Unsupported combination of ignored and untracked-files arguments"));
+		die(_("unsupported combination of ignored and untracked-files arguments"));
 
 	parse_pathspec(&s.pathspec, 0,
 		       PATHSPEC_PREFER_FULL,
@@ -1749,7 +1749,7 @@ int cmd_commit(int argc, const char **argv, const char *prefix)
 
 			parent = get_merge_parent(m.buf);
 			if (!parent)
-				die(_("Corrupt MERGE_HEAD file (%s)"), m.buf);
+				die(_("corrupt MERGE_HEAD file (%s)"), m.buf);
 			pptr = commit_list_append(parent, pptr);
 		}
 		fclose(fp);

@@ -602,7 +602,7 @@ static void parse_branch_merge_options(char *bmo)
 		return;
 	argc = split_cmdline(bmo, &argv);
 	if (argc < 0)
-		die(_("Bad branch.%s.mergeoptions string: %s"), branch,
+		die(_("bad branch.%s.mergeoptions string: %s"), branch,
 		    _(split_cmdline_strerror(argc)));
 	REALLOC_ARRAY(argv, argc + 2);
 	MOVE_ARRAY(argv + 1, argv, argc + 1);
@@ -1012,16 +1012,16 @@ static int setup_with_upstream(const char ***argv)
 	const char **args;
 
 	if (!branch)
-		die(_("No current branch."));
+		die(_("no current branch."));
 	if (!branch->remote_name)
-		die(_("No remote for the current branch."));
+		die(_("no remote for the current branch."));
 	if (!branch->merge_nr)
-		die(_("No default upstream defined for the current branch."));
+		die(_("no default upstream defined for the current branch."));
 
 	args = xcalloc(st_add(branch->merge_nr, 1), sizeof(char *));
 	for (i = 0; i < branch->merge_nr; i++) {
 		if (!branch->merge[i]->dst)
-			die(_("No remote-tracking branch for %s from %s"),
+			die(_("no remote-tracking branch for %s from %s"),
 			    branch->merge[i]->src, branch->remote_name);
 		args[i] = branch->merge[i]->dst;
 	}
@@ -1078,7 +1078,7 @@ static int default_edit_option(void)
 	if (e) {
 		int v = git_parse_maybe_bool(e);
 		if (v < 0)
-			die(_("Bad value '%s' in environment '%s'"), e, name);
+			die(_("bad value '%s' in environment '%s'"), e, name);
 		return v;
 	}
 
@@ -1331,7 +1331,7 @@ int cmd_merge(int argc, const char **argv, const char *prefix)
 			      builtin_merge_usage, builtin_merge_options);
 
 		if (!file_exists(git_path_merge_head(the_repository)))
-			die(_("There is no merge to abort (MERGE_HEAD missing)."));
+			die(_("there is no merge to abort (MERGE_HEAD missing)."));
 
 		if (read_oneliner(&stash_oid, git_path_merge_autostash(the_repository),
 		    READ_ONELINER_SKIP_IF_EMPTY))
@@ -1366,7 +1366,7 @@ int cmd_merge(int argc, const char **argv, const char *prefix)
 			      builtin_merge_usage, builtin_merge_options);
 
 		if (!file_exists(git_path_merge_head(the_repository)))
-			die(_("There is no merge in progress (MERGE_HEAD missing)."));
+			die(_("there is no merge in progress (MERGE_HEAD missing)."));
 
 		/* Invoke 'git commit' */
 		ret = cmd_commit(nargc, nargv, prefix);
@@ -1382,17 +1382,17 @@ int cmd_merge(int argc, const char **argv, const char *prefix)
 		 * add/rm <file>', just 'git commit'.
 		 */
 		if (advice_enabled(ADVICE_RESOLVE_CONFLICT))
-			die(_("You have not concluded your merge (MERGE_HEAD exists).\n"
-				  "Please, commit your changes before you merge."));
+			die(_("you have not concluded your merge (MERGE_HEAD exists).\n"
+				  "please, commit your changes before you merge."));
 		else
-			die(_("You have not concluded your merge (MERGE_HEAD exists)."));
+			die(_("you have not concluded your merge (MERGE_HEAD exists)."));
 	}
 	if (ref_exists("CHERRY_PICK_HEAD")) {
 		if (advice_enabled(ADVICE_RESOLVE_CONFLICT))
-			die(_("You have not concluded your cherry-pick (CHERRY_PICK_HEAD exists).\n"
-			    "Please, commit your changes before you merge."));
+			die(_("you have not concluded your cherry-pick (CHERRY_PICK_HEAD exists).\n"
+			    "please, commit your changes before you merge."));
 		else
-			die(_("You have not concluded your cherry-pick (CHERRY_PICK_HEAD exists)."));
+			die(_("you have not concluded your cherry-pick (CHERRY_PICK_HEAD exists)."));
 	}
 	resolve_undo_clear();
 
@@ -1424,7 +1424,7 @@ int cmd_merge(int argc, const char **argv, const char *prefix)
 		if (default_to_upstream)
 			argc = setup_with_upstream(&argv);
 		else
-			die(_("No commit specified and merge.defaultToUpstream not set."));
+			die(_("no commit specified and merge.defaultToUpstream not set."));
 	} else if (argc == 1 && !strcmp(argv[0], "-")) {
 		argv[0] = "@{-1}";
 	}
@@ -1441,16 +1441,16 @@ int cmd_merge(int argc, const char **argv, const char *prefix)
 		 */
 		struct object_id *remote_head_oid;
 		if (squash)
-			die(_("Squash commit into empty head not supported yet"));
+			die(_("squash commit into empty head not supported yet"));
 		if (fast_forward == FF_NO)
-			die(_("Non-fast-forward commit does not make sense into "
+			die(_("non-fast-forward commit does not make sense into "
 			    "an empty head"));
 		remoteheads = collect_parents(head_commit, &head_subsumed,
 					      argc, argv, NULL);
 		if (!remoteheads)
 			die(_("%s - not something we can merge"), argv[0]);
 		if (remoteheads->next)
-			die(_("Can merge only exactly one commit into empty head"));
+			die(_("can merge only exactly one commit into empty head"));
 
 		if (verify_signatures)
 			verify_merge_signature(remoteheads->item, verbosity,

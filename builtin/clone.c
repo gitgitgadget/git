@@ -1274,7 +1274,7 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 				find_remote_branch(mapped_refs, option_branch);
 
 			if (!our_head_points_at)
-				die(_("Remote branch %s not found in upstream %s"),
+				die(_("remote branch %s not found in upstream %s"),
 				    option_branch, remote_name);
 		}
 		else
@@ -1286,10 +1286,10 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 		char *ref_free = NULL;
 
 		if (option_branch)
-			die(_("Remote branch %s not found in upstream %s"),
+			die(_("remote branch %s not found in upstream %s"),
 					option_branch, remote_name);
 
-		warning(_("You appear to have cloned an empty repository."));
+		warning(_("you appear to have cloned an empty repository."));
 		our_head_points_at = NULL;
 		remote_head_points_at = NULL;
 		remote_head = NULL;
