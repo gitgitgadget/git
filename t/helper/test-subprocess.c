@@ -9,7 +9,7 @@ int cmd__subprocess(int argc, const char **argv)
 
 	setup_git_directory_gently(&nogit);
 	if (nogit)
-		die("no git repo found");
+		die("No git repo found");
 	if (argc > 1 && !strcmp(argv[1], "--setup-work-tree")) {
 		setup_work_tree();
 		argv++;

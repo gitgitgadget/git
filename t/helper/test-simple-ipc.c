@@ -681,6 +681,6 @@ int cmd__simple_ipc(int argc, const char **argv)
 		return !!client__multiple();
 	}
 
-	die("unhandled subcommand: '%s'", cl_args.subcommand);
+	die("Unhandled subcommand: '%s'", cl_args.subcommand);
 }
 #endif

@@ -119,12 +119,12 @@ int cmd__fast_rebase(int argc, const char **argv)
 
 	/* Sanity check */
 	if (get_oid("HEAD", &head))
-		die(_("cannot read HEAD"));
+		die(_("Cannot read HEAD"));
 	assert(oideq(&onto->object.oid, &head));
 
 	hold_locked_index(&lock, LOCK_DIE_ON_ERROR);
 	if (repo_read_index(the_repository) < 0)
-		BUG("could not read index");
+		BUG("Could not read index");
 
 	repo_init_revisions(the_repository, &revs, NULL);
 	revs.verbose_header = 1;
@@ -215,7 +215,7 @@ int cmd__fast_rebase(int argc, const char **argv)
 			       &head,
 			       REF_NO_DEREF, UPDATE_REFS_MSG_ON_ERR)) {
 			error(_("could not update %s"), argv[4]);
-			die("failed to update %s", argv[4]);
+			die("Failed to update %s", argv[4]);
 		}
 	}
 	if (write_locked_index(&the_index, &lock,
