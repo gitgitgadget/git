@@ -519,9 +519,9 @@ static int add_file_cb(const struct option *opt, const char *arg, int unset)
 	item->util = info = xmalloc(sizeof(*info));
 	info->base = xstrdup_or_null(base);
 	if (stat(path, &info->stat))
-		die(_("File not found: %s"), path);
+		die(_("file not found: %s"), path);
 	if (!S_ISREG(info->stat.st_mode))
-		die(_("Not a regular file: %s"), path);
+		die(_("not a regular file: %s"), path);
 	return 0;
 }
 
@@ -575,11 +575,11 @@ static int parse_archive_args(int argc, const char **argv,
 	argc = parse_options(argc, argv, NULL, opts, archive_usage, 0);
 
 	if (remote)
-		die(_("Unexpected option --remote"));
+		die(_("unexpected option --remote"));
 	if (exec)
 		die(_("the option '%s' requires '%s'"), "--exec", "--remote");
 	if (output)
-		die(_("Unexpected option --output"));
+		die(_("unexpected option --output"));
 	if (is_remote && args->extra_files.nr)
 		die(_("options '%s' and '%s' cannot be used together"), "--add-file", "--remote");
 
@@ -603,7 +603,7 @@ static int parse_archive_args(int argc, const char **argv,
 		usage_with_options(archive_usage, opts);
 	*ar = lookup_archiver(format);
 	if (!*ar || (is_remote && !((*ar)->flags & ARCHIVER_REMOTE)))
-		die(_("Unknown archive format '%s'"), format);
+		die(_("unknown archive format '%s'"), format);
 
 	args->compression_level = Z_DEFAULT_COMPRESSION;
 	if (compression_level != -1) {
@@ -612,7 +612,7 @@ static int parse_archive_args(int argc, const char **argv,
 		if (levels_ok && (compression_level <= 9 || high_ok))
 			args->compression_level = compression_level;
 		else {
-			die(_("Argument not supported for format '%s': -%d"),
+			die(_("argument not supported for format '%s': -%d"),
 					format, compression_level);
 		}
 	}

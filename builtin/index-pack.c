@@ -864,7 +864,7 @@ static void sha1_object(const void *data, struct object_entry *obj_entry,
 			    fsck_object(obj, buf, size, &fsck_options))
 				die(_("fsck error in packed object"));
 			if (strict && fsck_walk(obj, NULL, &fsck_options))
-				die(_("Not all child objects of %s are reachable"), oid_to_hex(&obj->oid));
+				die(_("not all child objects of %s are reachable"), oid_to_hex(&obj->oid));
 
 			if (obj->type == OBJ_TREE) {
 				struct tree *item = (struct tree *) obj;
@@ -1297,7 +1297,7 @@ static void conclude_pack(int fix_thin_pack, const char *curr_pack, unsigned cha
 					 curr_pack, nr_objects,
 					 read_hash, consumed_bytes-the_hash_algo->rawsz);
 		if (!hasheq(read_hash, tail_hash))
-			die(_("Unexpected tail checksum for %s "
+			die(_("unexpected tail checksum for %s "
 			      "(disk corruption?)"), curr_pack);
 	}
 	if (nr_ofs_deltas + nr_ref_deltas != nr_resolved_deltas)
@@ -1645,9 +1645,9 @@ static void read_idx_option(struct pack_idx_option *opts, const char *pack_name)
 	struct packed_git *p = add_packed_git(pack_name, strlen(pack_name), 1);
 
 	if (!p)
-		die(_("Cannot open existing pack file '%s'"), pack_name);
+		die(_("cannot open existing pack file '%s'"), pack_name);
 	if (open_pack_index(p))
-		die(_("Cannot open existing pack idx file for '%s'"), pack_name);
+		die(_("cannot open existing pack idx file for '%s'"), pack_name);
 
 	/* Read the attributes from the existing idx file */
 	opts->version = p->index_version;
@@ -1745,7 +1745,7 @@ int cmd_index_pack(int argc, const char **argv, const char *prefix)
 	reset_pack_idx_option(&opts);
 	git_config(git_index_pack_config, &opts);
 	if (prefix && chdir(prefix))
-		die(_("Cannot come back to cwd"));
+		die(_("cannot come back to cwd"));
 
 	if (git_env_bool(GIT_TEST_WRITE_REV_INDEX, 0))
 		rev_index = 1;

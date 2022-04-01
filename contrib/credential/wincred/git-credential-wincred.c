@@ -29,7 +29,7 @@ static void *xmalloc(size_t size)
 	if (!ret && !size)
 		ret = malloc(1);
 	if (!ret)
-		 die("Out of memory");
+		 die("out of memory");
 	return ret;
 }
 

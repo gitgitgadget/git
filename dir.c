@@ -3116,8 +3116,8 @@ char *git_url_basename(const char *repo, int is_bundle, int is_bare)
 	strip_suffix_mem(start, &len, is_bundle ? ".bundle" : ".git");
 
 	if (!len || (len == 1 && *start == '/'))
-		die(_("No directory name could be guessed.\n"
-		      "Please specify a directory on the command line"));
+		die(_("no directory name could be guessed.\n"
+		      "please specify a directory on the command line"));
 
 	if (is_bare)
 		dir = xstrfmt("%.*s.git", (int)len, start);
