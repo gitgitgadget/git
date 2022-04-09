@@ -48,6 +48,14 @@ then
 	exit 1
 fi
 
+if test ! -f "$GIT_BUILD_DIR"/GIT-BUILD-OPTIONS
+then
+	echo >&2 'error: GIT-BUILD-OPTIONS missing (has Git been built?).'
+	exit 1
+fi
+. "$GIT_BUILD_DIR"/GIT-BUILD-OPTIONS
+export PERL_PATH SHELL_PATH
+
 # Prepend a string to a VAR using an arbitrary ":" delimiter, not
 # adding the delimiter if VAR or VALUE is empty. I.e. a generalized:
 #
@@ -77,15 +85,16 @@ export ASAN_OPTIONS
 
 prepend_var LSAN_OPTIONS : $GIT_SAN_OPTIONS
 prepend_var LSAN_OPTIONS : fast_unwind_on_malloc=0
-export LSAN_OPTIONS
 
-if test ! -f "$GIT_BUILD_DIR"/GIT-BUILD-OPTIONS
+# Disable leak detection unless it is explicitly enabled, On linux the
+# address sanitizer defaults to enabling the leak sanitizer but our
+# build system does not setup UNLEAK() unless SANITIZE contains
+# "leak".
+if test -z "$SANITIZE_LEAK"
 then
-	echo >&2 'error: GIT-BUILD-OPTIONS missing (has Git been built?).'
-	exit 1
+	prepend_var LSAN_OPTIONS : detect_leaks=0
 fi
-. "$GIT_BUILD_DIR"/GIT-BUILD-OPTIONS
-export PERL_PATH SHELL_PATH
+export LSAN_OPTIONS
 
 # In t0000, we need to override test directories of nested testcases. In case
 # the developer has TEST_OUTPUT_DIRECTORY part of his build options, then we'd
