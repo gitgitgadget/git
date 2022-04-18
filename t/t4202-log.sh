@@ -15,7 +15,6 @@ test_cmp_graph () {
 }
 
 test_expect_success setup '
-
 	echo one >one &&
 	git add one &&
 	test_tick &&
@@ -44,36 +43,31 @@ test_expect_success setup '
 	git rm a/two &&
 	test_tick &&
 	git commit -m sixth
-
 '
 
-printf "sixth\nfifth\nfourth\nthird\nsecond\ninitial" > expect
+printf "sixth\nfifth\nfourth\nthird\nsecond\ninitial" >expect
 test_expect_success 'pretty' '
-
-	git log --pretty="format:%s" > actual &&
+	git log --pretty="format:%s" >actual &&
 	test_cmp expect actual
 '
 
-printf "sixth\nfifth\nfourth\nthird\nsecond\ninitial\n" > expect
+printf "sixth\nfifth\nfourth\nthird\nsecond\ninitial\n" >expect
 test_expect_success 'pretty (tformat)' '
-
-	git log --pretty="tformat:%s" > actual &&
+	git log --pretty="tformat:%s" >actual &&
 	test_cmp expect actual
 '
 
 test_expect_success 'pretty (shortcut)' '
-
-	git log --pretty="%s" > actual &&
+	git log --pretty="%s" >actual &&
 	test_cmp expect actual
 '
 
 test_expect_success 'format' '
-
-	git log --format="%s" > actual &&
+	git log --format="%s" >actual &&
 	test_cmp expect actual
 '
 
-cat > expect << EOF
+cat >expect << EOF
  This is
   the sixth
   commit.
@@ -83,18 +77,16 @@ cat > expect << EOF
 EOF
 
 test_expect_success 'format %w(11,1,2)' '
-
-	git log -2 --format="%w(11,1,2)This is the %s commit." > actual &&
+	git log -2 --format="%w(11,1,2)This is the %s commit." >actual &&
 	test_cmp expect actual
 '
 
 test_expect_success 'format %w(,1,2)' '
-
-	git log -2 --format="%w(,1,2)This is%nthe %s%ncommit." > actual &&
+	git log -2 --format="%w(,1,2)This is%nthe %s%ncommit." >actual &&
 	test_cmp expect actual
 '
 
-cat > expect << EOF
+cat >expect << EOF
 $(git rev-parse --short :/sixth  ) sixth
 $(git rev-parse --short :/fifth  ) fifth
 $(git rev-parse --short :/fourth ) fourth
@@ -103,47 +95,37 @@ $(git rev-parse --short :/second ) second
 $(git rev-parse --short :/initial) initial
 EOF
 test_expect_success 'oneline' '
-
-	git log --oneline > actual &&
+	git log --oneline >actual &&
 	test_cmp expect actual
 '
 
 test_expect_success 'diff-filter=A' '
-
-	git log --no-renames --pretty="format:%s" --diff-filter=A HEAD > actual &&
-	git log --no-renames --pretty="format:%s" --diff-filter A HEAD > actual-separate &&
-	printf "fifth\nfourth\nthird\ninitial" > expect &&
+	git log --no-renames --pretty="format:%s" --diff-filter=A HEAD >actual &&
+	git log --no-renames --pretty="format:%s" --diff-filter A HEAD >actual-separate &&
+	printf "fifth\nfourth\nthird\ninitial" >expect &&
 	test_cmp expect actual &&
 	test_cmp expect actual-separate
-
 '
 
 test_expect_success 'diff-filter=M' '
-
 	git log --pretty="format:%s" --diff-filter=M HEAD >actual &&
 	printf "second" >expect &&
 	test_cmp expect actual
-
 '
 
 test_expect_success 'diff-filter=D' '
-
 	git log --no-renames --pretty="format:%s" --diff-filter=D HEAD >actual &&
 	printf "sixth\nthird" >expect &&
 	test_cmp expect actual
-
 '
 
 test_expect_success 'diff-filter=R' '
-
 	git log -M --pretty="format:%s" --diff-filter=R HEAD >actual &&
 	printf "third" >expect &&
 	test_cmp expect actual
-
 '
 
 test_expect_success 'multiple --diff-filter bits' '
-
 	git log -M --pretty="format:%s" --diff-filter=R HEAD >expect &&
 	git log -M --pretty="format:%s" --diff-filter=Ra HEAD >actual &&
 	test_cmp expect actual &&
@@ -152,19 +134,15 @@ test_expect_success 'multiple --diff-filter bits' '
 	git log -M --pretty="format:%s" \
 		--diff-filter=a --diff-filter=R HEAD >actual &&
 	test_cmp expect actual
-
 '
 
 test_expect_success 'diff-filter=C' '
-
 	git log -C -C --pretty="format:%s" --diff-filter=C HEAD >actual &&
 	printf "fourth" >expect &&
 	test_cmp expect actual
-
 '
 
 test_expect_success 'git log --follow' '
-
 	git log --follow --pretty="format:%s" ichi >actual &&
 	printf "third\nsecond\ninitial" >expect &&
 	test_cmp expect actual
@@ -196,43 +174,43 @@ test_expect_success 'git config log.follow is overridden by --no-follow' '
 
 # Note that these commits are intentionally listed out of order.
 last_three="$(git rev-parse :/fourth :/sixth :/fifth)"
-cat > expect << EOF
+cat >expect << EOF
 $(git rev-parse --short :/sixth ) sixth
 $(git rev-parse --short :/fifth ) fifth
 $(git rev-parse --short :/fourth) fourth
 EOF
 test_expect_success 'git log --no-walk <commits> sorts by commit time' '
-	git log --no-walk --oneline $last_three > actual &&
+	git log --no-walk --oneline $last_three >actual &&
 	test_cmp expect actual
 '
 
 test_expect_success 'git log --no-walk=sorted <commits> sorts by commit time' '
-	git log --no-walk=sorted --oneline $last_three > actual &&
+	git log --no-walk=sorted --oneline $last_three >actual &&
 	test_cmp expect actual
 '
 
-cat > expect << EOF
+cat >expect << EOF
 === $(git rev-parse --short :/sixth ) sixth
 === $(git rev-parse --short :/fifth ) fifth
 === $(git rev-parse --short :/fourth) fourth
 EOF
 test_expect_success 'git log --line-prefix="=== " --no-walk <commits> sorts by commit time' '
-	git log --line-prefix="=== " --no-walk --oneline $last_three > actual &&
+	git log --line-prefix="=== " --no-walk --oneline $last_three >actual &&
 	test_cmp expect actual
 '
 
-cat > expect << EOF
+cat >expect << EOF
 $(git rev-parse --short :/fourth) fourth
 $(git rev-parse --short :/sixth ) sixth
 $(git rev-parse --short :/fifth ) fifth
 EOF
 test_expect_success 'git log --no-walk=unsorted <commits> leaves list of commits as given' '
-	git log --no-walk=unsorted --oneline $last_three > actual &&
+	git log --no-walk=unsorted --oneline $last_three >actual &&
 	test_cmp expect actual
 '
 
 test_expect_success 'git show <commits> leaves list of commits as given' '
-	git show --oneline -s $last_three > actual &&
+	git show --oneline -s $last_three >actual &&
 	test_cmp expect actual
 '
 
@@ -249,7 +227,7 @@ test_expect_success 'log --grep' '
 	test_cmp expect actual
 '
 
-cat > expect << EOF
+cat >expect << EOF
 second
 initial
 EOF
@@ -536,7 +514,7 @@ test_expect_success '-c color.grep.matchSelected log --grep' '
 	test_cmp expect actual
 '
 
-cat > expect <<EOF
+cat >expect <<EOF
 * Second
 * sixth
 * fifth
@@ -550,7 +528,7 @@ test_expect_success 'simple log --graph' '
 	test_cmp_graph
 '
 
-cat > expect <<EOF
+cat >expect <<EOF
 123 * Second
 123 * sixth
 123 * fifth
@@ -572,7 +550,7 @@ test_expect_success 'set up merge history' '
 	git merge side
 '
 
-cat > expect <<\EOF
+cat >expect <<\EOF
 *   Merge branch 'side'
 |\
 | * side-2
@@ -591,7 +569,7 @@ test_expect_success 'log --graph with merge' '
 	test_cmp_graph --date-order
 '
 
-cat > expect <<\EOF
+cat >expect <<\EOF
 | | | *   Merge branch 'side'
 | | | |\
 | | | | * side-2
@@ -610,7 +588,7 @@ test_expect_success 'log --graph --line-prefix="| | | " with merge' '
 	test_cmp_graph --line-prefix="| | | " --date-order
 '
 
-cat > expect.colors <<\EOF
+cat >expect.colors <<\EOF
 *   Merge branch 'side'
 <BLUE>|<RESET><CYAN>\<RESET>
 <BLUE>|<RESET> * side-2
@@ -640,7 +618,7 @@ test_expect_success 'diff-tree --graph' '
 	grep "one" actual
 '
 
-cat > expect <<\EOF
+cat >expect <<\EOF
 *   commit main
 |\  Merge: A B
 | | Author: A U Thor <author@example.com>
@@ -721,7 +699,7 @@ test_expect_success 'set up more tangled history' '
 	git merge reach
 '
 
-cat > expect <<\EOF
+cat >expect <<\EOF
 *   Merge tag 'reach'
 |\
 | \
@@ -879,7 +857,7 @@ test_expect_success 'multiple decorate-refs' '
 	git log -n6 --decorate=short --pretty="tformat:%f%d" \
 		--decorate-refs="heads/octopus*" \
 		--decorate-refs="tags/reach" >actual &&
-    test_cmp expect.decorate actual
+	test_cmp expect.decorate actual
 '
 
 test_expect_success 'decorate-refs-exclude with glob' '
@@ -1844,7 +1822,7 @@ test_expect_success GPGSM 'log x509 fingerprint' '
 '
 
 test_expect_success GPGSM 'log OpenPGP fingerprint' '
-	echo "D4BE22311AD3131E5EDA29A461092E85B7227189" > expect &&
+	echo "D4BE22311AD3131E5EDA29A461092E85B7227189" >expect &&
 	git log -n1 --format="%GP" signed-subkey >actual &&
 	test_cmp expect actual
 '
@@ -2190,10 +2168,10 @@ test_expect_success 'log --decorate includes all levels of tag annotated tags' '
 '
 
 test_expect_success 'log --end-of-options' '
-       git update-ref refs/heads/--source HEAD &&
-       git log --end-of-options --source >actual &&
-       git log >expect &&
-       test_cmp expect actual
+	git update-ref refs/heads/--source HEAD &&
+	git log --end-of-options --source >actual &&
+	git log >expect &&
+	test_cmp expect actual
 '
 
 test_expect_success 'set up commits with different authors' '
