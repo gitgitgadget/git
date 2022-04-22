@@ -495,7 +495,7 @@ include::config/repack.txt[]
 
 include::config/rerere.txt[]
 
-include::config/reset.txt[]
+include::config/safe.txt[]
 
 include::config/sendemail.txt[]
 

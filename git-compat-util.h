@@ -436,6 +436,18 @@ static inline int git_offset_1st_component(const char *path)
 #define is_valid_path(path) 1
 #endif
 
+#ifndef is_path_owned_by_current_user
+static inline int is_path_owned_by_current_uid(const char *path)
+{
+	struct stat st;
+	if (lstat(path, &st))
+		return 0;
+	return st.st_uid == geteuid();
+}
+
+#define is_path_owned_by_current_user is_path_owned_by_current_uid
+#endif
+
 #ifndef find_last_dir_sep
 static inline char *git_find_last_dir_sep(const char *path)
 {
@@ -524,6 +536,10 @@ void warning_errno(const char *err, ...) __attribute__((format (printf, 1, 2)));
 #endif /* APPLE_COMMON_CRYPTO */
 #include <openssl/x509v3.h>
 #endif /* NO_OPENSSL */
+
+#ifdef HAVE_OPENSSL_CSPRNG
+#include <openssl/rand.h>
+#endif
 
 /*
  * Let callers be aware of the constant return value; this can help
@@ -1280,6 +1296,11 @@ enum fsync_action {
  * changes are durable. It is not expected to fail.
  */
 int git_fsync(int fd, enum fsync_action action);
+
+/*
+ * Writes out trace statistics for fsync using the trace2 API.
+ */
+void trace_git_fsync_stats(void);
 
 /*
  * Preserves errno, prints a message, but gives no warning for ENOENT.

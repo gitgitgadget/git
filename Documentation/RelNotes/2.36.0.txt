@@ -13,6 +13,15 @@ Backward compatibility warts
    top-level a partial clone, while submodules are fully cloned.  This
    behaviour is changed to pass the same filter down to the submodules.
 
+ * With the fixes for CVE-2022-24765 that are common with versions of
+   Git 2.30.4, 2.31.3, 2.32.2, 2.33.3, 2.34.3, and 2.35.3, Git has
+   been taught not to recognise repositories owned by other users, in
+   order to avoid getting affected by their config files and hooks.
+   You can list the path to the safe/trusted repositories that may be
+   owned by others on a multi-valued configuration variable
+   `safe.directory` to override this behaviour, or use '*' to declare
+   that you trust anything.
+
 
 Note to those who build from the source
 
@@ -46,10 +55,10 @@ UI, Workflows & Features
 
  * "git branch" learned the "--recurse-submodules" option.
 
- * A not-so-common mistake is to write a script to feed "git bisect
-   run" without making it executable, in which case all tests will
-   exit with 126 or 127 error codes, even on revisions that are marked
-   as good.  Try to recognize this situation and stop iteration early.
+ * A user can forget to make a script file executable before giving
+   it to "git bisect run".  In such a case, all tests will exit with
+   126 or 127 error codes, even on revisions that are marked as good.
+   Try to recognize this situation and stop iteration early.
 
  * When "index-pack" dies due to incoming data exceeding the maximum
    allowed input size, include the value of the limit in the error
@@ -83,6 +92,24 @@ UI, Workflows & Features
  * "git repack" learned a new configuration to disable triggering of
    age-old "update-server-info" command, which is rarely useful these
    days.
+
+ * "git stash" does not allow subcommands it internally runs as its
+   implementation detail, except for "git reset", to emit messages;
+   now "git reset" part has also been squelched.
+
+ * "git ls-tree" learns "--oid-only" option, similar to "--name-only",
+   and more generalized "--format" option.
+
+ * "git fetch --refetch" learned to fetch everything without telling
+   the other side what we already have, which is useful when you
+   cannot trust what you have in the local object store.
+
+ * "git branch" gives hint when branch tracking cannot be established
+   because fetch refspecs from multiple remote repositories overlap.
+
+ * "git worktree list --porcelain" did not c-quote pathnames and lock
+   reasons with unsafe bytes correctly, which is worked around by
+   introducing NUL terminated output format with "-z".
 
 
 Performance, Internal Implementation, Development Support etc.
@@ -157,6 +184,9 @@ Performance, Internal Implementation, Development Support etc.
 
  * Updates to refs traditionally weren't fsync'ed, but we can
    configure using core.fsync variable to do so.
+
+ * "git reflog" command now uses parse-options API to parse its
+   command line options.
 
 
 Fixes since v2.35
@@ -268,12 +298,6 @@ Fixes since v2.35
    future "gc" needs to clean up.
    (merge 5407764069 cb/clear-quarantine-early-on-all-ref-update-errors later to maint).
 
- * Because a deletion of ref would need to remove it from both the
-   loose ref store and the packed ref store, a delete-ref operation
-   that logically removes one ref may end up invoking ref-transaction
-   hook twice, which has been corrected.
-   (merge 2ed1b64ebd ps/avoid-unnecessary-hook-invocation-with-packed-refs later to maint).
-
  * When there is no object to write .bitmap file for, "git
    multi-pack-index" triggered an error, instead of just skipping,
    which has been corrected.
@@ -321,10 +345,6 @@ Fixes since v2.35
    recorded the last level component of the branch name, which has
    been corrected.
 
- * "git fetch" can make two separate fetches, but ref updates coming
-   from them were in two separate ref transactions under "--atomic",
-   which has been corrected.
-
  * Check the return value from parse_tree_indirect() to turn segfaults
    into calls to die().
    (merge 8d2eaf649a gc/parse-tree-indirect-errors later to maint).
@@ -363,6 +383,19 @@ Fixes since v2.35
  * When "shallow" information is updated, we forgot to update the
    in-core equivalent, which has been corrected.
 
+ * When creating a loose object file, we didn't report the exact
+   filename of the file we failed to fsync, even though the
+   information was readily available, which has been corrected.
+
+ * "git am" can read from the standard input when no mailbox is given
+   on the command line, but the end-user gets no indication when it
+   happens, making Git appear stuck.
+   (merge 7b20af6a06 jc/mailsplit-warn-on-tty later to maint).
+
+ * "git mv" failed to refresh the cached stat information for the
+   entry it moved.
+   (merge b7f9130a06 vd/mv-refresh-stat later to maint).
+
  * Other code cleanup, docfix, build fix, etc.
    (merge cfc5cf428b jc/find-header later to maint).
    (merge 40e7cfdd46 jh/p4-fix-use-of-process-error-exception later to maint).
@@ -392,3 +425,5 @@ Fixes since v2.35
    (merge c614beb933 ep/t6423-modernize later to maint).
    (merge 57be9c6dee ab/reflog-prep-fix later to maint).
    (merge 5327d8982a js/in-place-reverse-in-sequencer later to maint).
+   (merge 2e2c0be51e dp/worktree-repair-in-usage later to maint).
+   (merge 6563706568 jc/coding-guidelines-decl-in-for-loop later to maint).

@@ -18,17 +18,31 @@ struct tracking {
 	int matches;
 };
 
+struct find_tracked_branch_cb {
+	struct tracking *tracking;
+	struct string_list ambiguous_remotes;
+};
+
 static int find_tracked_branch(struct remote *remote, void *priv)
 {
-	struct tracking *tracking = priv;
+	struct find_tracked_branch_cb *ftb = priv;
+	struct tracking *tracking = ftb->tracking;
 
 	if (!remote_find_tracking(remote, &tracking->spec)) {
-		if (++tracking->matches == 1) {
+		switch (++tracking->matches) {
+		case 1:
 			string_list_append(tracking->srcs, tracking->spec.src);
 			tracking->remote = remote->name;
-		} else {
+			break;
+		case 2:
+			/* there are at least two remotes; backfill the first one */
+			string_list_append(&ftb->ambiguous_remotes, tracking->remote);
+			/* fall through */
+		default:
+			string_list_append(&ftb->ambiguous_remotes, remote->name);
 			free(tracking->spec.src);
 			string_list_clear(tracking->srcs, 0);
+		break;
 		}
 		tracking->spec.src = NULL;
 	}
@@ -232,12 +246,19 @@ static void setup_tracking(const char *new_ref, const char *orig_ref,
 	struct tracking tracking;
 	struct string_list tracking_srcs = STRING_LIST_INIT_DUP;
 	int config_flags = quiet ? 0 : BRANCH_CONFIG_VERBOSE;
+	struct find_tracked_branch_cb ftb_cb = {
+		.tracking = &tracking,
+		.ambiguous_remotes = STRING_LIST_INIT_DUP,
+	};
+
+	if (!track)
+		BUG("asked to set up tracking, but tracking is disallowed");
 
 	memset(&tracking, 0, sizeof(tracking));
 	tracking.spec.dst = (char *)orig_ref;
 	tracking.srcs = &tracking_srcs;
 	if (track != BRANCH_TRACK_INHERIT)
-		for_each_remote(find_tracked_branch, &tracking);
+		for_each_remote(find_tracked_branch, &ftb_cb);
 	else if (inherit_tracking(&tracking, orig_ref))
 		goto cleanup;
 
@@ -252,18 +273,49 @@ static void setup_tracking(const char *new_ref, const char *orig_ref,
 			goto cleanup;
 		}
 
-	if (tracking.matches > 1)
-		die(_("not tracking: ambiguous information for ref %s"),
-		    orig_ref);
+	if (tracking.matches > 1) {
+		int status = die_message(_("not tracking: ambiguous information for ref '%s'"),
+					    orig_ref);
+		if (advice_enabled(ADVICE_AMBIGUOUS_FETCH_REFSPEC)) {
+			struct strbuf remotes_advice = STRBUF_INIT;
+			struct string_list_item *item;
+
+			for_each_string_list_item(item, &ftb_cb.ambiguous_remotes)
+				/*
+				 * TRANSLATORS: This is a line listing a remote with duplicate
+				 * refspecs in the advice message below. For RTL languages you'll
+				 * probably want to swap the "%s" and leading "  " space around.
+				 */
+				strbuf_addf(&remotes_advice, _("  %s\n"), item->string);
+
+			/*
+			 * TRANSLATORS: The second argument is a \n-delimited list of
+			 * duplicate refspecs, composed above.
+			 */
+			advise(_("There are multiple remotes whose fetch refspecs map to the remote\n"
+				 "tracking ref '%s':\n"
+				 "%s"
+				 "\n"
+				 "This is typically a configuration error.\n"
+				 "\n"
+				 "To support setting up tracking branches, ensure that\n"
+				 "different remotes' fetch refspecs map into different\n"
+				 "tracking namespaces."), orig_ref,
+			       remotes_advice.buf);
+			strbuf_release(&remotes_advice);
+		}
+		exit(status);
+	}
 
 	if (tracking.srcs->nr < 1)
 		string_list_append(tracking.srcs, orig_ref);
 	if (install_branch_config_multiple_remotes(config_flags, new_ref,
 				tracking.remote, tracking.srcs) < 0)
-		exit(-1);
+		exit(1);
 
 cleanup:
 	string_list_clear(&tracking_srcs, 0);
+	string_list_clear(&ftb_cb.ambiguous_remotes, 0);
 }
 
 int read_branch_desc(struct strbuf *buf, const char *branch_name)
@@ -385,12 +437,10 @@ static void dwim_branch_start(struct repository *r, const char *start_name,
 	real_ref = NULL;
 	if (get_oid_mb(start_name, &oid)) {
 		if (explicit_tracking) {
-			if (advice_enabled(ADVICE_SET_UPSTREAM_FAILURE)) {
-				error(_(upstream_missing), start_name);
-				advise(_(upstream_advice));
-				exit(1);
-			}
-			die(_(upstream_missing), start_name);
+			int code = die_message(_(upstream_missing), start_name);
+			advise_if_enabled(ADVICE_SET_UPSTREAM_FAILURE,
+					  _(upstream_advice));
+			exit(code);
 		}
 		die(_("not a valid object name: '%s'"), start_name);
 	}
@@ -534,8 +584,27 @@ static int submodule_create_branch(struct repository *r,
 		strvec_push(&child.args, "--quiet");
 	if (reflog)
 		strvec_push(&child.args, "--create-reflog");
-	if (track == BRANCH_TRACK_ALWAYS || track == BRANCH_TRACK_EXPLICIT)
-		strvec_push(&child.args, "--track");
+
+	switch (track) {
+	case BRANCH_TRACK_NEVER:
+		strvec_push(&child.args, "--no-track");
+		break;
+	case BRANCH_TRACK_ALWAYS:
+	case BRANCH_TRACK_EXPLICIT:
+		strvec_push(&child.args, "--track=direct");
+		break;
+	case BRANCH_TRACK_OVERRIDE:
+		BUG("BRANCH_TRACK_OVERRIDE cannot be used when creating a branch.");
+		break;
+	case BRANCH_TRACK_INHERIT:
+		strvec_push(&child.args, "--track=inherit");
+		break;
+	case BRANCH_TRACK_UNSPECIFIED:
+		/* Default for "git checkout". Do not pass --track. */
+	case BRANCH_TRACK_REMOTE:
+		/* Default for "git branch". Do not pass --track. */
+		break;
+	}
 
 	strvec_pushl(&child.args, name, start_oid, tracking_name, NULL);
 
@@ -585,11 +654,13 @@ void create_branches_recursively(struct repository *r, const char *name,
 	 */
 	for (i = 0; i < submodule_entry_list.entry_nr; i++) {
 		if (submodule_entry_list.entries[i].repo == NULL) {
+			int code = die_message(
+				_("submodule '%s': unable to find submodule"),
+				submodule_entry_list.entries[i].submodule->name);
 			if (advice_enabled(ADVICE_SUBMODULES_NOT_UPDATED))
 				advise(_("You may try updating the submodules using 'git checkout %s && git submodule update --init'"),
 				       start_commitish);
-			die(_("submodule '%s': unable to find submodule"),
-			    submodule_entry_list.entries[i].submodule->name);
+			exit(code);
 		}
 
 		if (submodule_create_branch(
@@ -614,7 +685,8 @@ void create_branches_recursively(struct repository *r, const char *name,
 	 * tedious to determine whether or not tracking was set up in the
 	 * superproject.
 	 */
-	setup_tracking(name, tracking_name, track, quiet);
+	if (track)
+		setup_tracking(name, tracking_name, track, quiet);
 
 	for (i = 0; i < submodule_entry_list.entry_nr; i++) {
 		if (submodule_create_branch(

@@ -8,7 +8,6 @@ export GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME
 . ./test-lib.sh
 
 test_expect_success setup '
-	mkdir -p .git/hooks &&
 	test_commit PRE &&
 	PRE_OID=$(git rev-parse PRE) &&
 	test_commit POST &&
@@ -16,9 +15,8 @@ test_expect_success setup '
 '
 
 test_expect_success 'hook allows updating ref if successful' '
-	test_when_finished "rm .git/hooks/reference-transaction" &&
 	git reset --hard PRE &&
-	write_script .git/hooks/reference-transaction <<-\EOF &&
+	test_hook reference-transaction <<-\EOF &&
 		echo "$*" >>actual
 	EOF
 	cat >expect <<-EOF &&
@@ -30,9 +28,8 @@ test_expect_success 'hook allows updating ref if successful' '
 '
 
 test_expect_success 'hook aborts updating ref in prepared state' '
-	test_when_finished "rm .git/hooks/reference-transaction" &&
 	git reset --hard PRE &&
-	write_script .git/hooks/reference-transaction <<-\EOF &&
+	test_hook reference-transaction <<-\EOF &&
 		if test "$1" = prepared
 		then
 			exit 1
@@ -43,9 +40,9 @@ test_expect_success 'hook aborts updating ref in prepared state' '
 '
 
 test_expect_success 'hook gets all queued updates in prepared state' '
-	test_when_finished "rm .git/hooks/reference-transaction actual" &&
+	test_when_finished "rm actual" &&
 	git reset --hard PRE &&
-	write_script .git/hooks/reference-transaction <<-\EOF &&
+	test_hook reference-transaction <<-\EOF &&
 		if test "$1" = prepared
 		then
 			while read -r line
@@ -66,9 +63,9 @@ test_expect_success 'hook gets all queued updates in prepared state' '
 '
 
 test_expect_success 'hook gets all queued updates in committed state' '
-	test_when_finished "rm .git/hooks/reference-transaction actual" &&
+	test_when_finished "rm actual" &&
 	git reset --hard PRE &&
-	write_script .git/hooks/reference-transaction <<-\EOF &&
+	test_hook reference-transaction <<-\EOF &&
 		if test "$1" = committed
 		then
 			while read -r line
@@ -86,9 +83,9 @@ test_expect_success 'hook gets all queued updates in committed state' '
 '
 
 test_expect_success 'hook gets all queued updates in aborted state' '
-	test_when_finished "rm .git/hooks/reference-transaction actual" &&
+	test_when_finished "rm actual" &&
 	git reset --hard PRE &&
-	write_script .git/hooks/reference-transaction <<-\EOF &&
+	test_hook reference-transaction <<-\EOF &&
 		if test "$1" = aborted
 		then
 			while read -r line
@@ -115,11 +112,11 @@ test_expect_success 'interleaving hook calls succeed' '
 
 	git init --bare target-repo.git &&
 
-	write_script target-repo.git/hooks/reference-transaction <<-\EOF &&
+	test_hook -C target-repo.git reference-transaction <<-\EOF &&
 		echo $0 "$@" >>actual
 	EOF
 
-	write_script target-repo.git/hooks/update <<-\EOF &&
+	test_hook -C target-repo.git update <<-\EOF &&
 		echo $0 "$@" >>actual
 	EOF
 
@@ -134,56 +131,6 @@ test_expect_success 'interleaving hook calls succeed' '
 
 	git push ./target-repo.git PRE POST &&
 	test_cmp expect target-repo.git/actual
-'
-
-test_expect_success 'hook does not get called on packing refs' '
-	# Pack references first such that we are in a known state.
-	git pack-refs --all &&
-
-	write_script .git/hooks/reference-transaction <<-\EOF &&
-		echo "$@" >>actual
-		cat >>actual
-	EOF
-	rm -f actual &&
-
-	git update-ref refs/heads/unpacked-ref $POST_OID &&
-	git pack-refs --all &&
-
-	# We only expect a single hook invocation, which is the call to
-	# git-update-ref(1).
-	cat >expect <<-EOF &&
-		prepared
-		$ZERO_OID $POST_OID refs/heads/unpacked-ref
-		committed
-		$ZERO_OID $POST_OID refs/heads/unpacked-ref
-	EOF
-
-	test_cmp expect actual
-'
-
-test_expect_success 'deleting packed ref calls hook once' '
-	# Create a reference and pack it.
-	git update-ref refs/heads/to-be-deleted $POST_OID &&
-	git pack-refs --all &&
-
-	write_script .git/hooks/reference-transaction <<-\EOF &&
-		echo "$@" >>actual
-		cat >>actual
-	EOF
-	rm -f actual &&
-
-	git update-ref -d refs/heads/to-be-deleted $POST_OID &&
-
-	# We only expect a single hook invocation, which is the logical
-	# deletion.
-	cat >expect <<-EOF &&
-		prepared
-		$POST_OID $ZERO_OID refs/heads/to-be-deleted
-		committed
-		$POST_OID $ZERO_OID refs/heads/to-be-deleted
-	EOF
-
-	test_cmp expect actual
 '
 
 test_done

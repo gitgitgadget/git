@@ -329,7 +329,7 @@ test_commit () {
 	else
 		$echo "${3-$1}" >"$indir$file"
 	fi &&
-	git ${indir:+ -C "$indir"} add "$file" &&
+	git ${indir:+ -C "$indir"} add -- "$file" &&
 	if test -z "$notick"
 	then
 		test_tick
@@ -549,6 +549,82 @@ write_script () {
 		cat
 	} >"$1" &&
 	chmod +x "$1"
+}
+
+# Usage: test_hook [options] <hook-name> <<-\EOF
+#
+#   -C <dir>:
+#	Run all git commands in directory <dir>
+#   --setup
+#	Setup a hook for subsequent tests, i.e. don't remove it in a
+#	"test_when_finished"
+#   --clobber
+#	Overwrite an existing <hook-name>, if it exists. Implies
+#	--setup (i.e. the "test_when_finished" is assumed to have been
+#	set up already).
+#    --disable
+#	Disable (chmod -x) an existing <hook-name>, which must exist.
+#    --remove
+#	Remove (rm -f) an existing <hook-name>, which must exist.
+test_hook () {
+	setup= &&
+	clobber= &&
+	disable= &&
+	remove= &&
+	indir= &&
+	while test $# != 0
+	do
+		case "$1" in
+		-C)
+			indir="$2" &&
+			shift
+			;;
+		--setup)
+			setup=t
+			;;
+		--clobber)
+			clobber=t
+			;;
+		--disable)
+			disable=t
+			;;
+		--remove)
+			remove=t
+			;;
+		-*)
+			BUG "invalid argument: $1"
+			;;
+		*)
+			break
+			;;
+		esac &&
+		shift
+	done &&
+
+	git_dir=$(git -C "$indir" rev-parse --absolute-git-dir) &&
+	hook_dir="$git_dir/hooks" &&
+	hook_file="$hook_dir/$1" &&
+	if test -n "$disable$remove"
+	then
+		test_path_is_file "$hook_file" &&
+		if test -n "$disable"
+		then
+			chmod -x "$hook_file"
+		elif test -n "$remove"
+		then
+			rm -f "$hook_file"
+		fi &&
+		return 0
+	fi &&
+	if test -z "$clobber"
+	then
+		test_path_is_missing "$hook_file"
+	fi &&
+	if test -z "$setup$clobber"
+	then
+		test_when_finished "rm \"$hook_file\""
+	fi &&
+	write_script "$hook_file"
 }
 
 # Use test_set_prereq to tell that a particular prerequisite is available.
@@ -1785,40 +1861,6 @@ test_subcommand () {
 		! grep "\[$expr\]"
 	else
 		grep "\[$expr\]"
-	fi
-}
-
-# Check that the given command was invoked as part of the
-# trace2-format trace on stdin, but without an exact set of
-# arguments.
-#
-#	test_subcommand [!] <command> <args>... < <trace>
-#
-# For example, to look for an invocation of "git pack-objects"
-# with the "--honor-pack-keep" argument, use
-#
-#	GIT_TRACE2_EVENT=event.log git repack ... &&
-#	test_subcommand git pack-objects --honor-pack-keep <event.log
-#
-# If the first parameter passed is !, this instead checks that
-# the given command was not called.
-#
-test_subcommand_inexact () {
-	local negate=
-	if test "$1" = "!"
-	then
-		negate=t
-		shift
-	fi
-
-	local expr=$(printf '"%s".*' "$@")
-	expr="${expr%,}"
-
-	if test -n "$negate"
-	then
-		! grep "\"event\":\"child_start\".*\[$expr\]"
-	else
-		grep "\"event\":\"child_start\".*\[$expr\]"
 	fi
 }
 
