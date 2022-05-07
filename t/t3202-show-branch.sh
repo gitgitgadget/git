@@ -161,4 +161,47 @@ test_expect_success 'show branch --reflog=2' '
 	test_cmp actual expect
 '
 
+test_expect_success 'show branch --reflog=2 --current' '
+	sed "s/^>	//" >expect <<-\EOF &&
+	>	! [refs/heads/branch10@{0}] (4 years, 5 months ago) commit: branch10
+	>	 ! [refs/heads/branch10@{1}] (4 years, 5 months ago) commit: branch10
+	>	  * [branch10] (4 years, 5 months ago) (current) branch: Created from initial
+	>	---
+	>	+ * [refs/heads/branch10@{0}] branch10
+	>	++* [refs/heads/branch10@{1}] initial
+	EOF
+	git show-branch --reflog=2 --current >actual &&
+	test_cmp actual expect
+'
+
+test_expect_success 'show branch --current' '
+	sed "s/^>	//" >expect <<-\EOF &&
+	>	! [branch1] branch1
+	>	 ! [branch2] branch2
+	>	  ! [branch3] branch3
+	>	   ! [branch4] branch4
+	>	    ! [branch5] branch5
+	>	     ! [branch6] branch6
+	>	      ! [branch7] branch7
+	>	       ! [branch8] branch8
+	>	        ! [branch9] branch9
+	>	         * [branch10] branch10
+	>	          ! [master] initial
+	>	-----------
+	>	         *  [branch10] branch10
+	>	        +   [branch9] branch9
+	>	       +    [branch8] branch8
+	>	      +     [branch7] branch7
+	>	     +      [branch6] branch6
+	>	    +       [branch5] branch5
+	>	   +        [branch4] branch4
+	>	  +         [branch3] branch3
+	>	 +          [branch2] branch2
+	>	+           [branch1] branch1
+	>	+++++++++*+ [master] initial
+	EOF
+	git show-branch --current >actual &&
+	test_cmp actual expect
+'
+
 test_done

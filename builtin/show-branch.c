@@ -813,8 +813,24 @@ int cmd_show_branch(int ac, const char **av, const char *prefix)
 		}
 		if (!has_head) {
 			const char *name = head;
+			struct object_id oid;
+			char *ref;
+			unsigned int flags = 0;
+			char *log_msg = NULL;
+			char *end_log_msg;
+			timestamp_t timestamp;
+			int tz;
+
+			if (!dwim_ref(*av, strlen(*av), &oid, &ref, 0))
+				die(_("no such ref %s"), *av);
+			read_ref_at(get_main_ref_store(the_repository), ref, flags, 0, i, &oid, &log_msg, &timestamp, &tz, NULL);
+			end_log_msg = strchr(log_msg, '\n');
+			if (end_log_msg)
+				*end_log_msg = '\0';
 			skip_prefix(name, "refs/heads/", &name);
 			append_one_rev(name);
+			reflog_msg[ref_name_cnt - 1] = xstrfmt("(%s) (current) %s", show_date(timestamp, tz, DATE_MODE(RELATIVE)), (!log_msg || !*log_msg) ? "(none)" : log_msg);
+			free(log_msg);
 		}
 	}
 
