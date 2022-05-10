@@ -3110,7 +3110,9 @@ class P4Sync(Command, P4UserMap):
                     'rev': record['headRev'],
                     'type': record['headType']})
 
-    def commit(self, details, files, branch, parent = "", allow_empty=False):
+    # Commit a p4 change to git, unless it should be ignored.
+    # Returns True if the change was committed to git, or False if it was ignored.
+    def maybeCommit(self, details, files, branch, parent = "", allow_empty=False):
         epoch = details["time"]
         author = details["user"]
         jobs = self.extractJobsFromCommit(details)
@@ -3133,7 +3135,7 @@ class P4Sync(Command, P4UserMap):
         if not files and not allow_empty:
             print('Ignoring revision {0} as it would produce an empty commit.'
                 .format(details['change']))
-            return
+            return False
 
         self.gitStream.write("commit %s\n" % branch)
         self.gitStream.write("mark :%s\n" % details["change"])
@@ -3199,6 +3201,7 @@ class P4Sync(Command, P4UserMap):
                 if not self.silent:
                     print("Tag %s does not match with change %s: file count is different."
                            % (labelDetails["label"], change))
+        return True
 
     # Build a dictionary of changelists and labels, for "detect-labels" option.
     def getLabels(self):
@@ -3533,22 +3536,22 @@ class P4Sync(Command, P4UserMap):
                             tempBranch = "%s/%d" % (self.tempBranchLocation, change)
                             if self.verbose:
                                 print("Creating temporary branch: " + tempBranch)
-                            self.commit(description, filesForCommit, tempBranch)
+                            self.maybeCommit(description, filesForCommit, tempBranch)
                             self.tempBranches.append(tempBranch)
                             self.checkpoint()
                             blob = self.searchParent(parent, branch, tempBranch)
                         if blob:
-                            self.commit(description, filesForCommit, branch, blob)
+                            self.maybeCommit(description, filesForCommit, branch, blob)
                         else:
                             if self.verbose:
                                 print("Parent of %s not found. Committing into head of %s" % (branch, parent))
-                            self.commit(description, filesForCommit, branch, parent)
+                            self.maybeCommit(description, filesForCommit, branch, parent)
                 else:
                     files = self.extractFilesFromCommit(description)
-                    self.commit(description, files, self.branch,
-                                self.initialParent)
-                    # only needed once, to connect to the previous commit
-                    self.initialParent = ""
+                    if self.maybeCommit(description, files, self.branch,
+                                        self.initialParent):
+                        # only needed once, to connect to the previous commit
+                        self.initialParent = ""
             except IOError:
                 print(self.gitError.read())
                 sys.exit(1)
@@ -3612,7 +3615,7 @@ class P4Sync(Command, P4UserMap):
 
         self.updateOptionDict(details)
         try:
-            self.commit(details, self.extractFilesFromCommit(details), self.branch)
+            self.maybeCommit(details, self.extractFilesFromCommit(details), self.branch)
         except IOError as err:
             print("IO error with git fast-import. Is your git version recent enough?")
             print("IO error details: {}".format(err))
@@ -4123,8 +4126,8 @@ class P4Unshelve(Command):
 
             parent_files.append(f)
 
-        sync.commit(parent_description, parent_files, branch_name,
-                parent=origin, allow_empty=True)
+        sync.maybeCommit(parent_description, parent_files, branch_name,
+                         parent=origin, allow_empty=True)
         print("created parent commit for {0} based on {1} in {2}".format(
             change, self.origin, branch_name))
 
@@ -4165,7 +4168,7 @@ class P4Unshelve(Command):
         description = p4_describe(change, True)
         files = sync.extractFilesFromCommit(description, True, change)
 
-        sync.commit(description, files, branch_name, "")
+        sync.maybeCommit(description, files, branch_name, "")
         sync.closeStreams()
 
         print("unshelved changelist {0} into {1}".format(change, branch_name))

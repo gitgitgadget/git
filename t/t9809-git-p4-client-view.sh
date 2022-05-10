@@ -147,6 +147,43 @@ test_expect_success 'later mapping takes precedence (partial repo)' '
 	git_verify $files
 '
 
+# after a sync/clone of a partial client view, if the very next p4 change is outside
+# the view and thus ignored, the a subsequent sync will fail to connect to its parent:
+#     "fast-import failed: warning: Not updating refs/remotes/p4/master
+#      (new tip x does not contain y)"
+test_expect_success 'partial sync bug with ignored change' '
+	client_view "//depot/dir1/... //client/..." &&
+	files="file11 file12" &&
+	client_verify $files &&
+	test_when_finished cleanup_git &&
+	git p4 clone --use-client-spec --dest="$git" //depot &&
+	cli2="$TRASH_DIRECTORY/cli2" &&
+	mkdir -p "$cli2" &&
+	test_when_finished "p4 client -f -d client2 && rm -rf \"$cli2\"" &&
+	(
+		cd "$cli2" &&
+		P4CLIENT=client2 &&
+		cli="$cli2" &&
+		client_view "//depot/... //client2/..." &&
+		p4 sync &&
+		p4 open dir2/file21 &&
+		echo dir2/file21 update >dir2/file21 &&
+		p4 submit -d "update dir2/file21"
+	) &&
+	(
+		cd "$cli" &&
+		p4 sync &&
+		p4 open file11 &&
+		echo file11 update >file11 &&
+		p4 submit -d "update file11"
+	) &&
+	(
+		cd "$git" &&
+		git p4 sync --use-client-spec
+	) &&
+	git_verify $files
+'
+
 # Reading the view backwards,
 #   dir2 goes to cli12
 #   dir1 cannot go to cli12 since it was filled by dir2
