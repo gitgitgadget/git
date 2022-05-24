@@ -5,8 +5,8 @@ Normally you can just do "make" followed by "make install", and that
 will install the git programs in your own ~/bin/ directory.  If you want
 to do a global install, you can do
 
-	$ make prefix=/usr all doc info ;# as yourself
-	# make prefix=/usr install install-doc install-html install-info ;# as root
+	$ make prefix=/usr all doc info ; $ as yourself
+	# make prefix=/usr install install-doc install-html install-info ; # as root
 
 (or prefix=/usr/local, of course).  Just like any program suite
 that uses $prefix, the built results have some paths encoded,
@@ -20,10 +20,10 @@ config.mak file.
 Alternatively you can use autoconf generated ./configure script to
 set up install paths (via config.mak.autogen), so you can write instead
 
-	$ make configure ;# as yourself
-	$ ./configure --prefix=/usr ;# as yourself
-	$ make all doc ;# as yourself
-	# make install install-doc install-html;# as root
+	$ make configure ; $ as yourself
+	$ ./configure --prefix=/usr ; $ as yourself
+	$ make all doc ; $ as yourself
+	# make install install-doc install-html; # as root
 
 If you're willing to trade off (much) longer build time for a later
 faster git you can also do a profile feedback build with
