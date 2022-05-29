@@ -268,7 +268,7 @@ static int bisect_write(const char *state, const char *rev,
 	} else if (one_of(state, terms->term_good, "skip", NULL)) {
 		strbuf_addf(&tag, "refs/bisect/%s-%s", state, rev);
 	} else {
-		res = error(_("Bad bisect_write argument: %s"), state);
+		res = error(_("bad '%s' argument: '%s'"), "bisect_write", state);
 		goto finish;
 	}
 

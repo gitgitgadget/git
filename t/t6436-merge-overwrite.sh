@@ -166,7 +166,7 @@ test_expect_success 'will not be confused by symlink in leading path' '
 
 cat >expect <<\EOF
 error: Untracked working tree file 'c0.c' would be overwritten by merge.
-fatal: read-tree failed
+fatal: the command 'read-tree' failed
 EOF
 
 test_expect_success 'will not overwrite untracked file on unborn branch' '

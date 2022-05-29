@@ -1293,7 +1293,7 @@ static int push_dav(int nr_spec, const char **specs)
 		strvec_push(&child.args, specs[i]);
 
 	if (run_command(&child))
-		die(_("git-http-push failed"));
+		die(_("the command '%s' failed"), "git-http-push");
 	return 0;
 }
 

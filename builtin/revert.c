@@ -238,7 +238,7 @@ int cmd_revert(int argc, const char **argv, const char *prefix)
 	sequencer_init_config(&opts);
 	res = run_sequencer(argc, argv, &opts);
 	if (res < 0)
-		die(_("revert failed"));
+		die(_("the command '%s' failed"), "revert");
 	return res;
 }
 
@@ -251,6 +251,6 @@ int cmd_cherry_pick(int argc, const char **argv, const char *prefix)
 	sequencer_init_config(&opts);
 	res = run_sequencer(argc, argv, &opts);
 	if (res < 0)
-		die(_("cherry-pick failed"));
+		die(_("the command '%s' failed"), "cherry-pick");
 	return res;
 }

@@ -451,7 +451,7 @@ void handle_ignore_submodules_arg(struct diff_options *diffopt,
 	else if (!strcmp(arg, "dirty"))
 		diffopt->flags.ignore_dirty_submodules = 1;
 	else if (strcmp(arg, "none"))
-		die(_("bad --ignore-submodules argument: %s"), arg);
+		die(_("bad '%s' argument: '%s'"), "--ignore-submodules", arg);
 	/*
 	 * Please update _git_status() in git-completion.bash when you
 	 * add new options

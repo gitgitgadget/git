@@ -36,7 +36,7 @@ int option_parse_push_signed(const struct option *opt,
 		*(int *)(opt->value) = SEND_PACK_PUSH_CERT_IF_ASKED;
 		return 0;
 	}
-	die("bad %s argument: %s", opt->long_name, arg);
+	die("bad '%s' argument: '%s'", opt->long_name, arg);
 }
 
 static void feed_object(const struct object_id *oid, FILE *fh, int negative)

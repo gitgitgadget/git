@@ -24,7 +24,7 @@ static int option_parse_type(const struct option *opt, const char *arg,
 	else if (!strcmp(arg, "ulong"))
 		*cmdmode = ENV_HELPER_TYPE_ULONG;
 	else
-		die(_("unrecognized --type argument, %s"), arg);
+		die(_("bad '%s' argument: '%s'"), "--type", arg);
 
 	return 0;
 }

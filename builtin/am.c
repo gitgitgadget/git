@@ -586,7 +586,7 @@ static int is_mail(FILE *fp)
 	int ret = 1;
 
 	if (fseek(fp, 0L, SEEK_SET))
-		die_errno(_("fseek failed"));
+		die_errno(_("the function '%s' failed"), "fseek");
 
 	if (regcomp(&regex, header_regex, REG_NOSUB | REG_EXTENDED))
 		die("invalid pattern: %s", header_regex);

@@ -193,7 +193,7 @@ test_expect_success 'check advice when we move HEAD by committing' '
 	error: there is nothing to skip
 	hint: have you committed already?
 	hint: try "git cherry-pick --continue"
-	fatal: cherry-pick failed
+	fatal: the command '\''cherry-pick'\'' failed
 	EOF
 	test_must_fail git cherry-pick base..yetanotherpick &&
 	echo c >foo &&
@@ -208,7 +208,7 @@ test_expect_success 'selectively advise --skip while launching another sequence'
 	cat >expect <<-EOF &&
 	error: cherry-pick is already in progress
 	hint: try "git cherry-pick (--continue | --skip | --abort | --quit)"
-	fatal: cherry-pick failed
+	fatal: the command '\''cherry-pick'\'' failed
 	EOF
 	test_must_fail git cherry-pick picked..yetanotherpick &&
 	test_must_fail git cherry-pick picked..yetanotherpick 2>advice &&
@@ -216,7 +216,7 @@ test_expect_success 'selectively advise --skip while launching another sequence'
 	cat >expect <<-EOF &&
 	error: cherry-pick is already in progress
 	hint: try "git cherry-pick (--continue | --abort | --quit)"
-	fatal: cherry-pick failed
+	fatal: the command '\''cherry-pick'\'' failed
 	EOF
 	git reset --merge &&
 	test_must_fail git cherry-pick picked..yetanotherpick 2>advice &&
@@ -227,7 +227,7 @@ test_expect_success 'allow skipping commit but not abort for a new history' '
 	pristine_detach initial &&
 	cat >expect <<-EOF &&
 	error: cannot abort from a branch yet to be born
-	fatal: cherry-pick failed
+	fatal: the command '\''cherry-pick'\'' failed
 	EOF
 	git checkout --orphan new_disconnected &&
 	git reset --hard &&

@@ -501,7 +501,7 @@ cleanup:
 static int cmd_list(int argc, const char **argv)
 {
 	if (argc != 1)
-		die(_("`scalar list` does not take arguments"));
+		die(_("the '%s' command does not take arguments"), "scalar list");
 
 	if (run_git("config", "--global", "--get-all", "scalar.repo", NULL) < 0)
 		return -1;

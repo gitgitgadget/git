@@ -292,7 +292,7 @@ static int parse_fetch_recurse(const char *opt, const char *arg,
 		 * git-completion.bash when you add new options.
 		 */
 		if (die_on_error)
-			die("bad %s argument: %s", opt, arg);
+			die("bad '%s' argument: '%s'", opt, arg);
 		else
 			return RECURSE_SUBMODULES_ERROR;
 	}
@@ -342,7 +342,7 @@ static int parse_update_recurse(const char *opt, const char *arg,
 		return RECURSE_SUBMODULES_OFF;
 	default:
 		if (die_on_error)
-			die("bad %s argument: %s", opt, arg);
+			die("bad '%s' argument: '%s'", opt, arg);
 		return RECURSE_SUBMODULES_ERROR;
 	}
 }
@@ -359,7 +359,7 @@ static int parse_push_recurse(const char *opt, const char *arg,
 	case 1:
 		/* There's no simple "on" value when pushing */
 		if (die_on_error)
-			die("bad %s argument: %s", opt, arg);
+			die("bad '%s' argument: '%s'", opt, arg);
 		else
 			return RECURSE_SUBMODULES_ERROR;
 	case 0:
@@ -376,7 +376,7 @@ static int parse_push_recurse(const char *opt, const char *arg,
 		 * git-completion.bash when you add new modes.
 		 */
 		else if (die_on_error)
-			die("bad %s argument: %s", opt, arg);
+			die("bad '%s' argument: '%s'", opt, arg);
 		else
 			return RECURSE_SUBMODULES_ERROR;
 	}

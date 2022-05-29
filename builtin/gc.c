@@ -749,7 +749,7 @@ static int maintenance_opt_schedule(const struct option *opt, const char *arg,
 	*priority = parse_schedule(arg);
 
 	if (!*priority)
-		die(_("unrecognized --schedule argument '%s'"), arg);
+		die(_("bad '%s' argument: '%s'"), "--schedule", arg);
 
 	return 0;
 }
@@ -1103,7 +1103,7 @@ static int multi_pack_index_expire(struct maintenance_run_opts *opts)
 		strvec_push(&child.args, "--no-progress");
 
 	if (run_command(&child))
-		return error(_("'git multi-pack-index expire' failed"));
+		return error(_("the command '%s' failed"), "git multi-pack-index expire");
 
 	return 0;
 }
@@ -1162,7 +1162,7 @@ static int multi_pack_index_repack(struct maintenance_run_opts *opts)
 				  (uintmax_t)get_auto_pack_size());
 
 	if (run_command(&child))
-		return error(_("'git multi-pack-index repack' failed"));
+		return error(_("the command '%s' failed"), "git multi-pack-index repack");
 
 	return 0;
 }
@@ -2392,7 +2392,7 @@ static int maintenance_opt_scheduler(const struct option *opt, const char *arg,
 
 	*scheduler = parse_scheduler(arg);
 	if (*scheduler == SCHEDULER_INVALID)
-		return error(_("unrecognized --scheduler argument '%s'"), arg);
+		return error(_("bad '%s' argument: '%s'"), "--scheduler", arg);
 	return 0;
 }
 

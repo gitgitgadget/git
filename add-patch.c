@@ -1181,7 +1181,7 @@ static int run_apply_check(struct add_p_state *s,
 			    "apply", "--check", NULL);
 	strvec_pushv(&cp.args, s->mode->apply_check_args);
 	if (pipe_command(&cp, s->buf.buf, s->buf.len, NULL, 0, NULL, 0))
-		return error(_("'git apply --cached' failed"));
+		return error(_("the command '%s' failed"), "git apply --cached");
 
 	return 0;
 }
@@ -1683,7 +1683,7 @@ soft_increment:
 			strvec_pushv(&cp.args, s->mode->apply_args);
 			if (pipe_command(&cp, s->buf.buf, s->buf.len,
 					 NULL, 0, NULL, 0))
-				error(_("'git apply' failed"));
+				error(_("the command '%s' failed"), "git apply");
 		}
 		if (repo_read_index(s->s.r) >= 0)
 			repo_refresh_and_write_index(s->s.r, REFRESH_QUIET, 0,

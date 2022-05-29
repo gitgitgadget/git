@@ -2215,7 +2215,7 @@ test_expect_success 'unset type specifiers may be reset to conflicting ones' '
 
 test_expect_success '--type rejects unknown specifiers' '
 	test_must_fail git config --type=nonsense section.foo 2>error &&
-	test_i18ngrep "unrecognized --type argument" error
+	test_i18ngrep "bad '\''--type'\'' argument" error
 '
 
 test_expect_success '--replace-all does not invent newlines' '

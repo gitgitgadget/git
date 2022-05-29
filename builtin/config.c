@@ -106,7 +106,7 @@ static int option_parse_type(const struct option *opt, const char *arg,
 		else if (!strcmp(arg, "color"))
 			new_type = TYPE_COLOR;
 		else
-			die(_("unrecognized --type argument, %s"), arg);
+			die(_("bad '%s' argument: '%s'"), "--type", arg);
 	}
 
 	to_type = opt->value;

@@ -325,7 +325,7 @@ static int save_state(struct object_id *stash)
 	close(cp.out);
 
 	if (finish_command(&cp) || len < 0)
-		die(_("stash failed"));
+		die(_("the command '%s' failed"), "stash");
 	else if (!len)		/* no changes */
 		goto out;
 	strbuf_setlen(&buffer, buffer.len-1);
@@ -352,7 +352,7 @@ static void read_empty(const struct object_id *oid, int verbose)
 	args[i] = NULL;
 
 	if (run_command_v_opt(args, RUN_GIT_CMD))
-		die(_("read-tree failed"));
+		die(_("the command '%s' failed"), "read-tree");
 }
 
 static void reset_hard(const struct object_id *oid, int verbose)
@@ -369,7 +369,7 @@ static void reset_hard(const struct object_id *oid, int verbose)
 	args[i] = NULL;
 
 	if (run_command_v_opt(args, RUN_GIT_CMD))
-		die(_("read-tree failed"));
+		die(_("the command '%s' failed"), "read-tree");
 }
 
 static void restore_state(const struct object_id *head,

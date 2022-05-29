@@ -317,7 +317,7 @@ static int objecttype_atom_parser(struct ref_format *format, struct used_atom *a
 				  const char *arg, struct strbuf *err)
 {
 	if (arg)
-		return strbuf_addf_ret(err, -1, _("%%(objecttype) does not take arguments"));
+		return strbuf_addf_ret(err, -1, _("the atom '%s' does not take arguments"), "%(objecttype)");
 	if (*atom->name == '*')
 		oi_deref.info.typep = &oi_deref.type;
 	else
@@ -349,7 +349,7 @@ static int deltabase_atom_parser(struct ref_format *format, struct used_atom *at
 				 const char *arg, struct strbuf *err)
 {
 	if (arg)
-		return strbuf_addf_ret(err, -1, _("%%(deltabase) does not take arguments"));
+		return strbuf_addf_ret(err, -1, _("the atom '%s' does not take arguments"), "%(deltabase)");
 	if (*atom->name == '*')
 		oi_deref.info.delta_base_oid = &oi_deref.delta_base_oid;
 	else
@@ -361,7 +361,7 @@ static int body_atom_parser(struct ref_format *format, struct used_atom *atom,
 			    const char *arg, struct strbuf *err)
 {
 	if (arg)
-		return strbuf_addf_ret(err, -1, _("%%(body) does not take arguments"));
+		return strbuf_addf_ret(err, -1, _("the atom '%s' does not take arguments"), "%(body)");
 	atom->u.contents.option = C_BODY_DEP;
 	return 0;
 }
@@ -565,7 +565,7 @@ static int rest_atom_parser(struct ref_format *format, struct used_atom *atom,
 			    const char *arg, struct strbuf *err)
 {
 	if (arg)
-		return strbuf_addf_ret(err, -1, _("%%(rest) does not take arguments"));
+		return strbuf_addf_ret(err, -1, _("the atom '%s' does not take arguments"), "%(rest)");
 	format->use_rest = 1;
 	return 0;
 }

@@ -401,7 +401,7 @@ test_expect_success '--auto and --schedule incompatible' '
 
 test_expect_success 'invalid --schedule value' '
 	test_must_fail git maintenance run --schedule=annually 2>err &&
-	test_i18ngrep "unrecognized --schedule" err
+	test_i18ngrep "bad '\''--schedule'\''" err
 '
 
 test_expect_success '--schedule inheritance weekly -> daily -> hourly' '
@@ -529,7 +529,7 @@ test_expect_success !MINGW 'register and unregister with regex metacharacters' '
 
 test_expect_success 'start --scheduler=<scheduler>' '
 	test_expect_code 129 git maintenance start --scheduler=foo 2>err &&
-	test_i18ngrep "unrecognized --scheduler argument" err &&
+	test_i18ngrep "bad '\''--scheduler'\'' argument" err &&
 
 	test_expect_code 129 git maintenance start --no-scheduler 2>err &&
 	test_i18ngrep "unknown option" err &&

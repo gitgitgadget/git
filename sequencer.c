@@ -848,17 +848,17 @@ int read_author_script(const char *path, char **name, char **email, char **date,
 	for (i = 0; i < kv.nr; i++) {
 		if (!strcmp(kv.items[i].string, "GIT_AUTHOR_NAME")) {
 			if (name_i != -2)
-				name_i = error(_("'GIT_AUTHOR_NAME' already given"));
+				name_i = error(_("'%s' already given"), "GIT_AUTHOR_NAME");
 			else
 				name_i = i;
 		} else if (!strcmp(kv.items[i].string, "GIT_AUTHOR_EMAIL")) {
 			if (email_i != -2)
-				email_i = error(_("'GIT_AUTHOR_EMAIL' already given"));
+				email_i = error(_("'%s' already given"), "GIT_AUTHOR_EMAIL");
 			else
 				email_i = i;
 		} else if (!strcmp(kv.items[i].string, "GIT_AUTHOR_DATE")) {
 			if (date_i != -2)
-				date_i = error(_("'GIT_AUTHOR_DATE' already given"));
+				date_i = error(_("'%s' already given"), "GIT_AUTHOR_DATE");
 			else
 				date_i = i;
 		} else {
@@ -867,11 +867,11 @@ int read_author_script(const char *path, char **name, char **email, char **date,
 		}
 	}
 	if (name_i == -2)
-		error(_("missing 'GIT_AUTHOR_NAME'"));
+		error(_("missing '%s'"), "GIT_AUTHOR_NAME");
 	if (email_i == -2)
-		error(_("missing 'GIT_AUTHOR_EMAIL'"));
+		error(_("missing '%s'"), "GIT_AUTHOR_EMAIL");
 	if (date_i == -2)
-		error(_("missing 'GIT_AUTHOR_DATE'"));
+		error(_("missing '%s'"), "GIT_AUTHOR_DATE");
 	if (date_i < 0 || email_i < 0 || date_i < 0 || err)
 		goto finish;
 	*name = kv.items[name_i].util;

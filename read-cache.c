@@ -1748,8 +1748,8 @@ static unsigned int get_index_format_default(struct repository *r)
 		if (r->settings.index_version >= 0)
 			version = r->settings.index_version;
 		if (version < INDEX_FORMAT_LB || INDEX_FORMAT_UB < version) {
-			warning(_("index.version set, but the value is invalid.\n"
-				  "Using version %i"), INDEX_FORMAT_DEFAULT);
+			warning(_("'%s' set, but the value is invalid.\n"
+				  "Using version %i"), "index.version", INDEX_FORMAT_DEFAULT);
 			return INDEX_FORMAT_DEFAULT;
 		}
 		return version;
@@ -1758,8 +1758,8 @@ static unsigned int get_index_format_default(struct repository *r)
 	version = strtoul(envversion, &endp, 10);
 	if (*endp ||
 	    version < INDEX_FORMAT_LB || INDEX_FORMAT_UB < version) {
-		warning(_("GIT_INDEX_VERSION set, but the value is invalid.\n"
-			  "Using version %i"), INDEX_FORMAT_DEFAULT);
+		warning(_("'%s' set, but the value is invalid.\n"
+			  "Using version %i"), "GIT_INDEX_VERSION", INDEX_FORMAT_DEFAULT);
 		version = INDEX_FORMAT_DEFAULT;
 	}
 	return version;

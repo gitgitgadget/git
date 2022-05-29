@@ -994,7 +994,7 @@ static int get_pack(struct fetch_pack_args *args,
 			args->check_self_contained_and_connected &&
 			ret == 0;
 	else
-		die(_("%s failed"), cmd_name);
+		die(_("the command '%s' failed"), cmd_name);
 	if (use_sideband && finish_async(&demux))
 		die(_("error in sideband demultiplexer"));
 
@@ -1053,78 +1053,78 @@ static struct ref *do_fetch_pack(struct fetch_pack_args *args,
 		advertise_sid = 0;
 
 	if (server_supports("shallow"))
-		print_verbose(args, _("Server supports %s"), "shallow");
+		print_verbose(args, _("Server supports '%s'"), "shallow");
 	else if (args->depth > 0 || is_repository_shallow(r))
 		die(_("Server does not support shallow clients"));
 	if (args->depth > 0 || args->deepen_since || args->deepen_not)
 		args->deepen = 1;
 	if (server_supports("multi_ack_detailed")) {
-		print_verbose(args, _("Server supports %s"), "multi_ack_detailed");
+		print_verbose(args, _("Server supports '%s'"), "multi_ack_detailed");
 		multi_ack = 2;
 		if (server_supports("no-done")) {
-			print_verbose(args, _("Server supports %s"), "no-done");
+			print_verbose(args, _("Server supports '%s'"), "no-done");
 			if (args->stateless_rpc)
 				no_done = 1;
 		}
 	}
 	else if (server_supports("multi_ack")) {
-		print_verbose(args, _("Server supports %s"), "multi_ack");
+		print_verbose(args, _("Server supports '%s'"), "multi_ack");
 		multi_ack = 1;
 	}
 	if (server_supports("side-band-64k")) {
-		print_verbose(args, _("Server supports %s"), "side-band-64k");
+		print_verbose(args, _("Server supports '%s'"), "side-band-64k");
 		use_sideband = 2;
 	}
 	else if (server_supports("side-band")) {
-		print_verbose(args, _("Server supports %s"), "side-band");
+		print_verbose(args, _("Server supports '%s'"), "side-band");
 		use_sideband = 1;
 	}
 	if (server_supports("allow-tip-sha1-in-want")) {
-		print_verbose(args, _("Server supports %s"), "allow-tip-sha1-in-want");
+		print_verbose(args, _("Server supports '%s'"), "allow-tip-sha1-in-want");
 		allow_unadvertised_object_request |= ALLOW_TIP_SHA1;
 	}
 	if (server_supports("allow-reachable-sha1-in-want")) {
-		print_verbose(args, _("Server supports %s"), "allow-reachable-sha1-in-want");
+		print_verbose(args, _("Server supports '%s'"), "allow-reachable-sha1-in-want");
 		allow_unadvertised_object_request |= ALLOW_REACHABLE_SHA1;
 	}
 	if (server_supports("thin-pack"))
-		print_verbose(args, _("Server supports %s"), "thin-pack");
+		print_verbose(args, _("Server supports '%s'"), "thin-pack");
 	else
 		args->use_thin_pack = 0;
 	if (server_supports("no-progress"))
-		print_verbose(args, _("Server supports %s"), "no-progress");
+		print_verbose(args, _("Server supports '%s'"), "no-progress");
 	else
 		args->no_progress = 0;
 	if (server_supports("include-tag"))
-		print_verbose(args, _("Server supports %s"), "include-tag");
+		print_verbose(args, _("Server supports '%s'"), "include-tag");
 	else
 		args->include_tag = 0;
 	if (server_supports("ofs-delta"))
-		print_verbose(args, _("Server supports %s"), "ofs-delta");
+		print_verbose(args, _("Server supports '%s'"), "ofs-delta");
 	else
 		prefer_ofs_delta = 0;
 
 	if (server_supports("filter")) {
 		server_supports_filtering = 1;
-		print_verbose(args, _("Server supports %s"), "filter");
+		print_verbose(args, _("Server supports '%s'"), "filter");
 	} else if (args->filter_options.choice) {
 		warning("filtering not recognized by server, ignoring");
 	}
 
 	if (server_supports("deepen-since")) {
-		print_verbose(args, _("Server supports %s"), "deepen-since");
+		print_verbose(args, _("Server supports '%s'"), "deepen-since");
 		deepen_since_ok = 1;
 	} else if (args->deepen_since)
-		die(_("Server does not support --shallow-since"));
+		die(_("Server does not support '%s'"), "--shallow-since");
 	if (server_supports("deepen-not")) {
-		print_verbose(args, _("Server supports %s"), "deepen-not");
+		print_verbose(args, _("Server supports '%s'"), "deepen-not");
 		deepen_not_ok = 1;
 	} else if (args->deepen_not)
-		die(_("Server does not support --shallow-exclude"));
+		die(_("Server does not support '%s'"), "--shallow-exclude");
 	if (server_supports("deepen-relative"))
-		print_verbose(args, _("Server supports %s"), "deepen-relative");
+		print_verbose(args, _("Server supports '%s'"), "deepen-relative");
 	else if (args->deepen_relative)
-		die(_("Server does not support --deepen"));
+		die(_("Server does not support '%s'"), "--deepen");
 	if (!server_supports_hash(the_hash_algo->name, NULL))
 		die(_("Server does not support this repository's object format"));
 

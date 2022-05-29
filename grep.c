@@ -43,7 +43,7 @@ static int parse_pattern_type_arg(const char *opt, const char *arg)
 		return GREP_PATTERN_TYPE_FIXED;
 	else if (!strcmp(arg, "perl"))
 		return GREP_PATTERN_TYPE_PCRE;
-	die("bad %s argument: %s", opt, arg);
+	die("bad '%s' argument: '%s'", opt, arg);
 }
 
 define_list_config_array_extra(color_grep_slots, {"match"});
