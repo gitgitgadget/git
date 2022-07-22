@@ -1416,7 +1416,7 @@ int transport_push(struct repository *r,
 	if (porcelain && !push_ret)
 		puts("Done");
 	else if (!quiet && !ret && !transport_refs_pushed(remote_refs))
-		fprintf(stderr, "Everything up-to-date\n");
+		fprintf(stderr, "Everything up to date.\n");
 
 done:
 	free_refs(local_refs);
