@@ -241,6 +241,10 @@ static int delete_branches(int argc, const char **argv, int force, int kinds,
 			die(_("Couldn't look up commit object for HEAD"));
 	}
 
+	if ((argc == 1) && !strcmp(argv[0], "-")) {
+		argv[0] = "@{-1}";
+	}
+
 	for (i = 0; i < argc; i++, strbuf_reset(&bname)) {
 		char *target = NULL;
 		int flags = 0;
