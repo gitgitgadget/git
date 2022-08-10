@@ -1616,6 +1616,20 @@ int repo_interpret_branch_name(struct repository *r,
 	if (!namelen)
 		namelen = strlen(name);
 
+	if (namelen == 1 && *name == '-') {
+		struct grab_nth_branch_switch_cbdata cb = {
+			.remaining = 1,
+			.sb = buf
+		};
+
+		if (refs_for_each_reflog_ent_reverse(get_main_ref_store(r),
+						     "HEAD",
+						     grab_nth_branch_switch,
+						     &cb) <= 0)
+			return -1;
+		return namelen;
+	}
+
 	if (!options->allowed || (options->allowed & INTERPRET_BRANCH_LOCAL)) {
 		len = interpret_nth_prior_checkout(r, name, namelen, buf);
 		if (!len) {

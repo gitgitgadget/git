@@ -67,6 +67,22 @@ test_expect_success 'delete branch via @{-1}' '
 	expect_deleted previous-del
 '
 
+test_expect_success 'delete branch via -' '
+	git checkout -b previous-del &&
+	git checkout - &&
+
+	git branch -d - &&
+	expect_deleted previous-del &&
+
+	git branch previous-del2 &&
+	git checkout -b previous-del &&
+	git checkout - &&
+
+	git branch -d previous-del2 - &&
+	expect_deleted previous-del &&
+	expect_deleted previous-del2
+'
+
 test_expect_success 'delete branch via local @{upstream}' '
 	git branch local-del &&
 	git branch --set-upstream-to=local-del &&
