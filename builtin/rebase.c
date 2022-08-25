@@ -1568,8 +1568,6 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 			options.upstream_name = argv[0];
 			argc--;
 			argv++;
-			if (!strcmp(options.upstream_name, "-"))
-				options.upstream_name = "@{-1}";
 		}
 		options.upstream =
 			lookup_commit_reference_by_name(options.upstream_name);
