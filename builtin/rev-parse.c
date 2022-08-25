@@ -736,7 +736,7 @@ int cmd_rev_parse(int argc, const char **argv, const char *prefix)
 			continue;
 		}
 
-		if (!seen_end_of_options && *arg == '-') {
+		if (!seen_end_of_options && *arg == '-' && !strchr(".^~:@", arg[1])) {
 			if (!strcmp(arg, "--git-path")) {
 				if (!argv[i + 1])
 					die(_("--git-path requires an argument"));
