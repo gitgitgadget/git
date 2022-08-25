@@ -145,6 +145,19 @@ test_expect_success "check-ref-format --branch @{-1}" '
 	refname2=$(git check-ref-format --branch @{-2}) &&
 	test "$refname2" = main'
 
+test_expect_success "check-ref-format --branch -" '
+	T=$(git write-tree) &&
+	sha1=$(echo A | git commit-tree $T) &&
+	git update-ref refs/heads/main $sha1 &&
+	git update-ref refs/remotes/origin/main $sha1 &&
+	git checkout main &&
+	git checkout origin/main &&
+	git checkout main &&
+	refname=$(git check-ref-format --branch -) &&
+	test "$refname" = "$sha1" &&
+	refname2=$(git check-ref-format --branch @{-2}) &&
+	test "$refname2" = main'
+
 test_expect_success 'check-ref-format --branch -nain' '
 	test_must_fail git check-ref-format --branch -nain >actual &&
 	test_must_be_empty actual
@@ -169,6 +182,12 @@ test_expect_success 'check-ref-format --branch from subdir' '
 
 test_expect_success 'check-ref-format --branch @{-1} from non-repo' '
 	nongit test_must_fail git check-ref-format --branch @{-1} >actual &&
+	test_must_be_empty actual
+'
+
+test_expect_success 'check-ref-format --branch - from non-repo' '
+	nongit test_must_fail git check-ref-format --branch - &&
+	nongit test_must_fail git check-ref-format --branch - >actual &&
 	test_must_be_empty actual
 '
 

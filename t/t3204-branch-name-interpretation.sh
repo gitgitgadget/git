@@ -37,6 +37,16 @@ test_expect_success 'update branch via @{-1}' '
 	expect_branch previous two
 '
 
+test_expect_success 'update branch via -' '
+	git branch previous_ one &&
+
+	git checkout previous_ &&
+	git checkout main &&
+
+	git branch -f - two &&
+	expect_branch previous_ two
+'
+
 test_expect_success 'update branch via local @{upstream}' '
 	git branch local one &&
 	git branch --set-upstream-to=local &&
@@ -65,6 +75,22 @@ test_expect_success 'delete branch via @{-1}' '
 
 	git branch -D @{-1} &&
 	expect_deleted previous-del
+'
+
+test_expect_success 'delete branch via -' '
+	git checkout -b previous-del &&
+	git checkout - &&
+
+	git branch -d - &&
+	expect_deleted previous-del &&
+
+	git branch previous-del2 &&
+	git checkout -b previous-del &&
+	git checkout - &&
+
+	git branch -d previous-del2 - &&
+	expect_deleted previous-del &&
+	expect_deleted previous-del2
 '
 
 test_expect_success 'delete branch via local @{upstream}' '
@@ -106,6 +132,17 @@ test_expect_success 'disallow deleting remote branch via @{-1}' '
 	test_must_fail git branch -r -D @{-1} &&
 	expect_branch refs/remotes/origin/previous one &&
 	expect_branch refs/heads/origin/previous two
+'
+
+test_expect_success 'disallow deleting remote branch via -' '
+	git update-ref refs/remotes/origin/previous_ one &&
+
+	git checkout -b origin/previous_ two &&
+	git checkout main &&
+
+	test_must_fail git branch -r -D - &&
+	expect_branch refs/remotes/origin/previous_ one &&
+	expect_branch refs/heads/origin/previous_ two
 '
 
 # The thing we are testing here is that "@" is the real branch refs/heads/@,

@@ -40,8 +40,16 @@ test_expect_success '@{-1} works' '
 	test_cmp_rev side @{-1}
 '
 
+test_expect_success '- works' '
+	test_cmp_rev side -
+'
+
 test_expect_success '@{-1}~2 works' '
 	test_cmp_rev side~2 @{-1}~2
+'
+
+test_expect_success '-~2 works' '
+	test_cmp_rev side~2 -~2
 '
 
 test_expect_success '@{-1}^2 works' '

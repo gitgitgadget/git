@@ -292,4 +292,17 @@ test_expect_success '--set-upstream-to @{-1}' '
 	test_cmp expect actual
 '
 
+test_expect_success '--set-upstream-to -' '
+	git checkout follower &&
+	git checkout from-topic_2 &&
+	git config branch.from-topic_2.merge > expect2 &&
+	git branch --set-upstream-to - from-main &&
+	git config branch.from-main.merge > actual &&
+	git config branch.from-topic_2.merge > actual2 &&
+	git branch --set-upstream-to follower from-main &&
+	git config branch.from-main.merge > expect &&
+	test_cmp expect2 actual2 &&
+	test_cmp expect actual
+'
+
 test_done

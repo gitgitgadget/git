@@ -76,6 +76,12 @@ test_expect_success 'switch to the last' '
 	test_cmp_symbolic_HEAD_ref branch2
 '
 
+test_expect_success 'switch to the last' '
+	more_switches &&
+	git checkout - &&
+	test_cmp_symbolic_HEAD_ref branch2
+'
+
 test_expect_success 'switch to second from the last' '
 	more_switches &&
 	git checkout @{-2} &&

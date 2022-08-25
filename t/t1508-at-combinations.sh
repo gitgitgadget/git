@@ -60,8 +60,11 @@ check "HEAD@{1}" commit new-one
 check "@{now}" commit new-two
 check "HEAD@{now}" commit new-two
 check "@{-1}" ref refs/heads/old-branch
+check "-" ref refs/heads/old-branch
 check "@{-1}@{0}" commit old-two
+check "-@{0}" commit old-two
 check "@{-1}@{1}" commit old-one
+check "-@{1}" commit old-one
 check "@{u}" ref refs/heads/upstream-branch
 check "HEAD@{u}" ref refs/heads/upstream-branch
 check "@{u}@{1}" commit upstream-one

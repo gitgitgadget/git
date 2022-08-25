@@ -17,6 +17,14 @@ test_expect_success 'branch -d @{-1}' '
 	test_must_fail git rev-parse --verify refs/heads/junk
 '
 
+test_expect_success 'branch -d -' '
+	git checkout -b junk &&
+	git checkout - &&
+	test "$(git symbolic-ref HEAD)" = refs/heads/main &&
+	git branch -d - &&
+	test_must_fail git rev-parse --verify refs/heads/junk
+'
+
 test_expect_success 'branch -d @{-12} when there is not enough switches yet' '
 	git reflog expire --expire=now &&
 	git checkout -b junk2 &&
@@ -40,12 +48,37 @@ test_expect_success 'merge @{-1}' '
 	git cat-file commit HEAD | grep "Merge branch '\''other'\''"
 '
 
+test_expect_success 'merge -' '
+	git checkout A &&
+	test_commit B- &&
+	git checkout A &&
+	test_commit C- &&
+	test_commit D- &&
+	git branch -f main B- &&
+	git branch -f other &&
+	git checkout other &&
+	git checkout main &&
+	git merge - &&
+	git cat-file commit HEAD | grep "Merge branch '\''other'\''"
+'
+
 test_expect_success 'merge @{-1}~1' '
 	git checkout main &&
 	git reset --hard B &&
 	git checkout other &&
 	git checkout main &&
 	git merge @{-1}~1 &&
+	git cat-file commit HEAD >actual &&
+	grep "Merge branch '\''other'\''" actual
+'
+
+test_expect_success 'merge -~1' '
+	git checkout main &&
+	git reset --hard B &&
+	git checkout other &&
+	git checkout main &&
+	git merge -~1 &&
+	git cat-file commit HEAD &&
 	git cat-file commit HEAD >actual &&
 	grep "Merge branch '\''other'\''" actual
 '
@@ -65,6 +98,16 @@ test_expect_success 'log -g @{-1}' '
 	git checkout -b new_branch &&
 	echo "last_branch@{0}" >expect &&
 	git log -g --format=%gd @{-1} >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'log -g -' '
+	git checkout -b last_branch_ &&
+	git checkout -b new_branch_ &&
+	echo "last_branch_@{0}" &&
+	echo "last_branch_@{0}" >expect &&
+	git log -g --format=%gd - &&
+	git log -g --format=%gd - >actual &&
 	test_cmp expect actual
 '
 
