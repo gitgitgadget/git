@@ -1421,7 +1421,7 @@ static int interpret_nth_prior_checkout(struct repository *r,
 	const char *brace;
 	char *num_end;
 
-        if (name[0] == '-' && strchr(".^~:@", name[1])) {
+        if (name[0] == '-' && !check_refchar_component_special(name[1])) {
                 nth = 1;
                 brace = name;
         } else {

@@ -533,6 +533,11 @@ int for_each_reflog(each_ref_fn fn, void *cb_data);
 int check_refname_format(const char *refname, int flags);
 
 /*
+ * Return 0 if refchar is a special ref component char
+ */
+int check_refchar_component_special(char refchar);
+
+/*
  * Apply the rules from check_refname_format, but mutate the result until it
  * is acceptable, and place the result in "out".
  */
