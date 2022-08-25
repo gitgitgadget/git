@@ -589,9 +589,6 @@ static int add(int ac, const char **av, const char *prefix)
 	path = prefix_filename(prefix, av[0]);
 	branch = ac < 2 ? "HEAD" : av[1];
 
-	if (!strcmp(branch, "-"))
-		branch = "@{-1}";
-
 	if (new_branch_force) {
 		struct strbuf symref = STRBUF_INIT;
 
