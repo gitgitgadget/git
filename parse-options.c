@@ -740,7 +740,7 @@ enum parse_opt_result parse_options_step(struct parse_opt_ctx_t *ctx,
 		    ctx->argc != ctx->total)
 			break;
 
-		if (*arg != '-' || !arg[1]) {
+		if (*arg != '-' || strchr(".^~:@", arg[1])) {
 			if (parse_nodash_opt(ctx, arg, options) == 0)
 				continue;
 			if (ctx->flags & PARSE_OPT_STOP_AT_NON_OPTION)

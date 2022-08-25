@@ -198,6 +198,11 @@ static int check_or_sanitize_refname(const char *refname, int flags,
 		else
 			return -1;
 	}
+
+	if (component_len == 1 && refname[0] == '-') {
+                return -1;
+	}
+
 	if (!(flags & REFNAME_ALLOW_ONELEVEL) && component_count < 2)
 		return -1; /* Refname has only one component. */
 	return 0;

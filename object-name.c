@@ -934,6 +934,9 @@ static int get_oid_basic(struct repository *r, const char *str, int len,
 		}
 	}
 
+        if ((len == 1) && (str[0] == '-'))
+                nth_prior = 1;
+
 	/* Accept only unambiguous ref paths. */
 	if (len && ambiguous_path(str, len))
 		return -1;
@@ -1420,18 +1423,24 @@ static int interpret_nth_prior_checkout(struct repository *r,
 	const char *brace;
 	char *num_end;
 
-	if (namelen < 4)
-		return -1;
-	if (name[0] != '@' || name[1] != '{' || name[2] != '-')
-		return -1;
-	brace = memchr(name, '}', namelen);
-	if (!brace)
-		return -1;
-	nth = strtol(name + 3, &num_end, 10);
-	if (num_end != brace)
-		return -1;
-	if (nth <= 0)
-		return -1;
+        if (name[0] == '-' && strchr(".^~:@", name[1])) {
+                nth = 1;
+                brace = name;
+        } else {
+                if (namelen < 4)
+                        return -1;
+                if (name[0] != '@' || name[1] != '{' || name[2] != '-')
+                        return -1;
+                brace = memchr(name, '}', namelen);
+                if (!brace)
+                        return -1;
+                nth = strtol(name + 3, &num_end, 10);
+                if (num_end != brace)
+                        return -1;
+                if (nth <= 0)
+                        return -1;
+        }
+
 	cb.remaining = nth;
 	cb.sb = buf;
 
@@ -1684,7 +1693,7 @@ int strbuf_check_branch_ref(struct strbuf *sb, const char *name)
 	 */
 	strbuf_splice(sb, 0, 0, "refs/heads/", 11);
 
-	if (*name == '-' ||
+	if ((*name == '-' && name[1]) ||
 	    !strcmp(sb->buf, "refs/heads/HEAD"))
 		return -1;
 

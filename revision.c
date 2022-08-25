@@ -2802,7 +2802,7 @@ int setup_revisions(int argc, const char **argv, struct rev_info *revs, struct s
 		revarg_opt |= REVARG_CANNOT_BE_FILENAME;
 	for (left = i = 1; i < argc; i++) {
 		const char *arg = argv[i];
-		if (!seen_end_of_options && *arg == '-') {
+		if (!seen_end_of_options && *arg == '-' && !strchr(".^~:@", arg[1])) {
 			int opts;
 
 			opts = handle_revision_pseudo_opt(
