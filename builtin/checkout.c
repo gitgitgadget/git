@@ -1316,9 +1316,6 @@ static int parse_branchname_arg(int argc, const char **argv,
 		die(_("only one reference expected, %d given."), dash_dash_pos);
 	opts->count_checkout_paths = !opts->quiet && !has_dash_dash;
 
-	if (!strcmp(arg, "-"))
-		arg = "@{-1}";
-
 	if (get_oid_mb(arg, rev)) {
 		/*
 		 * Either case (3) or (4), with <something> not being
