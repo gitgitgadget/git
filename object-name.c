@@ -1001,9 +1001,9 @@ static int get_oid_basic(struct repository *r, const char *str, int len,
 		if (read_ref_at(get_main_ref_store(r),
 				real_ref, flags, at_time, nth, oid, NULL,
 				&co_time, &co_tz, &co_cnt)) {
-                        if (!skip_prefix(real_ref, "refs/heads/", &str))
-                                str = "HEAD";
-                        len = strlen(str);
+			if (!skip_prefix(real_ref, "refs/heads/", &str))
+				str = "HEAD";
+			len = strlen(str);
 			if (at_time) {
 				if (!(flags & GET_OID_QUIETLY)) {
 					warning(_("log for '%.*s' only goes back to %s"),
@@ -1421,23 +1421,23 @@ static int interpret_nth_prior_checkout(struct repository *r,
 	const char *brace;
 	char *num_end;
 
-        if (name[0] == '-' && !check_refchar_component_special(name[1])) {
-                nth = 1;
-                brace = name;
-        } else {
-                if (namelen < 4)
-                        return -1;
-                if (name[0] != '@' || name[1] != '{' || name[2] != '-')
-                        return -1;
-                brace = memchr(name, '}', namelen);
-                if (!brace)
-                        return -1;
-                nth = strtol(name + 3, &num_end, 10);
-                if (num_end != brace)
-                        return -1;
-                if (nth <= 0)
-                        return -1;
-        }
+	if (name[0] == '-' && !check_refchar_component_special(name[1])) {
+		nth = 1;
+		brace = name;
+	} else {
+		if (namelen < 4)
+			return -1;
+		if (name[0] != '@' || name[1] != '{' || name[2] != '-')
+			return -1;
+		brace = memchr(name, '}', namelen);
+		if (!brace)
+			return -1;
+		nth = strtol(name + 3, &num_end, 10);
+		if (num_end != brace)
+			return -1;
+		if (nth <= 0)
+			return -1;
+	}
 
 	cb.remaining = nth;
 	cb.sb = buf;

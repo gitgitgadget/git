@@ -161,28 +161,28 @@ out:
 
 int check_refchar_component_special(char refchar)
 {
-        int ch = refchar & 255;
-        unsigned char disp = refname_disposition[ch];
+	int ch = refchar & 255;
+	unsigned char disp = refname_disposition[ch];
 
-        switch (disp) {
-        case 1:
-                /* end of component */
-                return 0;
-        case 2:
-                /* ".." components */
-                return 0;
-        case 3:
-                /* "@{" components */
-                return 0;
-        case 4:
-                /* forbidden char */
-                return 0;
-        case 5:
-                /* pattern */
-                return 0;
-        }
+	switch (disp) {
+	case 1:
+		/* end of component */
+		return 0;
+	case 2:
+		/* ".." components */
+		return 0;
+	case 3:
+		/* "@{" components */
+		return 0;
+	case 4:
+		/* forbidden char */
+		return 0;
+	case 5:
+		/* pattern */
+		return 0;
+	}
 
-        return -1;
+	return -1;
 }
 
 static int check_or_sanitize_refname(const char *refname, int flags,
