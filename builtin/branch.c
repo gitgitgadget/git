@@ -614,7 +614,7 @@ static int edit_branch_description(const char *branch_name)
 	strbuf_reset(&buf);
 	if (launch_editor(edit_description(), &buf, NULL)) {
 		strbuf_release(&buf);
-		return -1;
+		return 1;
 	}
 	strbuf_stripspace(&buf, 1);
 
@@ -791,6 +791,7 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 	} else if (edit_description) {
 		const char *branch_name;
 		struct strbuf branch_ref = STRBUF_INIT;
+		int ret = 0;
 
 		if (!argc) {
 			if (filter.detached)
@@ -803,19 +804,17 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 
 		strbuf_addf(&branch_ref, "refs/heads/%s", branch_name);
 		if (!ref_exists(branch_ref.buf)) {
-			strbuf_release(&branch_ref);
-
 			if (!argc)
-				return error(_("No commit on branch '%s' yet."),
+				ret = error(_("No commit on branch '%s' yet."),
 					     branch_name);
 			else
-				return error(_("No branch named '%s'."),
+				ret = error(_("No branch named '%s'."),
 					     branch_name);
-		}
-		strbuf_release(&branch_ref);
+		} else
+			ret = edit_branch_description(branch_name);
 
-		if (edit_branch_description(branch_name))
-			return 1;
+		strbuf_release(&branch_ref);
+		return ret;
 	} else if (copy) {
 		if (!argc)
 			die(_("branch name required"));
