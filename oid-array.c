@@ -28,6 +28,18 @@ static const struct object_id *oid_access(size_t index, const void *table)
 	return &array[index];
 }
 
+int oid_array_readonly_contains(const struct oid_array *array,
+				const struct object_id* oid) {
+	int i;
+
+	if (array->sorted)
+		return oid_pos(oid, array->oid, array->nr, oid_access) >= 0;
+	for (i = 0; i < array->nr; i++)
+		if (oideq(&array->oid[i], oid))
+			return 1;
+	return 0;
+}
+
 int oid_array_lookup(struct oid_array *array, const struct object_id *oid)
 {
 	oid_array_sort(array);

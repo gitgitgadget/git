@@ -59,6 +59,13 @@ struct oid_array {
 #define OID_ARRAY_INIT { 0 }
 
 /**
+ * Sees whether an array contains an object ID. Optimized for when the array is
+ * sorted but does not require the array to be sorted.
+ */
+int oid_array_readonly_contains(const struct oid_array *array,
+				const struct object_id* oid);
+
+/**
  * Add an item to the set. The object ID will be placed at the end of the array
  * (but note that some operations below may lose this ordering).
  */
