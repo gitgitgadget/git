@@ -31,6 +31,8 @@ const char *list_object_filter_config_name(enum list_objects_filter_choice c)
 		return "sparse:oid";
 	case LOFC_OBJECT_TYPE:
 		return "object:type";
+	case LOFC_DEPTH:
+		return "depth";
 	case LOFC_COMBINE:
 		return "combine";
 	case LOFC__COUNT:
@@ -38,6 +40,23 @@ const char *list_object_filter_config_name(enum list_objects_filter_choice c)
 		break;
 	}
 	BUG("list_object_filter_config_name: invalid argument '%d'", c);
+}
+
+int list_objects_filter_choice_exists(
+	struct list_objects_filter_options *filter_options,
+	enum list_objects_filter_choice choice) {
+	int i;
+
+	if (!filter_options)
+		return 0;
+
+	if (filter_options->choice == choice)
+		return 1;
+	if (filter_options->sub_nr)
+		for (i = 0; i < filter_options->sub_nr; i++)
+			if (filter_options->sub[i].choice == choice)
+				return 1;
+	return 0;
 }
 
 int gently_parse_list_objects_filter(
@@ -95,6 +114,17 @@ int gently_parse_list_objects_filter(
 		filter_options->object_type = type;
 		filter_options->choice = LOFC_OBJECT_TYPE;
 
+		return 0;
+
+	} else if (skip_prefix(arg, "depth:", &v0)) {
+		if (!git_parse_ulong(v0, &filter_options->depth)) {
+			strbuf_addstr(errbuf, _("expected 'depth:<depth>'"));
+			return 1;
+		} else if (atoi(v0) <= 0) {
+			strbuf_addf(errbuf, _("depth %s is not a positive number"), v0);
+			return 1;
+		}
+		filter_options->choice = LOFC_DEPTH;
 		return 0;
 
 	} else if (skip_prefix(arg, "combine:", &v0)) {

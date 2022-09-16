@@ -16,6 +16,14 @@ void mark_edges_uninteresting(struct rev_info *revs,
 struct oidset;
 struct list_objects_filter_options;
 
+struct traversal_context {
+	struct rev_info *revs;
+	show_object_fn show_object;
+	show_commit_fn show_commit;
+	void *show_data;
+	struct filter *filter;
+};
+
 void traverse_commit_list_filtered(
 	struct rev_info *revs,
 	show_commit_fn show_commit,

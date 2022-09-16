@@ -954,6 +954,12 @@ Note that the form '--filter=sparse:path=<path>' that wants to read
 from an arbitrary path on the filesystem has been dropped for security
 reasons.
 +
+The form '--filter=depth:<depth>' omits all commits whose depth is
+>= <depth>, it just look like '--depth=<depth>' in git clone, but it
+will not be treated as shallow-clone, so if you want to see some deeper
+commits, you can freely do some git commands e.g. git diff to refetch
+missing git objects without 'git fetch --unshallow'.
++
 Multiple '--filter=' flags can be specified to combine filters. Only
 objects which are accepted by every filter are included.
 +

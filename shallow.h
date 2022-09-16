@@ -34,6 +34,8 @@ void rollback_shallow_file(struct repository *r, struct shallow_lock *lk);
 
 struct commit_list *get_shallow_commits(struct object_array *heads,
 					int depth, int shallow_flag, int not_shallow_flag);
+struct commit_list *get_shallow_commits_by_commits(
+		struct commit_list *commits, int depth, int shallow_flag, int not_shallow_flag);
 struct commit_list *get_shallow_commits_by_rev_list(
 		int ac, const char **av, int shallow_flag, int not_shallow_flag);
 int write_shallow_commits(struct strbuf *out, int use_pack_protocol,

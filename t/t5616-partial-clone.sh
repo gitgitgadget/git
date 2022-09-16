@@ -458,6 +458,122 @@ test_expect_success 'partial clone with unresolvable sparse filter fails cleanly
 	test_i18ngrep "unable to parse sparse filter data in" err
 '
 
+test_expect_success 'setup src repo for depth filter' '
+	git init depth-src &&
+	git -C depth-src config --local uploadpack.allowfilter 1 &&
+	git -C depth-src config --local uploadpack.allowanysha1inwant 1 &&
+	test_commit -C depth-src one &&
+	test_commit -C depth-src two &&
+	test_commit -C depth-src three &&
+	git -C depth-src rm -rf two.t &&
+	git -C depth-src commit -m four
+'
+
+test_expect_success 'partial clone with depth=1 filter succeeds' '
+	rm -rf dst.git &&
+	git clone --no-local --bare \
+		  --filter=depth:1 \
+		  depth-src dst.git &&
+	(
+		cd dst.git &&
+		git cat-file --batch-check --batch-all-objects >object &&
+		grep blob object >blob_count &&
+		test_line_count = 2 blob_count &&
+		grep tree object >tree_count &&
+		test_line_count = 1 tree_count &&
+		grep commit object >commit_count &&
+		test_line_count = 1 commit_count
+	)
+'
+
+test_expect_success 'partial clone with depth=2 filter succeeds' '
+	rm -rf dst.git &&
+	git clone --no-local --bare \
+		  --filter=depth:2 \
+		  depth-src dst.git &&
+	(
+		cd dst.git &&
+		git cat-file --batch-check --batch-all-objects >object &&
+		grep blob object >blob_count &&
+		test_line_count = 3 blob_count &&
+		grep tree object >tree_count &&
+		test_line_count = 2 tree_count &&
+		grep commit object >commit_count &&
+		test_line_count = 2 commit_count
+	)
+'
+
+test_expect_success 'partial clone depth filter combine with blob:none filter succeeds' '
+	rm -rf dst.git &&
+	git clone --no-local --bare \
+		  --filter="combine:depth:1+blob:none" \
+		  depth-src dst.git &&
+	(
+		cd dst.git &&
+		git cat-file --batch-check --batch-all-objects >object &&
+		! grep blob object &&
+		grep tree object >tree_count &&
+		test_line_count = 1 tree_count &&
+		grep commit object >commit_count &&
+		test_line_count = 1 commit_count
+	)
+'
+
+test_expect_success 'refetch other commits after partial clone with depth filter' '
+	rm -rf dst.git &&
+	git clone --no-local --bare \
+		  --filter=depth:1 \
+		  depth-src dst.git &&
+	(
+		cd dst.git &&
+		git cat-file --batch-check --batch-all-objects >object &&
+		grep blob object >blob_count &&
+		test_line_count = 2 blob_count &&
+		grep tree object >tree_count &&
+		test_line_count = 1 tree_count &&
+		grep commit object >commit_count &&
+		test_line_count = 1 commit_count &&
+		# git log will trigger refetch commits
+		git log &&
+		git cat-file --batch-check --batch-all-objects >object &&
+		grep blob object >blob_count &&
+		test_line_count = 2 blob_count &&
+		grep tree object >tree_count &&
+		test_line_count = 4 tree_count &&
+		grep commit object >commit_count &&
+		test_line_count = 4 commit_count &&
+		# git diff will trigger refetch blobs
+		git diff HEAD^ HEAD &&
+		git cat-file --batch-check --batch-all-objects >object &&
+		grep blob object >blob_count &&
+		test_line_count = 3 blob_count &&
+		grep tree object >tree_count &&
+		test_line_count = 4 tree_count &&
+		grep commit object >commit_count &&
+		test_line_count = 4 commit_count
+	)
+'
+
+test_expect_success 'partial clone with depth filter with shallow clone failed' "
+	rm -rf dst.git &&
+	test_must_fail git clone --no-local --bare \
+		  --filter=depth:1 --depth=1 \
+		  depth-src dst.git 2>err &&
+	test_i18ngrep \"fatal: --filter='depth:<depth>' cannot be used with --depth, --shallow-since, --shallow-exclude, --shallow-submodules\" err &&
+	test_must_fail git clone --no-local --bare \
+		  --filter=depth:1  --shallow-since '300000000 +0700' \
+		  depth-src dst.git 2>err &&
+	test_i18ngrep \"fatal: --filter='depth:<depth>' cannot be used with --depth, --shallow-since, --shallow-exclude, --shallow-submodules\" err &&
+	test_must_fail git clone --no-local --bare \
+		  --filter=depth:1 --shallow-exclude one.t \
+		  depth-src dst.git 2>err &&
+	test_i18ngrep \"fatal: --filter='depth:<depth>' cannot be used with --depth, --shallow-since, --shallow-exclude, --shallow-submodules\" err &&
+	test_must_fail git clone --no-local --bare \
+		  --filter=depth:1 --shallow-submodules \
+		  depth-src dst.git 2>err &&
+	test_i18ngrep \"fatal: --filter='depth:<depth>' cannot be used with --depth, --shallow-since, --shallow-exclude, --shallow-submodules\" err
+"
+
 setup_triangle () {
 	rm -rf big-blob.txt server client promisor-remote &&
 

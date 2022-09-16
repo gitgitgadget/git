@@ -122,6 +122,22 @@ static void free_depth_in_slab(int **ptr)
 {
 	FREE_AND_NULL(*ptr);
 }
+
+struct commit_list *get_shallow_commits_by_commits(struct commit_list *commits, int depth,
+		int shallow_flag, int not_shallow_flag) {
+	struct object_array array = OBJECT_ARRAY_INIT;
+	struct commit_list *result = NULL;
+	struct commit_list *commit = commits;
+
+	while (commit) {
+		add_object_array(&commit->item->object, NULL, &array);
+		commit = commit->next;
+	}
+	result = get_shallow_commits(&array, depth, shallow_flag, not_shallow_flag);
+	object_array_clear(&array);
+	return result;
+}
+
 struct commit_list *get_shallow_commits(struct object_array *heads, int depth,
 		int shallow_flag, int not_shallow_flag)
 {

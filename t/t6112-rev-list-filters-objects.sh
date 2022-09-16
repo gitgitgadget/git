@@ -417,6 +417,20 @@ test_expect_success 'verify tree:3 includes everything expected' '
 	test_line_count = 10 actual
 '
 
+test_expect_success 'verify depth:1 includes tip commit expected' '
+	git -C r3 rev-list --objects --filter=depth:1 --no-object-names HEAD >objects &&
+	cat objects | git -C r3 cat-file --batch-check="%(objecttype)" >types &&
+	grep commit types >actual &&
+	test_line_count = 1 actual
+'
+
+test_expect_success 'verify depth:2 includes two commits expected' '
+	git -C r3 rev-list --objects --filter=depth:2 --no-object-names HEAD >objects &&
+	cat objects | git -C r3 cat-file --batch-check="%(objecttype)" >types &&
+	grep commit types >actual &&
+	test_line_count = 2 actual
+'
+
 test_expect_success 'combine:... for a simple combination' '
 	git -C r3 rev-list --objects --filter=combine:tree:2+blob:none HEAD \
 		>actual &&

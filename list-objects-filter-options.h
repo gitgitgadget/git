@@ -15,6 +15,7 @@ enum list_objects_filter_choice {
 	LOFC_TREE_DEPTH,
 	LOFC_SPARSE_OID,
 	LOFC_OBJECT_TYPE,
+	LOFC_DEPTH,
 	LOFC_COMBINE,
 	LOFC__COUNT /* must be last */
 };
@@ -54,6 +55,7 @@ struct list_objects_filter_options {
 	 */
 
 	char *sparse_oid_name;
+	unsigned long depth;
 	unsigned long blob_limit_value;
 	unsigned long tree_exclude_depth;
 	enum object_type object_type;
@@ -68,6 +70,10 @@ struct list_objects_filter_options {
 	 * END choice-specific parsed values.
 	 */
 };
+
+int list_objects_filter_choice_exists(
+	struct list_objects_filter_options *filter_options,
+	enum list_objects_filter_choice choice);
 
 /*
  * Parse value of the argument to the "filter" keyword.

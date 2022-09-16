@@ -920,7 +920,8 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 		usage_msg_opt(_("You must specify a repository to clone."),
 			builtin_clone_usage, builtin_clone_options);
 
-	if (option_depth || option_since || option_not.nr)
+	if (option_depth || option_since || option_not.nr ||
+	    list_objects_filter_choice_exists(&filter_options, LOFC_DEPTH))
 		deepen = 1;
 	if (option_single_branch == -1)
 		option_single_branch = deepen ? 1 : 0;
@@ -1119,6 +1120,13 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 	if (option_filter_submodules > 0 && !option_recurse_submodules.nr)
 		die(_("the option '%s' requires '%s'"),
 		    "--also-filter-submodules", "--recurse-submodules");
+
+	if ((option_depth || option_since || option_not.nr ||
+	     option_shallow_submodules) &&
+	     list_objects_filter_choice_exists(&filter_options, LOFC_DEPTH))
+		die(_("--filter='depth:<depth>' cannot be used with "
+		      "--depth, --shallow-since, --shallow-exclude, "
+		      "--shallow-submodules"));
 
 	/*
 	 * apply the remote name provided by --origin only after this second

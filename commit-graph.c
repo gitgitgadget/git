@@ -820,6 +820,7 @@ static int fill_commit_in_graph(struct repository *r,
 	struct commit_list **pptr;
 	const unsigned char *commit_data;
 	uint32_t lex_index;
+	struct commit_graft *graft;
 
 	while (pos < g->num_commits_in_base)
 		g = g->base_graph;
@@ -833,30 +834,53 @@ static int fill_commit_in_graph(struct repository *r,
 
 	set_commit_tree(item, NULL);
 
+	graft = lookup_commit_graft(r, &item->object.oid);
+	if (graft)
+		r->parsed_objects->substituted_parent = 1;
+
 	pptr = &item->parents;
 
 	edge_value = get_be32(commit_data + g->hash_len);
 	if (edge_value == GRAPH_PARENT_NONE)
 		return 1;
-	pptr = insert_parent_or_die(r, g, edge_value, pptr);
+	if (!(graft && (graft->nr_parent < 0 || grafts_replace_parents)))
+		pptr = insert_parent_or_die(r, g, edge_value, pptr);
 
 	edge_value = get_be32(commit_data + g->hash_len + 4);
 	if (edge_value == GRAPH_PARENT_NONE)
 		return 1;
 	if (!(edge_value & GRAPH_EXTRA_EDGES_NEEDED)) {
-		pptr = insert_parent_or_die(r, g, edge_value, pptr);
-		return 1;
+		if (!(graft && (graft->nr_parent < 0 || grafts_replace_parents))) {
+			pptr = insert_parent_or_die(r, g, edge_value, pptr);
+			return 1;
+		}
 	}
 
 	parent_data_ptr = (uint32_t*)(g->chunk_extra_edges +
 			  4 * (uint64_t)(edge_value & GRAPH_EDGE_LAST_MASK));
 	do {
 		edge_value = get_be32(parent_data_ptr);
-		pptr = insert_parent_or_die(r, g,
-					    edge_value & GRAPH_EDGE_LAST_MASK,
-					    pptr);
+		if (!(graft && (graft->nr_parent < 0 || grafts_replace_parents))) {
+			pptr = insert_parent_or_die(r, g,
+						    edge_value & GRAPH_EDGE_LAST_MASK,
+						    pptr);
+		}
 		parent_data_ptr++;
 	} while (!(edge_value & GRAPH_LAST_EDGE));
+
+	if (graft) {
+		int i;
+		struct commit *new_parent;
+		for (i = 0; i < graft->nr_parent; i++) {
+			new_parent = lookup_commit(r,
+						   &graft->parent[i]);
+			if (!new_parent)
+				die(_("bad graft parent %s in commit %s"),
+				       oid_to_hex(&graft->parent[i]),
+				       oid_to_hex(&item->object.oid));
+			pptr = &commit_list_insert(new_parent, pptr)->next;
+		}
+	}
 
 	return 1;
 }

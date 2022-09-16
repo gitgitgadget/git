@@ -13,6 +13,8 @@
 #include "oidmap.h"
 #include "oidset.h"
 #include "object-store.h"
+#include "shallow.h"
+#include "upload-pack.h"
 
 /* Remember to update object flag allocation in object.h */
 /*
@@ -69,6 +71,69 @@ struct filter {
 	struct oidset *omits;
 };
 
+static enum list_objects_filter_result filter_noop(
+	struct repository *r,
+	enum list_objects_filter_situation filter_situation,
+	struct object *obj,
+	const char *pathname,
+	const char *filename,
+	struct oidset *omits,
+	void *filter_data_)
+{
+	switch (filter_situation) {
+	default:
+		BUG("unknown filter_situation: %d", filter_situation);
+
+	case LOFS_TAG:
+		assert(obj->type == OBJ_TAG);
+		/* always include all tag objects */
+		return LOFR_MARK_SEEN | LOFR_DO_SHOW;
+
+	case LOFS_COMMIT:
+		assert(obj->type == OBJ_COMMIT);
+		/* always include all commit objects */
+		return LOFR_MARK_SEEN | LOFR_DO_SHOW;
+
+	case LOFS_BEGIN_TREE:
+		assert(obj->type == OBJ_TREE);
+		/* always include all tree objects */
+		return LOFR_MARK_SEEN | LOFR_DO_SHOW;
+
+	case LOFS_END_TREE:
+		assert(obj->type == OBJ_TREE);
+		return LOFR_ZERO;
+
+	case LOFS_BLOB:
+		assert(obj->type == OBJ_BLOB);
+		/* always include all blob objects */
+		return LOFR_MARK_SEEN | LOFR_DO_SHOW;
+	}
+}
+
+static void noop_free(void *filter_data) {
+	/* noop */
+}
+
+static void filter_depth__init(
+	struct traversal_context *ctx,
+	struct list_objects_filter_options *filter_options,
+	struct filter *filter)
+{
+	struct commit_list *result = get_shallow_commits_by_commits(ctx->revs->commits,
+					filter_options->depth,
+					SHALLOW, NOT_SHALLOW);
+
+	while (result) {
+		register_shallow(the_repository, &result->item->object.oid);
+		result = result->next;
+	}
+	free_commit_list(result);
+
+	filter->filter_object_fn = filter_noop;
+	filter->free_fn = noop_free;
+}
+
+
 static enum list_objects_filter_result filter_blobs_none(
 	struct repository *r,
 	enum list_objects_filter_situation filter_situation,
@@ -112,6 +177,7 @@ static enum list_objects_filter_result filter_blobs_none(
 }
 
 static void filter_blobs_none__init(
+	struct traversal_context *ctx,
 	struct list_objects_filter_options *filter_options,
 	struct filter *filter)
 {
@@ -249,6 +315,7 @@ static void filter_trees_free(void *filter_data) {
 }
 
 static void filter_trees_depth__init(
+	struct traversal_context *ctx,
 	struct list_objects_filter_options *filter_options,
 	struct filter *filter)
 {
@@ -336,6 +403,7 @@ include_it:
 }
 
 static void filter_blobs_limit__init(
+	struct traversal_context *ctx,
 	struct list_objects_filter_options *filter_options,
 	struct filter *filter)
 {
@@ -519,6 +587,7 @@ static void filter_sparse_free(void *filter_data)
 }
 
 static void filter_sparse_oid__init(
+	struct traversal_context *ctx,
 	struct list_objects_filter_options *filter_options,
 	struct filter *filter)
 {
@@ -609,6 +678,7 @@ static enum list_objects_filter_result filter_object_type(
 }
 
 static void filter_object_type__init(
+	struct traversal_context *ctx,
 	struct list_objects_filter_options *filter_options,
 	struct filter *filter)
 {
@@ -734,6 +804,7 @@ static void filter_combine__finalize_omits(
 }
 
 static void filter_combine__init(
+	struct traversal_context *ctx,
 	struct list_objects_filter_options *filter_options,
 	struct filter* filter)
 {
@@ -744,7 +815,7 @@ static void filter_combine__init(
 	CALLOC_ARRAY(d->sub, d->nr);
 	for (sub = 0; sub < d->nr; sub++)
 		d->sub[sub].filter = list_objects_filter__init(
-			filter->omits ? &d->sub[sub].omits : NULL,
+			ctx, filter->omits ? &d->sub[sub].omits : NULL,
 			&filter_options->sub[sub]);
 
 	filter->filter_data = d;
@@ -754,6 +825,7 @@ static void filter_combine__init(
 }
 
 typedef void (*filter_init_fn)(
+	struct traversal_context *ctx,
 	struct list_objects_filter_options *filter_options,
 	struct filter *filter);
 
@@ -767,10 +839,12 @@ static filter_init_fn s_filters[] = {
 	filter_trees_depth__init,
 	filter_sparse_oid__init,
 	filter_object_type__init,
+	filter_depth__init,
 	filter_combine__init,
 };
 
 struct filter *list_objects_filter__init(
+	struct traversal_context *ctx,
 	struct oidset *omitted,
 	struct list_objects_filter_options *filter_options)
 {
@@ -792,7 +866,7 @@ struct filter *list_objects_filter__init(
 
 	CALLOC_ARRAY(filter, 1);
 	filter->omits = omitted;
-	init_fn(filter_options, filter);
+	init_fn(ctx, filter_options, filter);
 	return filter;
 }
 

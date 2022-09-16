@@ -13,14 +13,6 @@
 #include "object-store.h"
 #include "trace.h"
 
-struct traversal_context {
-	struct rev_info *revs;
-	show_object_fn show_object;
-	show_commit_fn show_commit;
-	void *show_data;
-	struct filter *filter;
-};
-
 static void show_commit(struct traversal_context *ctx,
 			struct commit *commit)
 {
@@ -448,7 +440,7 @@ void traverse_commit_list_filtered(
 	};
 
 	if (revs->filter.choice)
-		ctx.filter = list_objects_filter__init(omitted, &revs->filter);
+		ctx.filter = list_objects_filter__init(&ctx, omitted, &revs->filter);
 
 	do_traverse(&ctx);
 

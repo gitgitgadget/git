@@ -5,6 +5,7 @@ struct list_objects_filter_options;
 struct object;
 struct oidset;
 struct repository;
+struct traversal_context;
 
 /*
  * During list-object traversal we allow certain objects to be
@@ -72,6 +73,7 @@ struct filter;
  * filter *`.
  */
 struct filter *list_objects_filter__init(
+	struct traversal_context *ctx,
 	struct oidset *omitted,
 	struct list_objects_filter_options *filter_options);
 
