@@ -338,7 +338,7 @@ int cmd_send_pack(int argc, const char **argv, const char *prefix)
 	}
 
 	if (!ret && !transport_refs_pushed(remote_refs))
-		fprintf(stderr, "Everything up-to-date\n");
+		fprintf(stderr, "Everything up to date.\n");
 
 	return ret;
 }
