@@ -1,3 +1,4 @@
+#include "cache.h"
 #include "fsm-ipc-unix.h"
 #include "fsmonitor-ipc.h"
 
