@@ -531,6 +531,28 @@ test_expect_success 'diff --restrict' '
 	 modules/a | 0
 	 3 files changed, 1 deletion(-)
 	EOF
+	test_cmp expect full-checkout-out &&
+	run_on_all git diff --staged --stat &&
+	cat >expect <<-EOF &&
+	 deep/a    | 1 -
+	 deep/b    | 0
+	 modules/a | 0
+	 3 files changed, 1 deletion(-)
+	EOF
+	test_cmp expect sparse-checkout-out &&
+	cat >expect <<-EOF &&
+	 deep/a    | 1 -
+	 deep/b    | 0
+	 modules/a | 0
+	 3 files changed, 1 deletion(-)
+	EOF
+	test_cmp expect sparse-index-out &&
+	cat >expect <<-EOF &&
+	 deep/a    | 1 -
+	 deep/b    | 0
+	 modules/a | 0
+	 3 files changed, 1 deletion(-)
+	EOF
 	test_cmp expect full-checkout-out
 '
 
