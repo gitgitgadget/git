@@ -310,6 +310,29 @@ struct untracked_cache;
 struct progress;
 struct pattern_list;
 
+enum sparse_index_mode {
+	/*
+	 * There are no sparse directories in the index at all.
+	 *
+	 * Repositories that don't use cone-mode sparse-checkout will
+	 * always have their indexes in this mode.
+	 */
+	INDEX_EXPANDED = 0,
+
+	/*
+	 * The index has already been collapsed to sparse directories
+	 * whereever possible.
+	 */
+	INDEX_COLLAPSED,
+
+	/*
+	 * The sparse directories that exist are outside the
+	 * sparse-checkout boundary, but it is possible that some file
+	 * entries could collapse to sparse directory entries.
+	 */
+	INDEX_PARTIALLY_SPARSE,
+};
+
 struct index_state {
 	struct cache_entry **cache;
 	unsigned int version;
@@ -323,14 +346,8 @@ struct index_state {
 		 drop_cache_tree : 1,
 		 updated_workdir : 1,
 		 updated_skipworktree : 1,
-		 fsmonitor_has_run_once : 1,
-
-		 /*
-		  * sparse_index == 1 when sparse-directory
-		  * entries exist. Requires sparse-checkout
-		  * in cone mode.
-		  */
-		 sparse_index : 1;
+		 fsmonitor_has_run_once : 1;
+	enum sparse_index_mode sparse_index;
 	struct hashmap name_hash;
 	struct hashmap dir_hash;
 	struct object_id oid;
@@ -458,8 +475,7 @@ extern struct index_state the_index;
 
 /*
  * Values in this enum (except those outside the 3 bit range) are part
- * of pack file format. See Documentation/technical/pack-format.txt
- * for more information.
+ * of pack file format. See gitformat-pack(5) for more information.
  */
 enum object_type {
 	OBJ_BAD = -1,
@@ -566,7 +582,7 @@ extern char *git_work_tree_cfg;
 int is_inside_work_tree(void);
 const char *get_git_dir(void);
 const char *get_git_common_dir(void);
-char *get_object_directory(void);
+const char *get_object_directory(void);
 char *get_index_file(void);
 char *get_graft_file(struct repository *r);
 void set_git_dir(const char *path, int make_realpath);
@@ -814,6 +830,15 @@ struct cache_entry *index_file_exists(struct index_state *istate, const char *na
 int index_name_pos(struct index_state *, const char *name, int namelen);
 
 /*
+ * Like index_name_pos, returns the position of an entry of the given name in
+ * the index if one exists, otherwise returns a negative value where the negated
+ * value minus 1 is the position where the index entry would be inserted. Unlike
+ * index_name_pos, however, a sparse index is not expanded to find an entry
+ * inside a sparse directory.
+ */
+int index_name_pos_sparse(struct index_state *, const char *name, int namelen);
+
+/*
  * Determines whether an entry with the given name exists within the
  * given index. The return value is 1 if an exact match is found, otherwise
  * it is 0. Note that, unlike index_name_pos, this function does not expand
@@ -991,7 +1016,6 @@ void reset_shared_repository(void);
  * commands that do not want replace references to be active.
  */
 extern int read_replace_refs;
-extern char *git_replace_ref_base;
 
 /*
  * These values are used to help identify parts of a repository to fsync.
@@ -1031,6 +1055,10 @@ enum fsync_component {
 			      FSYNC_COMPONENT_INDEX | \
 			      FSYNC_COMPONENT_REFERENCE)
 
+#ifndef FSYNC_COMPONENTS_PLATFORM_DEFAULT
+#define FSYNC_COMPONENTS_PLATFORM_DEFAULT FSYNC_COMPONENTS_DEFAULT
+#endif
+
 /*
  * A bitmask indicating which components of the repo should be fsynced.
  */
@@ -1040,7 +1068,8 @@ extern int use_fsync;
 
 enum fsync_method {
 	FSYNC_METHOD_FSYNC,
-	FSYNC_METHOD_WRITEOUT_ONLY
+	FSYNC_METHOD_WRITEOUT_ONLY,
+	FSYNC_METHOD_BATCH,
 };
 
 extern enum fsync_method fsync_method;
@@ -1667,6 +1696,12 @@ struct ident_split {
 int split_ident_line(struct ident_split *, const char *, int);
 
 /*
+ * Given a commit or tag object buffer and the commit or tag headers, replaces
+ * the idents in the headers with their canonical versions using the mailmap mechanism.
+ */
+void apply_mailmap_to_header(struct strbuf *, const char **, struct string_list *);
+
+/*
  * Compare split idents for equality or strict ordering. Note that we
  * compare only the ident part of the line, ignoring any timestamp.
  *
@@ -1765,6 +1800,11 @@ void write_or_die(int fd, const void *buf, size_t count);
 void fsync_or_die(int fd, const char *);
 int fsync_component(enum fsync_component component, int fd);
 void fsync_component_or_die(enum fsync_component component, int fd, const char *msg);
+
+static inline int batch_fsync_enabled(enum fsync_component component)
+{
+	return (fsync_components & component) && (fsync_method == FSYNC_METHOD_BATCH);
+}
 
 ssize_t read_in_full(int fd, void *buf, size_t count);
 ssize_t write_in_full(int fd, const void *buf, size_t count);

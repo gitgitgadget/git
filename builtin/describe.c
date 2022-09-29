@@ -63,7 +63,7 @@ static const char *prio_names[] = {
 	N_("head"), N_("lightweight"), N_("annotated"),
 };
 
-static int commit_name_neq(const void *unused_cmp_data,
+static int commit_name_neq(const void *cmp_data UNUSED,
 			   const struct hashmap_entry *eptr,
 			   const struct hashmap_entry *entry_or_key,
 			   const void *peeled)
@@ -140,7 +140,8 @@ static void add_to_known_names(const char *path,
 	}
 }
 
-static int get_name(const char *path, const struct object_id *oid, int flag, void *cb_data)
+static int get_name(const char *path, const struct object_id *oid,
+		    int flag UNUSED, void *cb_data UNUSED)
 {
 	int is_tag = 0;
 	struct object_id peeled;
@@ -517,6 +518,7 @@ static void describe_blob(struct object_id oid, struct strbuf *dst)
 
 	traverse_commit_list(&revs, process_commit, process_object, &pcd);
 	reset_revision_walk();
+	release_revisions(&revs);
 }
 
 static void describe(const char *arg, int last_one)
@@ -667,6 +669,7 @@ int cmd_describe(int argc, const char **argv, const char *prefix)
 				suffix = NULL;
 			else
 				suffix = dirty;
+			release_revisions(&revs);
 		}
 		describe("HEAD", 1);
 	} else if (dirty) {

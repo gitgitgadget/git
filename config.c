@@ -81,6 +81,17 @@ static enum config_scope current_parsing_scope;
 static int pack_compression_seen;
 static int zlib_compression_seen;
 
+/*
+ * Config that comes from trusted scopes, namely:
+ * - CONFIG_SCOPE_SYSTEM (e.g. /etc/gitconfig)
+ * - CONFIG_SCOPE_GLOBAL (e.g. $HOME/.gitconfig, $XDG_CONFIG_HOME/git)
+ * - CONFIG_SCOPE_COMMAND (e.g. "-c" option, environment variables)
+ *
+ * This is declared here for code cleanliness, but unlike the other
+ * static variables, this does not hold config parser state.
+ */
+static struct config_set protected_config;
+
 static int config_file_fgetc(struct config_source *conf)
 {
 	return getc_unlocked(conf->u.file);
@@ -351,7 +362,8 @@ static void populate_remote_urls(struct config_include_data *inc)
 	current_parsing_scope = store_scope;
 }
 
-static int forbid_remote_url(const char *var, const char *value, void *data)
+static int forbid_remote_url(const char *var, const char *value UNUSED,
+			     void *data UNUSED)
 {
 	const char *remote_name;
 	size_t remote_name_len;
@@ -1342,7 +1354,7 @@ static const struct fsync_component_name {
 
 static enum fsync_component parse_fsync_components(const char *var, const char *string)
 {
-	enum fsync_component current = FSYNC_COMPONENTS_DEFAULT;
+	enum fsync_component current = FSYNC_COMPONENTS_PLATFORM_DEFAULT;
 	enum fsync_component positive = 0, negative = 0;
 
 	while (string) {
@@ -1688,6 +1700,8 @@ static int git_default_core_config(const char *var, const char *value, void *cb)
 			fsync_method = FSYNC_METHOD_FSYNC;
 		else if (!strcmp(value, "writeout-only"))
 			fsync_method = FSYNC_METHOD_WRITEOUT_ONLY;
+		else if (!strcmp(value, "batch"))
+			fsync_method = FSYNC_METHOD_BATCH;
 		else
 			warning(_("ignoring unknown core.fsyncMethod value '%s'"), value);
 
@@ -1780,6 +1794,9 @@ static int git_default_branch_config(const char *var, const char *value)
 			return 0;
 		} else if (value && !strcmp(value, "inherit")) {
 			git_branch_track = BRANCH_TRACK_INHERIT;
+			return 0;
+		} else if (value && !strcmp(value, "simple")) {
+			git_branch_track = BRANCH_TRACK_SIMPLE;
 			return 0;
 		}
 		git_branch_track = git_config_bool(var, value);
@@ -1963,6 +1980,8 @@ int git_config_from_file_with_options(config_fn_t fn, const char *filename,
 	int ret = -1;
 	FILE *f;
 
+	if (!filename)
+		BUG("filename cannot be NULL");
 	f = fopen_or_warn(filename, "r");
 	if (f) {
 		ret = do_config_from_file(fn, CONFIG_ORIGIN_FILE, filename,
@@ -2319,10 +2338,10 @@ static int configset_add_value(struct config_set *cs, const char *key, const cha
 	return 0;
 }
 
-static int config_set_element_cmp(const void *unused_cmp_data,
+static int config_set_element_cmp(const void *cmp_data UNUSED,
 				  const struct hashmap_entry *eptr,
 				  const struct hashmap_entry *entry_or_key,
-				  const void *unused_keydata)
+				  const void *keydata UNUSED)
 {
 	const struct config_set_element *e1, *e2;
 
@@ -2371,6 +2390,11 @@ static int config_set_callback(const char *key, const char *value, void *cb)
 int git_configset_add_file(struct config_set *cs, const char *filename)
 {
 	return git_config_from_file(config_set_callback, filename, cs);
+}
+
+int git_configset_add_parameters(struct config_set *cs)
+{
+	return git_config_from_parameters(config_set_callback, cs);
 }
 
 int git_configset_get_value(struct config_set *cs, const char *key, const char **value)
@@ -2612,6 +2636,36 @@ int repo_config_get_pathname(struct repository *repo,
 	if (ret < 0)
 		git_die_config(key, NULL);
 	return ret;
+}
+
+/* Read values into protected_config. */
+static void read_protected_config(void)
+{
+	char *xdg_config = NULL, *user_config = NULL, *system_config = NULL;
+
+	git_configset_init(&protected_config);
+
+	system_config = git_system_config();
+	git_global_config(&user_config, &xdg_config);
+
+	if (system_config)
+		git_configset_add_file(&protected_config, system_config);
+	if (xdg_config)
+		git_configset_add_file(&protected_config, xdg_config);
+	if (user_config)
+		git_configset_add_file(&protected_config, user_config);
+	git_configset_add_parameters(&protected_config);
+
+	free(system_config);
+	free(xdg_config);
+	free(user_config);
+}
+
+void git_protected_config(config_fn_t fn, void *data)
+{
+	if (!protected_config.hash_initialized)
+		read_protected_config();
+	configset_iter(&protected_config, fn, data);
 }
 
 /* Functions used historically to read configuration from 'the_repository' */
@@ -3190,7 +3244,7 @@ int git_config_set_multivar_in_file_gently(const char *config_filename,
 			goto out_free;
 		}
 		/* if nothing to unset, error out */
-		if (value == NULL) {
+		if (!value) {
 			ret = CONFIG_NOTHING_SET;
 			goto out_free;
 		}
@@ -3206,7 +3260,7 @@ int git_config_set_multivar_in_file_gently(const char *config_filename,
 		int i, new_line = 0;
 		struct config_options opts;
 
-		if (value_pattern == NULL)
+		if (!value_pattern)
 			store.value_pattern = NULL;
 		else if (value_pattern == CONFIG_REGEX_NONE)
 			store.value_pattern = CONFIG_REGEX_NONE;
@@ -3346,7 +3400,7 @@ int git_config_set_multivar_in_file_gently(const char *config_filename,
 		}
 
 		/* write the pair (value == NULL means unset) */
-		if (value != NULL) {
+		if (value) {
 			if (!store.section_seen) {
 				if (write_section(fd, key, &store) < 0)
 					goto write_err_out;
@@ -3567,7 +3621,7 @@ static int git_config_copy_or_rename_section_in_file(const char *config_filename
 			offset = section_name_match(&buf[i], old_name);
 			if (offset > 0) {
 				ret++;
-				if (new_name == NULL) {
+				if (!new_name) {
 					remove = 1;
 					continue;
 				}

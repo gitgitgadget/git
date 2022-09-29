@@ -4,6 +4,7 @@
 #
 
 test_description='git svn fetching'
+
 . ./lib-git-svn.sh
 
 test_expect_success 'initialize repo' '

@@ -10,6 +10,7 @@
 #include "config.h"
 #include "packfile.h"
 #include "hook.h"
+#include "compat/nonblock.h"
 
 void child_process_init(struct child_process *child)
 {
@@ -20,7 +21,7 @@ void child_process_init(struct child_process *child)
 void child_process_clear(struct child_process *child)
 {
 	strvec_clear(&child->args);
-	strvec_clear(&child->env_array);
+	strvec_clear(&child->env);
 }
 
 struct child_to_clean {
@@ -646,7 +647,7 @@ static void trace_run_command(const struct child_process *cp)
 		sq_quote_buf_pretty(&buf, cp->dir);
 		strbuf_addch(&buf, ';');
 	}
-	trace_add_env(&buf, cp->env_array.v);
+	trace_add_env(&buf, cp->env.v);
 	if (cp->git_cmd)
 		strbuf_addstr(&buf, " git");
 	sq_quote_argv_pretty(&buf, cp->args.v);
@@ -751,7 +752,7 @@ fail_pipe:
 		set_cloexec(null_fd);
 	}
 
-	childenv = prep_childenv(cmd->env_array.v);
+	childenv = prep_childenv(cmd->env.v);
 	atfork_prepare(&as);
 
 	/*
@@ -914,8 +915,9 @@ end_of_spawn:
 	else if (cmd->use_shell)
 		cmd->args.v = prepare_shell_cmd(&nargv, sargv);
 
-	cmd->pid = mingw_spawnvpe(cmd->args.v[0], cmd->args.v, (char**) cmd->env_array.v,
-			cmd->dir, fhin, fhout, fherr);
+	cmd->pid = mingw_spawnvpe(cmd->args.v[0], cmd->args.v,
+				  (char**) cmd->env.v,
+				  cmd->dir, fhin, fhout, fherr);
 	failed_errno = errno;
 	if (cmd->pid < 0 && (!cmd->silent_exec_failure || errno != ENOENT))
 		error_errno("cannot spawn %s", cmd->args.v[0]);
@@ -983,7 +985,8 @@ int finish_command(struct child_process *cmd)
 int finish_command_in_signal(struct child_process *cmd)
 {
 	int ret = wait_or_whine(cmd->pid, cmd->args.v[0], 1);
-	trace2_child_exit(cmd, ret);
+	if (ret != -1)
+		trace2_child_exit(cmd, ret);
 	return ret;
 }
 
@@ -1031,7 +1034,7 @@ int run_command_v_opt_cd_env_tr2(const char **argv, int opt, const char *dir,
 	cmd.close_object_store = opt & RUN_CLOSE_OBJECT_STORE ? 1 : 0;
 	cmd.dir = dir;
 	if (env)
-		strvec_pushv(&cmd.env_array, (const char **)env);
+		strvec_pushv(&cmd.env, (const char **)env);
 	cmd.trace2_child_class = tr2_class;
 	return run_command(&cmd);
 }
@@ -1362,12 +1365,25 @@ static int pump_io_round(struct io_pump *slots, int nr, struct pollfd *pfd)
 			continue;
 
 		if (io->type == POLLOUT) {
-			ssize_t len = xwrite(io->fd,
-					     io->u.out.buf, io->u.out.len);
+			ssize_t len;
+
+			/*
+			 * Don't use xwrite() here. It loops forever on EAGAIN,
+			 * and we're in our own poll() loop here.
+			 *
+			 * Note that we lose xwrite()'s handling of MAX_IO_SIZE
+			 * and EINTR, so we have to implement those ourselves.
+			 */
+			len = write(io->fd, io->u.out.buf,
+				    io->u.out.len <= MAX_IO_SIZE ?
+				    io->u.out.len : MAX_IO_SIZE);
 			if (len < 0) {
-				io->error = errno;
-				close(io->fd);
-				io->fd = -1;
+				if (errno != EINTR && errno != EAGAIN &&
+				    errno != ENOSPC) {
+					io->error = errno;
+					close(io->fd);
+					io->fd = -1;
+				}
 			} else {
 				io->u.out.buf += len;
 				io->u.out.len -= len;
@@ -1436,6 +1452,15 @@ int pipe_command(struct child_process *cmd,
 		return -1;
 
 	if (in) {
+		if (enable_pipe_nonblock(cmd->in) < 0) {
+			error_errno("unable to make pipe non-blocking");
+			close(cmd->in);
+			if (out)
+				close(cmd->out);
+			if (err)
+				close(cmd->err);
+			return -1;
+		}
 		io[nr].fd = cmd->in;
 		io[nr].type = POLLOUT;
 		io[nr].u.out.buf = in;
@@ -1471,6 +1496,7 @@ enum child_state {
 	GIT_CP_WAIT_CLEANUP,
 };
 
+int run_processes_parallel_ungroup;
 struct parallel_processes {
 	void *data;
 
@@ -1494,6 +1520,7 @@ struct parallel_processes {
 	struct pollfd *pfd;
 
 	unsigned shutdown : 1;
+	unsigned ungroup : 1;
 
 	int output_owner;
 	struct strbuf buffered_output; /* of finished children */
@@ -1537,7 +1564,7 @@ static void pp_init(struct parallel_processes *pp,
 		    get_next_task_fn get_next_task,
 		    start_failure_fn start_failure,
 		    task_finished_fn task_finished,
-		    void *data)
+		    void *data, int ungroup)
 {
 	int i;
 
@@ -1559,15 +1586,21 @@ static void pp_init(struct parallel_processes *pp,
 	pp->nr_processes = 0;
 	pp->output_owner = 0;
 	pp->shutdown = 0;
+	pp->ungroup = ungroup;
 	CALLOC_ARRAY(pp->children, n);
-	CALLOC_ARRAY(pp->pfd, n);
+	if (pp->ungroup)
+		pp->pfd = NULL;
+	else
+		CALLOC_ARRAY(pp->pfd, n);
 	strbuf_init(&pp->buffered_output, 0);
 
 	for (i = 0; i < n; i++) {
 		strbuf_init(&pp->children[i].err, 0);
 		child_process_init(&pp->children[i].process);
-		pp->pfd[i].events = POLLIN | POLLHUP;
-		pp->pfd[i].fd = -1;
+		if (pp->pfd) {
+			pp->pfd[i].events = POLLIN | POLLHUP;
+			pp->pfd[i].fd = -1;
+		}
 	}
 
 	pp_for_signal = pp;
@@ -1615,24 +1648,31 @@ static int pp_start_one(struct parallel_processes *pp)
 		BUG("bookkeeping is hard");
 
 	code = pp->get_next_task(&pp->children[i].process,
-				 &pp->children[i].err,
+				 pp->ungroup ? NULL : &pp->children[i].err,
 				 pp->data,
 				 &pp->children[i].data);
 	if (!code) {
-		strbuf_addbuf(&pp->buffered_output, &pp->children[i].err);
-		strbuf_reset(&pp->children[i].err);
+		if (!pp->ungroup) {
+			strbuf_addbuf(&pp->buffered_output, &pp->children[i].err);
+			strbuf_reset(&pp->children[i].err);
+		}
 		return 1;
 	}
-	pp->children[i].process.err = -1;
-	pp->children[i].process.stdout_to_stderr = 1;
+	if (!pp->ungroup) {
+		pp->children[i].process.err = -1;
+		pp->children[i].process.stdout_to_stderr = 1;
+	}
 	pp->children[i].process.no_stdin = 1;
 
 	if (start_command(&pp->children[i].process)) {
-		code = pp->start_failure(&pp->children[i].err,
+		code = pp->start_failure(pp->ungroup ? NULL :
+					 &pp->children[i].err,
 					 pp->data,
 					 pp->children[i].data);
-		strbuf_addbuf(&pp->buffered_output, &pp->children[i].err);
-		strbuf_reset(&pp->children[i].err);
+		if (!pp->ungroup) {
+			strbuf_addbuf(&pp->buffered_output, &pp->children[i].err);
+			strbuf_reset(&pp->children[i].err);
+		}
 		if (code)
 			pp->shutdown = 1;
 		return code;
@@ -1640,7 +1680,8 @@ static int pp_start_one(struct parallel_processes *pp)
 
 	pp->nr_processes++;
 	pp->children[i].state = GIT_CP_WORKING;
-	pp->pfd[i].fd = pp->children[i].process.err;
+	if (pp->pfd)
+		pp->pfd[i].fd = pp->children[i].process.err;
 	return 0;
 }
 
@@ -1674,6 +1715,7 @@ static void pp_buffer_stderr(struct parallel_processes *pp, int output_timeout)
 static void pp_output(struct parallel_processes *pp)
 {
 	int i = pp->output_owner;
+
 	if (pp->children[i].state == GIT_CP_WORKING &&
 	    pp->children[i].err.len) {
 		strbuf_write(&pp->children[i].err, stderr);
@@ -1696,7 +1738,7 @@ static int pp_collect_finished(struct parallel_processes *pp)
 
 		code = finish_command(&pp->children[i].process);
 
-		code = pp->task_finished(code,
+		code = pp->task_finished(code, pp->ungroup ? NULL :
 					 &pp->children[i].err, pp->data,
 					 pp->children[i].data);
 
@@ -1707,10 +1749,13 @@ static int pp_collect_finished(struct parallel_processes *pp)
 
 		pp->nr_processes--;
 		pp->children[i].state = GIT_CP_FREE;
-		pp->pfd[i].fd = -1;
+		if (pp->pfd)
+			pp->pfd[i].fd = -1;
 		child_process_init(&pp->children[i].process);
 
-		if (i != pp->output_owner) {
+		if (pp->ungroup) {
+			; /* no strbuf_*() work to do here */
+		} else if (i != pp->output_owner) {
 			strbuf_addbuf(&pp->buffered_output, &pp->children[i].err);
 			strbuf_reset(&pp->children[i].err);
 		} else {
@@ -1747,9 +1792,14 @@ int run_processes_parallel(int n,
 	int i, code;
 	int output_timeout = 100;
 	int spawn_cap = 4;
+	int ungroup = run_processes_parallel_ungroup;
 	struct parallel_processes pp;
 
-	pp_init(&pp, n, get_next_task, start_failure, task_finished, pp_cb);
+	/* unset for the next API user */
+	run_processes_parallel_ungroup = 0;
+
+	pp_init(&pp, n, get_next_task, start_failure, task_finished, pp_cb,
+		ungroup);
 	while (1) {
 		for (i = 0;
 		    i < spawn_cap && !pp.shutdown &&
@@ -1766,8 +1816,15 @@ int run_processes_parallel(int n,
 		}
 		if (!pp.nr_processes)
 			break;
-		pp_buffer_stderr(&pp, output_timeout);
-		pp_output(&pp);
+		if (ungroup) {
+			int i;
+
+			for (i = 0; i < pp.max_processes; i++)
+				pp.children[i].state = GIT_CP_WAIT_CLEANUP;
+		} else {
+			pp_buffer_stderr(&pp, output_timeout);
+			pp_output(&pp);
+		}
 		code = pp_collect_finished(&pp);
 		if (code) {
 			pp.shutdown = 1;
@@ -1815,16 +1872,16 @@ int run_auto_maintenance(int quiet)
 	return run_command(&maint);
 }
 
-void prepare_other_repo_env(struct strvec *env_array, const char *new_git_dir)
+void prepare_other_repo_env(struct strvec *env, const char *new_git_dir)
 {
 	const char * const *var;
 
 	for (var = local_repo_env; *var; var++) {
 		if (strcmp(*var, CONFIG_DATA_ENVIRONMENT) &&
 		    strcmp(*var, CONFIG_COUNT_ENVIRONMENT))
-			strvec_push(env_array, *var);
+			strvec_push(env, *var);
 	}
-	strvec_pushf(env_array, "%s=%s", GIT_DIR_ENVIRONMENT, new_git_dir);
+	strvec_pushf(env, "%s=%s", GIT_DIR_ENVIRONMENT, new_git_dir);
 }
 
 enum start_bg_result start_bg_command(struct child_process *cmd,

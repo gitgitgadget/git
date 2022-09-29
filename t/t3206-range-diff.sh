@@ -162,7 +162,7 @@ test_expect_success 'A^! and A^-<n> (unmodified)' '
 '
 
 test_expect_success 'A^{/..} is not mistaken for a range' '
-	test_must_fail git range-diff topic^.. topic^{/..} 2>error &&
+	test_must_fail git range-diff topic^.. topic^{/..} -- 2>error &&
 	test_i18ngrep "not a commit range" error
 '
 
@@ -769,6 +769,68 @@ test_expect_success '--left-only/--right-only' '
 	head_oid=$(git rev-parse --short HEAD) &&
 	common_oid=$(git rev-parse --short common) &&
 	echo "1:  $head_oid = 2:  $common_oid common" >expect &&
+	test_cmp expect actual
+'
+
+test_expect_success 'ranges with pathspecs' '
+	git range-diff topic...mode-only-change -- other-file >actual &&
+	test_line_count = 2 actual &&
+	topic_oid=$(git rev-parse --short topic) &&
+	mode_change_oid=$(git rev-parse --short mode-only-change^) &&
+	file_change_oid=$(git rev-parse --short mode-only-change) &&
+	grep "$mode_change_oid" actual &&
+	! grep "$file_change_oid" actual &&
+	! grep "$topic_oid" actual
+'
+
+test_expect_success 'submodule changes are shown irrespective of diff.submodule' '
+	git init sub-repo &&
+	test_commit -C sub-repo sub-first &&
+	sub_oid1=$(git -C sub-repo rev-parse HEAD) &&
+	test_commit -C sub-repo sub-second &&
+	sub_oid2=$(git -C sub-repo rev-parse HEAD) &&
+	test_commit -C sub-repo sub-third &&
+	sub_oid3=$(git -C sub-repo rev-parse HEAD) &&
+
+	git checkout -b main-sub topic &&
+	git submodule add ./sub-repo sub &&
+	git -C sub checkout --detach sub-first &&
+	git commit -m "add sub" sub &&
+	sup_oid1=$(git rev-parse --short HEAD) &&
+	git checkout -b topic-sub &&
+	git -C sub checkout sub-second &&
+	git commit -m "change sub" sub &&
+	sup_oid2=$(git rev-parse --short HEAD) &&
+	git checkout -b modified-sub main-sub &&
+	git -C sub checkout sub-third &&
+	git commit -m "change sub" sub &&
+	sup_oid3=$(git rev-parse --short HEAD) &&
+	sup_oid0=$(test_oid __) &&
+
+	test_config diff.submodule log &&
+	git range-diff topic topic-sub modified-sub >actual &&
+	cat >expect <<-EOF &&
+	1:  $sup_oid1 = 1:  $sup_oid1 add sub
+	2:  $sup_oid2 < -:  $sup_oid0 change sub
+	-:  $sup_oid0 > 2:  $sup_oid3 change sub
+	EOF
+	test_cmp expect actual &&
+	test_config diff.submodule diff &&
+	git range-diff topic topic-sub modified-sub >actual &&
+	git range-diff --creation-factor=100 topic topic-sub modified-sub >actual &&
+	cat >expect <<-EOF &&
+	1:  $sup_oid1 = 1:  $sup_oid1 add sub
+	2:  $sup_oid2 ! 2:  $sup_oid3 change sub
+	    @@ Commit message
+	      ## sub ##
+	     @@
+	     -Subproject commit $sub_oid1
+	    -+Subproject commit $sub_oid2
+	    ++Subproject commit $sub_oid3
+	EOF
+	test_cmp expect actual &&
+	test_config diff.submodule diff &&
+	git range-diff --creation-factor=100 topic topic-sub modified-sub >actual &&
 	test_cmp expect actual
 '
 

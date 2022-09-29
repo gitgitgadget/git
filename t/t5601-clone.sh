@@ -71,6 +71,29 @@ test_expect_success 'clone respects GIT_WORK_TREE' '
 
 '
 
+test_expect_success LIBCURL 'clone warns or fails when using username:password' '
+	message="URL '\''https://username:<redacted>@localhost/'\'' uses plaintext credentials" &&
+	test_must_fail git -c transfer.credentialsInUrl=allow clone https://username:password@localhost attempt1 2>err &&
+	! grep "$message" err &&
+
+	test_must_fail git -c transfer.credentialsInUrl=warn clone https://username:password@localhost attempt2 2>err &&
+	grep "warning: $message" err >warnings &&
+	test_line_count = 2 warnings &&
+
+	test_must_fail git -c transfer.credentialsInUrl=die clone https://username:password@localhost attempt3 2>err &&
+	grep "fatal: $message" err >warnings &&
+	test_line_count = 1 warnings &&
+
+	test_must_fail git -c transfer.credentialsInUrl=die clone https://username:@localhost attempt3 2>err &&
+	grep "fatal: $message" err >warnings &&
+	test_line_count = 1 warnings
+'
+
+test_expect_success LIBCURL 'clone does not detect username:password when it is https://username@domain:port/' '
+	test_must_fail git -c transfer.credentialsInUrl=warn clone https://username@localhost:8080 attempt3 2>err &&
+	! grep "uses plaintext credentials" err
+'
+
 test_expect_success 'clone from hooks' '
 
 	test_create_repo r0 &&
@@ -720,7 +743,11 @@ test_expect_success 'batch missing blob request during checkout' '
 
 	# Ensure that there is only one negotiation by checking that there is
 	# only "done" line sent. ("done" marks the end of negotiation.)
-	GIT_TRACE_PACKET="$(pwd)/trace" git -C client checkout HEAD^ &&
+	GIT_TRACE_PACKET="$(pwd)/trace" \
+		GIT_TRACE2_EVENT="$(pwd)/trace2_event" \
+		git -C client -c trace2.eventNesting=5 checkout HEAD^ &&
+	grep \"key\":\"total_rounds\",\"value\":\"1\" trace2_event >trace_lines &&
+	test_line_count = 1 trace_lines &&
 	grep "fetch> done" trace >done_lines &&
 	test_line_count = 1 done_lines
 '

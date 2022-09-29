@@ -135,7 +135,7 @@ static struct child_process *get_helper(struct transport *transport)
 	helper->silent_exec_failure = 1;
 
 	if (have_git_dir())
-		strvec_pushf(&helper->env_array, "%s=%s",
+		strvec_pushf(&helper->env, "%s=%s",
 			     GIT_DIR_ENVIRONMENT, get_git_dir());
 
 	helper->trace2_child_class = helper->args.v[0]; /* "remote-<name>" */
@@ -1288,6 +1288,8 @@ int transport_helper_init(struct transport *transport, const char *name)
 
 	if (getenv("GIT_TRANSPORT_HELPER_DEBUG"))
 		debug = 1;
+
+	list_objects_filter_init(&data->transport_options.filter_options);
 
 	transport->data = data;
 	transport->vtable = &vtable;

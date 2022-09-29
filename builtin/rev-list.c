@@ -46,6 +46,7 @@ static const char rev_list_usage[] =
 "    --parents\n"
 "    --children\n"
 "    --objects | --objects-edge\n"
+"    --disk-usage[=human]\n"
 "    --unpacked\n"
 "    --header | --pretty\n"
 "    --[no-]object-names\n"
@@ -81,6 +82,7 @@ static int arg_show_object_names = 1;
 
 static int show_disk_usage;
 static off_t total_disk_usage;
+static int human_readable;
 
 static off_t get_object_disk_usage(struct object *obj)
 {
@@ -213,10 +215,8 @@ static void show_commit(struct commit *commit, void *data)
 
 static void finish_commit(struct commit *commit)
 {
-	if (commit->parents) {
-		free_commit_list(commit->parents);
-		commit->parents = NULL;
-	}
+	free_commit_list(commit->parents);
+	commit->parents = NULL;
 	free_commit_buffer(the_repository->parsed_objects,
 			   commit);
 }
@@ -370,6 +370,17 @@ static int show_object_fast(
 	return 1;
 }
 
+static void print_disk_usage(off_t size)
+{
+	struct strbuf sb = STRBUF_INIT;
+	if (human_readable)
+		strbuf_humanise_bytes(&sb, size);
+	else
+		strbuf_addf(&sb, "%"PRIuMAX, (uintmax_t)size);
+	puts(sb.buf);
+	strbuf_release(&sb);
+}
+
 static inline int parse_missing_action_value(const char *value)
 {
 	if (!strcmp(value, "error")) {
@@ -475,6 +486,7 @@ static int try_bitmap_disk_usage(struct rev_info *revs,
 				 int filter_provided_objects)
 {
 	struct bitmap_index *bitmap_git;
+	off_t size_from_bitmap;
 
 	if (!show_disk_usage)
 		return -1;
@@ -483,8 +495,8 @@ static int try_bitmap_disk_usage(struct rev_info *revs,
 	if (!bitmap_git)
 		return -1;
 
-	printf("%"PRIuMAX"\n",
-	       (uintmax_t)get_disk_usage_from_bitmap(bitmap_git, revs));
+	size_from_bitmap = get_disk_usage_from_bitmap(bitmap_git, revs);
+	print_disk_usage(size_from_bitmap);
 	return 0;
 }
 
@@ -502,6 +514,7 @@ int cmd_rev_list(int argc, const char **argv, const char *prefix)
 	int use_bitmap_index = 0;
 	int filter_provided_objects = 0;
 	const char *show_progress = NULL;
+	int ret = 0;
 
 	if (argc == 2 && !strcmp(argv[1], "-h"))
 		usage(rev_list_usage);
@@ -585,7 +598,7 @@ int cmd_rev_list(int argc, const char **argv, const char *prefix)
 		}
 		if (!strcmp(arg, "--test-bitmap")) {
 			test_bitmap_walk(&revs);
-			return 0;
+			goto cleanup;
 		}
 		if (skip_prefix(arg, "--progress=", &arg)) {
 			show_progress = arg;
@@ -625,7 +638,21 @@ int cmd_rev_list(int argc, const char **argv, const char *prefix)
 			continue;
 		}
 
-		if (!strcmp(arg, "--disk-usage")) {
+		if (skip_prefix(arg, "--disk-usage", &arg)) {
+			if (*arg == '=') {
+				if (!strcmp(++arg, "human")) {
+					human_readable = 1;
+				} else
+					die(_("invalid value for '%s': '%s', the only allowed format is '%s'"),
+					    "--disk-usage=<format>", arg, "human");
+			} else if (*arg) {
+				/*
+				 * Arguably should goto a label to continue chain of ifs?
+				 * Doesn't matter unless we try to add --disk-usage-foo
+				 * afterwards.
+				 */
+				usage(rev_list_usage);
+			}
 			show_disk_usage = 1;
 			info.flags |= REV_LIST_QUIET;
 			continue;
@@ -674,11 +701,11 @@ int cmd_rev_list(int argc, const char **argv, const char *prefix)
 
 	if (use_bitmap_index) {
 		if (!try_bitmap_count(&revs, filter_provided_objects))
-			return 0;
+			goto cleanup;
 		if (!try_bitmap_disk_usage(&revs, filter_provided_objects))
-			return 0;
+			goto cleanup;
 		if (!try_bitmap_traversal(&revs, filter_provided_objects))
-			return 0;
+			goto cleanup;
 	}
 
 	if (prepare_revision_walk(&revs))
@@ -698,8 +725,10 @@ int cmd_rev_list(int argc, const char **argv, const char *prefix)
 
 		find_bisection(&revs.commits, &reaches, &all, bisect_flags);
 
-		if (bisect_show_vars)
-			return show_bisect_vars(&info, reaches, all);
+		if (bisect_show_vars) {
+			ret = show_bisect_vars(&info, reaches, all);
+			goto cleanup;
+		}
 	}
 
 	if (filter_provided_objects) {
@@ -752,7 +781,9 @@ int cmd_rev_list(int argc, const char **argv, const char *prefix)
 	}
 
 	if (show_disk_usage)
-		printf("%"PRIuMAX"\n", (uintmax_t)total_disk_usage);
+		print_disk_usage(total_disk_usage);
 
-	return 0;
+cleanup:
+	release_revisions(&revs);
+	return ret;
 }

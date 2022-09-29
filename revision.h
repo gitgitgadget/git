@@ -48,6 +48,7 @@
  */
 #define NOT_USER_GIVEN	(1u<<25)
 #define TRACK_LINEAR	(1u<<26)
+#define ANCESTRY_PATH	(1u<<27)
 #define ALL_REV_FLAGS	(((1u<<11)-1) | NOT_USER_GIVEN | TRACK_LINEAR | PULL_MERGE)
 
 #define DECORATE_SHORT_REFS	1
@@ -164,6 +165,13 @@ struct rev_info {
 			cherry_mark:1,
 			bisect:1,
 			ancestry_path:1,
+
+			/* True if --ancestry-path was specified without an
+			 * argument. The bottom revisions are implicitly
+			 * the arguments in this case.
+			 */
+			ancestry_path_implicit_bottoms:1,
+
 			first_parent_only:1,
 			exclude_first_parent_only:1,
 			line_level_traverse:1,
@@ -221,6 +229,7 @@ struct rev_info {
 			missing_newline:1,
 			date_mode_explicit:1,
 			preserve_subject:1,
+			force_in_body_from:1,
 			encode_email_headers:1,
 			include_header:1;
 	unsigned int	disable_stdin:1;
@@ -263,6 +272,7 @@ struct rev_info {
 	int skip_count;
 	int max_count;
 	timestamp_t max_age;
+	timestamp_t max_age_as_filter;
 	timestamp_t min_age;
 	int min_parents;
 	int max_parents;
@@ -305,6 +315,7 @@ struct rev_info {
 	struct saved_parents *saved_parents_slab;
 
 	struct commit_list *previous_parents;
+	struct commit_list *ancestry_path_bottoms;
 	const char *break_bar;
 
 	struct revision_sources *sources;
@@ -329,31 +340,24 @@ struct rev_info {
 	struct tmp_objdir *remerge_objdir;
 };
 
-int ref_excluded(struct string_list *, const char *path);
-void clear_ref_exclusion(struct string_list **);
-void add_ref_exclusion(struct string_list **, const char *exclude);
-
-
-#define REV_TREE_SAME		0
-#define REV_TREE_NEW		1	/* Only new files */
-#define REV_TREE_OLD		2	/* Only files removed */
-#define REV_TREE_DIFFERENT	3	/* Mixed changes */
-
-/* revision.c */
-typedef void (*show_early_output_fn_t)(struct rev_info *, struct commit_list *);
-extern volatile show_early_output_fn_t show_early_output;
-
-struct setup_revision_opt {
-	const char *def;
-	void (*tweak)(struct rev_info *, struct setup_revision_opt *);
-	unsigned int	assume_dashdash:1,
-			allow_exclude_promisor_objects:1;
-	unsigned revarg_opt;
-};
-
-#ifndef NO_THE_REPOSITORY_COMPATIBILITY_MACROS
-#define init_revisions(revs, prefix) repo_init_revisions(the_repository, revs, prefix)
-#endif
+/**
+ * Initialize the "struct rev_info" structure with a macro.
+ *
+ * This will not fully initialize a "struct rev_info", the
+ * repo_init_revisions() function needs to be called before
+ * setup_revisions() and any revision walking takes place.
+ *
+ * Use REV_INFO_INIT to make the "struct rev_info" safe for passing to
+ * release_revisions() when it's inconvenient (e.g. due to a "goto
+ * cleanup" pattern) to arrange for repo_init_revisions() to be called
+ * before release_revisions() is called.
+ *
+ * Initializing with this REV_INFO_INIT is redundant to invoking
+ * repo_init_revisions(). If repo_init_revisions() is guaranteed to be
+ * called before release_revisions() the "struct rev_info" can be left
+ * uninitialized.
+ */
+#define REV_INFO_INIT { 0 }
 
 /**
  * Initialize a rev_info structure with default values. The third parameter may
@@ -366,6 +370,9 @@ struct setup_revision_opt {
 void repo_init_revisions(struct repository *r,
 			 struct rev_info *revs,
 			 const char *prefix);
+#ifndef NO_THE_REPOSITORY_COMPATIBILITY_MACROS
+#define init_revisions(revs, prefix) repo_init_revisions(the_repository, revs, prefix)
+#endif
 
 /**
  * Parse revision information, filling in the `rev_info` structure, and
@@ -374,8 +381,22 @@ void repo_init_revisions(struct repository *r,
  * head of the argument list. The last parameter is used in case no
  * parameter given by the first two arguments.
  */
+struct setup_revision_opt {
+	const char *def;
+	void (*tweak)(struct rev_info *, struct setup_revision_opt *);
+	unsigned int	assume_dashdash:1,
+			allow_exclude_promisor_objects:1,
+			free_removed_argv_elements:1;
+	unsigned revarg_opt;
+};
 int setup_revisions(int argc, const char **argv, struct rev_info *revs,
 		    struct setup_revision_opt *);
+
+/**
+ * Free data allocated in a "struct rev_info" after it's been
+ * initialized with repo_init_revisions() or REV_INFO_INIT.
+ */
+void release_revisions(struct rev_info *revs);
 
 void parse_revision_opt(struct rev_info *revs, struct parse_opt_ctx_t *ctx,
 			const struct option *options,
@@ -416,6 +437,14 @@ void mark_tree_uninteresting(struct repository *r, struct tree *tree);
 void mark_trees_uninteresting_sparse(struct repository *r, struct oidset *trees);
 
 void show_object_with_name(FILE *, struct object *, const char *);
+
+/**
+ * Helpers to check if a "struct string_list" item matches with
+ * wildmatch().
+ */
+int ref_excluded(struct string_list *, const char *path);
+void clear_ref_exclusion(struct string_list **);
+void add_ref_exclusion(struct string_list **, const char *exclude);
 
 /**
  * This function can be used if you want to add commit objects as revision
@@ -471,5 +500,11 @@ int rewrite_parents(struct rev_info *revs,
  * history simplification is off.
  */
 struct commit_list *get_saved_parents(struct rev_info *revs, const struct commit *commit);
+
+/**
+ * Global for the (undocumented) "--early-output" flag for "git log".
+ */
+typedef void (*show_early_output_fn_t)(struct rev_info *, struct commit_list *);
+extern volatile show_early_output_fn_t show_early_output;
 
 #endif

@@ -89,7 +89,7 @@ struct ref_to_worktree_entry {
 	struct worktree *wt; /* key is wt->head_ref */
 };
 
-static int ref_to_worktree_map_cmpfnc(const void *unused_lookupdata,
+static int ref_to_worktree_map_cmpfnc(const void *lookupdata UNUSED,
 				      const struct hashmap_entry *eptr,
 				      const struct hashmap_entry *kptr,
 				      const void *keydata_aka_refname)
@@ -1261,7 +1261,7 @@ static void grab_date(const char *buf, struct atom_value *v, const char *atomnam
 	 * ":" means no format is specified, and use the default.
 	 */
 	formatp = strchr(atomname, ':');
-	if (formatp != NULL) {
+	if (formatp) {
 		formatp++;
 		parse_date_format(formatp, &date_mode);
 	}
@@ -1509,7 +1509,7 @@ static void fill_missing_values(struct atom_value *val)
 	int i;
 	for (i = 0; i < used_atom_cnt; i++) {
 		struct atom_value *v = &val[i];
-		if (v->s == NULL)
+		if (!v->s)
 			v->s = xstrdup("");
 	}
 }
@@ -1619,7 +1619,7 @@ static const char *rstrip_ref_components(const char *refname, int len)
 
 	while (remaining-- > 0) {
 		char *p = strrchr(start, '/');
-		if (p == NULL) {
+		if (!p) {
 			free((char *)to_free);
 			return xstrdup("");
 		} else
@@ -2392,6 +2392,7 @@ static void reach_filter(struct ref_array *array,
 		clear_commit_marks(merge_commit, ALL_REV_FLAGS);
 	}
 
+	release_revisions(&revs);
 	free(to_clear);
 }
 
@@ -2404,12 +2405,16 @@ static void reach_filter(struct ref_array *array,
 int filter_refs(struct ref_array *array, struct ref_filter *filter, unsigned int type)
 {
 	struct ref_filter_cbdata ref_cbdata;
+	int save_commit_buffer_orig;
 	int ret = 0;
 
 	ref_cbdata.array = array;
 	ref_cbdata.filter = filter;
 
 	filter->kind = type & FILTER_REFS_KIND_MASK;
+
+	save_commit_buffer_orig = save_commit_buffer;
+	save_commit_buffer = 0;
 
 	init_contains_cache(&ref_cbdata.contains_cache);
 	init_contains_cache(&ref_cbdata.no_contains_cache);
@@ -2443,6 +2448,7 @@ int filter_refs(struct ref_array *array, struct ref_filter *filter, unsigned int
 	reach_filter(array, filter->reachable_from, INCLUDE_REACHED);
 	reach_filter(array, filter->unreachable_from, EXCLUDE_REACHED);
 
+	save_commit_buffer = save_commit_buffer_orig;
 	return ret;
 }
 

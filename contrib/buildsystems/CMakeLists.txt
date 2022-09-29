@@ -54,7 +54,7 @@ set(CMAKE_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/../..)
 
 option(USE_VCPKG "Whether or not to use vcpkg for obtaining dependencies.  Only applicable to Windows platforms" ON)
 if(NOT WIN32)
-	set(USE_VCPKG OFF CACHE BOOL FORCE)
+	set(USE_VCPKG OFF CACHE BOOL "" FORCE)
 endif()
 
 if(NOT DEFINED CMAKE_EXPORT_COMPILE_COMMANDS)
@@ -77,7 +77,7 @@ if(USE_VCPKG)
 	set(CMAKE_TOOLCHAIN_FILE ${VCPKG_DIR}/scripts/buildsystems/vcpkg.cmake CACHE STRING "Vcpkg toolchain file")
 endif()
 
-find_program(SH_EXE sh PATHS "C:/Program Files/Git/bin")
+find_program(SH_EXE sh PATHS "C:/Program Files/Git/bin" "$ENV{LOCALAPPDATA}/Programs/Git/bin")
 if(NOT SH_EXE)
 	message(FATAL_ERROR "sh: shell interpreter was not found in your path, please install one."
 			"On Windows, you can get it as part of 'Git for Windows' install at https://gitforwindows.org/")
@@ -108,7 +108,6 @@ project(git
 
 #TODO gitk git-gui gitweb
 #TODO Enable NLS on windows natively
-#TODO Add pcre support
 
 #macros for parsing the Makefile for sources and scripts
 macro(parse_makefile_for_sources list_var regex)
@@ -160,6 +159,14 @@ if(NOT (WIN32 AND (CMAKE_C_COMPILER_ID STREQUAL "MSVC" OR CMAKE_C_COMPILER_ID ST
 	find_package(Intl)
 endif()
 
+find_package(PkgConfig)
+if(PkgConfig_FOUND)
+	pkg_check_modules(PCRE2 libpcre2-8)
+	if(PCRE2_FOUND)
+		add_compile_definitions(USE_LIBPCRE2)
+	endif()
+endif()
+
 if(NOT Intl_FOUND)
 	add_compile_definitions(NO_GETTEXT)
 	if(NOT Iconv_FOUND)
@@ -179,6 +186,9 @@ if(Iconv_FOUND)
 endif()
 if(Intl_FOUND)
 	include_directories(SYSTEM ${Intl_INCLUDE_DIRS})
+endif()
+if(PCRE2_FOUND)
+	include_directories(SYSTEM ${PCRE2_INCLUDE_DIRS})
 endif()
 
 
@@ -260,7 +270,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 				_CONSOLE DETECT_MSYS_TTY STRIP_EXTENSION=".exe"  NO_SYMLINK_HEAD UNRELIABLE_FSTAT
 				NOGDI OBJECT_CREATION_MODE=1 __USE_MINGW_ANSI_STDIO=0
 				USE_NED_ALLOCATOR OVERRIDE_STRDUP MMAP_PREVENTS_DELETE USE_WIN32_MMAP
-				UNICODE _UNICODE HAVE_WPGMPTR ENSURE_MSYSTEM_IS_SET HAVE_RTLGENRANDOM)
+				HAVE_WPGMPTR ENSURE_MSYSTEM_IS_SET HAVE_RTLGENRANDOM)
 	list(APPEND compat_SOURCES
 		compat/mingw.c
 		compat/winansi.c
@@ -277,7 +287,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	add_compile_definitions(PROCFS_EXECUTABLE_PATH="/proc/self/exe" HAVE_DEV_TTY )
-	list(APPEND compat_SOURCES unix-socket.c unix-stream-server.c)
+	list(APPEND compat_SOURCES unix-socket.c unix-stream-server.c compat/linux/procinfo.c)
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
@@ -297,9 +307,17 @@ if(SUPPORTS_SIMPLE_IPC)
 	if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 		add_compile_definitions(HAVE_FSMONITOR_DAEMON_BACKEND)
 		list(APPEND compat_SOURCES compat/fsmonitor/fsm-listen-win32.c)
+		list(APPEND compat_SOURCES compat/fsmonitor/fsm-health-win32.c)
+
+		add_compile_definitions(HAVE_FSMONITOR_OS_SETTINGS)
+		list(APPEND compat_SOURCES compat/fsmonitor/fsm-settings-win32.c)
 	elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
 		add_compile_definitions(HAVE_FSMONITOR_DAEMON_BACKEND)
 		list(APPEND compat_SOURCES compat/fsmonitor/fsm-listen-darwin.c)
+		list(APPEND compat_SOURCES compat/fsmonitor/fsm-health-darwin.c)
+
+		add_compile_definitions(HAVE_FSMONITOR_OS_SETTINGS)
+		list(APPEND compat_SOURCES compat/fsmonitor/fsm-settings-darwin.c)
 	endif()
 endif()
 
@@ -592,7 +610,7 @@ unset(CMAKE_REQUIRED_INCLUDES)
 #programs
 set(PROGRAMS_BUILT
 	git git-daemon git-http-backend git-sh-i18n--envsubst
-	git-shell)
+	git-shell scalar)
 
 if(NOT CURL_FOUND)
 	list(APPEND excluded_progs git-http-fetch git-http-push)
@@ -700,6 +718,10 @@ endif()
 if(Iconv_FOUND)
 	target_link_libraries(common-main ${Iconv_LIBRARIES})
 endif()
+if(PCRE2_FOUND)
+	target_link_libraries(common-main ${PCRE2_LIBRARIES})
+	target_link_directories(common-main PUBLIC ${PCRE2_LIBRARY_DIRS})
+endif()
 if(WIN32)
 	target_link_libraries(common-main ws2_32 ntdll ${CMAKE_BINARY_DIR}/git.res)
 	add_dependencies(common-main git-rc)
@@ -734,6 +756,9 @@ target_link_libraries(git-sh-i18n--envsubst common-main)
 
 add_executable(git-shell ${CMAKE_SOURCE_DIR}/shell.c)
 target_link_libraries(git-shell common-main)
+
+add_executable(scalar ${CMAKE_SOURCE_DIR}/scalar.c)
+target_link_libraries(scalar common-main)
 
 if(CURL_FOUND)
 	add_library(http_obj OBJECT ${CMAKE_SOURCE_DIR}/http.c)
@@ -881,7 +906,7 @@ list(TRANSFORM git_perl_scripts PREPEND "${CMAKE_BINARY_DIR}/")
 
 #install
 foreach(program ${PROGRAMS_BUILT})
-if(program STREQUAL "git" OR program STREQUAL "git-shell")
+if(program MATCHES "^(git|git-shell|scalar)$")
 install(TARGETS ${program}
 	RUNTIME DESTINATION bin)
 else()
@@ -955,7 +980,7 @@ endif()
 
 #wrapper scripts
 set(wrapper_scripts
-	git git-upload-pack git-receive-pack git-upload-archive git-shell git-remote-ext)
+	git git-upload-pack git-receive-pack git-upload-archive git-shell git-remote-ext scalar)
 
 set(wrapper_test_scripts
 	test-fake-ssh test-tool)
@@ -1054,7 +1079,7 @@ if(NOT ${CMAKE_BINARY_DIR}/CMakeCache.txt STREQUAL ${CACHE_PATH})
 		"string(REPLACE \"\${GIT_BUILD_DIR_REPL}\" \"GIT_BUILD_DIR=\\\"$TEST_DIRECTORY/../${BUILD_DIR_RELATIVE}\\\"\" content \"\${content}\")\n"
 		"file(WRITE ${CMAKE_SOURCE_DIR}/t/test-lib.sh \${content})")
 	#misc copies
-	file(COPY ${CMAKE_SOURCE_DIR}/t/chainlint.sed DESTINATION ${CMAKE_BINARY_DIR}/t/)
+	file(COPY ${CMAKE_SOURCE_DIR}/t/chainlint.pl DESTINATION ${CMAKE_BINARY_DIR}/t/)
 	file(COPY ${CMAKE_SOURCE_DIR}/po/is.po DESTINATION ${CMAKE_BINARY_DIR}/po/)
 	file(COPY ${CMAKE_SOURCE_DIR}/mergetools/tkdiff DESTINATION ${CMAKE_BINARY_DIR}/mergetools/)
 	file(COPY ${CMAKE_SOURCE_DIR}/contrib/completion/git-prompt.sh DESTINATION ${CMAKE_BINARY_DIR}/contrib/completion/)

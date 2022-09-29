@@ -120,6 +120,17 @@ int commit_graft_pos(struct repository *r, const struct object_id *oid)
 		       commit_graft_oid_access);
 }
 
+static void unparse_commit(struct repository *r, const struct object_id *oid)
+{
+	struct commit *c = lookup_commit(r, oid);
+
+	if (!c->object.parsed)
+		return;
+	free_commit_list(c->parents);
+	c->parents = NULL;
+	c->object.parsed = 0;
+}
+
 int register_commit_graft(struct repository *r, struct commit_graft *graft,
 			  int ignore_dups)
 {
@@ -145,6 +156,7 @@ int register_commit_graft(struct repository *r, struct commit_graft *graft,
 			(r->parsed_objects->grafts_nr - pos - 1) *
 			sizeof(*r->parsed_objects->grafts));
 	r->parsed_objects->grafts[pos] = graft;
+	unparse_commit(r, &graft->oid);
 	return 0;
 }
 
@@ -253,8 +265,10 @@ void reset_commit_grafts(struct repository *r)
 {
 	int i;
 
-	for (i = 0; i < r->parsed_objects->grafts_nr; i++)
+	for (i = 0; i < r->parsed_objects->grafts_nr; i++) {
+		unparse_commit(r, &r->parsed_objects->grafts[i]->oid);
 		free(r->parsed_objects->grafts[i]);
+	}
 	r->parsed_objects->grafts_nr = 0;
 	r->parsed_objects->commit_graft_prepared = 0;
 }
@@ -407,17 +421,14 @@ int parse_commit_buffer(struct repository *r, struct commit *item, const void *b
 
 	if (item->object.parsed)
 		return 0;
-
-	if (item->parents) {
-		/*
-		 * Presumably this is leftover from an earlier failed parse;
-		 * clear it out in preparation for us re-parsing (we'll hit the
-		 * same error, but that's good, since it lets our caller know
-		 * the result cannot be trusted.
-		 */
-		free_commit_list(item->parents);
-		item->parents = NULL;
-	}
+	/*
+	 * Presumably this is leftover from an earlier failed parse;
+	 * clear it out in preparation for us re-parsing (we'll hit the
+	 * same error, but that's good, since it lets our caller know
+	 * the result cannot be trusted.
+	 */
+	free_commit_list(item->parents);
+	item->parents = NULL;
 
 	tail += size;
 	if (tail <= bufptr + tree_entry_len + 1 || memcmp(bufptr, "tree ", 5) ||
@@ -631,10 +642,11 @@ struct commit_list * commit_list_insert_by_date(struct commit *item, struct comm
 	return commit_list_insert(item, pp);
 }
 
-static int commit_list_compare_by_date(const void *a, const void *b)
+static int commit_list_compare_by_date(const struct commit_list *a,
+				       const struct commit_list *b)
 {
-	timestamp_t a_date = ((const struct commit_list *)a)->item->date;
-	timestamp_t b_date = ((const struct commit_list *)b)->item->date;
+	timestamp_t a_date = a->item->date;
+	timestamp_t b_date = b->item->date;
 	if (a_date < b_date)
 		return 1;
 	if (a_date > b_date)
@@ -642,20 +654,11 @@ static int commit_list_compare_by_date(const void *a, const void *b)
 	return 0;
 }
 
-static void *commit_list_get_next(const void *a)
-{
-	return ((const struct commit_list *)a)->next;
-}
-
-static void commit_list_set_next(void *a, void *next)
-{
-	((struct commit_list *)a)->next = next;
-}
+DEFINE_LIST_SORT(static, commit_list_sort, struct commit_list, next);
 
 void commit_list_sort_by_date(struct commit_list **list)
 {
-	*list = llist_mergesort(*list, commit_list_get_next, commit_list_set_next,
-				commit_list_compare_by_date);
+	commit_list_sort(list, commit_list_compare_by_date);
 }
 
 struct commit *pop_most_recent_commit(struct commit_list **list,
@@ -948,8 +951,9 @@ static void add_one_commit(struct object_id *oid, struct rev_collect *revs)
 }
 
 static int collect_one_reflog_ent(struct object_id *ooid, struct object_id *noid,
-				  const char *ident, timestamp_t timestamp,
-				  int tz, const char *message, void *cbdata)
+				  const char *ident UNUSED,
+				  timestamp_t timestamp UNUSED, int tz UNUSED,
+				  const char *message UNUSED, void *cbdata)
 {
 	struct rev_collect *revs = cbdata;
 
@@ -1515,7 +1519,7 @@ static int verify_utf8(struct strbuf *buf)
 static const char commit_utf8_warn[] =
 N_("Warning: commit message did not conform to UTF-8.\n"
    "You may want to amend it after fixing the message, or set the config\n"
-   "variable i18n.commitencoding to the encoding your project uses.\n");
+   "variable i18n.commitEncoding to the encoding your project uses.\n");
 
 int commit_tree_extended(const char *msg, size_t msg_len,
 			 const struct object_id *tree,

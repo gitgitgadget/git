@@ -9,7 +9,7 @@ git - the stupid content tracker
 SYNOPSIS
 --------
 [verse]
-'git' [--version] [--help] [-C <path>] [-c <name>=<value>]
+'git' [-v | --version] [-h | --help] [-C <path>] [-c <name>=<value>]
     [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]
     [-p|--paginate|-P|--no-pager] [--no-replace-objects] [--bare]
     [--git-dir=<path>] [--work-tree=<path>] [--namespace=<name>]
@@ -39,6 +39,7 @@ or https://git-scm.com/docs.
 
 OPTIONS
 -------
+-v::
 --version::
 	Prints the Git suite version that the 'git' program came from.
 +
@@ -46,6 +47,7 @@ This option is internally converted to `git version ...` and accepts
 the same options as the linkgit:git-version[1] command. If `--help` is
 also given, it takes precedence over `--version`.
 
+-h::
 --help::
 	Prints the synopsis and a list of the most commonly used
 	commands. If the option `--all` or `-a` is given then all
@@ -337,6 +339,23 @@ The following documentation pages are guides about Git concepts.
 
 include::cmds-guide.txt[]
 
+Repository, command and file interfaces
+---------------------------------------
+
+This documentation discusses repository and command interfaces which
+users are expected to interact with directly. See `--user-formats` in
+linkgit:git-help[1] for more details on the criteria.
+
+include::cmds-userinterfaces.txt[]
+
+File formats, protocols and other developer interfaces
+------------------------------------------------------
+
+This documentation discusses file formats, over-the-wire protocols and
+other git developer interfaces. See `--developer-interfaces` in
+linkgit:git-help[1].
+
+include::cmds-developerinterfaces.txt[]
 
 Configuration Mechanism
 -----------------------
@@ -883,9 +902,7 @@ for full details.
 	If set to a colon-separated list of protocols, behave as if
 	`protocol.allow` is set to `never`, and each of the listed
 	protocols has `protocol.<name>.allow` set to `always`
-	(overriding any existing configuration). In other words, any
-	protocol not mentioned will be disallowed (i.e., this is a
-	whitelist, not a blacklist). See the description of
+	(overriding any existing configuration). See the description of
 	`protocol.allow` in linkgit:git-config[1] for more details.
 
 `GIT_PROTOCOL_FROM_USER`::

@@ -1,16 +1,12 @@
 #include "git-compat-util.h"
 #include "test-tool.h"
+#include "test-tool-utils.h"
 #include "trace2.h"
 #include "parse-options.h"
 
 static const char * const test_tool_usage[] = {
 	"test-tool [-C <directory>] <command [<arguments>...]]",
 	NULL
-};
-
-struct test_cmd {
-	const char *name;
-	int (*fn)(int argc, const char **argv);
 };
 
 static struct test_cmd cmds[] = {
@@ -38,6 +34,7 @@ static struct test_cmd cmds[] = {
 	{ "getcwd", cmd__getcwd },
 	{ "hashmap", cmd__hashmap },
 	{ "hash-speed", cmd__hash_speed },
+	{ "hexdump", cmd__hexdump },
 	{ "index-version", cmd__index_version },
 	{ "json-writer", cmd__json_writer },
 	{ "lazy-init-name-hash", cmd__lazy_init_name_hash },
@@ -48,8 +45,11 @@ static struct test_cmd cmds[] = {
 	{ "oidmap", cmd__oidmap },
 	{ "oidtree", cmd__oidtree },
 	{ "online-cpus", cmd__online_cpus },
+	{ "pack-mtimes", cmd__pack_mtimes },
 	{ "parse-options", cmd__parse_options },
+	{ "parse-options-flags", cmd__parse_options_flags },
 	{ "parse-pathspec-file", cmd__parse_pathspec_file },
+	{ "parse-subcommand", cmd__parse_subcommand },
 	{ "partial-clone", cmd__partial_clone },
 	{ "path-utils", cmd__path_utils },
 	{ "pcre2-config", cmd__pcre2_config },
@@ -63,6 +63,7 @@ static struct test_cmd cmds[] = {
 	{ "read-midx", cmd__read_midx },
 	{ "ref-store", cmd__ref_store },
 	{ "reftable", cmd__reftable },
+	{ "rot13-filter", cmd__rot13_filter },
 	{ "dump-reftable", cmd__dump_reftable },
 	{ "regex", cmd__regex },
 	{ "repository", cmd__repository },
@@ -76,6 +77,7 @@ static struct test_cmd cmds[] = {
 	{ "simple-ipc", cmd__simple_ipc },
 	{ "strcmp-offset", cmd__strcmp_offset },
 	{ "string-list", cmd__string_list },
+	{ "submodule", cmd__submodule },
 	{ "submodule-config", cmd__submodule_config },
 	{ "submodule-nested-repo-config", cmd__submodule_nested_repo_config },
 	{ "subprocess", cmd__subprocess },

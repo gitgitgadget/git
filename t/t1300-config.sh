@@ -2024,8 +2024,17 @@ test_expect_success '--show-scope with --list' '
 	local	user.override=local
 	local	include.path=../include/relative.include
 	local	user.relative=include
+	local	core.repositoryformatversion=1
+	local	extensions.worktreeconfig=true
+	worktree	user.worktree=true
 	command	user.cmdline=true
 	EOF
+	git worktree add wt1 &&
+	# We need these to test for worktree scope, but outside of this
+	# test, this is just noise
+	test_config core.repositoryformatversion 1 &&
+	test_config extensions.worktreeConfig true &&
+	git config --worktree user.worktree true &&
 	git -c user.cmdline=true config --list --show-scope >output &&
 	test_cmp expect output
 '
@@ -2074,12 +2083,13 @@ test_expect_success '--show-scope with --show-origin' '
 '
 
 test_expect_success 'override global and system config' '
-	test_when_finished rm -f "$HOME"/.config/git &&
-
+	test_when_finished rm -f \"\$HOME\"/.gitconfig &&
 	cat >"$HOME"/.gitconfig <<-EOF &&
 	[home]
 		config = true
 	EOF
+
+	test_when_finished rm -rf \"\$HOME\"/.config/git &&
 	mkdir -p "$HOME"/.config/git &&
 	cat >"$HOME"/.config/git/config <<-EOF &&
 	[xdg]

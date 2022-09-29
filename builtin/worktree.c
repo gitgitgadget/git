@@ -301,7 +301,7 @@ static int checkout_worktree(const struct add_opts *opts,
 	strvec_pushl(&cp.args, "reset", "--hard", "--no-recurse-submodules", NULL);
 	if (opts->quiet)
 		strvec_push(&cp.args, "--quiet");
-	strvec_pushv(&cp.env_array, child_env->v);
+	strvec_pushv(&cp.env, child_env->v);
 	return run_command(&cp);
 }
 
@@ -433,7 +433,7 @@ static int add_worktree(const char *path, const char *refname,
 			strvec_push(&cp.args, "--quiet");
 	}
 
-	strvec_pushv(&cp.env_array, child_env.v);
+	strvec_pushv(&cp.env, child_env.v);
 	ret = run_command(&cp);
 	if (ret)
 		goto done;
@@ -989,9 +989,9 @@ static void check_clean_worktree(struct worktree *wt,
 	validate_no_submodules(wt);
 
 	child_process_init(&cp);
-	strvec_pushf(&cp.env_array, "%s=%s/.git",
+	strvec_pushf(&cp.env, "%s=%s/.git",
 		     GIT_DIR_ENVIRONMENT, wt->path);
-	strvec_pushf(&cp.env_array, "%s=%s",
+	strvec_pushf(&cp.env, "%s=%s",
 		     GIT_WORK_TREE_ENVIRONMENT, wt->path);
 	strvec_pushl(&cp.args, "status",
 		     "--porcelain", "--ignore-submodules=none",
@@ -1112,31 +1112,24 @@ static int repair(int ac, const char **av, const char *prefix)
 
 int cmd_worktree(int ac, const char **av, const char *prefix)
 {
+	parse_opt_subcommand_fn *fn = NULL;
 	struct option options[] = {
+		OPT_SUBCOMMAND("add", &fn, add),
+		OPT_SUBCOMMAND("prune", &fn, prune),
+		OPT_SUBCOMMAND("list", &fn, list),
+		OPT_SUBCOMMAND("lock", &fn, lock_worktree),
+		OPT_SUBCOMMAND("unlock", &fn, unlock_worktree),
+		OPT_SUBCOMMAND("move", &fn, move_worktree),
+		OPT_SUBCOMMAND("remove", &fn, remove_worktree),
+		OPT_SUBCOMMAND("repair", &fn, repair),
 		OPT_END()
 	};
 
 	git_config(git_worktree_config, NULL);
 
-	if (ac < 2)
-		usage_with_options(worktree_usage, options);
 	if (!prefix)
 		prefix = "";
-	if (!strcmp(av[1], "add"))
-		return add(ac - 1, av + 1, prefix);
-	if (!strcmp(av[1], "prune"))
-		return prune(ac - 1, av + 1, prefix);
-	if (!strcmp(av[1], "list"))
-		return list(ac - 1, av + 1, prefix);
-	if (!strcmp(av[1], "lock"))
-		return lock_worktree(ac - 1, av + 1, prefix);
-	if (!strcmp(av[1], "unlock"))
-		return unlock_worktree(ac - 1, av + 1, prefix);
-	if (!strcmp(av[1], "move"))
-		return move_worktree(ac - 1, av + 1, prefix);
-	if (!strcmp(av[1], "remove"))
-		return remove_worktree(ac - 1, av + 1, prefix);
-	if (!strcmp(av[1], "repair"))
-		return repair(ac - 1, av + 1, prefix);
-	usage_with_options(worktree_usage, options);
+
+	ac = parse_options(ac, av, prefix, options, worktree_usage, 0);
+	return fn(ac, av, prefix);
 }

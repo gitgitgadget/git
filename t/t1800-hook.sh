@@ -4,6 +4,7 @@ test_description='git-hook command'
 
 TEST_PASSES_SANITIZE_LEAK=true
 . ./test-lib.sh
+. "$TEST_DIRECTORY"/lib-terminal.sh
 
 test_expect_success 'git hook usage' '
 	test_expect_code 129 git hook &&
@@ -117,6 +118,62 @@ test_expect_success 'git -c core.hooksPath=<PATH> hook run' '
 	git -c core.hooksPath=my-hooks/ hook run test-hook -- two 2>>actual &&
 	git -c core.hooksPath="$PWD/my-hooks" hook run test-hook -- three 2>>actual &&
 	git -c core.hooksPath="$PWD/my-hooks/" hook run test-hook -- four 2>>actual &&
+	test_cmp expect actual
+'
+
+test_hook_tty () {
+	cat >expect <<-\EOF
+	STDOUT TTY
+	STDERR TTY
+	EOF
+
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+
+	test_commit -C repo A &&
+	test_commit -C repo B &&
+	git -C repo reset --soft HEAD^ &&
+
+	test_hook -C repo pre-commit <<-EOF &&
+	test -t 1 && echo STDOUT TTY >>actual || echo STDOUT NO TTY >>actual &&
+	test -t 2 && echo STDERR TTY >>actual || echo STDERR NO TTY >>actual
+	EOF
+
+	test_terminal git -C repo "$@" &&
+	test_cmp expect repo/actual
+}
+
+test_expect_success TTY 'git hook run: stdout and stderr are connected to a TTY' '
+	test_hook_tty hook run pre-commit
+'
+
+test_expect_success TTY 'git commit: stdout and stderr are connected to a TTY' '
+	test_hook_tty commit -m"B.new"
+'
+
+test_expect_success 'git hook run a hook with a bad shebang' '
+	test_when_finished "rm -rf bad-hooks" &&
+	mkdir bad-hooks &&
+	write_script bad-hooks/test-hook "/bad/path/no/spaces" </dev/null &&
+
+	# TODO: We should emit the same (or at least a more similar)
+	# error on MINGW (essentially Git for Windows) and all other
+	# platforms.. See the OS-specific code in start_command()
+	if test_have_prereq !MINGW
+	then
+		cat >expect <<-\EOF
+		fatal: cannot run bad-hooks/test-hook: ...
+		EOF
+	else
+		cat >expect <<-\EOF
+		error: cannot spawn bad-hooks/test-hook: ...
+		EOF
+	fi &&
+	test_expect_code 1 git \
+		-c core.hooksPath=bad-hooks \
+		hook run test-hook >out 2>err &&
+	test_must_be_empty out &&
+	sed -e "s/test-hook: .*/test-hook: .../" <err >actual &&
 	test_cmp expect actual
 '
 

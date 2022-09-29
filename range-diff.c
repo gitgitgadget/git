@@ -44,7 +44,7 @@ static int read_patches(const char *range, struct string_list *list,
 
 	strvec_pushl(&cp.args, "log", "--no-color", "-p", "--no-merges",
 		     "--reverse", "--date-order", "--decorate=no",
-		     "--no-prefix",
+		     "--no-prefix", "--submodule=short",
 		     /*
 		      * Choose indicators that are not used anywhere
 		      * else in diffs, but still look reasonable
@@ -57,9 +57,9 @@ static int read_patches(const char *range, struct string_list *list,
 		     "--pretty=medium",
 		     "--notes",
 		     NULL);
+	strvec_push(&cp.args, range);
 	if (other_arg)
 		strvec_pushv(&cp.args, other_arg->v);
-	strvec_push(&cp.args, range);
 	cp.out = -1;
 	cp.no_stdin = 1;
 	cp.git_cmd = 1;
@@ -224,8 +224,10 @@ cleanup:
 	return ret;
 }
 
-static int patch_util_cmp(const void *dummy, const struct patch_util *a,
-			  const struct patch_util *b, const char *keydata)
+static int patch_util_cmp(const void *cmp_data UNUSED,
+			  const struct patch_util *a,
+			  const struct patch_util *b,
+			  const char *keydata)
 {
 	return strcmp(a->diff, keydata ? keydata : b->diff);
 }
@@ -596,6 +598,6 @@ int is_range_diff_range(const char *arg)
 	}
 
 	free(copy);
-	object_array_clear(&revs.pending);
+	release_revisions(&revs);
 	return negative > 0 && positive > 0;
 }

@@ -165,15 +165,17 @@ static struct {
 	{ 0, "TRUST_", GPG_STATUS_TRUST_LEVEL },
 };
 
-static struct {
+/* Keep the order same as enum signature_trust_level */
+static struct sigcheck_gpg_trust_level {
 	const char *key;
+	const char *display_key;
 	enum signature_trust_level value;
 } sigcheck_gpg_trust_level[] = {
-	{ "UNDEFINED", TRUST_UNDEFINED },
-	{ "NEVER", TRUST_NEVER },
-	{ "MARGINAL", TRUST_MARGINAL },
-	{ "FULLY", TRUST_FULLY },
-	{ "ULTIMATE", TRUST_ULTIMATE },
+	{ "UNDEFINED", "undefined", TRUST_UNDEFINED },
+	{ "NEVER", "never", TRUST_NEVER },
+	{ "MARGINAL", "marginal", TRUST_MARGINAL },
+	{ "FULLY", "fully", TRUST_FULLY },
+	{ "ULTIMATE", "ultimate", TRUST_ULTIMATE },
 };
 
 static void replace_cstring(char **field, const char *line, const char *next)
@@ -697,7 +699,7 @@ void set_signing_key(const char *key)
 	configured_signing_key = xstrdup(key);
 }
 
-int git_gpg_config(const char *var, const char *value, void *cb)
+int git_gpg_config(const char *var, const char *value, void *cb UNUSED)
 {
 	struct gpg_format *fmt = NULL;
 	char *fmtname = NULL;
@@ -905,6 +907,20 @@ const char *get_signing_key(void)
 	return git_committer_info(IDENT_STRICT | IDENT_NO_DATE);
 }
 
+const char *gpg_trust_level_to_str(enum signature_trust_level level)
+{
+	struct sigcheck_gpg_trust_level *trust;
+
+	if (level < 0 || level >= ARRAY_SIZE(sigcheck_gpg_trust_level))
+		BUG("invalid trust level requested %d", level);
+
+	trust = &sigcheck_gpg_trust_level[level];
+	if (trust->value != level)
+		BUG("sigcheck_gpg_trust_level[] unsorted");
+
+	return sigcheck_gpg_trust_level[level].display_key;
+}
+
 int sign_buffer(struct strbuf *buffer, struct strbuf *signature, const char *signing_key)
 {
 	return use_format->sign_buffer(buffer, signature, signing_key);
@@ -985,7 +1001,7 @@ static int sign_buffer_ssh(struct strbuf *buffer, struct strbuf *signature,
 
 	if (!signing_key || signing_key[0] == '\0')
 		return error(
-			_("user.signingkey needs to be set for ssh signing"));
+			_("user.signingKey needs to be set for ssh signing"));
 
 	if (is_literal_ssh_key(signing_key, &literal_key)) {
 		/* A literal ssh key */

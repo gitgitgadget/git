@@ -236,7 +236,7 @@ static char *apply_command(struct conf_info *conf, const char *arg)
 			strbuf_replace(&cmd, TRAILER_ARG_STRING, arg);
 		strvec_push(&cp.args, cmd.buf);
 	}
-	strvec_pushv(&cp.env_array, (const char **)local_repo_env);
+	strvec_pushv(&cp.env, (const char **)local_repo_env);
 	cp.no_stdin = 1;
 	cp.use_shell = 1;
 
@@ -478,7 +478,8 @@ static struct {
 	{ "ifmissing", TRAILER_IF_MISSING }
 };
 
-static int git_trailer_default_config(const char *conf_key, const char *value, void *cb)
+static int git_trailer_default_config(const char *conf_key, const char *value,
+				      void *cb UNUSED)
 {
 	const char *trailer_item, *variable_name;
 
@@ -509,7 +510,8 @@ static int git_trailer_default_config(const char *conf_key, const char *value, v
 	return 0;
 }
 
-static int git_trailer_config(const char *conf_key, const char *value, void *cb)
+static int git_trailer_config(const char *conf_key, const char *value,
+			      void *cb UNUSED)
 {
 	const char *trailer_item, *variable_name;
 	struct arg_item *item;
@@ -1029,7 +1031,7 @@ static FILE *create_in_place_tempfile(const char *file)
 
 	/* Create temporary file in the same directory as the original */
 	tail = strrchr(file, '/');
-	if (tail != NULL)
+	if (tail)
 		strbuf_add(&filename_template, file, tail - file + 1);
 	strbuf_addstr(&filename_template, "git-interpret-trailers-XXXXXX");
 

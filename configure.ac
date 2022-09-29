@@ -237,9 +237,6 @@ AC_MSG_NOTICE([CHECKS for site configuration])
 # tests.  These tests take up a significant amount of the total test time
 # but are not needed unless you plan to talk to SVN repos.
 #
-# Define PPC_SHA1 environment variable when running make to make use of
-# a bundled SHA1 routine optimized for PowerPC.
-#
 # Define NO_OPENSSL environment variable if you do not have OpenSSL.
 #
 # Define OPENSSLDIR=/foo/bar if your openssl header and library files are in
@@ -1189,9 +1186,6 @@ AC_COMPILE_IFELSE([BSD_SYSCTL_SRC],
 GIT_CONF_SUBST([HAVE_BSD_SYSCTL])
 
 ## Other checks.
-# Define USE_PIC if you need the main git objects to be built with -fPIC
-# in order to build and link perl/Git.so.  x86-64 seems to need this.
-#
 # Define NO_SYMLINK_HEAD if you never want .git/HEAD to be a symbolic link.
 # Enable it on Windows.  By default, symrefs are still used.
 #

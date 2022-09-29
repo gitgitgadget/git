@@ -11,6 +11,7 @@ test_description='sparse checkout tests
   A	init.t
 '
 
+TEST_CREATE_REPO_NO_TEMPLATE=1
 . ./test-lib.sh
 . "$TEST_DIRECTORY"/lib-read-tree.sh
 
@@ -53,12 +54,13 @@ test_expect_success 'read-tree without .git/info/sparse-checkout' '
 '
 
 test_expect_success 'read-tree with .git/info/sparse-checkout but disabled' '
+	mkdir .git/info &&
 	echo >.git/info/sparse-checkout &&
 	read_tree_u_must_succeed -m -u HEAD &&
 	git ls-files -t >result &&
 	test_cmp expected.swt result &&
-	test -f init.t &&
-	test -f sub/added
+	test_path_is_file init.t &&
+	test_path_is_file sub/added
 '
 
 test_expect_success 'read-tree --no-sparse-checkout with empty .git/info/sparse-checkout and enabled' '
@@ -67,8 +69,8 @@ test_expect_success 'read-tree --no-sparse-checkout with empty .git/info/sparse-
 	read_tree_u_must_succeed --no-sparse-checkout -m -u HEAD &&
 	git ls-files -t >result &&
 	test_cmp expected.swt result &&
-	test -f init.t &&
-	test -f sub/added
+	test_path_is_file init.t &&
+	test_path_is_file sub/added
 '
 
 test_expect_success 'read-tree with empty .git/info/sparse-checkout' '
@@ -85,8 +87,8 @@ test_expect_success 'read-tree with empty .git/info/sparse-checkout' '
 	S subsub/added
 	EOF
 	test_cmp expected.swt result &&
-	! test -f init.t &&
-	! test -f sub/added
+	test_path_is_missing init.t &&
+	test_path_is_missing sub/added
 '
 
 test_expect_success 'match directories with trailing slash' '
@@ -101,8 +103,8 @@ test_expect_success 'match directories with trailing slash' '
 	read_tree_u_must_succeed -m -u HEAD &&
 	git ls-files -t > result &&
 	test_cmp expected.swt-noinit result &&
-	test ! -f init.t &&
-	test -f sub/added
+	test_path_is_missing init.t &&
+	test_path_is_file sub/added
 '
 
 test_expect_success 'match directories without trailing slash' '
@@ -110,8 +112,8 @@ test_expect_success 'match directories without trailing slash' '
 	read_tree_u_must_succeed -m -u HEAD &&
 	git ls-files -t >result &&
 	test_cmp expected.swt-noinit result &&
-	test ! -f init.t &&
-	test -f sub/added
+	test_path_is_missing init.t &&
+	test_path_is_file sub/added
 '
 
 test_expect_success 'match directories with negated patterns' '
@@ -129,9 +131,9 @@ EOF
 	git read-tree -m -u HEAD &&
 	git ls-files -t >result &&
 	test_cmp expected.swt-negation result &&
-	test ! -f init.t &&
-	test ! -f sub/added &&
-	test -f sub/addedtoo
+	test_path_is_missing init.t &&
+	test_path_is_missing sub/added &&
+	test_path_is_file sub/addedtoo
 '
 
 test_expect_success 'match directories with negated patterns (2)' '
@@ -150,9 +152,9 @@ EOF
 	git read-tree -m -u HEAD &&
 	git ls-files -t >result &&
 	test_cmp expected.swt-negation2 result &&
-	test -f init.t &&
-	test -f sub/added &&
-	test ! -f sub/addedtoo
+	test_path_is_file init.t &&
+	test_path_is_file sub/added &&
+	test_path_is_missing sub/addedtoo
 '
 
 test_expect_success 'match directory pattern' '
@@ -160,8 +162,8 @@ test_expect_success 'match directory pattern' '
 	read_tree_u_must_succeed -m -u HEAD &&
 	git ls-files -t >result &&
 	test_cmp expected.swt-noinit result &&
-	test ! -f init.t &&
-	test -f sub/added
+	test_path_is_missing init.t &&
+	test_path_is_file sub/added
 '
 
 test_expect_success 'checkout area changes' '
@@ -176,15 +178,15 @@ test_expect_success 'checkout area changes' '
 	read_tree_u_must_succeed -m -u HEAD &&
 	git ls-files -t >result &&
 	test_cmp expected.swt-nosub result &&
-	test -f init.t &&
-	test ! -f sub/added
+	test_path_is_file init.t &&
+	test_path_is_missing sub/added
 '
 
 test_expect_success 'read-tree updates worktree, absent case' '
 	echo sub/added >.git/info/sparse-checkout &&
 	git checkout -f top &&
 	read_tree_u_must_succeed -m -u HEAD^ &&
-	test ! -f init.t
+	test_path_is_missing init.t
 '
 
 test_expect_success 'read-tree will not throw away dirty changes, non-sparse' '
@@ -229,7 +231,7 @@ test_expect_success 'read-tree adds to worktree, absent case' '
 	echo init.t >.git/info/sparse-checkout &&
 	git checkout -f removed &&
 	read_tree_u_must_succeed -u -m HEAD^ &&
-	test ! -f sub/added
+	test_path_is_missing sub/added
 '
 
 test_expect_success 'read-tree adds to worktree, dirty case' '
@@ -248,7 +250,7 @@ test_expect_success 'index removal and worktree narrowing at the same time' '
 	echo init.t >.git/info/sparse-checkout &&
 	git checkout removed &&
 	git ls-files sub/added >result &&
-	test ! -f sub/added &&
+	test_path_is_missing sub/added &&
 	test_must_be_empty result
 '
 

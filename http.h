@@ -163,11 +163,23 @@ struct http_get_options {
  */
 int http_get_strbuf(const char *url, struct strbuf *result, struct http_get_options *options);
 
+/*
+ * Downloads a URL and stores the result in the given file.
+ *
+ * If a previous interrupted download is detected (i.e. a previous temporary
+ * file is still around) the download is resumed.
+ */
+int http_get_file(const char *url, const char *filename,
+		  struct http_get_options *options);
+
 int http_fetch_ref(const char *base, struct ref *ref);
 
 /* Helpers for fetching packs */
 int http_get_info_packs(const char *base_url,
 			struct packed_git **packs_head);
+
+/* Helper for getting Accept-Language header */
+const char *http_get_accept_language_header(void);
 
 struct http_pack_request {
 	char *url;

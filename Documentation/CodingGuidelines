@@ -43,7 +43,10 @@ the overall style of existing code. Modifications to existing
 code is expected to match the style the surrounding code already
 uses (even if it doesn't match the overall style of existing code).
 
-But if you must have a list of rules, here they are.
+But if you must have a list of rules, here are some language
+specific ones. Note that Documentation/ToolsForGit.txt document
+has a collection of tips to help you use some external tools
+to conform to these guidelines.
 
 For shell scripts specifically (not exhaustive):
 
@@ -492,17 +495,6 @@ For Perl programs:
 
  - Learn and use Git.pm if you need that functionality.
 
- - For Emacs, it's useful to put the following in
-   GIT_CHECKOUT/.dir-locals.el, assuming you use cperl-mode:
-
-    ;; note the first part is useful for C editing, too
-    ((nil . ((indent-tabs-mode . t)
-                  (tab-width . 8)
-                  (fill-column . 80)))
-     (cperl-mode . ((cperl-indent-level . 8)
-                    (cperl-extra-newline-before-brace . nil)
-                    (cperl-merge-trailing-else . t))))
-
 For Python scripts:
 
  - We follow PEP-8 (http://www.python.org/dev/peps/pep-0008/).
@@ -614,7 +606,7 @@ Writing Documentation:
     avoidance of gendered pronouns.
 
   - When it becomes awkward to stick to this style, prefer "you" when
-    addressing the the hypothetical user, and possibly "we" when
+    addressing the hypothetical user, and possibly "we" when
     discussing how the program might react to the user.  E.g.
 
       You can use this option instead of --xyz, but we might remove

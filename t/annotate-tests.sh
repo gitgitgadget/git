@@ -56,6 +56,10 @@ check_count () {
 	' "$@" <actual
 }
 
+get_progress_result () {
+	tr '\015' '\012' | tail -n 1
+}
+
 test_expect_success 'setup A lines' '
 	echo "1A quick brown fox jumps over the" >file &&
 	echo "lazy dog" >>file &&
@@ -149,7 +153,7 @@ test_expect_success 'blame evil merge' '
 
 test_expect_success 'blame huge graft' '
 	test_when_finished "git checkout branch2" &&
-	test_when_finished "rm -f .git/info/grafts" &&
+	test_when_finished "rm -rf .git/info" &&
 	graft= &&
 	for i in 0 1 2
 	do
@@ -164,6 +168,7 @@ test_expect_success 'blame huge graft' '
 			graft="$graft$commit " || return 1
 		done
 	done &&
+	mkdir .git/info &&
 	printf "%s " $graft >.git/info/grafts &&
 	check_count -h 00 01 1 10 1
 '
@@ -603,4 +608,40 @@ test_expect_success 'blame -L X,-N (non-numeric N)' '
 
 test_expect_success 'blame -L ,^/RE/' '
 	test_must_fail $PROG -L1,^/99/ file
+'
+
+test_expect_success 'blame progress on a full file' '
+	cat >expect <<-\EOF &&
+	Blaming lines: 100% (10/10), done.
+	EOF
+
+	GIT_PROGRESS_DELAY=0 \
+	git blame --progress hello.c 2>stderr &&
+
+	get_progress_result <stderr >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'blame progress on a single range' '
+	cat >expect <<-\EOF &&
+	Blaming lines: 100% (4/4), done.
+	EOF
+
+	GIT_PROGRESS_DELAY=0 \
+	git blame --progress -L 3,6 hello.c 2>stderr &&
+
+	get_progress_result <stderr >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'blame progress on multiple ranges' '
+	cat >expect <<-\EOF &&
+	Blaming lines: 100% (7/7), done.
+	EOF
+
+	GIT_PROGRESS_DELAY=0 \
+	git blame --progress -L 3,6 -L 8,10 hello.c 2>stderr &&
+
+	get_progress_result <stderr >actual &&
+	test_cmp expect actual
 '

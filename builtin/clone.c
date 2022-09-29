@@ -34,6 +34,7 @@
 #include "list-objects-filter-options.h"
 #include "hook.h"
 #include "bundle.h"
+#include "bundle-uri.h"
 
 /*
  * Overall FIXMEs:
@@ -72,11 +73,12 @@ static struct string_list option_optional_reference = STRING_LIST_INIT_NODUP;
 static int option_dissociate;
 static int max_jobs = -1;
 static struct string_list option_recurse_submodules = STRING_LIST_INIT_NODUP;
-static struct list_objects_filter_options filter_options;
+static struct list_objects_filter_options filter_options = LIST_OBJECTS_FILTER_INIT;
 static int option_filter_submodules = -1;    /* unspecified */
 static int config_filter_submodules = -1;    /* unspecified */
 static struct string_list server_options = STRING_LIST_INIT_NODUP;
 static int option_remote_submodules;
+static const char *bundle_uri;
 
 static int recurse_submodules_cb(const struct option *opt,
 				 const char *arg, int unset)
@@ -160,6 +162,8 @@ static struct option builtin_clone_options[] = {
 		    N_("any cloned submodules will use their remote-tracking branch")),
 	OPT_BOOL(0, "sparse", &option_sparse_checkout,
 		    N_("initialize sparse-checkout file to include only files at root")),
+	OPT_STRING(0, "bundle-uri", &bundle_uri,
+		   N_("uri"), N_("a URI for downloading bundles before fetching from origin remote")),
 	OPT_END()
 };
 
@@ -494,6 +498,7 @@ static struct ref *wanted_peer_refs(const struct ref *refs,
 			/* if --branch=tag, pull the requested tag explicitly */
 			get_fetch_map(remote_head, tag_refspec, &tail, 0);
 		}
+		free_refs(remote_head);
 	} else {
 		int i;
 		for (i = 0; i < refspec->nr; i++)
@@ -606,7 +611,7 @@ static void update_remote_refs(const struct ref *refs,
 }
 
 static void update_head(const struct ref *our, const struct ref *remote,
-			const char *msg)
+			const char *unborn, const char *msg)
 {
 	const char *head;
 	if (our && skip_prefix(our->name, "refs/heads/", &head)) {
@@ -632,6 +637,15 @@ static void update_head(const struct ref *our, const struct ref *remote,
 		 */
 		update_ref(msg, "HEAD", &remote->old_oid, NULL, REF_NO_DEREF,
 			   UPDATE_REFS_DIE_ON_ERR);
+	} else if (unborn && skip_prefix(unborn, "refs/heads/", &head)) {
+		/*
+		 * Unborn head from remote; same as "our" case above except
+		 * that we have no ref to update.
+		 */
+		if (create_symref("HEAD", unborn, NULL) < 0)
+			die(_("unable to update HEAD"));
+		if (!option_bare)
+			install_branch_config(0, head, remote_name, unborn);
 	}
 }
 
@@ -672,7 +686,7 @@ static int checkout(int submodule_progress, int filter_submodules)
 	head = resolve_refdup("HEAD", RESOLVE_REF_READING, &oid, NULL);
 	if (!head) {
 		warning(_("remote HEAD refers to nonexistent ref, "
-			  "unable to checkout.\n"));
+			  "unable to checkout"));
 		return 0;
 	}
 	if (!strcmp(head, "HEAD")) {
@@ -876,6 +890,7 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 	const struct ref *refs, *remote_head;
 	struct ref *remote_head_points_at = NULL;
 	const struct ref *our_head_points_at;
+	char *unborn_head = NULL;
 	struct ref *mapped_refs = NULL;
 	const struct ref *ref;
 	struct strbuf key = STRBUF_INIT;
@@ -921,6 +936,9 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 			die(_("options '%s' and '%s' cannot be used together"), "--bare", "--separate-git-dir");
 		option_no_checkout = 1;
 	}
+
+	if (bundle_uri && deepen)
+		die(_("--bundle-uri is incompatible with --depth, --shallow-since, and --shallow-exclude"));
 
 	repo_name = argv[0];
 
@@ -1106,10 +1124,12 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 	 * apply the remote name provided by --origin only after this second
 	 * call to git_config, to ensure it overrides all config-based values.
 	 */
-	if (option_origin != NULL)
+	if (option_origin) {
+		free(remote_name);
 		remote_name = xstrdup(option_origin);
+	}
 
-	if (remote_name == NULL)
+	if (!remote_name)
 		remote_name = xstrdup("origin");
 
 	if (!valid_remote_name(remote_name))
@@ -1219,6 +1239,18 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 	if (transport->smart_options && !deepen && !filter_options.choice)
 		transport->smart_options->check_self_contained_and_connected = 1;
 
+	/*
+	 * Before fetching from the remote, download and install bundle
+	 * data from the --bundle-uri option.
+	 */
+	if (bundle_uri) {
+		/* At this point, we need the_repository to match the cloned repo. */
+		if (repo_init(the_repository, git_dir, work_tree))
+			warning(_("failed to initialize the repo, skipping bundle URI"));
+		else if (fetch_bundle_uri(the_repository, bundle_uri))
+			warning(_("failed to fetch objects from bundle URI '%s'"),
+				bundle_uri);
+	}
 
 	strvec_push(&transport_ls_refs_options.ref_prefixes, "HEAD");
 	refspec_ref_prefixes(&remote->fetch,
@@ -1264,51 +1296,49 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 			if (transport_fetch_refs(transport, mapped_refs))
 				die(_("remote transport reported error"));
 		}
-
-		remote_head = find_ref_by_name(refs, "HEAD");
-		remote_head_points_at =
-			guess_remote_head(remote_head, mapped_refs, 0);
-
-		if (option_branch) {
-			our_head_points_at =
-				find_remote_branch(mapped_refs, option_branch);
-
-			if (!our_head_points_at)
-				die(_("Remote branch %s not found in upstream %s"),
-				    option_branch, remote_name);
-		}
-		else
-			our_head_points_at = remote_head_points_at;
 	}
-	else {
-		const char *branch;
-		const char *ref;
-		char *ref_free = NULL;
 
-		if (option_branch)
+	remote_head = find_ref_by_name(refs, "HEAD");
+	remote_head_points_at = guess_remote_head(remote_head, mapped_refs, 0);
+
+	if (option_branch) {
+		our_head_points_at = find_remote_branch(mapped_refs, option_branch);
+		if (!our_head_points_at)
 			die(_("Remote branch %s not found in upstream %s"),
-					option_branch, remote_name);
-
-		warning(_("You appear to have cloned an empty repository."));
+			    option_branch, remote_name);
+	} else if (remote_head_points_at) {
+		our_head_points_at = remote_head_points_at;
+	} else if (remote_head) {
 		our_head_points_at = NULL;
-		remote_head_points_at = NULL;
-		remote_head = NULL;
-		option_no_checkout = 1;
+	} else {
+		const char *branch;
+
+		if (!mapped_refs) {
+			warning(_("You appear to have cloned an empty repository."));
+			option_no_checkout = 1;
+		}
 
 		if (transport_ls_refs_options.unborn_head_target &&
 		    skip_prefix(transport_ls_refs_options.unborn_head_target,
 				"refs/heads/", &branch)) {
-			ref = transport_ls_refs_options.unborn_head_target;
-			create_symref("HEAD", ref, reflog_msg.buf);
+			unborn_head  = xstrdup(transport_ls_refs_options.unborn_head_target);
 		} else {
 			branch = git_default_branch_name(0);
-			ref_free = xstrfmt("refs/heads/%s", branch);
-			ref = ref_free;
+			unborn_head = xstrfmt("refs/heads/%s", branch);
 		}
 
-		if (!option_bare)
-			install_branch_config(0, branch, remote_name, ref);
-		free(ref_free);
+		/*
+		 * We may have selected a local default branch name "foo",
+		 * and even though the remote's HEAD does not point there,
+		 * it may still have a "foo" branch. If so, set it up so
+		 * that we can follow the usual checkout code later.
+		 *
+		 * Note that for an empty repo we'll already have set
+		 * option_no_checkout above, which would work against us here.
+		 * But for an empty repo, find_remote_branch() can never find
+		 * a match.
+		 */
+		our_head_points_at = find_remote_branch(mapped_refs, branch);
 	}
 
 	write_refspec_config(src_ref_prefix, our_head_points_at,
@@ -1328,7 +1358,7 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 			   branch_top.buf, reflog_msg.buf, transport,
 			   !is_local);
 
-	update_head(our_head_points_at, remote_head, reflog_msg.buf);
+	update_head(our_head_points_at, remote_head, unborn_head, reflog_msg.buf);
 
 	/*
 	 * We want to show progress for recursive submodule clones iff
@@ -1355,6 +1385,7 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 	strbuf_release(&key);
 	free_refs(mapped_refs);
 	free_refs(remote_head_points_at);
+	free(unborn_head);
 	free(dir);
 	free(path);
 	UNLEAK(repo);

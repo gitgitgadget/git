@@ -898,6 +898,7 @@ int cmd_blame(int argc, const char **argv, const char *prefix)
 	unsigned int range_i;
 	long anchor;
 	const int hexsz = the_hash_algo->hexsz;
+	long num_lines = 0;
 
 	setup_default_color_by_age();
 	git_config(git_blame_config, &output_option);
@@ -919,6 +920,7 @@ int cmd_blame(int argc, const char **argv, const char *prefix)
 			break;
 		case PARSE_OPT_HELP:
 		case PARSE_OPT_ERROR:
+		case PARSE_OPT_SUBCOMMAND:
 			exit(129);
 		case PARSE_OPT_COMPLETE:
 			exit(0);
@@ -1129,7 +1131,10 @@ parse_done:
 	for (range_i = ranges.nr; range_i > 0; --range_i) {
 		const struct range *r = &ranges.ranges[range_i - 1];
 		ent = blame_entry_prepend(ent, r->start, r->end, o);
+		num_lines += (r->end - r->start);
 	}
+	if (!num_lines)
+		num_lines = sb.num_lines;
 
 	o->suspects = ent;
 	prio_queue_put(&sb.commits, o->commit);
@@ -1158,7 +1163,7 @@ parse_done:
 	sb.found_guilty_entry = &found_guilty_entry;
 	sb.found_guilty_entry_data = &pi;
 	if (show_progress)
-		pi.progress = start_delayed_progress(_("Blaming lines"), sb.num_lines);
+		pi.progress = start_delayed_progress(_("Blaming lines"), num_lines);
 
 	assign_blame(&sb, opt);
 
@@ -1167,7 +1172,7 @@ parse_done:
 	if (!incremental)
 		setup_pager();
 	else
-		return 0;
+		goto cleanup;
 
 	blame_sort_final(&sb);
 
@@ -1201,6 +1206,8 @@ parse_done:
 		printf("num commits: %d\n", sb.num_commits);
 	}
 
+cleanup:
 	cleanup_scoreboard(&sb);
+	release_revisions(&revs);
 	return 0;
 }

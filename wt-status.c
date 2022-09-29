@@ -616,7 +616,7 @@ static void wt_status_collect_changes_worktree(struct wt_status *s)
 	rev.diffopt.rename_score = s->rename_score >= 0 ? s->rename_score : rev.diffopt.rename_score;
 	copy_pathspec(&rev.prune_data, &s->pathspec);
 	run_diff_files(&rev, 0);
-	clear_pathspec(&rev.prune_data);
+	release_revisions(&rev);
 }
 
 static void wt_status_collect_changes_index(struct wt_status *s)
@@ -662,8 +662,7 @@ static void wt_status_collect_changes_index(struct wt_status *s)
 
 	copy_pathspec(&rev.prune_data, &s->pathspec);
 	run_diff_index(&rev, 1);
-	object_array_clear(&rev.pending);
-	clear_pathspec(&rev.prune_data);
+	release_revisions(&rev);
 }
 
 static int add_file_to_list(const struct object_id *oid,
@@ -948,9 +947,11 @@ static void wt_longstatus_print_changed(struct wt_status *s)
 	wt_longstatus_print_trailer(s);
 }
 
-static int stash_count_refs(struct object_id *ooid, struct object_id *noid,
-			    const char *email, timestamp_t timestamp, int tz,
-			    const char *message, void *cb_data)
+static int stash_count_refs(struct object_id *ooid UNUSED,
+			    struct object_id *noid UNUSED,
+			    const char *email UNUSED,
+			    timestamp_t timestamp UNUSED, int tz UNUSED,
+			    const char *message UNUSED, void *cb_data)
 {
 	int *c = cb_data;
 	(*c)++;
@@ -982,7 +983,7 @@ static void wt_longstatus_print_submodule_summary(struct wt_status *s, int uncom
 	struct strbuf summary = STRBUF_INIT;
 	char *summary_content;
 
-	strvec_pushf(&sm_summary.env_array, "GIT_INDEX_FILE=%s", s->index_file);
+	strvec_pushf(&sm_summary.env, "GIT_INDEX_FILE=%s", s->index_file);
 
 	strvec_push(&sm_summary.args, "submodule");
 	strvec_push(&sm_summary.args, "summary");
@@ -1152,6 +1153,7 @@ static void wt_longstatus_print_verbose(struct wt_status *s)
 		rev.diffopt.b_prefix = "w/";
 		run_diff_files(&rev, 0);
 	}
+	release_revisions(&rev);
 }
 
 static void wt_longstatus_print_tracking(struct wt_status *s)
@@ -1612,8 +1614,10 @@ struct grab_1st_switch_cbdata {
 	struct object_id noid;
 };
 
-static int grab_1st_switch(struct object_id *ooid, struct object_id *noid,
-			   const char *email, timestamp_t timestamp, int tz,
+static int grab_1st_switch(struct object_id *ooid UNUSED,
+			   struct object_id *noid,
+			   const char *email UNUSED,
+			   timestamp_t timestamp UNUSED, int tz UNUSED,
 			   const char *message, void *cb_data)
 {
 	struct grab_1st_switch_cbdata *cb = cb_data;
@@ -2545,7 +2549,9 @@ int has_unstaged_changes(struct repository *r, int ignore_submodules)
 	rev_info.diffopt.flags.quick = 1;
 	diff_setup_done(&rev_info.diffopt);
 	result = run_diff_files(&rev_info, 0);
-	return diff_result_code(&rev_info.diffopt, result);
+	result = diff_result_code(&rev_info.diffopt, result);
+	release_revisions(&rev_info);
+	return result;
 }
 
 /**
@@ -2577,8 +2583,9 @@ int has_uncommitted_changes(struct repository *r,
 
 	diff_setup_done(&rev_info.diffopt);
 	result = run_diff_index(&rev_info, 1);
-	object_array_clear(&rev_info.pending);
-	return diff_result_code(&rev_info.diffopt, result);
+	result = diff_result_code(&rev_info.diffopt, result);
+	release_revisions(&rev_info);
+	return result;
 }
 
 /**

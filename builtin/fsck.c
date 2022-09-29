@@ -19,6 +19,7 @@
 #include "decorate.h"
 #include "packfile.h"
 #include "object-store.h"
+#include "resolve-undo.h"
 #include "run-command.h"
 #include "worktree.h"
 
@@ -487,8 +488,9 @@ static void fsck_handle_reflog_oid(const char *refname, struct object_id *oid,
 }
 
 static int fsck_handle_reflog_ent(struct object_id *ooid, struct object_id *noid,
-		const char *email, timestamp_t timestamp, int tz,
-		const char *message, void *cb_data)
+				  const char *email UNUSED,
+				  timestamp_t timestamp, int tz UNUSED,
+				  const char *message UNUSED, void *cb_data)
 {
 	const char *refname = cb_data;
 
@@ -501,8 +503,9 @@ static int fsck_handle_reflog_ent(struct object_id *ooid, struct object_id *noid
 	return 0;
 }
 
-static int fsck_handle_reflog(const char *logname, const struct object_id *oid,
-			      int flag, void *cb_data)
+static int fsck_handle_reflog(const char *logname,
+			      const struct object_id *oid UNUSED,
+			      int flag UNUSED, void *cb_data)
 {
 	struct strbuf refname = STRBUF_INIT;
 
@@ -513,7 +516,7 @@ static int fsck_handle_reflog(const char *logname, const struct object_id *oid,
 }
 
 static int fsck_handle_ref(const char *refname, const struct object_id *oid,
-			   int flag, void *cb_data)
+			   int flag UNUSED, void *cb_data UNUSED)
 {
 	struct object *obj;
 
@@ -757,6 +760,43 @@ static int fsck_cache_tree(struct cache_tree *it)
 	return err;
 }
 
+static int fsck_resolve_undo(struct index_state *istate)
+{
+	struct string_list_item *item;
+	struct string_list *resolve_undo = istate->resolve_undo;
+
+	if (!resolve_undo)
+		return 0;
+
+	for_each_string_list_item(item, resolve_undo) {
+		const char *path = item->string;
+		struct resolve_undo_info *ru = item->util;
+		int i;
+
+		if (!ru)
+			continue;
+		for (i = 0; i < 3; i++) {
+			struct object *obj;
+
+			if (!ru->mode[i] || !S_ISREG(ru->mode[i]))
+				continue;
+
+			obj = parse_object(the_repository, &ru->oid[i]);
+			if (!obj) {
+				error(_("%s: invalid sha1 pointer in resolve-undo"),
+				      oid_to_hex(&ru->oid[i]));
+				errors_found |= ERROR_REFS;
+				continue;
+			}
+			obj->flags |= USED;
+			fsck_put_object_name(&fsck_walk_options, &ru->oid[i],
+					     ":(%d):%s", i, path);
+			mark_object_reachable(obj);
+		}
+	}
+	return 0;
+}
+
 static void mark_object_for_connectivity(const struct object_id *oid)
 {
 	struct object *obj = lookup_unknown_object(the_repository, oid);
@@ -938,6 +978,7 @@ int cmd_fsck(int argc, const char **argv, const char *prefix)
 		}
 		if (active_cache_tree)
 			fsck_cache_tree(active_cache_tree);
+		fsck_resolve_undo(&the_index);
 	}
 
 	check_connectivity();

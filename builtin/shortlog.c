@@ -81,8 +81,10 @@ static void insert_one_record(struct shortlog *log,
 		format_subject(&subject, oneline, " ");
 		buffer = strbuf_detach(&subject, NULL);
 
-		if (item->util == NULL)
-			item->util = xcalloc(1, sizeof(struct string_list));
+		if (!item->util) {
+			item->util = xmalloc(sizeof(struct string_list));
+			string_list_init_nodup(item->util);
+		}
 		string_list_append(item->util, buffer);
 	}
 }
@@ -379,6 +381,7 @@ int cmd_shortlog(int argc, const char **argv, const char *prefix)
 			break;
 		case PARSE_OPT_HELP:
 		case PARSE_OPT_ERROR:
+		case PARSE_OPT_SUBCOMMAND:
 			exit(129);
 		case PARSE_OPT_COMPLETE:
 			exit(0);
@@ -420,6 +423,8 @@ parse_done:
 	else
 		get_from_rev(&rev, &log);
 
+	release_revisions(&rev);
+
 	shortlog_output(&log);
 	if (log.file != stdout)
 		fclose(log.file);
@@ -439,7 +444,7 @@ void shortlog_output(struct shortlog *log)
 	struct strbuf sb = STRBUF_INIT;
 
 	if (log->sort_by_number)
-		QSORT(log->list.items, log->list.nr,
+		STABLE_QSORT(log->list.items, log->list.nr,
 		      log->summary ? compare_by_counter : compare_by_list);
 	for (i = 0; i < log->list.nr; i++) {
 		const struct string_list_item *item = &log->list.items[i];

@@ -207,7 +207,7 @@ static enum ll_merge_result ll_ext_merge(const struct ll_merge_driver *fn,
 	dict[4].placeholder = "P"; dict[4].value = path_sq.buf;
 	dict[5].placeholder = NULL; dict[5].value = NULL;
 
-	if (fn->cmdline == NULL)
+	if (!fn->cmdline)
 		die("custom merge driver %s lacks command line.", fn->name);
 
 	result->ptr = NULL;
@@ -249,7 +249,8 @@ static enum ll_merge_result ll_ext_merge(const struct ll_merge_driver *fn,
 static struct ll_merge_driver *ll_user_merge, **ll_user_merge_tail;
 static const char *default_ll_merge;
 
-static int read_merge_config(const char *var, const char *value, void *cb)
+static int read_merge_config(const char *var, const char *value,
+			     void *cb UNUSED)
 {
 	struct ll_merge_driver *fn;
 	const char *key, *name;

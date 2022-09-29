@@ -5,6 +5,7 @@
 
 test_description='Test various path utilities'
 
+TEST_PASSES_SANITIZE_LEAK=true
 . ./test-lib.sh
 
 norm_path() {
@@ -21,7 +22,7 @@ relative_path() {
 
 test_submodule_relative_url() {
 	test_expect_success "test_submodule_relative_url: $1 $2 $3 => $4" "
-		actual=\$(git submodule--helper resolve-relative-url-test '$1' '$2' '$3') &&
+		actual=\$(test-tool submodule resolve-relative-url '$1' '$2' '$3') &&
 		test \"\$actual\" = '$4'
 	"
 }
@@ -542,7 +543,7 @@ test_lazy_prereq CAN_EXEC_IN_PWD '
 	./git rev-parse
 '
 
-test_expect_success RUNTIME_PREFIX,CAN_EXEC_IN_PWD 'RUNTIME_PREFIX works' '
+test_expect_success !VALGRIND,RUNTIME_PREFIX,CAN_EXEC_IN_PWD 'RUNTIME_PREFIX works' '
 	mkdir -p pretend/bin pretend/libexec/git-core &&
 	echo "echo HERE" | write_script pretend/libexec/git-core/git-here &&
 	cp "$GIT_EXEC_PATH"/git$X pretend/bin/ &&
@@ -550,7 +551,7 @@ test_expect_success RUNTIME_PREFIX,CAN_EXEC_IN_PWD 'RUNTIME_PREFIX works' '
 	echo HERE >expect &&
 	test_cmp expect actual'
 
-test_expect_success RUNTIME_PREFIX,CAN_EXEC_IN_PWD '%(prefix)/ works' '
+test_expect_success !VALGRIND,RUNTIME_PREFIX,CAN_EXEC_IN_PWD '%(prefix)/ works' '
 	mkdir -p pretend/bin &&
 	cp "$GIT_EXEC_PATH"/git$X pretend/bin/ &&
 	git config yes.path "%(prefix)/yes" &&

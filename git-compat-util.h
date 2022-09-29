@@ -23,6 +23,9 @@
 #include <crtdbg.h>
 #endif
 
+struct strbuf;
+
+
 #define _FILE_OFFSET_BITS 64
 
 
@@ -186,6 +189,13 @@
 #define _NETBSD_SOURCE 1
 #define _SGI_SOURCE 1
 
+#if defined(__GNUC__)
+#define UNUSED __attribute__((unused)) \
+	__attribute__((deprecated ("parameter declared as UNUSED")))
+#else
+#define UNUSED
+#endif
+
 #if defined(WIN32) && !defined(__CYGWIN__) /* Both MinGW and MSVC */
 # if !defined(_WIN32_WINNT)
 #  define _WIN32_WINNT 0x0600
@@ -236,6 +246,12 @@
 #include <sys/sysctl.h>
 #endif
 
+/* Used by compat/win32/path-utils.h, and more */
+static inline int is_xplatform_dir_sep(int c)
+{
+	return c == '/' || c == '\\';
+}
+
 #if defined(__CYGWIN__)
 #include "compat/win32/path-utils.h"
 #endif
@@ -252,6 +268,7 @@
 #include <sys/resource.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
+#include <sys/statvfs.h>
 #include <termios.h>
 #ifndef NO_SYS_SELECT_H
 #include <sys/select.h>
@@ -388,7 +405,9 @@ typedef uintmax_t timestamp_t;
 #endif
 
 #ifndef platform_core_config
-static inline int noop_core_config(const char *var, const char *value, void *cb)
+static inline int noop_core_config(const char *var UNUSED,
+				   const char *value UNUSED,
+				   void *cb UNUSED)
 {
 	return 0;
 }
@@ -416,11 +435,11 @@ static inline int git_skip_dos_drive_prefix(char **path)
 #define skip_dos_drive_prefix git_skip_dos_drive_prefix
 #endif
 
-#ifndef is_dir_sep
 static inline int git_is_dir_sep(int c)
 {
 	return c == '/';
 }
+#ifndef is_dir_sep
 #define is_dir_sep git_is_dir_sep
 #endif
 
@@ -437,12 +456,69 @@ static inline int git_offset_1st_component(const char *path)
 #endif
 
 #ifndef is_path_owned_by_current_user
-static inline int is_path_owned_by_current_uid(const char *path)
+
+#ifdef __TANDEM
+#define ROOT_UID 65535
+#else
+#define ROOT_UID 0
+#endif
+
+/*
+ * Do not use this function when
+ * (1) geteuid() did not say we are running as 'root', or
+ * (2) using this function will compromise the system.
+ *
+ * PORTABILITY WARNING:
+ * This code assumes uid_t is unsigned because that is what sudo does.
+ * If your uid_t type is signed and all your ids are positive then it
+ * should all work fine.
+ * If your version of sudo uses negative values for uid_t or it is
+ * buggy and return an overflowed value in SUDO_UID, then git might
+ * fail to grant access to your repository properly or even mistakenly
+ * grant access to someone else.
+ * In the unlikely scenario this happened to you, and that is how you
+ * got to this message, we would like to know about it; so sent us an
+ * email to git@vger.kernel.org indicating which platform you are
+ * using and which version of sudo, so we can improve this logic and
+ * maybe provide you with a patch that would prevent this issue again
+ * in the future.
+ */
+static inline void extract_id_from_env(const char *env, uid_t *id)
+{
+	const char *real_uid = getenv(env);
+
+	/* discard anything empty to avoid a more complex check below */
+	if (real_uid && *real_uid) {
+		char *endptr = NULL;
+		unsigned long env_id;
+
+		errno = 0;
+		/* silent overflow errors could trigger a bug here */
+		env_id = strtoul(real_uid, &endptr, 10);
+		if (!*endptr && !errno)
+			*id = env_id;
+	}
+}
+
+static inline int is_path_owned_by_current_uid(const char *path,
+					       struct strbuf *report UNUSED)
 {
 	struct stat st;
+	uid_t euid;
+
 	if (lstat(path, &st))
 		return 0;
-	return st.st_uid == geteuid();
+
+	euid = geteuid();
+	if (euid == ROOT_UID)
+	{
+		if (st.st_uid == ROOT_UID)
+			return 1;
+		else
+			extract_id_from_env("SUDO_UID", &euid);
+	}
+
+	return st.st_uid == euid;
 }
 
 #define is_path_owned_by_current_user is_path_owned_by_current_uid
@@ -503,8 +579,11 @@ static inline int git_has_dir_sep(const char *path)
 /* The sentinel attribute is valid from gcc version 4.0 */
 #if defined(__GNUC__) && (__GNUC__ >= 4)
 #define LAST_ARG_MUST_BE_NULL __attribute__((sentinel))
+/* warn_unused_result exists as of gcc 3.4.0, but be lazy and check 4.0 */
+#define RESULT_MUST_BE_USED __attribute__ ((warn_unused_result))
 #else
 #define LAST_ARG_MUST_BE_NULL
+#define RESULT_MUST_BE_USED
 #endif
 
 #define MAYBE_UNUSED __attribute__((__unused__))
@@ -933,6 +1012,28 @@ static inline unsigned long cast_size_t_to_ulong(size_t a)
 	return (unsigned long)a;
 }
 
+/*
+ * Limit size of IO chunks, because huge chunks only cause pain.  OS X
+ * 64-bit is buggy, returning EINVAL if len >= INT_MAX; and even in
+ * the absence of bugs, large chunks can result in bad latencies when
+ * you decide to kill the process.
+ *
+ * We pick 8 MiB as our default, but if the platform defines SSIZE_MAX
+ * that is smaller than that, clip it to SSIZE_MAX, as a call to
+ * read(2) or write(2) larger than that is allowed to fail.  As the last
+ * resort, we allow a port to pass via CFLAGS e.g. "-DMAX_IO_SIZE=value"
+ * to override this, if the definition of SSIZE_MAX given by the platform
+ * is broken.
+ */
+#ifndef MAX_IO_SIZE
+# define MAX_IO_SIZE_DEFAULT (8*1024*1024)
+# if defined(SSIZE_MAX) && (SSIZE_MAX < MAX_IO_SIZE_DEFAULT)
+#  define MAX_IO_SIZE SSIZE_MAX
+# else
+#  define MAX_IO_SIZE MAX_IO_SIZE_DEFAULT
+# endif
+#endif
+
 #ifdef HAVE_ALLOCA_H
 # include <alloca.h>
 # define xalloca(size)      (alloca(size))
@@ -1269,14 +1370,26 @@ static inline int regexec_buf(const regex_t *preg, const char *buf, size_t size,
 /* usage.c: only to be used for testing BUG() implementation (see test-tool) */
 extern int BUG_exit_code;
 
+/* usage.c: if bug() is called we should have a BUG_if_bug() afterwards */
+extern int bug_called_must_BUG;
+
 __attribute__((format (printf, 3, 4))) NORETURN
 void BUG_fl(const char *file, int line, const char *fmt, ...);
 #define BUG(...) BUG_fl(__FILE__, __LINE__, __VA_ARGS__)
+__attribute__((format (printf, 3, 4)))
+void bug_fl(const char *file, int line, const char *fmt, ...);
+#define bug(...) bug_fl(__FILE__, __LINE__, __VA_ARGS__)
+#define BUG_if_bug(...) do { \
+	if (bug_called_must_BUG) \
+		BUG_fl(__FILE__, __LINE__, __VA_ARGS__); \
+} while (0)
 
+#ifndef FSYNC_METHOD_DEFAULT
 #ifdef __APPLE__
 #define FSYNC_METHOD_DEFAULT FSYNC_METHOD_WRITEOUT_ONLY
 #else
 #define FSYNC_METHOD_DEFAULT FSYNC_METHOD_FSYNC
+#endif
 #endif
 
 enum fsync_action {
@@ -1400,8 +1513,8 @@ int cmd_main(int, const char **);
  * Intercept all calls to exit() and route them to trace2 to
  * optionally emit a message before calling the real exit().
  */
-int trace2_cmd_exit_fl(const char *file, int line, int code);
-#define exit(code) exit(trace2_cmd_exit_fl(__FILE__, __LINE__, (code)))
+int common_exit(const char *file, int line, int code);
+#define exit(code) exit(common_exit(__FILE__, __LINE__, (code)))
 
 /*
  * You can mark a stack variable with UNLEAK(var) to avoid it being
