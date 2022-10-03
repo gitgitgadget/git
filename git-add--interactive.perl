@@ -1910,7 +1910,9 @@ sub main_loop {
 }
 
 process_args();
-refresh();
+if ($patch_mode_flavour{FILTER} ne 'index-only') {
+	refresh();
+}
 if ($patch_mode_only) {
 	patch_update_cmd();
 }
