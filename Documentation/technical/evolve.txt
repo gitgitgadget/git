@@ -163,3 +163,81 @@ Git-imerge is a project to help make complicated merges easier, particularly
 when merging or rebasing long chains of patches. It is not an alternative to
 the change graph, but its algorithm of applying smaller incremental merges
 could be used as part of the evolve algorithm in the future.
+
+Overview
+========
+We introduce the notion of “meta-commits” which describe how one commit was
+created from other commits. A branch of meta-commits is known as a change.
+Changes are created and updated automatically whenever a user runs a command
+that creates a commit. They are used for locating obsolete commits, providing a
+list of a user’s unsubmitted work in progress, and providing a stable name for
+each unsubmitted change.
+
+Users can exchange edit histories by pushing and fetching changes.
+
+New commands will be introduced for manipulating changes and resolving
+divergence between them. Existing commands that create commits will be updated
+to modify the meta-commit graph and create changes where necessary.
+
+Example usage
+-------------
+# First create three dependent changes
+$ echo foo>bar.txt && git add .
+$ git commit -m "This is a test"
+created change metas/this_is_a_test
+$ echo foo2>bar2.txt && git add .
+$ git commit -m "This is also a test"
+created change metas/this_is_also_a_test
+$ echo foo3>bar3.txt && git add .
+$ git commit -m "More testing"
+created change metas/more_testing
+
+# List all our changes in progress
+$ git change list
+metas/this_is_a_test
+metas/this_is_also_a_test
+* metas/more_testing
+metas/some_change_already_merged_upstream
+
+# Now modify the earliest change, using its stable name
+$ git reset --hard metas/this_is_a_test
+$ echo morefoo>>bar.txt && git add . && git commit --amend --no-edit
+
+# Use git-evolve to fix up any dependent changes
+$ git evolve
+rebasing metas/this_is_also_a_test onto metas/this_is_a_test
+rebasing metas/more_testing onto metas/this_is_also_a_test
+Done
+
+# Use git-obslog to view the history of the this_is_a_test change
+$ git log --obslog
+93f110 metas/this_is_a_test@{0} commit (amend): This is a test
+930219 metas/this_is_a_test@{1} commit: This is a test
+
+# Now create an unrelated change
+$ git reset --hard origin/master
+$ echo newchange>unrelated.txt && git add .
+$ git commit -m "Unrelated change"
+created change metas/unrelated_change
+
+# Fetch the latest code from origin/master and use git-evolve
+# to rebase all dependent changes.
+$ git fetch origin master
+$ git evolve origin/master
+deleting metas/some_change_already_merged_upstream
+rebasing metas/this_is_a_test onto origin/master
+rebasing metas/this_is_also_a_test onto metas/this_is_a_test
+rebasing metas/more_testing onto metas/this_is_also_a_test
+rebasing metas/unrelated_change onto origin/master
+Conflict detected! Resolve it and then use git evolve --continue to resume.
+
+# Sort out the conflict
+$ git mergetool
+$ git evolve origin/master
+Done
+
+# Share the full history of edits for the this_is_a_test change
+# with a review server
+$ git push origin metas/this_is_a_test:refs/for/master
+# Share the lastest commit for “Unrelated change”, without history
+$ git push origin HEAD:refs/for/master
