@@ -515,3 +515,186 @@ Configuration
 -------------
 The core.enableChanges configuration variable enables the creation and update
 of change branches. This is enabled by default.
+
+Other options considered
+========================
+We considered several other options for storing the obsolescence graph. This
+section describes the other options and why they were rejected.
+
+Commit header
+-------------
+Add an “obsoletes” field to the commit header that points backwards from a
+commit to the previous commits it obsoletes.
+
+Pros:
+- Very simple
+- Easy to traverse from a commit to the previous commits it obsoletes.
+Cons:
+- Adds a cost to the storage format, even for commits where the change history
+  is uninteresting.
+- Unconditionally prevents the change history from being garbage collected.
+- Always causes the change history to be shared when pushing or pulling changes.
+
+Git notes
+---------
+Instead of storing obsolescence information in metacommits, the metacommit
+content could go in a new notes namespace - say refs/notes/metacommit. Each note
+would contain the list of obsolete and origin parents. An automerger could
+be supplied to make it easy to merge the metacommit notes from different remotes.
+
+Pros:
+- Easy to locate all commits obsoleted by a given commit (since there would only
+  be one metacommit for any given commit).
+Cons:
+- Wrong GC behavior (obsolete commits wouldn’t automatically be retained by GC)
+  unless we introduced a special case for these kinds of notes.
+- No way to selectively share or pull the metacommits for one specific change.
+  It would be all-or-nothing, which would be expensive. This could be addressed
+  by changes to the protocol, but this would be invasive.
+- Requires custom auto-merging behavior on fetch.
+
+Tags
+----
+Put the content of the metacommit in a message attached to tag on the
+replacement commit. This is very similar to the git notes approach and has the
+same pros and cons.
+
+Simple forward references
+-------------------------
+Record an edge from an obsolete commit to its replacement in this form:
+
+refs/obsoletes/<A>
+
+pointing to commit <B> as an indication that B is the replacement for the
+obsolete commit A.
+
+Pros:
+- Protects <B> from being garbage collected.
+- Fast lookup for the evolve operation, without additional search structures
+  (“what is the replacement for <A>?” is very fast).
+
+Cons:
+- Can’t represent divergence (which is a P0 requirement).
+- Creates lots of refs (which can be inefficient)
+- Doesn’t provide a way to fetch only refs for a specific change.
+- The obslog command requires a search of all refs.
+
+Complex forward references
+--------------------------
+Record an edge from an obsolete commit to its replacement in this form:
+
+refs/obsoletes/<change_id>/obs<A>_<B>
+
+Pointing to commit <B> as an indication that B is the replacement for obsolete
+commit A.
+
+Pros:
+- Permits sharing and fetching refs for only a specific change.
+- Supports divergence
+- Protects <B> from being garbage collected.
+
+Cons:
+- Creates lots of refs, which is inefficient.
+- Doesn’t provide a good lookup structure for lookups in either direction.
+
+Backward references
+-------------------
+Record an edge from a replacement commit to the obsolete one in this form:
+
+refs/obsolescences/<B>
+
+Cons:
+- Doesn’t provide a way to resolve divergence (which is a P0 requirement).
+- Doesn’t protect <B> from being garbage collected (which could be fixed by
+  combining this with a refs/metas namespace, as in the metacommit variant).
+
+Obsolescences file
+------------------
+Create a custom file (or files) in .git recording obsolescences.
+
+Pros:
+- Can store exactly the information we want with exactly the performance we want
+  for all operations. For example, there could be a disk-based hashtable
+  permitting constant time lookups in either direction.
+
+Cons:
+- Handling GC, pushing, and pulling would all require custom solutions. GC
+  issues could be addressed with a repository format extension.
+
+Squash points
+-------------
+We treat changes like topic branches, and use special squash points to mark
+places in the commit graph that separate changes.
+
+We create and update change branches in refs/metas at the same time we
+would have in the metacommit proposal. However, rather than pointing to a
+metacommit branch they point to normal commits and are treated as “squash
+points” - markers for sequences of commits intended to be squashed together on
+submission.
+
+Amends and rebases work differently than they do now. Rather than actually
+containing the desired state of a commit, they contain a delta from the previous
+version along with a squash point indicating that the preceding changes are
+intended to be squashed on submission. Specifically, amends would become new
+changes and rebases would become merge commits with the old commit and new
+parent as parents.
+
+When the changes are finally submitted, the squashes are executed, producing the
+final version of the commit.
+
+In addition to the squash points, git would maintain a set of “nosquash” tags
+for commits that were used as ancestors of a change that are not meant to be
+included in the squash.
+
+For example, if we have this commit graph:
+
+A(...)
+B(parent=A)
+C(parent=B)
+
+...and we amend B to produce D, we’d get:
+
+A(...)
+B(parent=A)
+C(parent=B)
+D(parent=B)
+
+...along with a new change branch indicating D should be squashed with its
+parents when submitted:
+
+metas/changeB = D
+metas/changeC = C
+
+We’d also create a nosquash tag for A indicating that A shouldn’t be included
+when changeB is squashed.
+
+If a user amends the change again, they’d get:
+
+A(...)
+B(parent=A)
+C(parent=B)
+D(parent=B)
+E(parent=D)
+
+metas/changeB = E
+metas/changeC = C
+
+Pros:
+- Good GC behavior.
+- Provides a natural way to share changes (they’re just normal branches).
+- Merge-base works automatically without special cases.
+- Rewriting the obslog would be easy using existing git commands.
+- No new data types needed.
+Cons:
+- No way to connect the squashed version of a change to the original, so no way
+  to automatically clean up old changes. This also means users lose all benefits
+  of the evolve command if they prematurely squash their commits. This may occur
+  if a user thinks a change is ready for submission, squashes it, and then later
+  discovers an additional change to make.
+- Histories would look very cluttered (users would see all previous edits to
+  their commit in the commit log, and all previous rebases would show up as
+  merges). Could be quite hard for users to tell what is going on. (Possible
+  fix: also implement a new smart log feature that displays the log as though
+  the squashes had occurred).
+- Need to change the current behavior of current commands (like amend and
+  rebase) in ways that will be unexpected to many users.
