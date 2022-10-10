@@ -516,6 +516,381 @@ Configuration
 The core.enableChanges configuration variable enables the creation and update
 of change branches. This is enabled by default.
 
+User interface
+--------------
+All git porcelain commands that create commits are classified as having one of
+four behaviors: modify, create, copy, or import. These behaviors are discussed
+in more detail below.
+
+Modify commands
+---------------
+Modification commands (commit --amend, rebase) will mark the old commit as
+obsolete by creating a new meta-commit that references the old one as a
+replaced parent. In the event that multiple changes point to the same commit,
+this is done independently for every such change.
+
+More specifically, modifications work like this:
+
+1. Locate all existing changes for which the old commit is the content for the
+   head of the change branch. If no such branch exists, create one that points
+   to the old commit. Changes that include this commit in their history but not
+   at their head are explicitly not included.
+2. For every such change, create a new meta-commit that references the new
+   commit as its content and references the old head of the change as a
+   replaced parent.
+3. Move the change branch forward to point to the new meta-commit.
+
+Copy commands
+-------------
+Copy commands (cherry-pick, merge --squash) create a new meta-commit that
+references the old commits as origin parents. Besides the fact that the new
+parents are tagged differently, copy commands work the same way as modify
+commands.
+
+Create commands
+---------------
+Creation commands (commit, merge) create a new commit and a new change that
+points to that commit. The do not create any meta-commits.
+
+Import commands
+---------------
+Import commands (fetch, pull) do not create any new meta-commits or changes
+unless that is specifically what they are importing. For example, the fetch
+command would update remote/origin/metas/change35 and fetch all referenced
+meta-commits if asked to do so directly, but it wouldn’t create any changes or
+meta-commits for commits discovered on the master branch when running “git fetch
+origin master”.
+
+Other commands
+--------------
+Some commands don’t fit cleanly into one of the above categories.
+
+Semantically, filter-branch should be treated as a modify command, but doing so
+is likely to create a lot of irrelevant clutter in the changes namespace and the
+large number of extra change refs may introduce performance problems. We
+recommend treating filter-branch as an import command initially, but making it
+behave more like a modify command in future follow-up work. One possible
+solution may be to treat commits that are part of existing changes as being
+modified but to avoid creating changes for other rewritten changes. Another
+solution may be to record the modifications as changes in the hiddenmetas
+namespace.
+
+Once the evolve command can handle obsolescence across cherry-picks, such
+cherry-picks will result in a hybrid move-and-copy operation. It will create
+cherry-picks that replace other cherry-picks, which will have both origin edges
+(pointing to the new source commit being picked) and replacement edges (pointing
+to the previous cherry-pick being replaced).
+
+Evolve
+------
+The evolve command performs the correct sequence of rebases such that no change
+has an obsolete parent. The syntax looks like this:
+
+git evolve [upstream…]
+
+It takes an optional list of upstream branches. All changes whose parent shows
+up in the history of one of the upstream branches will be rebased onto the
+upstream branch before resolving obsolete parents.
+
+Any change whose latest state is found in an upstream branch (or that ends up
+empty after rebase) will be deleted. This is the normal mechanism for deleting
+changes. Changes are created automatically on the first commit, and are deleted
+automatically when evolve determines that they’ve been merged upstream.
+
+Orphan commits are commits with obsolete parents. The evolve command then
+repeatedly rebases orphan commits with non-orphan parents until there are either
+no orphan commits left, or a merge conflict is discovered. It will also
+terminate if it detects a divergent parent or a cycle that can't be resolved
+using any of the enabled transformations.
+
+When evolve discovers divergence, it will first check if it can resolve the
+divergence automatically using one of its enabled transformations. Supported
+transformations are:
+
+- Check if the user has already merged the divergent changes in a follow-up
+  change. That is, look for an existing merge in a follow-up change where all
+  the parents are divergent versions of the same change. Squash that merge with
+  its parents and use the result as the resolution for the divergence.
+
+- Attempt to auto-merge all the divergent changes (disabled by default).
+
+Each of the transformations can be enabled or disabled by command line options.
+
+Cycles can occur when two changes reference one another as parents. This can
+happen when both changes use an obsolete version of the other change as their
+parent. Although there are never cycles in the commit graph, users can create
+cycles in the change graph by rebasing changes onto obsolete commits. The evolve
+command has a transformation that will detect and break cycles by arbitrarily
+picking one of the changes to go first. If this generates a merge conflict,
+it tries each of the other changes in sequence to see if any ordering merges
+cleanly. If no possible ordering merges cleanly, it picks one and terminates
+to let the user resolve the merge conflict.
+
+If the working tree is dirty, evolve will attempt to stash the user's changes
+before applying the evolve and then reapply those changes afterward, in much
+the same way as rebase --autostash does.
+
+Change
+------
+Change is a low-level command that allows for direct interfacing with
+metacommits. It permits for deleting, listing or creating changes.
+
+Checkout
+--------
+Running checkout on a change by name has the same effect as checking out a
+detached head pointing to the latest commit on that change-branch. There is no
+need to ever have HEAD point to a change since changes always move forward when
+necessary, no matter what branch the user has checked out
+
+Meta-commits themselves cannot be checked out by their hash.
+
+Reset
+-----
+Resetting a branch to a change by name is the same as resetting to the content
+(or abandoned) commit at that change’s head.
+
+Commit
+------
+Commit --amend gets modify semantics and will move existing changes forward. The
+normal form of commit gets create semantics and will create a new change.
+
+$ touch foo && git add . && git commit -m "foo" && git tag A
+$ touch bar && git add . && git commit -m "bar" && git tag B
+$ touch baz && git add . && git commit -m "baz" && git tag C
+
+This produces the following commits:
+A(tree=[foo])
+B(tree=[foo, bar], parent=A)
+C(tree=[foo, bar, baz], parent=B)
+
+...along with three changes:
+metas/foo = A
+metas/bar = B
+metas/baz = C
+
+Running commit --amend does the following:
+$ git checkout B
+$ touch zoom && git add . && git commit --amend -m "baz and zoom"
+$ git tag D
+
+Commits:
+A(tree=[foo])
+B(tree=[foo, bar], parent=A)
+C(tree=[foo, bar, baz], parent=B)
+D(tree=[foo, bar, zoom], parent=A)
+Dmeta(content=D, obsolete=B)
+
+Changes:
+metas/foo = A
+metas/bar = Dmeta
+metas/baz = C
+
+Merge
+-----
+Merge gets create, modify, or copy semantics based on what is being merged and
+the options being used.
+
+The --squash version of merge gets copy semantics (it produces a new change that
+is marked as a copy of all the original changes that were squashed into it).
+
+The “modify” version of merge replaces both of the original commits with the
+resulting merge commit. This is one of the standard mechanisms for resolving
+divergence. The parents of the merge commit are the parents of the two commits
+being merged. The resulting commit will not be a merge commit if both of the
+original commits had the same parent or if one was the parent of the other.
+
+The “create” version of merge creates a new change pointing to a merge commit
+that has both original commits as parents. The result is what merge produces now
+- a new merge commit. However, this version of merge doesn’t directly resolve
+divergence.
+
+To select between these two behaviors, merge gets new “--amend” and “--noamend”
+options which select between the “create” and “modify” behaviors respectively,
+with noamend being the default.
+
+For example, imagine we created two divergent changes like this:
+
+$ touch foo && git add . && git commit -m "foo" && git tag A
+$ touch bar && git add . && git commit -m "bar" && git tag B
+$ touch baz && git add . && git commit --amend -m "bar and baz"
+$ git tag C
+$ git checkout B
+$ touch bam && git add . && git commit --amend -m "bar and bam"
+$ git tag D
+
+At this point the commit graph looks like this:
+
+A(tree=[foo])
+B(tree=[bar], parent=A)
+C(tree=[bar, baz], parent=A)
+D(tree=[bar, bam], parent=A)
+Cmeta(content=C, obsoletes=B)
+Dmeta(content=D, obsoletes=B)
+
+There would be three active changes with heads pointing as follows:
+
+metas/changeA=A
+metas/changeB=Cmeta
+metas/changeB2=Dmeta
+
+ChangeB and changeB2 are divergent at this point. Lets consider what happens if
+perform each type of merge between changeB and changeB2.
+
+Merge example: Amend merge
+One way to resolve divergent changes is to use an amend merge. Recall that HEAD
+is currently pointing to D at this point.
+
+$ git merge --amend metas/changeB
+
+Here we’ve asked for an amend merge since we’re trying to resolve divergence
+between two versions of the same change. There are no conflicts so we end up
+with this:
+
+E(tree=[bar, baz, bam], parent=A)
+Emeta(content=E, obsoletes=[Cmeta, Dmeta])
+
+With the following branches:
+
+metas/changeA=A
+metas/changeB=Emeta
+metas/changeB2=Emeta
+
+Notice that the result of the “amend merge” is a replacement for C and D rather
+than a new commit with C and D as parents (as a normal merge would have
+produced). The parents of the amend merge are the parents of C and D which - in
+this case - is just A, so the result is not a merge commit. Also notice that
+changeB and changeB2 are now aliases for the same change.
+
+Merge example: Noamend merge
+Consider what would have happened if we’d used a noamend merge instead. Recall
+that HEAD was at D and our branches looked like this:
+
+metas/changeA=A
+metas/changeB=Cmeta
+metas/changeB2=Dmeta
+
+$ git merge --noamend metas/changeB
+
+That would produce the sort of merge we’d normally expect today:
+
+F(tree=[bar, baz, bam], parent=[C, D])
+
+And our changes would look like this:
+metas/changeA=A
+metas/changeB=Cmeta
+metas/changeB2=Dmeta
+metas/changeF=F
+
+In this case, changeB and changeB2 are still divergent and we’ve created a new
+change for our merge commit. However, this is just a temporary state. The next
+time we run the “evolve” command, it will discover the divergence but also
+discover the merge commit F that resolves it. Evolve will suggest converting F
+into an amend merge in order to resolve the divergence and will display the
+command for doing so.
+
+Rebase
+------
+In general the rebase command is treated as a modify command. When a change is
+rebased, the new commit replaces the original.
+
+Rebase --abort is special. Its intent is to restore git to the state it had
+prior to running rebase. It should move back any changes to point to the refs
+they had prior to running rebase and delete any new changes that were created as
+part of the rebase. To achieve this, rebase will save the state of all changes
+in refs/metas prior to running rebase and will restore the entire namespace
+after rebase completes (deleting any newly-created changes). Newly-created
+metacommits are left in place, but will have no effect until garbage collected
+since metacommits are only used if they are reachable from refs/metas.
+
+Change
+------
+The “change” command can be used to list, rename, reset or delete change. It has
+a number of subcommands.
+
+The "list" subcommand lists local changes. If given the -r argument, it lists
+remote changes.
+
+The "rename" subcommand renames a change, given its old and new name. If the old
+name is omitted and there is exactly one change pointing to the current HEAD,
+that change is renamed. If there are no changes pointing to the current HEAD,
+one is created with the given name.
+
+The "forget" subcommand deletes a change by deleting its ref from the metas/
+namespace. This is the normal way to delete extra aliases for a change if the
+change has more than one name. By default, this will refuse to delete the last
+alias for a change if there are any other changes that reference this change as
+a parent.
+
+The "update" subcommand adds a new state to a change. It uses the default
+algorithm for assigning change names. If the content commit is omitted, HEAD is
+used. If given the optional --force argument, it will overwrite any existing
+change of the same name. This latter form of "update" can be used to effectively
+reset changes.
+
+The "update" command can accept any number of --origin and --replace arguments.
+If any are present, the resulting change branch will point to a metacommit
+containing the given origin and replacement edges.
+
+The "abandon" command deletes a change using obsolescence markers. It marks the
+change as being obsolete and having been replaced by its parent. If given no
+arguments, it applies to the current commit. Running evolve will cause any
+abandoned changes to be removed from the branch. Any child changes will be
+reparented on top of the parent of the abandoned change. If the current change
+is abandoned, HEAD will move to point to its parent.
+
+The "restore" command restores a previously-abandoned change.
+
+The "prune" command deletes all obsolete changes and all changes that are
+present in the given branch. Note that such changes can be recovered from the
+reflog.
+
+Combined with the GC protection that is offered, this is intended to facilitate
+a workflow that relies on changes instead of branches. Users could choose to
+work with no local branches and use changes instead - both for mailing list and
+gerrit workflows.
+
+Log
+---
+When a commit is shown in git log that is part of a change, it is decorated with
+extra change information. If it is the head of a change, the name of the change
+is shown next to the list of branches. If it is obsolete, it is decorated with
+the text “obsolete, <n> commits behind <changename>”.
+
+Log gets a new --obslog argument indicating that the obsolescence graph should
+be followed instead of the commit graph. This also changes the default
+formatting options to make them more appropriate for viewing different
+iterations of the same commit.
+
+Pull
+----
+
+Pull gets an --evolve argument that will automatically attempt to run "evolve"
+on any affected branches after pulling.
+
+We also introduce an "evolve" enum value for the branch.<name>.rebase config
+value. When set, the evolve behavior will happen automatically for that branch
+after every pull even if the --evolve argument is not used.
+
+Next
+----
+
+The "next" command will reset HEAD to a non-obsolete commit that refers to this
+change as its parent. If there is more than one such change, the user will be
+prompted. If given the --evolve argument, the next commit will be evolved if
+necessary first.
+
+The "next" command can be thought of as the opposite of
+"git reset --hard HEAD^" in that it navigates to a child commit rather than a
+parent.
+
+Prev
+----
+
+The "prev" command will reset HEAD to the latest version of the parent change.
+If the parent change isn't obsolete, this is equivalent to
+"git reset --hard HEAD^". If the parent commit is obsolete, it resets to the
+latest replacement for the parent commit.
+
 Other options considered
 ========================
 We considered several other options for storing the obsolescence graph. This
