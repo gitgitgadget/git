@@ -1,0 +1,165 @@
+Evolve
+======
+
+Objective
+=========
+Create an "evolve" command to help users craft a high quality commit history.
+Users can improve commits one at a time and in any order, then run git evolve to
+rewrite their recent history to ensure everything is up-to-date. We track
+amendments to a commit over time in a change graph. Users can share their
+progress with others by exchanging their change graphs using the standard push,
+fetch, and format-patch commands.
+
+Status
+======
+This proposal has not been implemented yet.
+
+Background
+==========
+Imagine you have three sequential changes up for review and you receive feedback
+that requires editing all three changes. We'll define the word "change"
+formally later, but for the moment let's say that a change is a work-in-progress
+whose final version will be submitted as a commit in the future.
+
+While you're editing one change, more feedback arrives on one of the others.
+What do you do?
+
+The evolve command is a convenient way to work with chains of commits that are
+under review. Whenever you rebase or amend a commit, the repository remembers
+that the old commit is obsolete and has been replaced by the new one. Then, at
+some point in the future, you can run "git evolve" and the correct sequence of
+rebases will occur in the correct order such that no commit has an obsolete
+parent.
+
+Part of making the "evolve" command work involves tracking the edits to a commit
+over time, which is why we need an change graph. However, the change
+graph will also bring other benefits:
+
+- Users can view the history of a change directly (the sequence of amends and
+  rebases it has undergone, orthogonal to the history of the branch it is on).
+- It will be possible to quickly locate and list all the changes the user
+  currently has in progress.
+- It can be used as part of other high-level commands that combine or split
+  changes.
+- It can be used to decorate commits (in git log, gitk, etc) that are either
+  obsolete or are the tip of a work in progress.
+- By pushing and pulling the change graph, users can collaborate more
+  easily on changes-in-progress. This is better than pushing and pulling the
+  commits themselves since the change graph can be used to locate a more
+  specific merge base, allowing for better merges between different versions of
+  the same change.
+- It could be used to correctly rebase local changes and other local branches
+  after running git-filter-branch.
+- It can replace the change-id footer used by gerrit.
+
+Goals
+-----
+Legend: Goals marked with P0 are required. Goals marked with Pn should be
+attempted unless they interfere with goals marked with Pn-1.
+
+P0. All commands that modify commits (such as the normal commit --amend or
+    rebase command) should mark the old commit as being obsolete and replaced by
+    the new one. No additional commands should be required to keep the
+    change graph up-to-date.
+P0. Any commit that may be involved in a future evolve command should not be
+    garbage collected. Specifically:
+    - Commits that obsolete another should not be garbage collected until
+      user-specified conditions have occurred and the change has expired from
+      the reflog. User specified conditions for removing changes include:
+      - The user explicitly deleted the change.
+      - The change was merged into a specific branch.
+    - Commits that have been obsoleted by another should not be garbage
+      collected if any of their replacements are still being retained.
+P0. A commit can be obsoleted by more than one replacement (called divergence).
+P0. Users must be able to resolve divergence (convergence).
+P1. Users should be able to share chains of obsolete changes in order to
+    collaborate on WIP changes.
+P2. Such sharing should be at the user’s option. That is, it should be possible
+    to directly share a change without also sharing the file states or commit
+    comments from the obsolete changes that led up to it, and the choice not to
+    share those commits should not require changing any commit hashes.
+P2. It should be possible to discard part or all of the change graph
+    without discarding the commits themselves that are already present in
+    branches and the reflog.
+P2. Provide sufficient information to replace gerrit's Change-Id footers.
+
+Similar technologies
+--------------------
+There are some other technologies that address the same end-user problem.
+
+Rebase -i can be used to solve the same problem, but users can't easily switch
+tasks midway through an interactive rebase or have more than one interactive
+rebase going on at the same time. It can't handle the case where you have
+multiple changes sharing the same parent when that parent needs to be rebased
+and won't let you collaborate with others on resolving a complicated interactive
+rebase. You can think of rebase -i as a top-down approach and the evolve command
+as the bottom-up approach to the same problem.
+
+Revup amend (https://github.com/Skydio/revup/blob/main/docs/amend.md)
+allows insertion of cached changes into any commit in
+the current history, and then reapplies the rest of history on top of
+those changes. It uses a "git apply --cached" engine under the hood so
+doesn't touch the working directory (although it will soon use the new
+git merge-tree). When paired with "revup upload" which creates and
+pushes multiple branches in the background for you, its possible to
+work on a "graph" of changes on a single branch linearly, then have
+the true graph structure created at upload time.
+
+git-revise (https://github.com/mystor/git-revise) does some very
+similar things except it uses "git merge-file" combined with manually
+merging the resulting trees. git branchstack
+(https://github.com/krobelus/git-branchstack) can also create branches
+in the background with the same mechanism.
+
+These tools don't store any external state, but as such also don't
+provide any specific collaboration mechanism for individual changes.
+
+Several patch queue managers have been built on top of git (such as topgit,
+stgit, and quilt). They address the same user need. However they also rely on
+state managed outside git that needs to be kept in sync. Such state can be
+easily damaged when running a git native command that is unaware of the patch
+queue. They also typically require an explicit initialization step to be done by
+the user which creates workflow problems.
+
+Mercurial implements a very similar feature in its EvolveExtension. The behavior
+of the evolve command itself is very similar, but the storage format for the
+change graph differs. In the case of mercurial, each change set can have one or
+more obsolescence markers that point to other changesets that they replace. This
+is similar to the "Commit Headers" approach considered in the other options
+appendix. The approach proposed here stores obsolescence information in a
+separate metacommit graph, which makes exchanging of obsolescence information
+optional.
+
+Mercurial's default behavior makes it easy to find and switch between
+non-obsolete changesets that aren't currently on any branch. We introduce the
+notion of a new ref namespace that enables a similar workflow via a different
+mechanism. Mercurial has the notion of changeset phases which isn't present
+in git and creates new ways for a changeset to diverge. Git doesn't need
+to deal with these issues, but it has to deal with the problems of picking an
+upstream branch as a target for rebases and protecting obsolescence information
+from GC. We also introduce some additional transformations (see
+obsolescence-over-cherry-pick, below) that aren't present in the mercurial
+implementation.
+
+Semi-related work
+-----------------
+There are other technologies that address different problems but have some
+similarities with this proposal.
+
+Replacements (refs/replace) are superficially similar to obsolescences in that
+they describe that one commit should be replaced by another. However, they
+differ in both how they are created and how they are intended to be used.
+Obsolescences are created automatically by the commands a user runs, and they
+describe the user’s intent to perform a future rebase. Obsolete commits still
+appear in branches, logs, etc like normal commits (possibly with an extra
+decoration that marks them as obsolete). Replacements are typically created
+explicitly by the user, they are meant to be kept around for a long time, and
+they describe a replacement to be applied at read-time rather than as the input
+to a future operation. When a replaced commit is queried, it is typically hidden
+and swapped out with its replacement as though the replacement has already
+occurred.
+
+Git-imerge is a project to help make complicated merges easier, particularly
+when merging or rebasing long chains of patches. It is not an alternative to
+the change graph, but its algorithm of applying smaller incremental merges
+could be used as part of the evolve algorithm in the future.
