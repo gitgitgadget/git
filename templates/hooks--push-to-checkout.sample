@@ -67,7 +67,7 @@ else
 	head=$(git hash-object -t tree --stdin </dev/null)
 fi
 
-if ! git diff-index --quiet --cached --ignore-submodules $head --
+if ! git diff-index --quiet --cached --ignore-submodules "$head" --
 then
 	die "Working directory has staged changes"
 fi
