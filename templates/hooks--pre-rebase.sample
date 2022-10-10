@@ -88,7 +88,7 @@ else
 	exit 1
 fi
 
-<<\DOC_END
+:<<\DOC_END
 
 This sample hook safeguards topic branches that have been
 published from being rewound.
