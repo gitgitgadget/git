@@ -31,20 +31,17 @@ all: boilerplates.made custom
 
 bpsrc = $(filter-out %~,$(wildcard *--*))
 boilerplates.made : $(bpsrc)
-	$(QUIET)umask 022 && ls *--* 2>/dev/null | \
-	while read boilerplate; \
-	do \
+	$(QUIET)umask 022 && \
+	for boilerplate in *--*; do \
 		case "$$boilerplate" in *~) continue ;; esac && \
-		dst=`echo "$$boilerplate" | sed -e 's|^this|.|;s|--|/|g'` && \
-		dir=`expr "$$dst" : '\(.*\)/'` && \
-		mkdir -p blt/$$dir && \
-		case "$$boilerplate" in \
-		*--) continue;; \
-		esac && \
+		dst=$$(echo "$$boilerplate" | sed -e 's|^this|.|;s|--|/|g') && \
+		dir=$$(expr "$$dst" : '\(.*\)/') && \
+		mkdir -p blt/"$$dir" && \
+		case "$$boilerplate" in *--) continue;; esac && \
 		sed -e '1s|#!.*/sh|#!$(SHELL_PATH_SQ)|' \
 		    -e 's|@SHELL_PATH@|$(SHELL_PATH_SQ)|' \
-		    -e 's|@PERL_PATH@|$(PERL_PATH_SQ)|g' $$boilerplate > \
-			blt/$$dst && \
+		    -e 's|@PERL_PATH@|$(PERL_PATH_SQ)|g' "$$boilerplate" > \
+			blt/"$$dst" && \
 		if test -x "$$boilerplate"; then rx=rx; else rx=r; fi && \
 		chmod a+$$rx "blt/$$dst" || exit; \
 	done && \
