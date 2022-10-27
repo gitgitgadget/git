@@ -32,6 +32,7 @@ git bisect run <cmd>...
 Please use "git help bisect" to get the full man page.'
 
 OPTIONS_SPEC=
+SUBDIRECTORY_OK=Yes
 . git-sh-setup
 
 TERM_BAD=bad

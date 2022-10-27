@@ -52,6 +52,13 @@ test_expect_success 'bisect starts with only one bad' '
 	git bisect next
 '
 
+test_expect_success 'bisect runs in a subdirectory' '
+    mkdir -p subdir &&
+    git -C subdir bisect start &&
+    git -C subdir bisect good &&
+    git -C subdir bisect reset
+'
+
 test_expect_success 'bisect does not start with only one good' '
 	git bisect reset &&
 	git bisect start &&
