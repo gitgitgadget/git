@@ -2,10 +2,17 @@
 #define PACK_BITMAP_H
 
 #include "ewah/ewok.h"
+#include "roaring/roaring.h"
+#include "bitmap.h"
 #include "khash.h"
 #include "pack.h"
 #include "pack-objects.h"
 #include "string-list.h"
+
+#define BITMAP_TYPE_INDEXES 0x54494458 /* "TIDX" */
+#define BITMAP_REACHABILITY_BITMAPS 0x5242544D /* "RBTM" */
+#define BITMAP_HASH_CACHE 0x424D4843 /* "BMHC" */
+#define BITMAP_LOOKUP_TABLE 0x424D4C54 /* "BMLT" */
 
 struct commit;
 struct repository;
@@ -34,7 +41,9 @@ struct bitmap_disk_header {
 
 enum pack_bitmap_opts {
 	BITMAP_OPT_FULL_DAG = 0x1,
-	BITMAP_OPT_HASH_CACHE = 0x4,
+	BITMAP_SET_EWAH_BITMAP = 0x2,
+	BITMAP_SET_ROARING_BITMAP = 0x4,
+	BITMAP_OPT_HASH_CACHE = 0x8,
 	BITMAP_OPT_LOOKUP_TABLE = 0x10,
 };
 
@@ -68,12 +77,12 @@ uint32_t midx_preferred_pack(struct bitmap_index *bitmap_git);
 int reuse_partial_packfile_from_bitmap(struct bitmap_index *,
 				       struct packed_git **packfile,
 				       uint32_t *entries,
-				       struct bitmap **reuse_out);
+				       void**reuse_out);
 int rebuild_existing_bitmaps(struct bitmap_index *, struct packing_data *mapping,
 			     kh_oid_map_t *reused_bitmaps, int show_progress);
 void free_bitmap_index(struct bitmap_index *);
 int bitmap_walk_contains(struct bitmap_index *,
-			 struct bitmap *bitmap, const struct object_id *oid);
+			 void *bitmap, const struct object_id *oid);
 
 /*
  * After a traversal has been performed by prepare_bitmap_walk(), this can be
@@ -86,16 +95,18 @@ off_t get_disk_usage_from_bitmap(struct bitmap_index *, struct rev_info *);
 
 void bitmap_writer_show_progress(int show);
 void bitmap_writer_set_checksum(const unsigned char *sha1);
+void bitmap_writer_init_bm_type(unsigned version_type);
 void bitmap_writer_build_type_index(struct packing_data *to_pack,
 				    struct pack_idx_entry **index,
 				    uint32_t index_nr);
 uint32_t *create_bitmap_mapping(struct bitmap_index *bitmap_git,
 				struct packing_data *mapping);
-int rebuild_bitmap(const uint32_t *reposition,
-		   struct ewah_bitmap *source,
-		   struct bitmap *dest);
-struct ewah_bitmap *bitmap_for_commit(struct bitmap_index *bitmap_git,
-				      struct commit *commit);
+int rebuild_bitmap(struct bitmap_index *bitmap_git,
+		   const uint32_t *reposition,
+		   void *source,
+		   void *dest);
+void *bitmap_for_commit(struct bitmap_index *bitmap_git,
+			struct commit *commit);
 void bitmap_writer_select_commits(struct commit **indexed_commits,
 		unsigned int indexed_commits_nr, int max_bitmaps);
 int bitmap_writer_build(struct packing_data *to_pack);

@@ -22,7 +22,7 @@
 #define EWAH_MASK(x) ((eword_t)1 << (x % BITS_IN_EWORD))
 #define EWAH_BLOCK(x) (x / BITS_IN_EWORD)
 
-struct bitmap *bitmap_word_alloc(size_t word_alloc)
+struct bitmap *raw_bitmap_word_alloc(size_t word_alloc)
 {
 	struct bitmap *bitmap = xmalloc(sizeof(struct bitmap));
 	CALLOC_ARRAY(bitmap->words, word_alloc);
@@ -30,14 +30,14 @@ struct bitmap *bitmap_word_alloc(size_t word_alloc)
 	return bitmap;
 }
 
-struct bitmap *bitmap_new(void)
+struct bitmap *raw_bitmap_new(void)
 {
-	return bitmap_word_alloc(32);
+	return raw_bitmap_word_alloc(32);
 }
 
-struct bitmap *bitmap_dup(const struct bitmap *src)
+struct bitmap *raw_bitmap_dup(const struct bitmap *src)
 {
-	struct bitmap *dst = bitmap_word_alloc(src->word_alloc);
+	struct bitmap *dst = raw_bitmap_word_alloc(src->word_alloc);
 	COPY_ARRAY(dst->words, src->words, src->word_alloc);
 	return dst;
 }
@@ -50,7 +50,7 @@ static void bitmap_grow(struct bitmap *self, size_t word_alloc)
 	       (self->word_alloc - old_size) * sizeof(eword_t));
 }
 
-void bitmap_set(struct bitmap *self, size_t pos)
+void raw_bitmap_set(struct bitmap *self, size_t pos)
 {
 	size_t block = EWAH_BLOCK(pos);
 
@@ -58,7 +58,7 @@ void bitmap_set(struct bitmap *self, size_t pos)
 	self->words[block] |= EWAH_MASK(pos);
 }
 
-void bitmap_unset(struct bitmap *self, size_t pos)
+void raw_bitmap_unset(struct bitmap *self, size_t pos)
 {
 	size_t block = EWAH_BLOCK(pos);
 
@@ -66,14 +66,14 @@ void bitmap_unset(struct bitmap *self, size_t pos)
 		self->words[block] &= ~EWAH_MASK(pos);
 }
 
-int bitmap_get(struct bitmap *self, size_t pos)
+int raw_bitmap_get(struct bitmap *self, size_t pos)
 {
 	size_t block = EWAH_BLOCK(pos);
 	return block < self->word_alloc &&
 		(self->words[block] & EWAH_MASK(pos)) != 0;
 }
 
-struct ewah_bitmap *bitmap_to_ewah(struct bitmap *bitmap)
+struct ewah_bitmap *raw_bitmap_to_ewah(struct bitmap *bitmap)
 {
 	struct ewah_bitmap *ewah = ewah_new();
 	size_t i, running_empty_words = 0;
@@ -100,9 +100,9 @@ struct ewah_bitmap *bitmap_to_ewah(struct bitmap *bitmap)
 	return ewah;
 }
 
-struct bitmap *ewah_to_bitmap(struct ewah_bitmap *ewah)
+struct bitmap *ewah_to_raw_bitmap(struct ewah_bitmap *ewah)
 {
-	struct bitmap *bitmap = bitmap_new();
+	struct bitmap *bitmap = raw_bitmap_new();
 	struct ewah_iterator it;
 	eword_t blowup;
 	size_t i = 0;
@@ -118,7 +118,7 @@ struct bitmap *ewah_to_bitmap(struct ewah_bitmap *ewah)
 	return bitmap;
 }
 
-void bitmap_and_not(struct bitmap *self, struct bitmap *other)
+void raw_bitmap_and_not(struct bitmap *self, struct bitmap *other)
 {
 	const size_t count = (self->word_alloc < other->word_alloc) ?
 		self->word_alloc : other->word_alloc;
@@ -129,7 +129,7 @@ void bitmap_and_not(struct bitmap *self, struct bitmap *other)
 		self->words[i] &= ~other->words[i];
 }
 
-void bitmap_or(struct bitmap *self, const struct bitmap *other)
+void raw_bitmap_or(struct bitmap *self, const struct bitmap *other)
 {
 	size_t i;
 
@@ -138,7 +138,7 @@ void bitmap_or(struct bitmap *self, const struct bitmap *other)
 		self->words[i] |= other->words[i];
 }
 
-void bitmap_or_ewah(struct bitmap *self, struct ewah_bitmap *other)
+void raw_bitmap_or_ewah(struct bitmap *self, struct ewah_bitmap *other)
 {
 	size_t original_size = self->word_alloc;
 	size_t other_final = (other->bit_size / BITS_IN_EWORD) + 1;
@@ -159,7 +159,7 @@ void bitmap_or_ewah(struct bitmap *self, struct ewah_bitmap *other)
 		self->words[i++] |= word;
 }
 
-size_t bitmap_popcount(struct bitmap *self)
+size_t raw_bitmap_popcount(struct bitmap *self)
 {
 	size_t i, count = 0;
 
@@ -169,7 +169,7 @@ size_t bitmap_popcount(struct bitmap *self)
 	return count;
 }
 
-int bitmap_equals(struct bitmap *self, struct bitmap *other)
+int raw_bitmap_equals(struct bitmap *self, struct bitmap *other)
 {
 	struct bitmap *big, *small;
 	size_t i;
@@ -195,7 +195,32 @@ int bitmap_equals(struct bitmap *self, struct bitmap *other)
 	return 1;
 }
 
-int bitmap_is_subset(struct bitmap *self, struct bitmap *other)
+void ewah_bitmap_print(struct ewah_bitmap *bm)
+{
+	uint32_t i;
+	struct bitmap *raw_bm = ewah_to_raw_bitmap(bm);
+
+	fprintf(stderr, "\n[ ");
+	for (i = 0; i < raw_bm->word_alloc; i++) {
+		eword_t word = raw_bm->words[i];
+		unsigned offset;
+
+		for (offset = 0; offset < BITS_IN_EWORD; offset++) {
+			uint32_t pos;
+
+			if ((word >> offset) == 0)
+				break;
+			offset += ewah_bit_ctz64(word >> offset);
+			pos = i * BITS_IN_EWORD + offset;
+
+			fprintf(stderr, "%d, ", pos);
+		}
+	}
+	fprintf(stderr, "]\n");
+
+}
+
+int raw_bitmap_is_subset(struct bitmap *self, struct bitmap *other)
 {
 	size_t common_size, i;
 
@@ -216,7 +241,7 @@ int bitmap_is_subset(struct bitmap *self, struct bitmap *other)
 	return 0;
 }
 
-void bitmap_free(struct bitmap *bitmap)
+void raw_bitmap_free(struct bitmap *bitmap)
 {
 	if (!bitmap)
 		return;

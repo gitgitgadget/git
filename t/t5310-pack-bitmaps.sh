@@ -28,17 +28,20 @@ has_any () {
 
 test_bitmap_cases () {
 	writeLookupTable=false
+	useRoaringBitmap=false
 	for i in "$@"
 	do
 		case "$i" in
 		"pack.writeBitmapLookupTable") writeLookupTable=true;;
+		"pack.useRoaringBitmap") useRoaringBitmap=true;;
 		esac
 	done
 
 	test_expect_success 'setup test repository' '
 		rm -fr * .git &&
 		git init &&
-		git config pack.writeBitmapLookupTable '"$writeLookupTable"'
+		git config pack.writeBitmapLookupTable '"$writeLookupTable"' &&
+		git config pack.useRoaringBitmap '"$useRoaringBitmap"'
 	'
 	setup_bitmap_history
 
@@ -48,7 +51,7 @@ test_bitmap_cases () {
 
 	test_expect_success 'full repack creates bitmaps' '
 		GIT_TRACE2_EVENT="$(pwd)/trace" \
-			git repack -ad &&
+		git repack -ad &&
 		ls .git/objects/pack/ | grep bitmap >output &&
 		test_line_count = 1 output &&
 		grep "\"key\":\"num_selected_commits\",\"value\":\"106\"" trace &&
@@ -187,27 +190,6 @@ test_bitmap_cases () {
 	test_expect_success 'pack with missing parent' '
 		rm $(objpath $parent) &&
 		git pack-objects --stdout --revs <revs >/dev/null
-	'
-
-	test_expect_success JGIT,SHA1 'we can read jgit bitmaps' '
-		git clone --bare . compat-jgit.git &&
-		(
-			cd compat-jgit.git &&
-			rm -f objects/pack/*.bitmap &&
-			jgit gc &&
-			git rev-list --test-bitmap HEAD
-		)
-	'
-
-	test_expect_success JGIT,SHA1 'jgit can read our bitmaps' '
-		git clone --bare . compat-us.git &&
-		(
-			cd compat-us.git &&
-			git config pack.writeBitmapLookupTable '"$writeLookupTable"' &&
-			git repack -adb &&
-			# jgit gc will barf if it does not like our bitmaps
-			jgit gc
-		)
 	'
 
 	test_expect_success 'splitting packs does not generate bogus bitmaps' '
@@ -371,6 +353,7 @@ test_bitmap_cases () {
 		(
 			cd repo &&
 			git config pack.writeBitmapLookupTable '"$writeLookupTable"' &&
+			git config pack.useRoaringBitmap '"$useRoaringBitmap"' &&
 
 			# create enough commits that not all are receive bitmap
 			# coverage even if they are all at the tip of some reference.
@@ -411,6 +394,7 @@ test_bitmap_cases () {
 		(
 			cd repo &&
 			git config pack.writeBitmapLookupTable '"$writeLookupTable"' &&
+			git config pack.useRoaringBitmap '"$useRoaringBitmap"' &&
 
 			test_commit base &&
 
@@ -447,6 +431,26 @@ test_expect_success 'incremental repack can disable bitmaps' '
 	git repack -d --no-write-bitmap-index
 '
 
+test_expect_success JGIT,SHA1 'we can read jgit bitmaps' '
+	git clone --bare . compat-jgit.git &&
+	(
+		cd compat-jgit.git &&
+		rm -f objects/pack/*.bitmap &&
+		jgit gc &&
+		git rev-list --test-bitmap HEAD
+	)
+'
+
+test_expect_success JGIT,SHA1 'jgit can read our bitmaps' '
+	git clone --bare . compat-us.git &&
+	(
+		cd compat-us.git &&
+		git repack -adb &&
+		# jgit gc will barf if it does not like our bitmaps
+		jgit gc
+	)
+'
+
 test_bitmap_cases "pack.writeBitmapLookupTable"
 
 test_expect_success 'verify writing bitmap lookup table when enabled' '
@@ -466,6 +470,35 @@ test_expect_success 'truncated bitmap fails gracefully (lookup table)' '
 	git rev-list --use-bitmap-index --count --all >actual 2>stderr &&
 	test_cmp expect actual &&
 	test_i18ngrep corrupted.bitmap.index stderr
+'
+
+test_expect_success JGIT,SHA1 'we can read jgit bitmaps (lookup table)' '
+	git clone --bare . compat-jgit.git &&
+	(
+		cd compat-jgit.git &&
+		rm -f objects/pack/*.bitmap &&
+		jgit gc &&
+		git rev-list --test-bitmap HEAD
+	)
+'
+
+test_expect_success JGIT,SHA1 'jgit can read our bitmaps (lookup table)' '
+	git clone --bare . compat-us.git &&
+	(
+		cd compat-us.git &&
+		git config pack.writeBitmapLookupTable true &&
+		git repack -adb &&
+		# jgit gc will barf if it does not like our bitmaps
+		jgit gc
+	)
+'
+
+test_bitmap_cases 'pack.useRoaringBitmap'
+
+test_expect_success 'verify writing roaring bitmaps when enabled' '
+	GIT_TRACE2_EVENT="$(pwd)/trace5" \
+		git repack -adb &&
+	grep "\"label\":\"write-roaring-bitmap\"" trace5
 '
 
 test_done

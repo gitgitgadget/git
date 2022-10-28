@@ -1112,9 +1112,15 @@ static int write_midx_bitmap(const char *midx_name,
 {
 	int ret, i;
 	uint16_t options = 0;
+	unsigned version = 0;
 	struct pack_idx_entry **index;
 	char *bitmap_name = xstrfmt("%s-%s.bitmap", midx_name,
 					hash_to_hex(midx_hash));
+
+	if (flags & MIDX_WRITE_ROARING_BITMAP)
+		version |= BITMAP_SET_ROARING_BITMAP;
+	else
+		version |= BITMAP_SET_EWAH_BITMAP;
 
 	if (flags & MIDX_WRITE_BITMAP_HASH_CACHE)
 		options |= BITMAP_OPT_HASH_CACHE;
@@ -1131,6 +1137,7 @@ static int write_midx_bitmap(const char *midx_name,
 	for (i = 0; i < pdata->nr_objects; i++)
 		index[i] = &pdata->objects[i].idx;
 
+	bitmap_writer_init_bm_type(version);
 	bitmap_writer_show_progress(flags & MIDX_PROGRESS);
 	bitmap_writer_build_type_index(pdata, index, pdata->nr_objects);
 

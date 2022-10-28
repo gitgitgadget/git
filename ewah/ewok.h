@@ -171,23 +171,24 @@ struct bitmap {
 	size_t word_alloc;
 };
 
-struct bitmap *bitmap_new(void);
-struct bitmap *bitmap_word_alloc(size_t word_alloc);
-struct bitmap *bitmap_dup(const struct bitmap *src);
-void bitmap_set(struct bitmap *self, size_t pos);
-void bitmap_unset(struct bitmap *self, size_t pos);
-int bitmap_get(struct bitmap *self, size_t pos);
-void bitmap_free(struct bitmap *self);
-int bitmap_equals(struct bitmap *self, struct bitmap *other);
-int bitmap_is_subset(struct bitmap *self, struct bitmap *other);
+struct bitmap *raw_bitmap_new(void);
+struct bitmap *raw_bitmap_word_alloc(size_t word_alloc);
+struct bitmap *raw_bitmap_dup(const struct bitmap *src);
+void raw_bitmap_set(struct bitmap *self, size_t pos);
+void raw_bitmap_unset(struct bitmap *self, size_t pos);
+int raw_bitmap_get(struct bitmap *self, size_t pos);
+void raw_bitmap_free(struct bitmap *self);
+int raw_bitmap_equals(struct bitmap *self, struct bitmap *other);
+int raw_bitmap_is_subset(struct bitmap *self, struct bitmap *other);
 
-struct ewah_bitmap * bitmap_to_ewah(struct bitmap *bitmap);
-struct bitmap *ewah_to_bitmap(struct ewah_bitmap *ewah);
+struct ewah_bitmap * raw_bitmap_to_ewah(struct bitmap *bitmap);
+struct bitmap *ewah_to_raw_bitmap(struct ewah_bitmap *ewah);
 
-void bitmap_and_not(struct bitmap *self, struct bitmap *other);
-void bitmap_or_ewah(struct bitmap *self, struct ewah_bitmap *other);
-void bitmap_or(struct bitmap *self, const struct bitmap *other);
+void raw_bitmap_and_not(struct bitmap *self, struct bitmap *other);
+void raw_bitmap_or_ewah(struct bitmap *self, struct ewah_bitmap *other);
+void raw_bitmap_or(struct bitmap *self, const struct bitmap *other);
+void ewah_bitmap_print(struct ewah_bitmap *bm);
 
-size_t bitmap_popcount(struct bitmap *self);
+size_t raw_bitmap_popcount(struct bitmap *self);
 
 #endif

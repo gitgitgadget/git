@@ -12,22 +12,27 @@
 #include "hash-lookup.h"
 #include "pack-objects.h"
 #include "commit-reach.h"
+#include "chunk-format.h"
 #include "prio-queue.h"
 
 struct bitmapped_commit {
 	struct commit *commit;
-	struct ewah_bitmap *bitmap;
-	struct ewah_bitmap *write_as;
+	void *bitmap;
+	void *write_as;
+
+	uint32_t bitmap_type;
 	int flags;
 	int xor_offset;
 	uint32_t commit_pos;
 };
 
-struct bitmap_writer {
-	struct ewah_bitmap *commits;
-	struct ewah_bitmap *trees;
-	struct ewah_bitmap *blobs;
-	struct ewah_bitmap *tags;
+struct write_bitmap_context {
+	void *commits;
+	void *trees;
+	void *blobs;
+	void *tags;
+
+	uint32_t bitmap_type;
 
 	kh_oid_map_t *bitmaps;
 	struct packing_data *to_pack;
@@ -35,18 +40,37 @@ struct bitmap_writer {
 	struct bitmapped_commit *selected;
 	unsigned int selected_nr, selected_alloc;
 
+	struct pack_idx_entry **index;
+	uint32_t index_nr;
+	off_t *offsets;
+	uint32_t *commit_positions;
+
+	void *lookup_table;
+	void *hash_cache;
+
 	struct progress *progress;
 	int show_progress;
 	unsigned char pack_checksum[GIT_MAX_RAWSZ];
 };
 
-static struct bitmap_writer writer;
+static struct write_bitmap_context writer;
 
 void bitmap_writer_show_progress(int show)
 {
 	writer.show_progress = show;
 }
 
+void bitmap_writer_init_bm_type(unsigned version_type)
+{
+	if (version_type & BITMAP_SET_ROARING_BITMAP) {
+		writer.bitmap_type = ROARING;
+		set_bitmap_type(ROARING);
+	}
+	else if (version_type & BITMAP_SET_EWAH_BITMAP) {
+		writer.bitmap_type = EWAH;
+		set_bitmap_type(EWAH);
+	}
+}
 /**
  * Build the initial type index for the packfile or multi-pack-index
  */
@@ -56,11 +80,13 @@ void bitmap_writer_build_type_index(struct packing_data *to_pack,
 {
 	uint32_t i;
 
-	writer.commits = ewah_new();
-	writer.trees = ewah_new();
-	writer.blobs = ewah_new();
-	writer.tags = ewah_new();
+	writer.commits = roaring_or_ewah_bitmap_init();
+	writer.trees = roaring_or_ewah_bitmap_init();
+	writer.blobs = roaring_or_ewah_bitmap_init();
+	writer.tags = roaring_or_ewah_bitmap_init();
 	ALLOC_ARRAY(to_pack->in_pack_pos, to_pack->nr_objects);
+	writer.index = index;
+	writer.index_nr = index_nr;
 
 	for (i = 0; i < index_nr; ++i) {
 		struct object_entry *entry = (struct object_entry *)index[i];
@@ -84,25 +110,25 @@ void bitmap_writer_build_type_index(struct packing_data *to_pack,
 
 		switch (real_type) {
 		case OBJ_COMMIT:
-			ewah_set(writer.commits, i);
+			roaring_or_ewah_bitmap_set(writer.commits, i);
 			break;
 
 		case OBJ_TREE:
-			ewah_set(writer.trees, i);
+			roaring_or_ewah_bitmap_set(writer.trees, i);
 			break;
 
 		case OBJ_BLOB:
-			ewah_set(writer.blobs, i);
+			roaring_or_ewah_bitmap_set(writer.blobs, i);
 			break;
 
 		case OBJ_TAG:
-			ewah_set(writer.tags, i);
+			roaring_or_ewah_bitmap_set(writer.tags, i);
 			break;
 
 		default:
 			die("Missing type information for %s (%d/%d)",
-			    oid_to_hex(&entry->idx.oid), real_type,
-			    oe_type(entry));
+				oid_to_hex(&entry->idx.oid), real_type,
+				oe_type(entry));
 		}
 	}
 }
@@ -184,8 +210,8 @@ static void compute_xor_offsets(void)
 
 struct bb_commit {
 	struct commit_list *reverse_edges;
-	struct bitmap *commit_mask;
-	struct bitmap *bitmap;
+	void *commit_mask;
+	void *bitmap;
 	unsigned selected:1,
 		 maximal:1;
 	unsigned idx; /* within selected array */
@@ -200,7 +226,7 @@ struct bitmap_builder {
 };
 
 static void bitmap_builder_init(struct bitmap_builder *bb,
-				struct bitmap_writer *writer,
+				struct write_bitmap_context *writer,
 				struct bitmap_index *old_bitmap)
 {
 	struct rev_info revs;
@@ -225,8 +251,8 @@ static void bitmap_builder_init(struct bitmap_builder *bb,
 		ent->maximal = 1;
 		ent->idx = i;
 
-		ent->commit_mask = bitmap_new();
-		bitmap_set(ent->commit_mask, i);
+		ent->commit_mask = roaring_or_raw_bitmap_new();
+		roaring_or_raw_bitmap_set(ent->commit_mask, i);
 
 		add_pending_object(&revs, &c->object, "");
 	}
@@ -278,18 +304,18 @@ static void bitmap_builder_init(struct bitmap_builder *bb,
 			int c_not_p, p_not_c;
 
 			if (!p_ent->commit_mask) {
-				p_ent->commit_mask = bitmap_new();
+				p_ent->commit_mask = roaring_or_raw_bitmap_new();
 				c_not_p = 1;
 				p_not_c = 0;
 			} else {
-				c_not_p = bitmap_is_subset(c_ent->commit_mask, p_ent->commit_mask);
-				p_not_c = bitmap_is_subset(p_ent->commit_mask, c_ent->commit_mask);
+				c_not_p = roaring_or_raw_bitmap_is_subset(c_ent->commit_mask, p_ent->commit_mask);
+				p_not_c = roaring_or_raw_bitmap_is_subset(p_ent->commit_mask, c_ent->commit_mask);
 			}
 
 			if (!c_not_p)
 				continue;
 
-			bitmap_or(p_ent->commit_mask, c_ent->commit_mask);
+			roaring_or_raw_bitmap_or(p_ent->commit_mask, c_ent->commit_mask);
 
 			if (p_not_c)
 				p_ent->maximal = 1;
@@ -312,7 +338,7 @@ static void bitmap_builder_init(struct bitmap_builder *bb,
 		}
 
 next:
-		bitmap_free(c_ent->commit_mask);
+		roaring_or_raw_bitmap_free(c_ent->commit_mask);
 		c_ent->commit_mask = NULL;
 	}
 
@@ -337,7 +363,7 @@ static void bitmap_builder_clear(struct bitmap_builder *bb)
 	bb->commits_nr = bb->commits_alloc = 0;
 }
 
-static int fill_bitmap_tree(struct bitmap *bitmap,
+static int fill_bitmap_tree(void *bitmap,
 			    struct tree *tree)
 {
 	int found;
@@ -352,9 +378,9 @@ static int fill_bitmap_tree(struct bitmap *bitmap,
 	pos = find_object_pos(&tree->object.oid, &found);
 	if (!found)
 		return -1;
-	if (bitmap_get(bitmap, pos))
+	if (roaring_or_raw_bitmap_get(bitmap, pos))
 		return 0;
-	bitmap_set(bitmap, pos);
+	roaring_or_raw_bitmap_set(bitmap, pos);
 
 	if (parse_tree(tree) < 0)
 		die("unable to load tree object %s",
@@ -372,7 +398,7 @@ static int fill_bitmap_tree(struct bitmap *bitmap,
 			pos = find_object_pos(&entry.oid, &found);
 			if (!found)
 				return -1;
-			bitmap_set(bitmap, pos);
+			roaring_or_raw_bitmap_set(bitmap, pos);
 			break;
 		default:
 			/* Gitlink, etc; not reachable */
@@ -394,7 +420,7 @@ static int fill_bitmap_commit(struct bb_commit *ent,
 	int found;
 	uint32_t pos;
 	if (!ent->bitmap)
-		ent->bitmap = bitmap_new();
+		ent->bitmap = roaring_or_raw_bitmap_new();
 
 	prio_queue_put(queue, commit);
 
@@ -403,13 +429,13 @@ static int fill_bitmap_commit(struct bb_commit *ent,
 		struct commit *c = prio_queue_get(queue);
 
 		if (old_bitmap && mapping) {
-			struct ewah_bitmap *old = bitmap_for_commit(old_bitmap, c);
+			void *old = bitmap_for_commit(old_bitmap, c);
 			/*
 			 * If this commit has an old bitmap, then translate that
 			 * bitmap and add its bits to this one. No need to walk
 			 * parents or the tree for this commit.
 			 */
-			if (old && !rebuild_bitmap(mapping, old, ent->bitmap))
+			if (old && !rebuild_bitmap(old_bitmap, mapping, old, ent->bitmap))
 				continue;
 		}
 
@@ -420,15 +446,15 @@ static int fill_bitmap_commit(struct bb_commit *ent,
 		pos = find_object_pos(&c->object.oid, &found);
 		if (!found)
 			return -1;
-		bitmap_set(ent->bitmap, pos);
+		roaring_or_raw_bitmap_set(ent->bitmap, pos);
 		prio_queue_put(tree_queue, get_commit_tree(c));
 
 		for (p = c->parents; p; p = p->next) {
 			pos = find_object_pos(&p->item->object.oid, &found);
 			if (!found)
 				return -1;
-			if (!bitmap_get(ent->bitmap, pos)) {
-				bitmap_set(ent->bitmap, pos);
+			if (!roaring_or_raw_bitmap_get(ent->bitmap, pos)) {
+				roaring_or_raw_bitmap_set(ent->bitmap, pos);
 				prio_queue_put(queue, p->item);
 			}
 		}
@@ -447,8 +473,15 @@ static void store_selected(struct bb_commit *ent, struct commit *commit)
 	struct bitmapped_commit *stored = &writer.selected[ent->idx];
 	khiter_t hash_pos;
 	int hash_ret;
+	enum bitmap_type bm_type = get_bitmap_type();
 
-	stored->bitmap = bitmap_to_ewah(ent->bitmap);
+	if (bm_type == EWAH)
+		stored->bitmap = raw_bitmap_to_ewah(ent->bitmap);
+	else if (bm_type == ROARING) {
+		stored->bitmap = roaring_bitmap_copy(ent->bitmap);
+		stored->write_as = stored->bitmap;
+		stored->xor_offset = 0;
+	}
 
 	hash_pos = kh_put_oid_map(writer.bitmaps, commit->object.oid, &hash_ret);
 	if (hash_ret == 0)
@@ -506,16 +539,16 @@ int bitmap_writer_build(struct packing_data *to_pack)
 				bb_data_at(&bb.data, child);
 
 			if (child_ent->bitmap)
-				bitmap_or(child_ent->bitmap, ent->bitmap);
+				roaring_or_raw_bitmap_or(child_ent->bitmap, ent->bitmap);
 			else if (reused)
-				child_ent->bitmap = bitmap_dup(ent->bitmap);
+				child_ent->bitmap = roaring_or_raw_bitmap_copy(ent->bitmap);
 			else {
 				child_ent->bitmap = ent->bitmap;
 				reused = 1;
 			}
 		}
 		if (!reused)
-			bitmap_free(ent->bitmap);
+			roaring_or_raw_bitmap_free(ent->bitmap);
 		ent->bitmap = NULL;
 	}
 	clear_prio_queue(&queue);
@@ -529,7 +562,7 @@ int bitmap_writer_build(struct packing_data *to_pack)
 
 	stop_progress(&writer.progress);
 
-	if (closed)
+	if (closed && writer.bitmap_type == EWAH)
 		compute_xor_offsets();
 	return closed ? 0 : -1;
 }
@@ -626,7 +659,7 @@ void bitmap_writer_select_commits(struct commit **indexed_commits,
 }
 
 
-static int hashwrite_ewah_helper(void *f, const void *buf, size_t len)
+static int hashwrite_bitmap_helper(void *f, const void *buf, size_t len)
 {
 	/* hashwrite will die on error */
 	hashwrite(f, buf, len);
@@ -638,7 +671,7 @@ static int hashwrite_ewah_helper(void *f, const void *buf, size_t len)
  */
 static inline void dump_bitmap(struct hashfile *f, struct ewah_bitmap *bitmap)
 {
-	if (ewah_serialize_to(bitmap, hashwrite_ewah_helper, f) < 0)
+	if (ewah_serialize_to(bitmap, hashwrite_bitmap_helper, f) < 0)
 		die("Failed to write bitmap index");
 }
 
@@ -649,10 +682,15 @@ static const struct object_id *oid_access(size_t pos, const void *table)
 }
 
 static void write_selected_commits_v1(struct hashfile *f,
-				      uint32_t *commit_positions,
-				      off_t *offsets)
+				      struct pack_idx_entry **index,
+				      uint32_t index_nr)
 {
 	int i;
+	uint32_t *commit_positions = writer.commit_positions;
+	off_t *offsets = writer.offsets;
+
+	if (!commit_positions)
+		die(_("commit positions are not initialized properly\n"));
 
 	for (i = 0; i < writer.selected_nr; ++i) {
 		struct bitmapped_commit *stored = &writer.selected[i];
@@ -683,11 +721,13 @@ static int table_cmp(const void *_va, const void *_vb, void *_data)
 }
 
 static void write_lookup_table(struct hashfile *f,
-			       uint32_t *commit_positions,
-			       off_t *offsets)
+			       struct pack_idx_entry **index,
+			       uint32_t index_nr)
 {
 	uint32_t i;
 	uint32_t *table, *table_inv;
+	uint32_t *commit_positions = writer.commit_positions;
+	off_t *offsets = writer.offsets;
 
 	ALLOC_ARRAY(table, writer.selected_nr);
 	ALLOC_ARRAY(table_inv, writer.selected_nr);
@@ -758,59 +798,188 @@ void bitmap_writer_set_checksum(const unsigned char *sha1)
 	hashcpy(writer.pack_checksum, sha1);
 }
 
-void bitmap_writer_finish(struct pack_idx_entry **index,
-			  uint32_t index_nr,
-			  const char *filename,
-			  uint16_t options)
+static size_t compute_pt_serialize_type_indexes_size(void)
 {
-	static uint16_t default_version = 1;
-	static uint16_t flags = BITMAP_OPT_FULL_DAG;
-	struct strbuf tmp_file = STRBUF_INIT;
-	struct hashfile *f;
-	uint32_t *commit_positions = NULL;
-	off_t *offsets = NULL;
-	uint32_t i;
+	size_t type_index_size = 0;
+	type_index_size += roaring_bitmap_network_portable_size_in_bytes(writer.commits);
+	type_index_size += roaring_bitmap_network_portable_size_in_bytes(writer.trees);
+	type_index_size += roaring_bitmap_network_portable_size_in_bytes(writer.blobs);
+	type_index_size += roaring_bitmap_network_portable_size_in_bytes(writer.tags);
+	return type_index_size;
+}
 
-	struct bitmap_disk_header header;
+static size_t compute_pt_serialize_commit_bitmap_sec_size(void)
+{
+	size_t  size = 0;
+	int i;
 
-	int fd = odb_mkstemp(&tmp_file, "pack/tmp_bitmap_XXXXXX");
+	for (i = 0; i < writer.selected_nr; ++i) {
+		struct bitmapped_commit *stored = &writer.selected[i];
 
-	f = hashfd(fd, tmp_file.buf);
+		size += sizeof(uint32_t) + sizeof(uint8_t) * 2;
+		size += roaring_bitmap_network_portable_size_in_bytes(stored->write_as);
+	}
+	return size;
+}
 
-	memcpy(header.magic, BITMAP_IDX_SIGNATURE, sizeof(BITMAP_IDX_SIGNATURE));
-	header.version = htons(default_version);
-	header.options = htons(flags | options);
-	header.entry_count = htonl(writer.selected_nr);
-	hashcpy(header.checksum, writer.pack_checksum);
+static size_t compute_hash_cache_size(void)
+{
+	return st_mult(writer.index_nr, sizeof(uint32_t));
+}
 
-	hashwrite(f, &header, sizeof(header) - GIT_MAX_RAWSZ + the_hash_algo->rawsz);
+static size_t compute_bitmap_lookup_table_size(void)
+{
+	return st_mult(writer.selected_nr, BITMAP_LOOKUP_TABLE_TRIPLET_WIDTH);
+}
+
+static int write_bitmap_type_indexes(struct hashfile *f, void *data)
+{
+	struct write_bitmap_context *writer = data;
+	roaring_bitmap_portable_network_serialize(writer->commits, hashwrite_bitmap_helper, f);
+	roaring_bitmap_portable_network_serialize(writer->trees, hashwrite_bitmap_helper, f);
+	roaring_bitmap_portable_network_serialize(writer->blobs, hashwrite_bitmap_helper, f);
+	roaring_bitmap_portable_network_serialize(writer->tags, hashwrite_bitmap_helper, f);
+	return 0;
+}
+
+static int write_reachability_roaring_bitmaps(struct hashfile *f, void *data)
+{
+	struct write_bitmap_context *writer = data;
+	uint32_t *commit_positions = writer->commit_positions;
+	int i;
+
+	if (!commit_positions)
+		die(_("commit positions are not initialized properly\n"));
+
+	for (i = 0; i < writer->selected_nr; ++i) {
+		struct bitmapped_commit *stored = &writer->selected[i];
+
+		if (writer->offsets)
+			writer->offsets[i] = hashfile_total(f);
+
+		hashwrite_be32(f, commit_positions[i]);
+		hashwrite_u8(f, stored->xor_offset);
+		hashwrite_u8(f, stored->flags);
+
+		roaring_bitmap_portable_network_serialize(stored->write_as, hashwrite_bitmap_helper, f);
+	}
+	return 0;
+}
+
+static int write_chunk_hash_cache(struct hashfile *f, void *data)
+{
+	struct write_bitmap_context *writer = data;
+	write_hash_cache(f, writer->index, writer->index_nr);
+	return 0;
+}
+
+static int write_chunk_lookup_table(struct hashfile *f, void *data)
+{
+	struct write_bitmap_context *writer = data;
+	write_lookup_table(f, writer->index, writer->index_nr);
+	return 0;
+}
+
+static void write_roaring_bitmap_file(struct hashfile *f,
+			       const char *filename,
+			       uint16_t options)
+{
+	struct chunkfile *cf = init_chunkfile(f);
+
+	add_chunk(cf, BITMAP_TYPE_INDEXES,
+		  compute_pt_serialize_type_indexes_size(),
+		  write_bitmap_type_indexes);
+
+	trace2_region_enter("pack-bitmap-write", "write-roaring-bitmap", the_repository);
+	add_chunk(cf, BITMAP_REACHABILITY_BITMAPS,
+		  compute_pt_serialize_commit_bitmap_sec_size(),
+		  write_reachability_roaring_bitmaps);
+
+	if (options & BITMAP_OPT_HASH_CACHE)
+		add_chunk(cf, BITMAP_HASH_CACHE,
+			compute_hash_cache_size(),
+			write_chunk_hash_cache);
+
+	if (options & BITMAP_OPT_LOOKUP_TABLE)
+		add_chunk(cf, BITMAP_LOOKUP_TABLE,
+			compute_bitmap_lookup_table_size(),
+			write_chunk_lookup_table);
+
+	hashwrite_u8(f, get_num_chunks(cf));
+	write_chunkfile(cf, &writer);
+	trace2_region_leave("pack-bitmap-write", "write-roaring-bitmap", the_repository);
+}
+
+static void write_ewah_bitmap_file(struct hashfile *f,
+			    struct pack_idx_entry **index,
+			    uint32_t index_nr,
+			    const char *filename,
+			    uint16_t options)
+{
 	dump_bitmap(f, writer.commits);
 	dump_bitmap(f, writer.trees);
 	dump_bitmap(f, writer.blobs);
 	dump_bitmap(f, writer.tags);
 
-	if (options & BITMAP_OPT_LOOKUP_TABLE)
-		CALLOC_ARRAY(offsets, index_nr);
+	write_selected_commits_v1(f, index, index_nr);
 
+	if (options & BITMAP_OPT_LOOKUP_TABLE)
+		write_lookup_table(f, index, index_nr);
+
+	if (options & BITMAP_OPT_HASH_CACHE)
+		write_hash_cache(f, index, index_nr);
+}
+
+static void fill_writer_commit_positions(void)
+{
+	uint32_t *commit_positions = NULL;
+	int i;
 	ALLOC_ARRAY(commit_positions, writer.selected_nr);
 
 	for (i = 0; i < writer.selected_nr; i++) {
 		struct bitmapped_commit *stored = &writer.selected[i];
-		int commit_pos = oid_pos(&stored->commit->object.oid, index, index_nr, oid_access);
+		int commit_pos = oid_pos(&stored->commit->object.oid, writer.index, writer.index_nr, oid_access);
 
 		if (commit_pos < 0)
 			BUG(_("trying to write commit not in index"));
 
 		commit_positions[i] = commit_pos;
 	}
+	writer.commit_positions = commit_positions;
+}
 
-	write_selected_commits_v1(f, commit_positions, offsets);
+void bitmap_writer_finish(struct pack_idx_entry **index,
+			  uint32_t index_nr,
+			  const char *filename,
+			  uint16_t options)
+{
+	struct strbuf tmp_file = STRBUF_INIT;
+	struct hashfile *f = NULL;
+	static uint16_t version = 1;
+	static uint16_t flags = BITMAP_OPT_FULL_DAG;
+	struct bitmap_disk_header header;
+
+	int fd = odb_mkstemp(&tmp_file, "pack/tmp_bitmap_XXXXXX");
+	f = hashfd(fd, tmp_file.buf);
+	if (writer.bitmap_type & ROARING)
+		version = 2;
+
+	memcpy(header.magic, BITMAP_IDX_SIGNATURE, sizeof(BITMAP_IDX_SIGNATURE));
+	header.version = htons(version);
+	header.options = htons(flags | options);
+	header.entry_count = htonl(writer.selected_nr);
+	hashcpy(header.checksum, writer.pack_checksum);
+
+	hashwrite(f, &header, sizeof(header) - GIT_MAX_RAWSZ + the_hash_algo->rawsz);
 
 	if (options & BITMAP_OPT_LOOKUP_TABLE)
-		write_lookup_table(f, commit_positions, offsets);
+		CALLOC_ARRAY(writer.offsets, index_nr);
 
-	if (options & BITMAP_OPT_HASH_CACHE)
-		write_hash_cache(f, index, index_nr);
+	fill_writer_commit_positions();
+	if (writer.bitmap_type == ROARING)
+		write_roaring_bitmap_file(f, filename, options);
+	else if (writer.bitmap_type == EWAH)
+		write_ewah_bitmap_file(f, index, index_nr, filename, options);
 
 	finalize_hashfile(f, NULL, FSYNC_COMPONENT_PACK_METADATA,
 			  CSUM_HASH_IN_STREAM | CSUM_FSYNC | CSUM_CLOSE);
@@ -820,8 +989,7 @@ void bitmap_writer_finish(struct pack_idx_entry **index,
 
 	if (rename(tmp_file.buf, filename))
 		die_errno("unable to rename temporary bitmap file to '%s'", filename);
-
 	strbuf_release(&tmp_file);
-	free(commit_positions);
-	free(offsets);
+	free(writer.offsets);
+	free(writer.commit_positions);
 }

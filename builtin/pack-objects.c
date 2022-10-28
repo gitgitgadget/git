@@ -218,7 +218,7 @@ static struct progress *progress_state;
 
 static struct packed_git *reuse_packfile;
 static uint32_t reuse_packfile_objects;
-static struct bitmap *reuse_packfile_bitmap;
+static void *reuse_packfile_bitmap;
 
 static int use_bitmap_index_default = 1;
 static int use_bitmap_index = -1;
@@ -228,7 +228,7 @@ static enum {
 	WRITE_BITMAP_QUIET,
 	WRITE_BITMAP_TRUE,
 } write_bitmap_index;
-static uint16_t write_bitmap_options = BITMAP_OPT_HASH_CACHE;
+static uint16_t write_bitmap_options = BITMAP_OPT_HASH_CACHE | BITMAP_SET_EWAH_BITMAP;
 
 static int exclude_promisor_objects;
 
@@ -1084,15 +1084,29 @@ static size_t write_reused_pack_verbatim(struct hashfile *out,
 					 struct pack_window **w_curs)
 {
 	size_t pos = 0;
+	enum bitmap_type bm_type = get_bitmap_type();
+	trace2_region_enter("pack-objects", "write-reuse-v2-pack", the_repository);
 
-	while (pos < reuse_packfile_bitmap->word_alloc &&
-			reuse_packfile_bitmap->words[pos] == (eword_t)~0)
-		pos++;
+	if (bm_type == EWAH) {
+		struct bitmap *raw_reuse_packfile_bitmap = reuse_packfile_bitmap;
+		while (pos < raw_reuse_packfile_bitmap->word_alloc &&
+				raw_reuse_packfile_bitmap->words[pos] == (eword_t)~0)
+			pos++;
+		written = (pos * BITS_IN_EWORD);
+	}
+	else if (bm_type == ROARING) {
+		uint32_t cardinality = roaring_bitmap_get_cardinality(reuse_packfile_bitmap);
+		while (pos < cardinality && roaring_bitmap_contains(reuse_packfile_bitmap, pos))
+			pos++;
+		written = pos;
+	}
+	else
+		die(_("bitmap type is not initialized\n"));
+	trace2_region_leave("pack-objects", "write-reuse-v2-pack", the_repository);
 
 	if (pos) {
 		off_t to_write;
 
-		written = (pos * BITS_IN_EWORD);
 		to_write = pack_pos_to_offset(reuse_packfile, written)
 			- sizeof(struct pack_header);
 
@@ -1112,30 +1126,49 @@ static void write_reused_pack(struct hashfile *f)
 	size_t i = 0;
 	uint32_t offset;
 	struct pack_window *w_curs = NULL;
+	enum bitmap_type bm_type = get_bitmap_type();
+	trace2_region_enter("pack-objects", "write-reused-pack", the_repository);
 
 	if (allow_ofs_delta)
 		i = write_reused_pack_verbatim(f, &w_curs);
 
-	for (; i < reuse_packfile_bitmap->word_alloc; ++i) {
-		eword_t word = reuse_packfile_bitmap->words[i];
-		size_t pos = (i * BITS_IN_EWORD);
+	if (bm_type == EWAH) {
+		struct bitmap *raw_reuse_packfile_bitmap = reuse_packfile_bitmap;
+		for (; i < raw_reuse_packfile_bitmap->word_alloc; ++i) {
+			eword_t word = raw_reuse_packfile_bitmap->words[i];
+			size_t pos = (i * BITS_IN_EWORD);
 
-		for (offset = 0; offset < BITS_IN_EWORD; ++offset) {
-			if ((word >> offset) == 0)
-				break;
+			for (offset = 0; offset < BITS_IN_EWORD; ++offset) {
+				if ((word >> offset) == 0)
+					break;
 
-			offset += ewah_bit_ctz64(word >> offset);
-			/*
-			 * Can use bit positions directly, even for MIDX
-			 * bitmaps. See comment in try_partial_reuse()
-			 * for why.
-			 */
-			write_reused_pack_one(pos + offset, f, &w_curs);
-			display_progress(progress_state, ++written);
+				offset += ewah_bit_ctz64(word >> offset);
+				/*
+				* Can use bit positions directly, even for MIDX
+				* bitmaps. See comment in try_partial_reuse()
+				* for why.
+				*/
+				write_reused_pack_one(pos + offset, f, &w_curs);
+				display_progress(progress_state, ++written);
+			}
 		}
 	}
+	else if (bm_type == ROARING) {
+		uint32_t cardinality = roaring_bitmap_get_cardinality(reuse_packfile_bitmap);
+		uint32_t *bm_arr = NULL;
+		roaring_bitmap_to_uint32_array(reuse_packfile_bitmap, bm_arr);
+
+		for (; i < cardinality; ++i) {
+			write_reused_pack_one(bm_arr[i], f, &w_curs);
+			display_progress(progress_state, ++written);
+		}
+		free(bm_arr);
+	}
+	else
+		die(_("bitmap_type not initialized"));
 
 	unuse_pack(&w_curs);
+	trace2_region_leave("pack-objects", "write-reused-pack", the_repository);
 }
 
 static void write_excluded_by_configs(void)
@@ -1258,7 +1291,9 @@ static void write_pack_file(void)
 				    hash_to_hex(hash));
 
 			if (write_bitmap_index) {
+				bitmap_writer_init_bm_type(write_bitmap_options);
 				bitmap_writer_set_checksum(hash);
+				fprintf(stderr, "hi man\n");
 				bitmap_writer_build_type_index(
 					&to_pack, written_list, nr_written);
 			}
@@ -1278,9 +1313,11 @@ static void write_pack_file(void)
 				stop_progress(&progress_state);
 
 				bitmap_writer_show_progress(progress);
+				fprintf(stderr, "hello I am working good\n");
 				bitmap_writer_select_commits(indexed_commits, indexed_commits_nr, -1);
 				if (bitmap_writer_build(&to_pack) < 0)
 					die(_("failed to write bitmap index"));
+				fprintf(stderr, "after building bitmaps\n");
 				bitmap_writer_finish(written_list, nr_written,
 						     tmpname.buf, write_bitmap_options);
 				write_bitmap_index = 0;
@@ -3142,6 +3179,10 @@ static int git_pack_config(const char *k, const char *v, void *cb)
 	if (!strcmp(k, "pack.deltacachelimit")) {
 		cache_max_small_delta_size = git_config_int(k, v);
 		return 0;
+	}
+	if (!strcmp(k, "pack.useroaringbitmap")) {
+		if (git_config_bool(k, v))
+			write_bitmap_options |= BITMAP_SET_ROARING_BITMAP;
 	}
 	if (!strcmp(k, "pack.writebitmaphashcache")) {
 		if (git_config_bool(k, v))

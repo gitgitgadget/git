@@ -80,6 +80,11 @@ static struct option *add_common_options(struct option *prev)
 static int git_multi_pack_index_write_config(const char *var, const char *value,
 					     void *cb UNUSED)
 {
+	if (!strcmp(var, "pack.useroaringbitmap")) {
+		if (git_config_bool(var, value))
+			opts.flags |= MIDX_WRITE_ROARING_BITMAP;
+	}
+
 	if (!strcmp(var, "pack.writebitmaphashcache")) {
 		if (git_config_bool(var, value))
 			opts.flags |= MIDX_WRITE_BITMAP_HASH_CACHE;

@@ -353,8 +353,8 @@ static void symdiff_prepare(struct rev_info *rev, struct symdiff *sym)
 			continue;
 		}
 		if (!map)
-			map = bitmap_new();
-		bitmap_set(map, i);
+			map = raw_bitmap_new();
+		raw_bitmap_set(map, i);
 	}
 
 	/*
@@ -364,7 +364,7 @@ static void symdiff_prepare(struct rev_info *rev, struct symdiff *sym)
 		usage(builtin_diff_usage);
 
 	if (!is_symdiff) {
-		bitmap_free(map);
+		raw_bitmap_free(map);
 		sym->warn = 0;
 		sym->skip = NULL;
 		return;
@@ -375,7 +375,7 @@ static void symdiff_prepare(struct rev_info *rev, struct symdiff *sym)
 	if (basecount == 0)
 		die(_("%s...%s: no merge base"), sym->left, sym->right);
 	sym->base = rev->pending.objects[basepos].name;
-	bitmap_unset(map, basepos);	/* unmark the base we want */
+	raw_bitmap_unset(map, basepos);	/* unmark the base we want */
 	sym->warn = basecount > 1;
 	sym->skip = map;
 }
@@ -539,7 +539,7 @@ int cmd_diff(int argc, const char **argv, const char *prefix)
 			obj = &get_commit_tree(((struct commit *)obj))->object;
 
 		if (obj->type == OBJ_TREE) {
-			if (sdiff.skip && bitmap_get(sdiff.skip, i))
+			if (sdiff.skip && raw_bitmap_get(sdiff.skip, i))
 				continue;
 			obj->flags |= flags;
 			add_object_array(obj, name, &ent);
