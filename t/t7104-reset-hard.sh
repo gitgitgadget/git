@@ -44,4 +44,31 @@ test_expect_success 'reset --hard did not corrupt index or cache-tree' '
 
 '
 
+test_expect_success 'reset --hard in safe mode on unborn branch with staged files results in a warning' '
+	git config reset.safe on &&
+	touch a &&
+	git add a &&
+	test_must_fail git reset --hard
+
+'
+
+test_expect_success 'reset --hard in safe mode after a commit without staged changes works fine' '
+	git config reset.safe on &&
+	touch b &&
+	git add b &&
+	git commit -m "initial" &&
+	git reset --hard
+
+'
+
+test_expect_success 'reset --hard in safe mode after a commit with staged changes results in a warning' '
+	git config reset.safe on &&
+	touch c d &&
+	git add c &&
+	git commit -m "initial" &&
+	git add d &&
+	test_must_fail git reset --hard
+
+'
+
 test_done

@@ -26,6 +26,7 @@
 #include "submodule.h"
 #include "submodule-config.h"
 #include "dir.h"
+#include "wt-status.h"
 
 #define REFRESH_INDEX_DELAY_WARNING_IN_MS (2 * 1000)
 
@@ -224,6 +225,35 @@ static void die_if_unmerged_cache(int reset_type)
 
 }
 
+static int check_commit_exists(const char *refname, const struct object_id *oid, int f, void *d)
+{
+	return is_branch(refname);
+}
+
+static void accept_discarding_changes(void) {
+	int answer = getc(stdin);
+	printf(_("Some staged changes may be discarded by this reset. Continue? [Y/n]"));
+
+	if (answer != 'y' && answer != 'Y') {
+		printf(_("aborted\n"));
+		exit(1);
+	}
+}
+
+static void detect_risky_reset(int commits_exist) {
+	int cache = read_cache();
+	if(!commits_exist) {
+		if(cache == 1) {
+			accept_discarding_changes();
+		}
+	}
+	else {
+		if(has_uncommitted_changes(the_repository, 1)) {
+			accept_discarding_changes();
+		}
+	}
+}
+
 static void parse_args(struct pathspec *pathspec,
 		       const char **argv, const char *prefix,
 		       int patch_mode,
@@ -399,6 +429,16 @@ int cmd_reset(int argc, const char **argv, const char *prefix)
 			die(_("Cannot do %s reset with paths."),
 					_(reset_type_names[reset_type]));
 	}
+
+	if (reset_type == HARD) {
+		int safe = 0;
+		git_config_get_bool("reset.safe", &safe);
+		if (safe) {
+			int commits_exist = for_each_fullref_in("refs/heads", check_commit_exists, NULL);
+			detect_risky_reset(commits_exist);
+		}
+	}
+
 	if (reset_type == NONE)
 		reset_type = MIXED; /* by default */
 
