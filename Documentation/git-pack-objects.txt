@@ -13,7 +13,7 @@ SYNOPSIS
 	[--no-reuse-delta] [--delta-base-offset] [--non-empty]
 	[--local] [--incremental] [--window=<n>] [--depth=<n>]
 	[--revs [--unpacked | --all]] [--keep-pack=<pack-name>]
-	[--cruft] [--cruft-expiration=<time>]
+	[--cruft] [--cruft-expiration=<time>] [--exclude-delta=<file>]
 	[--stdout [--filter=<filter-spec>] | <base-name>]
 	[--shallow] [--keep-true-parents] [--[no-]sparse] < <object-list>
 
@@ -220,6 +220,10 @@ depth is 4095.
 	This sometimes results in a slightly suboptimal pack.
 	This flag tells the command not to reuse existing deltas
 	but compute them from scratch.
+
+--exclude-delta=<pattern>::
+	Delta compression will not be attempted for blobs for paths
+	matching pattern. See linkgit:gitignore[5] for pattern details.
 
 --no-reuse-object::
 	This flag tells the command not to reuse existing object data at all,

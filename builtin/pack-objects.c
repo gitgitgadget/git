@@ -272,6 +272,8 @@ static struct commit **indexed_commits;
 static unsigned int indexed_commits_nr;
 static unsigned int indexed_commits_alloc;
 
+static struct pattern_list *exclude_delta_patterns;
+
 static void index_commit_for_bitmap(struct commit *commit)
 {
 	if (indexed_commits_nr >= indexed_commits_alloc) {
@@ -1315,13 +1317,20 @@ static void write_pack_file(void)
 static int no_try_delta(const char *path)
 {
 	static struct attr_check *check;
+	int dtype;
 
 	if (!check)
 		check = attr_check_initl("delta", NULL);
 	git_check_attr(the_repository->index, path, check);
 	if (ATTR_FALSE(check->items[0].value))
 		return 1;
-	return 0;
+
+	return exclude_delta_patterns &&
+		path_matches_pattern_list(path,
+					  strlen(path),
+					  path, &dtype,
+					  exclude_delta_patterns,
+					  the_repository->index) == MATCHED;
 }
 
 /*
@@ -4149,6 +4158,19 @@ static int option_parse_cruft_expiration(const struct option *opt,
 	return 0;
 }
 
+static int option_parse_exclude_delta(const struct option *opt,
+					 const char *arg, int unset)
+{
+	BUG_ON_OPT_NEG(unset);
+
+	if (!exclude_delta_patterns)
+		exclude_delta_patterns = xcalloc(1, sizeof(*exclude_delta_patterns));
+
+	if (arg)
+		add_pattern(arg, "", 0, exclude_delta_patterns, 0);
+	return 0;
+}
+
 struct po_filter_data {
 	unsigned have_revs:1;
 	struct rev_info revs;
@@ -4242,6 +4264,9 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
 		OPT_CALLBACK_F(0, "cruft-expiration", NULL, N_("time"),
 		  N_("expire cruft objects older than <time>"),
 		  PARSE_OPT_OPTARG, option_parse_cruft_expiration),
+		OPT_CALLBACK_F(0, "exclude-delta", NULL, N_("pattern"),
+		  N_("disable delta compression for files matching pattern"),
+		  PARSE_OPT_NONEG, option_parse_exclude_delta),
 		OPT_BOOL(0, "sparse", &sparse,
 			 N_("use the sparse reachability algorithm")),
 		OPT_BOOL(0, "thin", &thin,
@@ -4514,6 +4539,7 @@ int cmd_pack_objects(int argc, const char **argv, const char *prefix)
 
 cleanup:
 	strvec_clear(&rp);
+	FREE_AND_NULL(exclude_delta_patterns);
 
 	return 0;
 }
