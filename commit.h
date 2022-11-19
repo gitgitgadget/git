@@ -201,6 +201,10 @@ struct commit_list *copy_commit_list(struct commit_list *list);
 /* Modify list in-place to reverse it, returning new head; list will be tail */
 struct commit_list *reverse_commit_list(struct commit_list *list);
 
+/* Returns the commit at `index` or NULL if the index exceeds the `to_search`
+ * list */
+struct commit *get_commit_by_index(struct commit_list *to_search, int index);
+
 void free_commit_list(struct commit_list *list);
 
 struct rev_info; /* in revision.h, it circularly uses enum cmit_fmt */

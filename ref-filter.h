@@ -16,9 +16,11 @@
 #define FILTER_REFS_TAGS           0x0002
 #define FILTER_REFS_BRANCHES       0x0004
 #define FILTER_REFS_REMOTES        0x0008
-#define FILTER_REFS_OTHERS         0x0010
+#define FILTER_REFS_CHANGES        0x0010
+#define FILTER_REFS_OTHERS         0x0040
 #define FILTER_REFS_ALL            (FILTER_REFS_TAGS | FILTER_REFS_BRANCHES | \
-				    FILTER_REFS_REMOTES | FILTER_REFS_OTHERS)
+				    FILTER_REFS_REMOTES | FILTER_REFS_OTHERS | \
+				    FILTER_REFS_CHANGES)
 #define FILTER_REFS_DETACHED_HEAD  0x0020
 #define FILTER_REFS_KIND_MASK      (FILTER_REFS_ALL | FILTER_REFS_DETACHED_HEAD)
 
@@ -142,5 +144,8 @@ void pretty_print_ref(const char *name, const struct object_id *oid,
 struct ref_array_item *ref_array_push(struct ref_array *array,
 				      const char *refname,
 				      const struct object_id *oid);
+
+/* Strips `len` prefix components from the refname. */
+const char *lstrip_ref_components(const char *refname, int len);
 
 #endif /*  REF_FILTER_H  */

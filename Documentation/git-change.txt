@@ -1,0 +1,55 @@
+git-change(1)
+=============
+
+NAME
+----
+git-change - Create, list, update or delete changes
+
+SYNOPSIS
+--------
+[verse]
+'git change' list [<pattern>...]
+'git change' update [-g <change-name> | -n] [--force] [--replace <treeish>...] [--origin <treeish>...] [--content <newtreeish>]
+'git change' delete <change-name>...
+
+DESCRIPTION
+-----------
+
+`git change list`: lists all existing <change-name>s.
+
+`git change delete`: deletes the given <change-name>s.
+
+`git change update`: creates or updates a <change-name>.
+
+If no arguments are given to `update` then a change is added to the
+`refs/metas/` directory, unless a change already exists for the given commit.
+
+A <change-name> starts with `metas/` and represents the current change that is
+being worked on.
+
+OPTIONS
+-------
+-c::
+--content::
+	Identifies the content commit for the change
+
+-o::
+--origin::
+	Marks the given commit as being the origin of this commit.
+
+-r::
+--replace::
+	Marks the given commit as being obsoleted by the new commit.
+
+-g::
+	<change-name> to update
+
+-n::
+	Indicates that the change is new and an existing change should not be updated.
+
+--force::
+	Overwite an existing change of the same name.
+
+GIT
+---
+Part of the linkgit:git[1] suite
