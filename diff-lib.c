@@ -445,6 +445,13 @@ static void do_oneway_diff(struct unpack_trees_options *o,
 
 	match_missing = revs->match_missing;
 
+	if (revs->diffopt.scope == SPARSE_SCOPE_SPARSE &&
+	    ((o->index_only && revs->pending.objects[0].name &&
+	      strcmp(revs->pending.objects[0].name, "HEAD") &&
+	      !index_file_in_sparse_specification(idx ? idx : tree, &revs->diffopt.change_index_files)) ||
+	     (!o->index_only && !worktree_file_in_sparse_specification(idx))))
+		return;
+
 	if (cached && idx && ce_stage(idx)) {
 		struct diff_filepair *pair;
 		pair = diff_unmerge(&revs->diffopt, idx->name);
@@ -597,6 +604,43 @@ void diff_get_merge_base(const struct rev_info *revs, struct object_id *mb)
 
 	free_commit_list(merge_bases);
 }
+
+static void diff_collect_updated_cb(struct diff_queue_struct *q,
+					 struct diff_options *options,
+					 void *data) {
+	int i;
+	struct strset *change_index_files = (struct strset *)data;
+
+	for (i = 0; i < q->nr; i++) {
+		struct diff_filepair *p = q->queue[i];
+
+		strset_add(change_index_files, p->two->path);
+		if (p->status == DIFF_STATUS_RENAMED)
+			strset_add(change_index_files, p->one->path);
+	}
+}
+
+void diff_collect_changes_index(struct pathspec *pathspec, struct strset *change_index_files)
+{
+	struct rev_info rev;
+	struct setup_revision_opt opt;
+
+	repo_init_revisions(the_repository, &rev, NULL);
+	memset(&opt, 0, sizeof(opt));
+	opt.def = "HEAD";
+	setup_revisions(0, NULL, &rev, &opt);
+
+	rev.diffopt.ita_invisible_in_index = 1;
+	rev.diffopt.output_format |= DIFF_FORMAT_CALLBACK;
+	rev.diffopt.format_callback = diff_collect_updated_cb;
+	rev.diffopt.format_callback_data = change_index_files;
+	rev.diffopt.flags.recursive = 1;
+
+	copy_pathspec(&rev.prune_data, pathspec);
+	run_diff_index(&rev, 1);
+	release_revisions(&rev);
+}
+
 
 int run_diff_index(struct rev_info *revs, unsigned int option)
 {

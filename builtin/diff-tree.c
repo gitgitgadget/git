@@ -114,6 +114,14 @@ int cmd_diff_tree(int argc, const char **argv, const char *prefix)
 	struct userformat_want w;
 	int read_stdin = 0;
 	int merge_base = 0;
+	enum sparse_scope scope;
+
+	struct option sparse_scope_options[] = {
+		OPT_CALLBACK_F(0, "scope", &scope, N_("[sparse|all]"),
+				N_("restrict path scope in sparse specification"),
+				PARSE_OPT_NONEG, diff_opt_sparse_scope),
+		OPT_END()
+	};
 
 	if (argc == 2 && !strcmp(argv[1], "-h"))
 		usage(diff_tree_usage);
@@ -130,6 +138,13 @@ int cmd_diff_tree(int argc, const char **argv, const char *prefix)
 
 	prefix = precompose_argv_prefix(argc, argv, prefix);
 	argc = setup_revisions(argc, argv, opt, &s_r_opt);
+
+	argc = parse_options(argc, argv, prefix, sparse_scope_options, NULL,
+			     PARSE_OPT_KEEP_DASHDASH |
+			     PARSE_OPT_KEEP_UNKNOWN_OPT |
+			     PARSE_OPT_KEEP_ARGV0 |
+			     PARSE_OPT_NO_INTERNAL_HELP);
+	opt->diffopt.scope = scope;
 
 	memset(&w, 0, sizeof(w));
 	userformat_find_requirements(NULL, &w);

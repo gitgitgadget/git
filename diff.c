@@ -4663,6 +4663,7 @@ void repo_diff_setup(struct repository *r, struct diff_options *options)
 	options->color_moved = diff_color_moved_default;
 	options->color_moved_ws_handling = diff_color_moved_ws_default;
 
+	strset_init(&options->change_index_files);
 	prep_parse_options(options);
 }
 
@@ -6511,6 +6512,7 @@ void diff_free(struct diff_options *options)
 	diff_free_ignore_regex(options);
 	clear_pathspec(&options->pathspec);
 	FREE_AND_NULL(options->parseopts);
+	strset_clear(&options->change_index_files);
 }
 
 void diff_flush(struct diff_options *options)

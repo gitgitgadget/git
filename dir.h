@@ -4,6 +4,7 @@
 #include "cache.h"
 #include "hashmap.h"
 #include "strbuf.h"
+#include "strmap.h"
 
 /**
  * The directory listing API is used to enumerate paths in the work tree,
@@ -401,6 +402,9 @@ int path_in_sparse_checkout(const char *path,
 			    struct index_state *istate);
 int path_in_cone_mode_sparse_checkout(const char *path,
 				      struct index_state *istate);
+int path_in_sparse_patterns(const char *path);
+int index_file_in_sparse_specification(const struct cache_entry *ce, struct strset *change_index_files);
+int worktree_file_in_sparse_specification(const struct cache_entry *worktree_check_ce);
 
 struct dir_entry *dir_add_ignored(struct dir_struct *dir,
 				  struct index_state *istate,

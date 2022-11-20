@@ -161,9 +161,15 @@ static int builtin_diff_index(struct rev_info *revs,
 			perror("read_cache_preload");
 			return -1;
 		}
-	} else if (read_cache() < 0) {
-		perror("read_cache");
-		return -1;
+	} else {
+		if (read_cache() < 0) {
+			perror("read_cache");
+			return -1;
+		}
+		if (revs->diffopt.scope == SPARSE_SCOPE_SPARSE &&
+		    strcmp(revs->pending.objects[0].name, "HEAD"))
+			diff_collect_changes_index(&revs->diffopt.pathspec,
+						   &revs->diffopt.change_index_files);
 	}
 	return run_diff_index(revs, option);
 }
@@ -388,6 +394,25 @@ static void symdiff_prepare(struct rev_info *rev, struct symdiff *sym)
 	sym->skip = map;
 }
 
+int diff_opt_sparse_scope(const struct option *option,
+				const char *optarg, int unset)
+{
+	enum sparse_scope *scope = option->value;
+
+	BUG_ON_OPT_NEG_NOARG(unset, optarg);
+
+	if (!core_apply_sparse_checkout)
+		return error(_("this git repository don't "
+			       "use sparse-checkout, --scope option cannot be used"));
+	if (!strcmp(optarg, "all"))
+		*scope = SPARSE_SCOPE_ALL;
+	else if (!strcmp(optarg, "sparse"))
+		*scope = SPARSE_SCOPE_SPARSE;
+	else
+		return error(_("invalid --scope value: %s"), optarg);
+	return 0;
+}
+
 int cmd_diff(int argc, const char **argv, const char *prefix)
 {
 	int i;
@@ -399,6 +424,14 @@ int cmd_diff(int argc, const char **argv, const char *prefix)
 	int nongit = 0, no_index = 0;
 	int result = 0;
 	struct symdiff sdiff;
+	enum sparse_scope scope;
+
+	struct option sparse_scope_options[] = {
+		OPT_CALLBACK_F(0, "scope", &scope, N_("[sparse|all]"),
+				N_("restrict path scope in sparse specification"),
+				PARSE_OPT_NONEG, diff_opt_sparse_scope),
+		OPT_END()
+	};
 
 	/*
 	 * We could get N tree-ish in the rev.pending_objects list.
@@ -504,6 +537,13 @@ int cmd_diff(int argc, const char **argv, const char *prefix)
 		diff_setup_done(&rev.diffopt);
 	}
 
+	argc = parse_options(argc, argv, prefix, sparse_scope_options, NULL,
+			     PARSE_OPT_KEEP_DASHDASH |
+			     PARSE_OPT_KEEP_UNKNOWN_OPT |
+			     PARSE_OPT_KEEP_ARGV0 |
+			     PARSE_OPT_NO_INTERNAL_HELP);
+
+	rev.diffopt.scope = scope;
 	rev.diffopt.flags.recursive = 1;
 	rev.diffopt.rotate_to_strict = 1;
 

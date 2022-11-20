@@ -1503,6 +1503,26 @@ int path_in_cone_mode_sparse_checkout(const char *path,
 	return path_in_sparse_checkout_1(path, istate, 1);
 }
 
+int path_in_sparse_patterns(const char *path) {
+	return path_in_sparse_checkout_1(path, the_repository->index, core_sparse_checkout_cone);
+}
+
+/* Expand sparse-checkout specification (worktree) */
+int worktree_file_in_sparse_specification(const struct cache_entry *worktree_check_ce)
+{
+	return worktree_check_ce && !ce_skip_worktree(worktree_check_ce);
+}
+
+/* Expand sparse-checkout specification (index) */
+int index_file_in_sparse_specification(const struct cache_entry *ce, struct strset *change_index_files)
+{
+	if (!ce->ce_namelen)
+		return 0;
+	if (change_index_files && strset_contains(change_index_files, ce->name))
+		return 1;
+	return path_in_sparse_patterns(ce->name);
+}
+
 static struct path_pattern *last_matching_pattern_from_lists(
 		struct dir_struct *dir, struct index_state *istate,
 		const char *pathname, int pathlen,

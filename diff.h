@@ -8,6 +8,7 @@
 #include "pathspec.h"
 #include "object.h"
 #include "oidset.h"
+#include "strmap.h"
 
 /**
  * The diff API is for programs that compare two sets of files (e.g. two trees,
@@ -285,6 +286,9 @@ struct diff_options {
 	/* diff-filter bits */
 	unsigned int filter, filter_not;
 
+	/* diff sparse-checkout scope */
+	enum sparse_scope scope;
+
 	int use_color;
 
 	/* Number of context lines to generate in patch output. */
@@ -397,6 +401,7 @@ struct diff_options {
 	struct option *parseopts;
 	struct strmap *additional_path_headers;
 
+	struct strset change_index_files;
 	int no_free;
 };
 
@@ -695,5 +700,8 @@ long parse_algorithm_value(const char *value);
 void print_stat_summary(FILE *fp, int files,
 			int insertions, int deletions);
 void setup_diff_pager(struct diff_options *);
+
+void diff_collect_changes_index(struct pathspec *pathspec, struct strset *files);
+int diff_opt_sparse_scope(const struct option *option, const char *optarg, int unset);
 
 #endif /* DIFF_H */
