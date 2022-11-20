@@ -18,6 +18,7 @@
 #include "ewah/ewok.h"
 #include "fsmonitor.h"
 #include "submodule-config.h"
+#include "parse-options.h"
 
 /*
  * Tells read_directory_recursive how a file or directory should be treated.
@@ -1501,6 +1502,57 @@ int path_in_cone_mode_sparse_checkout(const char *path,
 				     struct index_state *istate)
 {
 	return path_in_sparse_checkout_1(path, istate, 1);
+}
+
+int path_in_sparse_patterns(const char *path, int is_dir) {
+	struct strbuf sb = STRBUF_INIT;
+
+	strbuf_addstr(&sb, path);
+	if (!sb.len)
+		return 0;
+	if (is_dir && sb.buf[sb.len - 1] != '/')
+		strbuf_addch(&sb, '/');
+	if (!path_in_sparse_checkout_1(sb.buf,
+				       the_repository->index,
+				       core_sparse_checkout_cone))
+		return 0;
+	strbuf_release(&sb);
+	return 1;
+}
+
+/* Expand sparse-checkout specification (worktree) */
+int worktree_file_in_sparse_specification(const struct cache_entry *worktree_check_ce)
+{
+	return worktree_check_ce && !ce_skip_worktree(worktree_check_ce);
+}
+
+/* Expand sparse-checkout specification (index) */
+int index_file_in_sparse_specification(const struct cache_entry *ce, struct strset *change_index_files)
+{
+	if (!ce->ce_namelen)
+		return 0;
+	if (change_index_files && strset_contains(change_index_files, ce->name))
+		return 1;
+	return path_in_sparse_patterns(ce->name, 0);
+}
+
+int opt_sparse_scope(const struct option *option,
+				const char *optarg, int unset)
+{
+	enum sparse_scope *scope = option->value;
+
+	BUG_ON_OPT_NEG_NOARG(unset, optarg);
+
+	if (!core_apply_sparse_checkout)
+		return error(_("this git repository don't "
+			       "use sparse-checkout, --scope option cannot be used"));
+	if (!strcmp(optarg, "all"))
+		*scope = SPARSE_SCOPE_ALL;
+	else if (!strcmp(optarg, "sparse"))
+		*scope = SPARSE_SCOPE_SPARSE;
+	else
+		return error(_("invalid --scope value: %s"), optarg);
+	return 0;
 }
 
 static struct path_pattern *last_matching_pattern_from_lists(

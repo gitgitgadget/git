@@ -162,9 +162,15 @@ static int builtin_diff_index(struct rev_info *revs,
 			perror("repo_read_index_preload");
 			return -1;
 		}
-	} else if (repo_read_index(the_repository) < 0) {
-		perror("repo_read_cache");
-		return -1;
+	} else {
+		if (repo_read_index(the_repository) < 0) {
+			perror("read_cache");
+			return -1;
+		}
+		if (revs->diffopt.scope == SPARSE_SCOPE_SPARSE &&
+		    strcmp(revs->pending.objects[0].name, "HEAD"))
+			diff_collect_changes_index(&revs->diffopt.pathspec,
+						   &revs->diffopt.change_index_files);
 	}
 	return run_diff_index(revs, option);
 }
@@ -403,6 +409,11 @@ int cmd_diff(int argc, const char **argv, const char *prefix)
 	int result = 0;
 	struct symdiff sdiff;
 
+	struct option sparse_scope_options[] = {
+		OPT_SPARSE_SCOPE(&rev.diffopt.scope),
+		OPT_END()
+	};
+
 	/*
 	 * We could get N tree-ish in the rev.pending_objects list.
 	 * Also there could be M blobs there, and P pathspecs. --cached may
@@ -506,6 +517,12 @@ int cmd_diff(int argc, const char **argv, const char *prefix)
 		rev.diffopt.output_format = DIFF_FORMAT_PATCH;
 		diff_setup_done(&rev.diffopt);
 	}
+
+	argc = parse_options(argc, argv, prefix, sparse_scope_options, NULL,
+			     PARSE_OPT_KEEP_DASHDASH |
+			     PARSE_OPT_KEEP_UNKNOWN_OPT |
+			     PARSE_OPT_KEEP_ARGV0 |
+			     PARSE_OPT_NO_INTERNAL_HELP);
 
 	rev.diffopt.flags.recursive = 1;
 	rev.diffopt.rotate_to_strict = 1;

@@ -1058,6 +1058,11 @@ extern int core_apply_sparse_checkout;
 extern int core_sparse_checkout_cone;
 extern int sparse_expect_files_outside_of_patterns;
 
+enum sparse_scope {
+	SPARSE_SCOPE_ALL = 0,
+	SPARSE_SCOPE_SPARSE,
+};
+
 /*
  * Returns the boolean value of $GIT_OPTIONAL_LOCKS (or the default value).
  */

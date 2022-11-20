@@ -195,6 +195,39 @@ For instance, if you configured the `diff.algorithm` variable to a
 non-default value and want to use the default one, then you
 have to use `--diff-algorithm=default` option.
 
+ifdef::git-diff[]
+ifdef::git-diff-index[]
+ifdef::git-diff-tree[]
+
+--scope=[sparse|all]::
+	Restrict or not restrict diff path scope in sparse specification.
+	The variants are as follows:
+
++
+--
+`sparse`;;
+	When using diff to compare commit history, restrict the
+	scope of file path comparisons to the sparse specification.
+	See sparse specification in link:technical/sparse-checkout.html
+	[the sparse-checkout design document] for more information.
+`all`;;
+	When using diff to compare commit history, the file comparison
+	scope is full-tree. This is consistent with the current default
+	behavior.
+--
++
+
+Note that `--scope` option only take effect if diff command specify
+`--cached` or `REVISION`.
+
+The behavior of this `--scope` option is experimental and may change
+in the future. See link:technical/sparse-checkout.html [the sparse-checkout
+design document] for more information.
+
+endif::git-diff-tree[]
+endif::git-diff-index[]
+endif::git-diff[]
+
 --stat[=<width>[,<name-width>[,<count>]]]::
 	Generate a diffstat. By default, as much space as necessary
 	will be used for the filename part, and the rest for the graph
