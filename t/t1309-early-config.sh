@@ -100,4 +100,14 @@ test_expect_success 'onbranch config outside of git repo' '
 	nongit git help
 '
 
+test_expect_success '[includeIf "os:..."]' '
+	test_config x.y 0 &&
+	echo "[x] y = z" >.git/xyz &&
+	uname_s="$(uname -s)" &&
+	test_config "includeIf.os:not-$uname_s.path" xyz &&
+	test 0 = "$(git  config x.y)" &&
+	test_config "includeIf.os:$uname_s.path" xyz &&
+	test z = "$(git config x.y)"
+'
+
 test_done

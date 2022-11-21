@@ -394,6 +394,15 @@ static int include_by_remote_url(struct config_include_data *inc,
 					     inc->remote_urls);
 }
 
+static int include_by_os(const char *cond, size_t cond_len)
+{
+	struct utsname uname_info;
+
+	return !uname(&uname_info) &&
+		!strncasecmp(uname_info.sysname, cond, cond_len) &&
+		!uname_info.sysname[cond_len];
+}
+
 static int include_condition_is_true(struct config_include_data *inc,
 				     const char *cond, size_t cond_len)
 {
@@ -408,6 +417,8 @@ static int include_condition_is_true(struct config_include_data *inc,
 	else if (skip_prefix_mem(cond, cond_len, "hasconfig:remote.*.url:", &cond,
 				   &cond_len))
 		return include_by_remote_url(inc, cond, cond_len);
+	else if (skip_prefix_mem(cond, cond_len, "os:", &cond, &cond_len))
+		return include_by_os(cond, cond_len);
 
 	/* unknown conditionals are always false */
 	return 0;

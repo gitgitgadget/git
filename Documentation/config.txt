@@ -186,6 +186,11 @@ As for the naming of this keyword, it is for forwards compatibiliy with
 a naming scheme that supports more variable-based include conditions,
 but currently Git only supports the exact keyword described above.
 
+`os`::
+	The data that follows this keyword is taken as the name of an
+	Operating System; If it matches the output of `uname -s`, the
+	include condition is met.
+
 A few more notes on matching via `gitdir` and `gitdir/i`:
 
  * Symlinks in `$GIT_DIR` are not resolved before matching.
