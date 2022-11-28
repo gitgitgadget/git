@@ -382,4 +382,31 @@ M	in
 	test_cmp expected actual
 '
 
+# git grep TREE
+
+test_expect_success 'git grep --scope=all' '
+	reset_sparse_checkout_state &&
+	cat >expected <<-EOF &&
+HEAD~:in/1
+HEAD~:out1/1
+HEAD~:out1/2
+HEAD~:out1/3
+HEAD~:out1/4
+HEAD~:out1/5
+HEAD~:out1/6
+HEAD~:out2/1
+	EOF
+	git -C repo grep --name-only --scope=all 1 HEAD~ >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'git grep --scope=sparse' '
+	reset_sparse_checkout_state &&
+	cat >expected <<-EOF &&
+HEAD~:in/1
+	EOF
+	git -C repo grep --name-only --scope=sparse 1 HEAD~ >actual &&
+	test_cmp expected actual
+'
+
 test_done
