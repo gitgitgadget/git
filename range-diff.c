@@ -55,7 +55,7 @@ static inline int strtost(char const *s, size_t *result, const char **end)
 	return 0;
 }
 
-static int parse_hunk_header(const char *p,
+static int parse_line_range(const char *p,
 			     size_t *old_count, size_t *new_count,
 			     const char **end)
 {
@@ -99,9 +99,62 @@ static inline int find_next_line(const char *line, size_t size)
 	return eol + 1 - line;
 }
 
+static void skip_whitespace(const char **p)
+{
+	while (isspace(**p))
+		(*p)++;
+}
+
+static void skip_patch_prefix(const char **p)
+{
+	const char *q;
+
+	if (skip_prefix(*p, "[PATCH", &q) && (q = strchr(q, ']'))) {
+		q++;
+		skip_whitespace(&q);
+		*p = q;
+	}
+}
+
+/*
+ * Parses a value of a mail header, starting at the `offset` of the `line` (the
+ * offset points to the beginning of the value).
+ *
+ * If the value is too long (i.e. if the next line starts with a space to
+ * indicate a continuation line), the `buf` is used to reconstruct the original,
+ * long value.
+ *
+ * Returns the number of consumed bytes (starting at `line`).
+ */
+static int parse_header_value(const char *line, int len, int offset,
+			      size_t size,
+			      struct strbuf *buf, const char **value)
+{
+	const char *orig_line = line;
+
+	if (len >= size || line[len] != ' ') {
+		*value = line + offset;
+		return len;
+	}
+
+	/* handle long header */
+	strbuf_reset(buf);
+	strbuf_addstr(buf, line + offset);
+	while (len < size && line[len] == ' ') {
+		line += len;
+		size -= len;
+		len = find_next_line(line, size);
+		strbuf_addstr(buf, line);
+	}
+
+	*value = buf->buf;
+	return (line - orig_line) + len;
+}
+
 static int read_mbox(const char *path, struct string_list *list)
 {
 	struct strbuf buf = STRBUF_INIT, contents = STRBUF_INIT;
+	struct strbuf author_buf = STRBUF_INIT, subject_buf = STRBUF_INIT;
 	struct patch_util *util = NULL;
 	enum {
 		MBOX_BEFORE_HEADER,
@@ -158,6 +211,8 @@ fail:
 				free(util);
 				free(current_filename);
 				string_list_clear(list, 1);
+				strbuf_release(&author_buf);
+				strbuf_release(&subject_buf);
 				strbuf_release(&buf);
 				strbuf_release(&contents);
 				return -1;
@@ -227,23 +282,14 @@ fail:
 				if (subject)
 					strbuf_addf(&buf, "    %s\n\n", subject);
 			} else if (skip_prefix(line, "From: ", &p)) {
-				while (isspace(*p))
-					p++;
-				author = p;
+				skip_whitespace(&p);
+				len = parse_header_value(line, len, p - line, size,
+						   &author_buf, &author);
 			} else if (skip_prefix(line, "Subject: ", &p)) {
-				const char *q;
-
-				while (isspace(*p))
-					p++;
-				subject = p;
-
-				if (starts_with(p, "[PATCH") &&
-				    (q = strchr(p, ']'))) {
-					q++;
-					while (isspace(*q))
-						q++;
-					subject = q;
-				}
+				skip_whitespace(&p);
+				skip_patch_prefix(&p);
+				len = parse_header_value(line, len, p - line, size,
+						   &subject_buf, &subject);
 			}
 		} else if (state == MBOX_IN_COMMIT_MESSAGE) {
 			if (!line[0]) {
@@ -289,7 +335,7 @@ fail:
 				util->diffsize++;
 				continue;
 			case '@':
-				if (parse_hunk_header(line, &old_count,
+				if (parse_line_range(line, &old_count,
 						      &new_count, &p))
 					break;
 
@@ -320,6 +366,8 @@ fail:
 		else
 			free(util);
 	}
+	strbuf_release(&author_buf);
+	strbuf_release(&subject_buf);
 	strbuf_release(&buf);
 	free(current_filename);
 
