@@ -220,16 +220,6 @@ fail:
 		} else if (state == MBOX_IN_HEADER) {
 			if (!line[0]) {
 				state = MBOX_IN_COMMIT_MESSAGE;
-				/* Look for an in-body From: */
-				if (skip_prefix(line + 1, "From: ", &p)) {
-					size -= p - line;
-					line += p - line;
-					len = find_next_line(line, size);
-
-					while (isspace(*p))
-						p++;
-					author = p;
-				}
 				strbuf_addstr(&buf, " ## Metadata ##\n");
 				if (author)
 					strbuf_addf(&buf, "Author: %s\n", author);
