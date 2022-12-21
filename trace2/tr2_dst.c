@@ -101,7 +101,7 @@ static int tr2_dst_too_many_files(struct tr2_dst *dst, const char *tgt_prefix)
 
 	if (file_count >= tr2env_max_files) {
 		dst->too_many_files = 1;
-		dst->fd = open(sentinel_path.buf, O_WRONLY | O_CREAT | O_EXCL, 0666);
+		dst->fd = open(sentinel_path.buf, O_WRONLY | O_APPEND | O_CREAT | O_EXCL, 0666);
 		ret = -1;
 		goto cleanup;
 	}
@@ -138,7 +138,7 @@ static int tr2_dst_try_auto_path(struct tr2_dst *dst, const char *tgt_prefix)
 				strbuf_addf(&path, ".%d", attempt_count);
 			}
 
-			dst->fd = open(path.buf, O_WRONLY | O_CREAT | O_EXCL, 0666);
+			dst->fd = open(path.buf, O_WRONLY | O_APPEND | O_CREAT | O_EXCL, 0666);
 			if (dst->fd != -1)
 				break;
 		}
