@@ -102,13 +102,13 @@ struct ref_namespace_info ref_namespace[] = {
 	},
 	[NAMESPACE_NOTES] = {
 		/*
-		 * The refs/notes/commit ref points to the tip of a
+		 * The refs/notes/commits ref points to the tip of a
 		 * parallel commit history that adds metadata to commits
 		 * in the normal history. This ref can be overwritten
 		 * by the core.notesRef config variable or the
 		 * GIT_NOTES_REFS environment variable.
 		 */
-		.ref = "refs/notes/commit",
+		.ref = GIT_NOTES_DEFAULT_REF,
 		.exact = 1,
 	},
 	[NAMESPACE_PREFETCH] = {
