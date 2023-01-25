@@ -24606,7 +24606,7 @@ msgstr "Impossibile trovare un commit comune con $pretty_name"
 #: git-merge-octopus.sh:77
 #, sh-format
 msgid "Already up to date with $pretty_name"
-msgstr "Già aggiornato rispetto a $pretty_name"
+msgstr "Già aggiornato a $pretty_name"
 
 #: git-merge-octopus.sh:89
 #, sh-format
