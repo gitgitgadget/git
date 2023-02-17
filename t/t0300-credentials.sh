@@ -120,7 +120,7 @@ test_expect_success 'credential_fill continues through partial response' '
 '
 
 test_expect_success 'credential_fill populates password_expiry_utc' '
-	check fill "verbatim-with-expiry one two 9999999999" <<-\EOF
+	check fill "verbatim-with-expiry one two 2145916800" <<-\EOF
 	protocol=http
 	host=example.com
 	--
@@ -128,7 +128,7 @@ test_expect_success 'credential_fill populates password_expiry_utc' '
 	host=example.com
 	username=one
 	password=two
-	password_expiry_utc=9999999999
+	password_expiry_utc=2145916800
 	--
 	verbatim-with-expiry: get
 	verbatim-with-expiry: protocol=http
@@ -202,7 +202,7 @@ test_expect_success 'credential_approve stores password expiry' '
 	host=example.com
 	username=foo
 	password=bar
-	password_expiry_utc=9999999999
+	password_expiry_utc=2145916800
 	--
 	--
 	useless: store
@@ -210,7 +210,7 @@ test_expect_success 'credential_approve stores password expiry' '
 	useless: host=example.com
 	useless: username=foo
 	useless: password=bar
-	useless: password_expiry_utc=9999999999
+	useless: password_expiry_utc=2145916800
 	EOF
 '
 

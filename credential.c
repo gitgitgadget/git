@@ -352,7 +352,9 @@ void credential_fill(struct credential *c)
 
 	for (i = 0; i < c->helpers.nr; i++) {
 		credential_do(c, c->helpers.items[i].string, "get");
-		if (c->password_expiry_utc < time(NULL)) {
+		if (c->password_expiry_utc != TIME_MAX &&
+			c->password_expiry_utc < time(NULL)) {
+			/* Discard expired password and reset expiry */
 			FREE_AND_NULL(c->password);
 			c->password_expiry_utc = TIME_MAX;
 		}
