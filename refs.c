@@ -721,17 +721,19 @@ static char *substitute_branch_name(struct repository *r,
 }
 
 int repo_dwim_ref(struct repository *r, const char *str, int len,
-		  struct object_id *oid, char **ref, int nonfatal_dangling_mark)
+		  struct object_id *oid, char **ref, int nonfatal_dangling_mark,
+		  int *ref_flags, int need_symref)
 {
 	char *last_branch = substitute_branch_name(r, &str, &len,
 						   nonfatal_dangling_mark);
-	int   refs_found  = expand_ref(r, str, len, oid, ref);
+	int   refs_found  = expand_ref(r, str, len, oid, ref, ref_flags, need_symref);
 	free(last_branch);
 	return refs_found;
 }
 
 int expand_ref(struct repository *repo, const char *str, int len,
-	       struct object_id *oid, char **ref)
+	       struct object_id *oid, char **ref, int *ref_flags,
+	       int need_symref)
 {
 	const char **p, *r;
 	int refs_found = 0;
@@ -751,8 +753,11 @@ int expand_ref(struct repository *repo, const char *str, int len,
 					    RESOLVE_REF_READING,
 					    this_result, &flag);
 		if (r) {
-			if (!refs_found++)
-				*ref = xstrdup(r);
+			if (!refs_found++) {
+				*ref = xstrdup(need_symref ? fullref.buf : r);
+				if (ref_flags)
+					*ref_flags = flag;
+			}
 			if (!warn_ambiguous_refs)
 				break;
 		} else if ((flag & REF_ISSYMREF) && strcmp(fullref.buf, "HEAD")) {

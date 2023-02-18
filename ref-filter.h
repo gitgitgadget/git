@@ -38,6 +38,7 @@ struct ref_array_item {
 	int flag;
 	unsigned int kind;
 	const char *symref;
+	int special_tag_verify;
 	struct commit *commit;
 	struct atom_value *value;
 	char refname[FLEX_ARRAY];
@@ -80,6 +81,7 @@ struct ref_format {
 
 	/* Internal state to ref-filter */
 	int need_color_reset_at_eol;
+	int special_tag_verify;
 };
 
 #define REF_FORMAT_INIT { .use_color = -1 }
@@ -133,7 +135,7 @@ void setup_ref_filter_porcelain_msg(void);
  * name must be a fully qualified refname.
  */
 void pretty_print_ref(const char *name, const struct object_id *oid,
-		      struct ref_format *format);
+		      struct ref_format *format, int ref_flags);
 
 /*
  * Push a single ref onto the array; this can be used to construct your own

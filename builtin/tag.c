@@ -86,7 +86,7 @@ static int list_tags(struct ref_filter *filter, struct ref_sorting *sorting,
 }
 
 typedef int (*each_tag_name_fn)(const char *name, const char *ref,
-				const struct object_id *oid, void *cb_data);
+				const struct object_id *oid, void *cb_data, int ref_flags);
 
 static int for_each_tag_name(const char **argv, each_tag_name_fn fn,
 			     void *cb_data)
@@ -95,16 +95,17 @@ static int for_each_tag_name(const char **argv, each_tag_name_fn fn,
 	struct strbuf ref = STRBUF_INIT;
 	int had_error = 0;
 	struct object_id oid;
+	int ref_flags;
 
 	for (p = argv; *p; p++) {
 		strbuf_reset(&ref);
 		strbuf_addf(&ref, "refs/tags/%s", *p);
-		if (read_ref(ref.buf, &oid)) {
+		if (read_ref_full(ref.buf, RESOLVE_REF_READING, &oid, &ref_flags)) {
 			error(_("tag '%s' not found."), *p);
 			had_error = 1;
 			continue;
 		}
-		if (fn(*p, ref.buf, &oid, cb_data))
+		if (fn(*p, ref.buf, &oid, cb_data, ref_flags))
 			had_error = 1;
 	}
 	strbuf_release(&ref);
@@ -112,7 +113,7 @@ static int for_each_tag_name(const char **argv, each_tag_name_fn fn,
 }
 
 static int collect_tags(const char *name, const char *ref,
-			const struct object_id *oid, void *cb_data)
+			const struct object_id *oid, void *cb_data, int unused_flags)
 {
 	struct string_list *ref_list = cb_data;
 
@@ -146,20 +147,21 @@ static int delete_tags(const char **argv)
 }
 
 static int verify_tag(const char *name, const char *ref,
-		      const struct object_id *oid, void *cb_data)
+		      const struct object_id *oid, void *cb_data, int ref_flags)
 {
 	int flags;
 	struct ref_format *format = cb_data;
 	flags = GPG_VERIFY_VERBOSE;
+	format->special_tag_verify = 1;
 
 	if (format->format)
 		flags = GPG_VERIFY_OMIT_STATUS;
 
-	if (gpg_verify_tag(oid, name, flags))
+	if (gpg_verify_tag(oid, ref, flags))
 		return -1;
 
 	if (format->format)
-		pretty_print_ref(name, oid, format);
+		pretty_print_ref(ref, oid, format, ref_flags);
 
 	return 0;
 }
