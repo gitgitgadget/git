@@ -83,6 +83,8 @@ void repo_set_gitdir(struct repository *repo,
 	}
 	expand_base_dir(&repo->objects->odb->path, o->object_dir,
 			repo->commondir, "objects");
+	expand_base_dir(&repo->rerere_dir, o->rerere_dir,
+			repo->commondir, "rr-cache");
 
 	repo->objects->odb->disable_ref_updates = o->disable_ref_updates;
 

@@ -111,6 +111,7 @@ const char * const local_repo_env[] = {
 	CONFIG_DATA_ENVIRONMENT,
 	CONFIG_COUNT_ENVIRONMENT,
 	DB_ENVIRONMENT,
+	GIT_RERERE_ENVIRONMENT,
 	GIT_DIR_ENVIRONMENT,
 	GIT_WORK_TREE_ENVIRONMENT,
 	GIT_IMPLICIT_WORK_TREE_ENVIRONMENT,
@@ -166,6 +167,7 @@ void setup_git_env(const char *git_dir)
 
 	args.commondir = getenv_safe(&to_free, GIT_COMMON_DIR_ENVIRONMENT);
 	args.object_dir = getenv_safe(&to_free, DB_ENVIRONMENT);
+	args.rerere_dir = getenv_safe(&to_free, GIT_RERERE_ENVIRONMENT);
 	args.graft_file = getenv_safe(&to_free, GRAFT_ENVIRONMENT);
 	args.index_file = getenv_safe(&to_free, INDEX_ENVIRONMENT);
 	args.alternate_db = getenv_safe(&to_free, ALTERNATE_DB_ENVIRONMENT);

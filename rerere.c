@@ -86,13 +86,14 @@ static void assign_variant(struct rerere_id *id)
 const char *rerere_path(const struct rerere_id *id, const char *file)
 {
 	if (!file)
-		return git_path("rr-cache/%s", rerere_id_hex(id));
+		return xstrfmt("%s/%s", the_repository->rerere_dir, rerere_id_hex(id));
 
 	if (id->variant <= 0)
-		return git_path("rr-cache/%s/%s", rerere_id_hex(id), file);
+		return xstrfmt("%s/%s/%s", the_repository->rerere_dir, rerere_id_hex(id),
+					   file);
 
-	return git_path("rr-cache/%s/%s.%d",
-			rerere_id_hex(id), file, id->variant);
+	return xstrfmt("%s/%s/%s.%d", the_repository->rerere_dir, rerere_id_hex(id),
+				   file, id->variant);
 }
 
 static int is_rr_file(const char *name, const char *filename, int *variant)

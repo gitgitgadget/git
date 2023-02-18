@@ -122,6 +122,12 @@ struct repository {
 	char *worktree;
 
 	/*
+	 * Path to the rerere cache directory.
+	 * Cannot be NULL after initialization.
+	 */
+	char *rerere_dir;
+
+	/*
 	 * Path from the root of the top-level superproject down to this
 	 * repository.  This is only non-NULL if the repository is initialized
 	 * as a submodule of another repository.
@@ -178,6 +184,7 @@ extern struct repository *the_repository;
 struct set_gitdir_args {
 	const char *commondir;
 	const char *object_dir;
+	const char *rerere_dir;
 	const char *graft_file;
 	const char *index_file;
 	const char *alternate_db;
