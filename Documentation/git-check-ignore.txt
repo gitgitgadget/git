@@ -50,10 +50,9 @@ linkgit:gitignore[5].
 	with a NUL character instead of a linefeed character.
 
 -n, --non-matching::
-	Show given paths which don't match any pattern.	 This only
-	makes sense when `--verbose` is enabled, otherwise it would
-	not be possible to distinguish between paths which match a
-	pattern and those which don't.
+	If `--verbose` is enabled, list both matching and non-matching
+	paths (non-matching paths along with the indicator `::`). Without
+	`--verbose`, list only the paths that do not match any pattern.
 
 --no-index::
 	Don't look in the index when undertaking the checks. This can

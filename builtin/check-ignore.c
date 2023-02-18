@@ -113,8 +113,15 @@ static int check_ignore(struct dir_struct *dir,
 			    pattern->flags & PATTERN_FLAG_NEGATIVE)
 				pattern = NULL;
 		}
-		if (!quiet && (pattern || show_non_matching))
+
+		/* If --non-matching, then show if verbose or the pattern is missing. */
+		if (!quiet && show_non_matching && (verbose || !pattern))
 			output_pattern(pathspec.items[i].original, pattern);
+
+		/* If not --non-matching, then show if the pattern exists. */
+		if (!quiet && !show_non_matching && pattern)
+			output_pattern(pathspec.items[i].original, pattern);
+
 		if (pattern)
 			num_ignored++;
 	}
@@ -175,8 +182,6 @@ int cmd_check_ignore(int argc, const char **argv, const char *prefix)
 		if (verbose)
 			die(_("cannot have both --quiet and --verbose"));
 	}
-	if (show_non_matching && !verbose)
-		die(_("--non-matching is only valid with --verbose"));
 
 	/* read_cache() is only necessary so we can watch out for submodules. */
 	if (!no_index && repo_read_index(the_repository) < 0)

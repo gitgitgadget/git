@@ -91,7 +91,8 @@ test_check_ignore () {
 #   1. with -q / --quiet
 #   2. with default verbosity
 #   3. with -v / --verbose
-#   4. with -v / --verbose, *and* -n / --non-matching
+#   4. with -n / --non-matching
+#   5. with -v / --verbose, *and* -n / --non-matching
 #
 # expecting success each time.  Takes advantage of the fact that
 # check-ignore --verbose output is the same as normal output except
@@ -103,7 +104,7 @@ test_check_ignore () {
 # Arguments:
 #   - (optional) prereqs for this test, e.g. 'SYMLINKS'
 #   - test name
-#   - output to expect from the fourth verbosity mode (the output
+#   - output to expect from the fifth verbosity mode (the output
 #     from the other verbosity modes is automatically inferred
 #     from this value)
 #   - code to run (should invoke test_check_ignore)
@@ -125,6 +126,7 @@ test_expect_success_multiple () {
 
 	expect_verbose=$( echo "$expect_all" | grep -v '^::	' )
 	expect=$( echo "$expect_verbose" | sed -e 's/.*	//' )
+	expect_non_matching=$( echo "$expect_all" | grep '^::	' | sed -e 's/.*	//')
 
 	test_expect_success $prereq "$testname${no_index_opt:+ with $no_index_opt}" '
 		expect "$expect" &&
@@ -144,6 +146,17 @@ test_expect_success_multiple () {
 		done
 		quiet_opt=
 	fi
+
+	for non_matching_opt in '-n' '--non-matching'
+	do
+		test_code="
+			expect '$expect_non_matching' &&
+			$code
+		"
+		opts="${no_index_opt:+$no_index_opt }$non_matching_opt"
+		test_expect_success $prereq "$testname${opts:+ with $opts}" "$test_code"
+	done
+	non_matching_opt=
 
 	for verbose_opt in '-v' '--verbose'
 	do
