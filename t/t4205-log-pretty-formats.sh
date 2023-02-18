@@ -576,6 +576,16 @@ test_expect_success 'clean log decoration' '
 	test_cmp expected actual1
 '
 
+test_expect_success 'oneline with --newlineafter=decorations' '
+	git checkout -b newlineafter &&
+	>baz &&
+	git add baz &&
+	git commit -m "decorations" &&
+	git log --pretty=format:"%h%d%n%>(18) %s%n" --max-count=1 >expect &&
+	git log --oneline --decorate --max-count=1 --newlineafter=decorations >actual &&
+	test_cmp expect actual
+'
+
 cat >trailers <<EOF
 Signed-off-by: A U Thor <author@example.com>
 Acked-by: A U Thor <author@example.com>

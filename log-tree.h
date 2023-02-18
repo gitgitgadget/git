@@ -19,11 +19,14 @@ int log_tree_commit(struct rev_info *, struct commit *);
 void show_log(struct rev_info *opt);
 void format_decorations_extended(struct strbuf *sb, const struct commit *commit,
 			     int use_color,
+			     int format,
+			     int abbrev_len,
+			     int newline,
 			     const char *prefix,
 			     const char *separator,
 			     const char *suffix);
-#define format_decorations(strbuf, commit, color) \
-			     format_decorations_extended((strbuf), (commit), (color), " (", ", ", ")")
+#define format_decorations(strbuf, commit, color, format, abbrev_len, newline) \
+			     format_decorations_extended((strbuf), (commit), (color), (format), (abbrev_len), (newline), " (", ", ", ")")
 void show_decorations(struct rev_info *opt, struct commit *commit);
 void log_write_email_headers(struct rev_info *opt, struct commit *commit,
 			     const char **extra_headers_p,

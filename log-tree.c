@@ -297,6 +297,9 @@ static void show_name(struct strbuf *sb, const struct name_decoration *decoratio
 void format_decorations_extended(struct strbuf *sb,
 			const struct commit *commit,
 			int use_color,
+			int format,
+			int abbrev_len,
+			int newline,
 			const char *prefix,
 			const char *separator,
 			const char *suffix)
@@ -345,11 +348,16 @@ void format_decorations_extended(struct strbuf *sb,
 	strbuf_addstr(sb, color_commit);
 	strbuf_addstr(sb, suffix);
 	strbuf_addstr(sb, color_reset);
+	if ((format == CMIT_FMT_ONELINE) && newline == 1) {
+		strbuf_addstr(sb, "\n");
+		strbuf_addchars(sb, ' ', abbrev_len);
+	}
 }
 
 void show_decorations(struct rev_info *opt, struct commit *commit)
 {
 	struct strbuf sb = STRBUF_INIT;
+	int newline = 0;
 
 	if (opt->sources) {
 		char **slot = revision_sources_peek(opt->sources, commit);
@@ -359,7 +367,11 @@ void show_decorations(struct rev_info *opt, struct commit *commit)
 	}
 	if (!opt->show_decorations)
 		return;
-	format_decorations(&sb, commit, opt->diffopt.use_color);
+
+	if (opt->newlineafter == NEWLINEAFTER_DECORATIONS)
+		newline = 1;
+
+	format_decorations(&sb, commit, opt->diffopt.use_color, opt->commit_format, opt->abbrev, newline);
 	fputs(sb.buf, opt->diffopt.file);
 	strbuf_release(&sb);
 }
@@ -637,6 +649,7 @@ void show_log(struct rev_info *opt)
 	int abbrev_commit = opt->abbrev_commit ? opt->abbrev : the_hash_algo->hexsz;
 	const char *extra_headers = opt->extra_headers;
 	struct pretty_print_context ctx = {0};
+	char hex[GIT_MAX_HEXSZ + 1];
 
 	opt->loginfo = NULL;
 	if (!opt->verbose_header) {
@@ -706,9 +719,8 @@ void show_log(struct rev_info *opt)
 
 		if (!opt->graph)
 			put_revision_mark(opt, commit);
-		fputs(find_unique_abbrev(&commit->object.oid,
-					 abbrev_commit),
-		      opt->diffopt.file);
+		opt->abbrev = find_unique_abbrev_r(hex, &commit->object.oid, abbrev_commit);
+		fputs(hex, opt->diffopt.file);
 		if (opt->print_parents)
 			show_parents(commit, abbrev_commit, opt->diffopt.file);
 		if (opt->children.name)

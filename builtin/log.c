@@ -55,6 +55,7 @@ static unsigned int force_in_body_from;
 static int stdout_mboxrd;
 static const char *fmt_patch_subject_prefix = "PATCH";
 static int fmt_patch_name_max = FORMAT_PATCH_NAME_MAX_DEFAULT;
+static int newlineafter = NEWLINEAFTER_NONE;
 static const char *fmt_pretty;
 
 static const char * const builtin_log_usage[] = {
@@ -148,6 +149,27 @@ static int log_line_range_callback(const struct option *option, const char *arg,
 	return 0;
 }
 
+static int parse_newlineafter(const char *value)
+{
+	if (!strcmp(value, "decorations"))
+		return NEWLINEAFTER_DECORATIONS;
+
+	return NEWLINEAFTER_NONE;
+}
+
+static int option_parse_newlineafter(const struct option *opt,
+				   const char *arg, int unset)
+{
+	int *newlineafter = opt->value;
+
+	if (unset)
+		*newlineafter = NEWLINEAFTER_NONE;
+	else
+		*newlineafter = parse_newlineafter(arg);
+
+	return 0;
+}
+
 static void init_log_defaults(void)
 {
 	init_diff_ui_defaults();
@@ -172,6 +194,7 @@ static void cmd_log_init_defaults(struct rev_info *rev)
 	rev->show_signature = default_show_signature;
 	rev->encode_email_headers = default_encode_email_headers;
 	rev->diffopt.flags.allow_textconv = 1;
+	rev->newlineafter = NEWLINEAFTER_NONE;
 
 	if (default_date_mode)
 		parse_date_format(default_date_mode, &rev->date_mode);
@@ -252,6 +275,7 @@ static void cmd_log_init_finish(int argc, const char **argv, const char *prefix,
 		OPT_CALLBACK('L', NULL, &line_cb, "range:file",
 			     N_("trace the evolution of line range <start>,<end> or function :<funcname> in <file>"),
 			     log_line_range_callback),
+		OPT_CALLBACK(0, "newlineafter", &newlineafter, N_("field"), N_("new line after <field>"), option_parse_newlineafter),
 		OPT_END()
 	};
 
@@ -335,6 +359,7 @@ static void cmd_log_init_finish(int argc, const char **argv, const char *prefix,
 		load_ref_decorations(&decoration_filter, decoration_style);
 	}
 
+	rev->newlineafter = newlineafter;
 	if (rev->line_level_traverse)
 		line_log_init(rev, line_cb.prefix, &line_cb.args);
 

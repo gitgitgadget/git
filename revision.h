@@ -290,6 +290,10 @@ struct rev_info {
 	int		no_inline;
 	int		show_log_size;
 	struct string_list *mailmap;
+	enum {
+			NEWLINEAFTER_NONE,
+			NEWLINEAFTER_DECORATIONS
+		} newlineafter;
 
 	/* Filter by commit log message */
 	struct grep_opt	grep_filter;

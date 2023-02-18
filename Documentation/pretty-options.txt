@@ -32,6 +32,10 @@ people using 80-column terminals.
 	This is a shorthand for "--pretty=oneline --abbrev-commit"
 	used together.
 
+--newlineafter[=(decorations)]
+	Used in conjunction with --pretty=oneline to add a line break after
+	decorations
+
 --encoding=<encoding>::
 	Commit objects record the character encoding used for the log message
 	in their encoding header; this option can be used to tell the
