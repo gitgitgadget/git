@@ -51,7 +51,7 @@ set_fake_editor () {
 		case $line in
 		pick|p|squash|s|fixup|f|edit|e|reword|r|drop|d|label|l|reset|r|merge|m)
 			action="$line";;
-		exec_*|x_*|break|b)
+		exec_*|x_*|break_*|b_*|break|b)
 			echo "$line" | sed 's/_/ /g' >> "$1";;
 		merge_*|fixup_*)
 			action=$(echo "$line" | sed 's/_/ /g');;

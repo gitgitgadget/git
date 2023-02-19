@@ -266,6 +266,22 @@ test_expect_success 'the todo command "break" works' '
 	test_path_is_file execed
 '
 
+test_expect_success 'the todo command "break" accepts a comment' '
+	rm -f execed &&
+	test_write_lines "break # comment" "break #" "exec >execed" >expect &&
+	write_script cat-todo.sh <<-\EOS &&
+	GIT_SEQUENCE_EDITOR="grep ^\[^#\]" git rebase --edit-todo >actual
+	EOS
+	FAKE_LINES="exec_./cat-todo.sh break_#_comment b_# exec_>execed" \
+		git rebase -i HEAD &&
+	test_cmp expect actual &&
+	test_path_is_missing execed &&
+	git rebase --continue &&
+	test_path_is_missing execed &&
+	git rebase --continue &&
+	test_path_is_file execed
+'
+
 test_expect_success '--reschedule-failed-exec' '
 	test_when_finished "git rebase --abort" &&
 	test_must_fail git rebase -x false --reschedule-failed-exec HEAD^ &&
