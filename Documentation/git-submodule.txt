@@ -163,12 +163,6 @@ checked out in the submodule.
 The following 'update' procedures are only available via the
 `submodule.<name>.update` configuration variable:
 
-	custom command;; arbitrary shell command that takes a single
-	    argument (the sha1 of the commit recorded in the
-	    superproject) is executed. When `submodule.<name>.update`
-	    is set to '!command', the remainder after the exclamation mark
-	    is the custom command.
-
 	none;; the submodule is not updated.
 
 If the submodule is not yet initialized, and you just want to use the
