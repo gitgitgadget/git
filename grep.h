@@ -22,6 +22,7 @@ typedef int pcre2_general_context;
 #endif
 #include "thread-utils.h"
 #include "userdiff.h"
+#include "cache.h"
 
 struct repository;
 
@@ -175,6 +176,7 @@ struct grep_opt {
 
 	void (*output)(struct grep_opt *opt, const void *data, size_t size);
 	void *output_priv;
+	enum sparse_scope scope;
 };
 
 #define GREP_OPT_INIT { \

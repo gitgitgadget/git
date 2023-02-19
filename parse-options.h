@@ -356,6 +356,13 @@ int parse_opt_passthru_argv(const struct option *, const char *, int);
 /* value is enum branch_track* */
 int parse_opt_tracking_mode(const struct option *, const char *, int);
 
+int opt_sparse_scope(const struct option *option,
+				const char *optarg, int unset);
+
+#define OPT_SPARSE_SCOPE(var) OPT_CALLBACK_F(0, "scope", (var), N_("[sparse|all]"), \
+				N_("restrict path scope in sparse specification"), \
+				PARSE_OPT_NONEG, opt_sparse_scope)
+
 #define OPT__VERBOSE(var, h)  OPT_COUNTUP('v', "verbose", (var), (h))
 #define OPT__QUIET(var, h)    OPT_COUNTUP('q', "quiet",   (var), (h))
 #define OPT__VERBOSITY(var) \

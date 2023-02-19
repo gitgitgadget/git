@@ -5,6 +5,7 @@
 #include "diff.h"
 #include "diffcore.h"
 #include "tree.h"
+#include "dir.h"
 
 /*
  * internal mode marker, saying a tree entry != entry of tp[imin]
@@ -76,6 +77,12 @@ static int tree_entry_pathcmp(struct tree_desc *t1, struct tree_desc *t2)
 static int emit_diff_first_parent_only(struct diff_options *opt, struct combine_diff_path *p)
 {
 	struct combine_diff_parent *p0 = &p->parent[0];
+
+	if (opt->scope == SPARSE_SCOPE_SPARSE &&
+	    !path_in_sparse_patterns(p->path,
+				     S_ISDIR(p->mode) ||
+				     S_ISDIR(p0->mode)))
+		return 0;
 	if (p->mode && p0->mode) {
 		opt->change(opt, p0->mode, p->mode, &p0->oid, &p->oid,
 			1, 1, p->path, 0, 0);

@@ -28,6 +28,7 @@ SYNOPSIS
 	   [-f <file>] [-e] <pattern>
 	   [--and|--or|--not|(|)|-e <pattern>...]
 	   [--recurse-submodules] [--parent-basename <basename>]
+	   [--scope=(sparse|all)]
 	   [ [--[no-]exclude-standard] [--cached | --no-index | --untracked] | <tree>...]
 	   [--] [<pathspec>...]
 
@@ -295,6 +296,29 @@ question doesn't support them.
 --quiet::
 	Do not output matched lines; instead, exit with status 0 when
 	there is a match and with non-zero status when there isn't.
+
+--scope=(sparse|all)::
+	Restrict or not restrict grep path scope in sparse specification.
+	The variants are as follows:
+
++
+--
+`sparse`;;
+	When grep in commit history, restrict the scope of file path
+	to the sparse specification. See sparse specification in
+	link:technical/sparse-checkout.html [the sparse-checkout design
+	document] for more information.
+`all`;;
+	When grep in commit history, the file path scope is full-tree.
+	This is consistent with the current default behavior.
+--
++
+
+Note that `--scope` option only take effect if git command specify `<tree>`.
+
+The behavior of this `--scope` option is experimental and may change
+in the future. See link:technical/sparse-checkout.html [the sparse-checkout
+design document] for more information.
 
 <tree>...::
 	Instead of searching tracked files in the working tree, search

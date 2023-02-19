@@ -20,6 +20,11 @@ int cmd_diff_index(int argc, const char **argv, const char *prefix)
 	int i;
 	int result;
 
+	struct option sparse_scope_options[] = {
+		OPT_SPARSE_SCOPE(&rev.diffopt.scope),
+		OPT_END()
+	};
+
 	if (argc == 2 && !strcmp(argv[1], "-h"))
 		usage(diff_cache_usage);
 
@@ -35,6 +40,13 @@ int cmd_diff_index(int argc, const char **argv, const char *prefix)
 	diff_merges_suppress_m_parsing();
 
 	argc = setup_revisions(argc, argv, &rev, NULL);
+
+	argc = parse_options(argc, argv, prefix, sparse_scope_options, NULL,
+			     PARSE_OPT_KEEP_DASHDASH |
+			     PARSE_OPT_KEEP_UNKNOWN_OPT |
+			     PARSE_OPT_KEEP_ARGV0 |
+			     PARSE_OPT_NO_INTERNAL_HELP);
+
 	for (i = 1; i < argc; i++) {
 		const char *arg = argv[i];
 
@@ -65,9 +77,15 @@ int cmd_diff_index(int argc, const char **argv, const char *prefix)
 			perror("repo_read_index_preload");
 			return -1;
 		}
-	} else if (repo_read_index(the_repository) < 0) {
-		perror("repo_read_index");
-		return -1;
+	} else {
+		if (repo_read_index(the_repository) < 0) {
+			perror("read_cache");
+			return -1;
+		}
+		if (rev.diffopt.scope == SPARSE_SCOPE_SPARSE &&
+		    strcmp(rev.pending.objects[0].name, "HEAD"))
+			diff_collect_changes_index(&rev.diffopt.pathspec,
+						   &rev.diffopt.change_index_files);
 	}
 	result = run_diff_index(&rev, option);
 	result = diff_result_code(&rev.diffopt, result);

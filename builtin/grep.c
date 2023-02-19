@@ -640,6 +640,15 @@ static int grep_tree(struct grep_opt *opt, const struct pathspec *pathspec,
 		}
 
 		strbuf_add(base, entry.path, te_len);
+		if (opt->scope == SPARSE_SCOPE_SPARSE &&
+			base->len != tn_len &&
+			!path_in_sparse_patterns(base->buf + tn_len,
+					S_ISDIR(entry.mode) ||
+					S_ISGITLINK(entry.mode))) {
+			strbuf_setlen(base, old_baselen);
+			continue;
+		}
+
 
 		if (S_ISREG(entry.mode)) {
 			hit |= grep_oid(opt, &entry.oid, base->buf, tn_len,
@@ -999,6 +1008,7 @@ int cmd_grep(int argc, const char **argv, const char *prefix)
 			   PARSE_OPT_NOCOMPLETE),
 		OPT_INTEGER('m', "max-count", &opt.max_count,
 			N_("maximum number of results per file")),
+		OPT_SPARSE_SCOPE(&opt.scope),
 		OPT_END()
 	};
 	grep_prefix = prefix;
