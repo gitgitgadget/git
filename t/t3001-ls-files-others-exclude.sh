@@ -108,7 +108,7 @@ test_expect_success 'restore gitignore' '
 	rm .git/index
 '
 
-cat > excludes-file <<\EOF
+cat >excludes-file <<\EOF
 *.[1-8]
 e*
 \#*
@@ -118,7 +118,7 @@ git config core.excludesFile excludes-file
 
 git -c status.displayCommentPrefix=true status | grep "^#	" > output
 
-cat > expect << EOF
+cat >expect << EOF
 #	.gitignore
 #	a.6
 #	one/

@@ -15,7 +15,7 @@ test_expect_success 'clear default config' '
 	rm -f .git/config
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [section]
 	penguin = little blue
 EOF
@@ -24,7 +24,7 @@ test_expect_success 'initial' '
 	test_cmp expect .git/config
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [section]
 	penguin = little blue
 	Movie = BadPhysics
@@ -34,7 +34,7 @@ test_expect_success 'mixed case' '
 	test_cmp expect .git/config
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [section]
 	penguin = little blue
 	Movie = BadPhysics
@@ -46,7 +46,7 @@ test_expect_success 'similar section' '
 	test_cmp expect .git/config
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [section]
 	penguin = little blue
 	Movie = BadPhysics
@@ -67,7 +67,7 @@ test_expect_success 'replace with non-match (actually matching)' '
 	git config section.penguin "very blue" !kingpin
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [section]
 	penguin = very blue
 	Movie = BadPhysics
@@ -111,7 +111,7 @@ test_expect_success 'unset with cont. lines' '
 	git config --unset beta.baz
 '
 
-cat > expect <<\EOF
+cat >expect <<\EOF
 [alpha]
 bar = foo
 [beta]
@@ -138,7 +138,7 @@ test_expect_success 'multiple unset' '
 	git config --unset-all beta.haha
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
@@ -164,7 +164,7 @@ test_expect_success '--replace-all' '
 	git config --replace-all beta.haha gamma
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
@@ -178,7 +178,7 @@ test_expect_success 'all replaced' '
 	test_cmp expect .git/config
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
@@ -192,7 +192,7 @@ test_expect_success 'really mean test' '
 	test_cmp expect .git/config
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
@@ -211,7 +211,7 @@ test_expect_success 'get value' '
 	test_cmp_config alpha beta.haha
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
@@ -225,7 +225,7 @@ test_expect_success 'unset' '
 	test_cmp expect .git/config
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
@@ -261,7 +261,7 @@ test_expect_success 'multi-valued get-all returns all' '
 	test_cmp expect actual
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
@@ -284,7 +284,7 @@ test_expect_success 'invalid unset' '
 	test_must_fail git config --unset somesection.nonewline
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
@@ -307,7 +307,7 @@ test_expect_success 'hierarchical section' '
 	git config Version.1.2.3eX.Alpha beta
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [beta] ; silly comment # another comment
 noIndent= sillyValue ; 'nother silly comment
 
@@ -325,7 +325,7 @@ test_expect_success 'hierarchical section value' '
 	test_cmp expect .git/config
 '
 
-cat > expect << EOF
+cat >expect << EOF
 beta.noindent=sillyValue
 nextsection.nonewline=wow2 for me
 123456.a123=987
@@ -341,7 +341,7 @@ test_expect_success '--list without repo produces empty output' '
 	test_must_be_empty output
 '
 
-cat > expect << EOF
+cat >expect << EOF
 beta.noindent
 nextsection.nonewline
 123456.a123
@@ -353,7 +353,7 @@ test_expect_success '--name-only --list' '
 	test_cmp expect output
 '
 
-cat > expect << EOF
+cat >expect << EOF
 beta.noindent sillyValue
 nextsection.nonewline wow2 for me
 EOF
@@ -363,7 +363,7 @@ test_expect_success '--get-regexp' '
 	test_cmp expect output
 '
 
-cat > expect << EOF
+cat >expect << EOF
 beta.noindent
 nextsection.nonewline
 EOF
@@ -373,7 +373,7 @@ test_expect_success '--name-only --get-regexp' '
 	test_cmp expect output
 '
 
-cat > expect << EOF
+cat >expect << EOF
 wow2 for me
 wow4 for you
 EOF
@@ -444,7 +444,7 @@ cat > .git/config << EOF
 	c = d
 EOF
 
-cat > expect << EOF
+cat >expect << EOF
 [a.b]
 	c = d
 [a]
@@ -456,7 +456,7 @@ test_expect_success 'new section is partial match of another' '
 	test_cmp expect .git/config
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [a.b]
 	c = d
 [a]
@@ -477,12 +477,12 @@ test_expect_success 'alternative --file (non-existing file should fail)' '
 	test_must_fail git config --file non-existing-config test.xyzzy
 '
 
-cat > other-config << EOF
+cat >other-config << EOF
 [ein]
 	bahn = strasse
 EOF
 
-cat > expect << EOF
+cat >expect << EOF
 ein.bahn=strasse
 EOF
 
@@ -514,7 +514,7 @@ test_expect_success 'refer config from subdirectory' '
 	test_cmp_config -C x strasse --file=../other-config --get ein.bahn
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [ein]
 	bahn = strasse
 [anwohner]
@@ -541,7 +541,7 @@ test_expect_success 'rename section' '
 	git config --rename-section branch.eins branch.zwei
 '
 
-cat > expect << EOF
+cat >expect << EOF
 # Hallo
 	#Bello
 [branch "zwei"]
@@ -569,7 +569,7 @@ test_expect_success 'rename another section' '
 	git config --rename-section branch."1 234 blabl/a" branch.drei
 '
 
-cat > expect << EOF
+cat >expect << EOF
 # Hallo
 	#Bello
 [branch "zwei"]
@@ -592,7 +592,7 @@ test_expect_success 'rename a section with a var on the same line' '
 	git config --rename-section branch.vier branch.zwei
 '
 
-cat > expect << EOF
+cat >expect << EOF
 # Hallo
 	#Bello
 [branch "zwei"]
@@ -625,7 +625,7 @@ test_expect_success 'remove section' '
 	git config --remove-section branch.zwei
 '
 
-cat > expect << EOF
+cat >expect << EOF
 # Hallo
 	#Bello
 [branch "drei"]
@@ -636,7 +636,7 @@ test_expect_success 'section was removed properly' '
 	test_cmp expect .git/config
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [gitcvs]
 	enabled = true
 	dbname = %Ggitcvs2.%a.%m.sqlite
@@ -694,7 +694,7 @@ test_expect_success 'invalid stdin config' '
 	test_i18ngrep "bad config line 1 in standard input" output
 '
 
-cat > expect << EOF
+cat >expect << EOF
 true
 false
 true
@@ -732,7 +732,7 @@ test_expect_success 'invalid bool (set)' '
 
 	test_must_fail git config --bool bool.nobool foobar'
 
-cat > expect <<\EOF
+cat >expect <<\EOF
 [bool]
 	true1 = true
 	true2 = true
@@ -757,7 +757,7 @@ test_expect_success 'set --bool' '
 	git config --bool bool.false4 FALSE &&
 	test_cmp expect .git/config'
 
-cat > expect <<\EOF
+cat >expect <<\EOF
 [int]
 	val1 = 1
 	val2 = -1
@@ -942,7 +942,7 @@ test_expect_success 'set --type=color barfs on non-color' '
 	test_i18ngrep "cannot parse color" error
 '
 
-cat > expect << EOF
+cat >expect << EOF
 [quote]
 	leading = " test"
 	ending = "test "
@@ -975,7 +975,7 @@ inued
 inued"
 EOF
 
-cat > expect <<\EOF
+cat >expect <<\EOF
 section.continued=continued
 section.noncont=not continued
 section.quotecont=cont;inued
@@ -995,7 +995,7 @@ cat > .git/config <<\EOF
 	val5
 EOF
 
-cat > expect <<\EOF
+cat >expect <<\EOF
 section.sub=section.val1
 foo=barQsection.sub=section.val2
 foo

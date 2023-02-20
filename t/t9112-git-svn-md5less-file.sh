@@ -9,7 +9,7 @@ test_description='test that git handles an svn repository with missing md5sums'
 # calculate one if you had put Text-Content-Length: 0).  This showed
 # up in a repository created with cvs2svn.
 
-cat > dumpfile.svn <<EOF
+cat >dumpfile.svn <<EOF
 SVN-fs-dump-format-version: 1
 
 Revision-number: 1

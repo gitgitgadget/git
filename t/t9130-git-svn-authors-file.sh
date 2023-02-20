@@ -7,7 +7,7 @@ test_description='git svn authors file tests'
 
 . ./lib-git-svn.sh
 
-cat > svn-authors <<EOF
+cat >svn-authors <<EOF
 aa = AAAAAAA AAAAAAA <aa@example.com>
 bb = BBBBBBB BBBBBBB <bb@example.com>
 EOF

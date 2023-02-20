@@ -848,7 +848,7 @@ test_expect_success 'broken branch creation' '
 '
 
 echo "" > expected.ok
-cat > expected.missing-tree.default <<EOF
+cat >expected.missing-tree.default <<EOF
 fatal: unable to read tree $deleted
 EOF
 
@@ -934,7 +934,7 @@ test_expect_success 'bisect: demonstrate identification of damage boundary' "
 	git bisect reset
 "
 
-cat > expected.bisect-log <<EOF
+cat >expected.bisect-log <<EOF
 # bad: [$HASH4] Add <4: Ciao for now> into <hello>.
 # good: [$HASH2] Add <2: A new day for git> into <hello>.
 git bisect start '$HASH4' '$HASH2'
@@ -952,7 +952,7 @@ test_expect_success 'bisect log: successful result' '
 	git bisect reset
 '
 
-cat > expected.bisect-skip-log <<EOF
+cat >expected.bisect-skip-log <<EOF
 # bad: [$HASH4] Add <4: Ciao for now> into <hello>.
 # good: [$HASH2] Add <2: A new day for git> into <hello>.
 git bisect start '$HASH4' '$HASH2'

@@ -1112,7 +1112,7 @@ new_head=$(cd sm && git rev-parse --short=7 --verify HEAD)
 touch .gitmodules
 
 test_expect_success '--ignore-submodules=untracked suppresses submodules with untracked content' '
-	cat > expect << EOF &&
+	cat >expect << EOF &&
 On branch main
 Your branch and '\''upstream'\'' have diverged,
 and have 2 and 2 different commits each, respectively.
@@ -1221,7 +1221,7 @@ test_expect_success '.git/config ignore=dirty suppresses submodules with modifie
 '
 
 test_expect_success "--ignore-submodules=untracked doesn't suppress submodules with modified content" '
-	cat > expect << EOF &&
+	cat >expect << EOF &&
 On branch main
 Your branch and '\''upstream'\'' have diverged,
 and have 2 and 2 different commits each, respectively.
@@ -1278,7 +1278,7 @@ test_expect_success ".git/config ignore=untracked doesn't suppress submodules wi
 head2=$(cd sm && git commit -q -m "2nd commit" foo && git rev-parse --short=7 --verify HEAD)
 
 test_expect_success "--ignore-submodules=untracked doesn't suppress submodule summary" '
-	cat > expect << EOF &&
+	cat >expect << EOF &&
 On branch main
 Your branch and '\''upstream'\'' have diverged,
 and have 2 and 2 different commits each, respectively.
@@ -1359,7 +1359,7 @@ test_expect_success ".git/config ignore=dirty doesn't suppress submodule summary
 	git config -f .gitmodules  --remove-section submodule.subname
 '
 
-cat > expect << EOF
+cat >expect << EOF
 ; On branch main
 ; Your branch and 'upstream' have diverged,
 ; and have 2 and 2 different commits each, respectively.
@@ -1407,7 +1407,7 @@ test_expect_success "status (core.commentchar with two chars with submodule summ
 '
 
 test_expect_success "--ignore-submodules=all suppresses submodule summary" '
-	cat > expect << EOF &&
+	cat >expect << EOF &&
 On branch main
 Your branch and '\''upstream'\'' have diverged,
 and have 2 and 2 different commits each, respectively.
@@ -1433,7 +1433,7 @@ EOF
 '
 
 test_expect_success '.gitmodules ignore=all suppresses unstaged submodule summary' '
-	cat > expect << EOF &&
+	cat >expect << EOF &&
 On branch main
 Your branch and '\''upstream'\'' have diverged,
 and have 2 and 2 different commits each, respectively.

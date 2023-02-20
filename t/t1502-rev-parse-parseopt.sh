@@ -180,7 +180,7 @@ END_EXPECT
 '
 
 test_expect_success 'setup expect.1' "
-	cat > expect <<EOF
+	cat >expect <<EOF
 set -- --foo --bar 'ham' -b --aswitch -- 'arg'
 EOF
 "
@@ -196,7 +196,7 @@ test_expect_success 'test --parseopt with mixed options and arguments' '
 '
 
 test_expect_success 'setup expect.2' "
-	cat > expect <<EOF
+	cat >expect <<EOF
 set -- --foo -- 'arg' '--bar=ham'
 EOF
 "
@@ -212,7 +212,7 @@ test_expect_success 'test --parseopt --stop-at-non-option' '
 '
 
 test_expect_success 'setup expect.3' "
-	cat > expect <<EOF
+	cat >expect <<EOF
 set -- --foo -- '--' 'arg' '--bar=ham'
 EOF
 "
@@ -234,7 +234,7 @@ test_expect_success 'test --parseopt --keep-dashdash --stop-at-non-option with -
 '
 
 test_expect_success 'setup expect.5' "
-	cat > expect <<EOF
+	cat >expect <<EOF
 set -- --foo -- 'arg' '--spam=ham'
 EOF
 "
@@ -245,7 +245,7 @@ test_expect_success 'test --parseopt --keep-dashdash --stop-at-non-option withou
 '
 
 test_expect_success 'setup expect.6' "
-	cat > expect <<EOF
+	cat >expect <<EOF
 set -- --foo --bar='z' --baz -C'Z' --data='A' -- 'arg'
 EOF
 "
@@ -256,7 +256,7 @@ test_expect_success 'test --parseopt --stuck-long' '
 '
 
 test_expect_success 'setup expect.7' "
-	cat > expect <<EOF
+	cat >expect <<EOF
 set -- --data='' -C --baz -- 'arg'
 EOF
 "
@@ -267,7 +267,7 @@ test_expect_success 'test --parseopt --stuck-long and empty optional argument' '
 '
 
 test_expect_success 'setup expect.8' "
-	cat > expect <<EOF
+	cat >expect <<EOF
 set -- --data --baz -- 'arg'
 EOF
 "

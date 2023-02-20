@@ -48,7 +48,7 @@ test_expect_success 'rebase with a dirty submodule' '
 
 '
 
-cat > fake-editor.sh << \EOF
+cat >fake-editor.sh << \EOF
 #!/bin/sh
 echo $EDITOR_TEXT
 EOF

@@ -11,7 +11,7 @@ test_description='git-apply --ignore-whitespace.
 # This primes main.c file that indents without using HT at all.
 # Various patches with HT and other spaces are attempted in the test.
 
-cat > patch1.patch <<\EOF
+cat >patch1.patch <<\EOF
 diff --git a/main.c b/main.c
 new file mode 100644
 --- /dev/null

@@ -65,7 +65,7 @@ sub3sha1=$(cd super/sub3 && git rev-parse HEAD)
 
 pwd=$(pwd)
 
-cat > expect <<EOF
+cat >expect <<EOF
 Entering 'sub1'
 $pwd/clone-foo1-sub1-$sub1sha1
 Entering 'sub3'
@@ -168,7 +168,7 @@ test_expect_success 'use "foreach --recursive" to checkout all submodules' '
 	)
 '
 
-cat > expect <<EOF
+cat >expect <<EOF
 Entering 'nested1'
 Entering 'nested1/nested2'
 Entering 'nested1/nested2/nested3'
@@ -186,7 +186,7 @@ test_expect_success 'test messages from "foreach --recursive"' '
 	test_cmp expect actual
 '
 
-cat > expect <<EOF
+cat >expect <<EOF
 Entering '../nested1'
 Entering '../nested1/nested2'
 Entering '../nested1/nested2/nested3'
@@ -238,7 +238,7 @@ test_expect_success 'test "submodule foreach --recursive" from subdirectory' '
 	test_cmp expect actual
 '
 
-cat > expect <<EOF
+cat >expect <<EOF
 nested1-nested1
 nested2-nested2
 nested3-nested3
@@ -285,7 +285,7 @@ sub3sha1=$(cd clone3/sub3 && git rev-parse HEAD)
 sub1sha1_short=$(cd clone3/sub1 && git rev-parse --short HEAD)
 sub2sha1_short=$(cd clone3/sub2 && git rev-parse --short HEAD)
 
-cat > expect <<EOF
+cat >expect <<EOF
  $nested1sha1 nested1 (heads/main)
  $nested2sha1 nested1/nested2 (heads/main)
  $nested3sha1 nested1/nested2/nested3 (heads/main)
@@ -303,7 +303,7 @@ test_expect_success 'test "status --recursive"' '
 	test_cmp expect actual
 '
 
-cat > expect <<EOF
+cat >expect <<EOF
  $nested1sha1 nested1 (heads/main)
 +$nested2sha1 nested1/nested2 (file2~1)
  $nested3sha1 nested1/nested2/nested3 (heads/main)
@@ -324,7 +324,7 @@ test_expect_success 'ensure "status --cached --recursive" preserves the --cached
 
 nested2sha1=$(git -C clone3/nested1/nested2 rev-parse HEAD)
 
-cat > expect <<EOF
+cat >expect <<EOF
  $nested1sha1 ../nested1 (heads/main)
 +$nested2sha1 ../nested1/nested2 (file2)
  $nested3sha1 ../nested1/nested2/nested3 (heads/main)

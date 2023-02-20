@@ -73,7 +73,7 @@ test_expect_success 'format' '
 	test_cmp expect actual
 '
 
-cat > expect << EOF
+cat >expect << EOF
  This is
   the sixth
   commit.
@@ -94,7 +94,7 @@ test_expect_success 'format %w(,1,2)' '
 	test_cmp expect actual
 '
 
-cat > expect << EOF
+cat >expect << EOF
 $(git rev-parse --short :/sixth  ) sixth
 $(git rev-parse --short :/fifth  ) fifth
 $(git rev-parse --short :/fourth ) fourth
@@ -196,7 +196,7 @@ test_expect_success 'git config log.follow is overridden by --no-follow' '
 
 # Note that these commits are intentionally listed out of order.
 last_three="$(git rev-parse :/fourth :/sixth :/fifth)"
-cat > expect << EOF
+cat >expect << EOF
 $(git rev-parse --short :/sixth ) sixth
 $(git rev-parse --short :/fifth ) fifth
 $(git rev-parse --short :/fourth) fourth
@@ -211,7 +211,7 @@ test_expect_success 'git log --no-walk=sorted <commits> sorts by commit time' '
 	test_cmp expect actual
 '
 
-cat > expect << EOF
+cat >expect << EOF
 === $(git rev-parse --short :/sixth ) sixth
 === $(git rev-parse --short :/fifth ) fifth
 === $(git rev-parse --short :/fourth) fourth
@@ -221,7 +221,7 @@ test_expect_success 'git log --line-prefix="=== " --no-walk <commits> sorts by c
 	test_cmp expect actual
 '
 
-cat > expect << EOF
+cat >expect << EOF
 $(git rev-parse --short :/fourth) fourth
 $(git rev-parse --short :/sixth ) sixth
 $(git rev-parse --short :/fifth ) fifth
@@ -258,7 +258,7 @@ do
 	'
 done
 
-cat > expect << EOF
+cat >expect << EOF
 second
 initial
 EOF
@@ -545,7 +545,7 @@ test_expect_success '-c color.grep.matchSelected log --grep' '
 	test_cmp expect actual
 '
 
-cat > expect <<EOF
+cat >expect <<EOF
 * Second
 * sixth
 * fifth
@@ -559,7 +559,7 @@ test_expect_success 'simple log --graph' '
 	test_cmp_graph
 '
 
-cat > expect <<EOF
+cat >expect <<EOF
 123 * Second
 123 * sixth
 123 * fifth
@@ -581,7 +581,7 @@ test_expect_success 'set up merge history' '
 	git merge side
 '
 
-cat > expect <<\EOF
+cat >expect <<\EOF
 *   Merge branch 'side'
 |\
 | * side-2
@@ -600,7 +600,7 @@ test_expect_success 'log --graph with merge' '
 	test_cmp_graph --date-order
 '
 
-cat > expect <<\EOF
+cat >expect <<\EOF
 | | | *   Merge branch 'side'
 | | | |\
 | | | | * side-2
@@ -619,7 +619,7 @@ test_expect_success 'log --graph --line-prefix="| | | " with merge' '
 	test_cmp_graph --line-prefix="| | | " --date-order
 '
 
-cat > expect.colors <<\EOF
+cat >expect.colors <<\EOF
 *   Merge branch 'side'
 <BLUE>|<RESET><CYAN>\<RESET>
 <BLUE>|<RESET> * side-2
@@ -649,7 +649,7 @@ test_expect_success 'diff-tree --graph' '
 	grep "one" actual
 '
 
-cat > expect <<\EOF
+cat >expect <<\EOF
 *   commit main
 |\  Merge: A B
 | | Author: A U Thor <author@example.com>
@@ -733,7 +733,7 @@ test_expect_success 'set up more tangled history' '
 	git merge reach
 '
 
-cat > expect <<\EOF
+cat >expect <<\EOF
 *   Merge tag 'reach'
 |\
 | \

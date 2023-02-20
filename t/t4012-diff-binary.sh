@@ -25,7 +25,7 @@ test_expect_success 'prepare repository' '
 	cat b b >d
 '
 
-cat > expected <<\EOF
+cat >expected <<\EOF
  a |    2 +-
  b |  Bin
  c |    2 +-

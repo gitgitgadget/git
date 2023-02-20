@@ -17,7 +17,7 @@ test_expect_success 'with no hook' '
 '
 
 # set up fake editor for interactive editing
-cat > fake-editor <<'EOF'
+cat >fake-editor <<'EOF'
 #!/bin/sh
 cp FAKE_MSG "$1"
 exit 0
@@ -289,7 +289,7 @@ test_expect_failure 'merge --continue remembers --no-verify' '
 '
 
 # set up fake editor to replace `pick` by `reword`
-cat > reword-editor <<'EOF'
+cat >reword-editor <<'EOF'
 #!/bin/sh
 mv "$1" "$1".bup &&
 sed 's/^pick/reword/' <"$1".bup >"$1"

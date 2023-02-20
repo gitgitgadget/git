@@ -3,7 +3,7 @@
 test_description='git svn globbing refspecs'
 . ./lib-git-svn.sh
 
-cat > expect.end <<EOF
+cat >expect.end <<EOF
 the end
 hi
 start a new branch
@@ -87,7 +87,7 @@ test_expect_success 'test left-hand-side only globbing' '
 	cut -d" " -f2- actual >output.two &&
 	test_cmp expect.two output.two
 	'
-cat > expect.four <<EOF
+cat >expect.four <<EOF
 adios
 adding more
 Changed 2 in v2/start

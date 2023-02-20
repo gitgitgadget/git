@@ -126,7 +126,7 @@ b_ne_cr="$(git hash-object ne_cr)"
 test_expect_success 'CRLF + $Id$' "test '$a_cr' = '$b_cr'"
 test_expect_success 'CRLF + $Id$ (no newline)' "test '$a_ne_cr' = '$b_ne_cr'"
 
-cat > show-ignore.expect <<\EOF
+cat >show-ignore.expect <<\EOF
 
 # /
 /no-such-file*

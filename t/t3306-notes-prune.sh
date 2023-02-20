@@ -29,7 +29,7 @@ test_expect_success 'setup: create a few commits with notes' '
 	git notes add -m "Note #3"
 '
 
-cat > expect <<END_OF_LOG
+cat >expect <<END_OF_LOG
 commit $third
 Author: A U Thor <author@example.com>
 Date:   Thu Apr 7 15:15:13 2005 -0700

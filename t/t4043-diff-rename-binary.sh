@@ -22,7 +22,7 @@ test_expect_success 'move the files into a "sub" directory' '
 	git commit -m "Moved to sub/"
 '
 
-cat > expected <<\EOF
+cat >expected <<\EOF
 -	-	bar => sub/bar
 0	0	foo => sub/foo
 

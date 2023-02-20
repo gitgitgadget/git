@@ -3,7 +3,7 @@
 test_description='git svn globbing refspecs'
 . ./lib-git-svn.sh
 
-cat > expect.end <<EOF
+cat >expect.end <<EOF
 the end
 hi
 start a new branch

@@ -34,7 +34,7 @@ test_expect_success setup '
 	git clone one test
 '
 
-cat > test/expect << EOF
+cat >test/expect << EOF
   one/main
   one/side
   origin/HEAD -> origin/main
@@ -76,7 +76,7 @@ test_expect_success 'git fetch --all does not allow non-option arguments' '
 	 test_must_fail git fetch --all origin main)
 '
 
-cat > expect << EOF
+cat >expect << EOF
   origin/HEAD -> origin/main
   origin/main
   origin/side
@@ -94,7 +94,7 @@ test_expect_success 'git fetch --multiple (but only one remote)' '
 	 test_cmp ../expect output)
 '
 
-cat > expect << EOF
+cat >expect << EOF
   one/main
   one/side
   two/another
@@ -135,7 +135,7 @@ test_expect_success 'git fetch --all (skipFetchAll)' '
 	 test_cmp ../expect output)
 '
 
-cat > expect << EOF
+cat >expect << EOF
   one/main
   one/side
   three/another

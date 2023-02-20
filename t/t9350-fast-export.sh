@@ -219,7 +219,7 @@ test_expect_success 'import/export-marks' '
 
 '
 
-cat > signed-tag-import << EOF
+cat >signed-tag-import << EOF
 tag sign-your-name
 from $(git rev-parse HEAD)
 tagger C O Mitter <committer@example.com> 1112911993 -0700
@@ -365,7 +365,7 @@ test_expect_success 'fast-export | fast-import when main is tagged' '
 
 '
 
-cat > tag-content << EOF
+cat >tag-content << EOF
 object $(git rev-parse HEAD)
 type commit
 tag rosten
@@ -403,7 +403,7 @@ test_expect_success 'setup for limiting exports by PATH' '
 	)
 '
 
-cat > limit-by-paths/expected << EOF
+cat >limit-by-paths/expected << EOF
 blob
 mark :1
 data 3
@@ -461,7 +461,7 @@ test_expect_success 'rewrite tag predating pathspecs to nothing' '
 	)
 '
 
-cat > limit-by-paths/expected << EOF
+cat >limit-by-paths/expected << EOF
 blob
 mark :1
 data 4
@@ -649,7 +649,7 @@ test_expect_success 'test bidirectionality' '
 	git fast-import --export-marks=marks-cur --import-marks-if-exists=marks-cur
 '
 
-cat > expected << EOF
+cat >expected << EOF
 blob
 mark :13
 data 5
@@ -679,7 +679,7 @@ test_expect_success 'avoid uninteresting refs' '
 	test_cmp expected actual
 '
 
-cat > expected << EOF
+cat >expected << EOF
 reset refs/heads/main
 from :14
 

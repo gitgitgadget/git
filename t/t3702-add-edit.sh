@@ -9,7 +9,7 @@ TEST_PASSES_SANITIZE_LEAK=true
 . ./test-lib.sh
 
 
-cat > file << EOF
+cat >file << EOF
 LO, praise of the prowess of people-kings
 of spear-armed Danes, in days long sped,
 we have heard, and what honor the athelings won!
@@ -23,7 +23,7 @@ who house by the whale-path, heard his mandate,
 gave him gifts:  a good king he!
 EOF
 
-cat > second-part << EOF
+cat >second-part << EOF
 To him an heir was afterward born,
 a son in his halls, whom heaven sent
 to favor the folk, feeling their woe
@@ -40,7 +40,7 @@ test_expect_success 'setup' '
 
 '
 
-cat > expected-patch << EOF
+cat >expected-patch << EOF
 diff --git a/file b/file
 --- a/file
 +++ b/file
@@ -64,7 +64,7 @@ diff --git a/file b/file
 +the Wielder of Wonder, with world's renown.
 EOF
 
-cat > patch << EOF
+cat >patch << EOF
 diff --git a/file b/file
 index b9834b5..ef6e94c 100644
 --- a/file
@@ -79,7 +79,7 @@ index b9834b5..ef6e94c 100644
  for he waxed under welkin, in wealth he throve,
 EOF
 
-cat > expected << EOF
+cat >expected << EOF
 diff --git a/file b/file
 --- a/file
 +++ b/file

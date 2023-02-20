@@ -10,7 +10,7 @@ TEST_PASSES_SANITIZE_LEAK=true
 . ./test-lib.sh
 
 test_expect_success setup '
-	cat > create-sm.patch <<EOF &&
+	cat >create-sm.patch <<EOF &&
 diff --git a/dir/sm b/dir/sm
 new file mode 160000
 index 0000000..0123456
@@ -19,7 +19,7 @@ index 0000000..0123456
 @@ -0,0 +1 @@
 +Subproject commit $(test_oid numeric)
 EOF
-	cat > remove-sm.patch <<EOF
+	cat >remove-sm.patch <<EOF
 diff --git a/dir/sm b/dir/sm
 deleted file mode 160000
 index 0123456..0000000

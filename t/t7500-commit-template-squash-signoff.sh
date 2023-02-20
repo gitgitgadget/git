@@ -168,7 +168,7 @@ test_expect_success 'using alternate GIT_INDEX_FILE (2)' '
 	cmp .git/index saved-index >/dev/null
 '
 
-cat > expect << EOF
+cat >expect << EOF
 zort
 
 Signed-off-by: C O Mitter <committer@example.com>

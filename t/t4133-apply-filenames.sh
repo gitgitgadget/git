@@ -10,7 +10,7 @@ TEST_PASSES_SANITIZE_LEAK=true
 . ./test-lib.sh
 
 test_expect_success setup '
-	cat > bad1.patch <<EOF &&
+	cat >bad1.patch <<EOF &&
 diff --git a/f b/f
 new file mode 100644
 index 0000000..d00491f
@@ -19,7 +19,7 @@ index 0000000..d00491f
 @@ -0,0 +1 @@
 +1
 EOF
-	cat > bad2.patch <<EOF
+	cat >bad2.patch <<EOF
 diff --git a/f b/f
 deleted file mode 100644
 index d00491f..0000000
