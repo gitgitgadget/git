@@ -17,27 +17,15 @@
 static int initialize_pipe_name(const char *path, wchar_t *wpath, size_t alloc)
 {
 	int off = 0;
-	struct strbuf realpath = STRBUF_INIT;
-
-	if (!strbuf_realpath(&realpath, path, 0))
-		return -1;
+	int ret = 0;
+	char *pipe_name = xstrdup(path);
 
 	off = swprintf(wpath, alloc, L"\\\\.\\pipe\\");
-	if (xutftowcs(wpath + off, realpath.buf, alloc - off) < 0)
-		return -1;
+	if (xutftowcs(wpath + off, basename(pipe_name), alloc - off) < 0)
+		ret = -1;
 
-	/* Handle drive prefix */
-	if (wpath[off] && wpath[off + 1] == L':') {
-		wpath[off + 1] = L'_';
-		off += 2;
-	}
-
-	for (; wpath[off]; off++)
-		if (wpath[off] == L'/')
-			wpath[off] = L'\\';
-
-	strbuf_release(&realpath);
-	return 0;
+	free(pipe_name);
+	return ret;
 }
 
 static enum ipc_active_state get_active_state(wchar_t *pipe_path)
