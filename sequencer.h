@@ -179,6 +179,12 @@ int sequencer_remove_state(struct replay_opts *opts);
 #define TODO_LIST_ROOT_WITH_ONTO (1U << 6)
 #define TODO_LIST_REAPPLY_CHERRY_PICKS (1U << 7)
 #define TODO_LIST_WARN_SKIPPED_CHERRY_PICKS (1U << 8)
+/*
+ * Instead of letting `merge` redoing the merges without taking the existing
+ * merge commit (including its resolved conflicts and amendments) into account,
+ * try harder to replay the original merge commit.
+ */
+#define TODO_LIST_REPLAY_MERGE_COMMITS (1U << 9)
 
 int sequencer_make_script(struct repository *r, struct strbuf *out, int argc,
 			  const char **argv, unsigned flags);
