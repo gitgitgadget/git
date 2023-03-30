@@ -6,6 +6,7 @@
 #include "hook.h"
 #include "hook-list.h"
 #include "diagnose.h"
+#include "config.h"
 
 
 static void get_system_info(struct strbuf *sys_info)
@@ -121,6 +122,8 @@ int cmd_bugreport(int argc, const char **argv, const char *prefix)
 
 	argc = parse_options(argc, argv, prefix, bugreport_options,
 			     bugreport_usage, 0);
+
+	git_config(git_default_config, NULL);
 
 	/* Prepare the path to put the result */
 	prefixed_filename = prefix_filename(prefix,
