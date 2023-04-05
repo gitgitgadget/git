@@ -306,6 +306,17 @@ int mingw_unlink(const char *pathname)
 	while ((ret = _wunlink(wpathname)) == -1 && tries < ARRAY_SIZE(delay)) {
 		if (!is_file_in_use_error(GetLastError()))
 			break;
+
+		/*
+		 * _wunlink() / DeleteFileW() fail for directory symlinks and
+		 * NTFS junctions. The error is the same as checked by the
+		 * `is_file_in_use_error()` function: ERROR_ACCESS_DENIED
+		 * (EACCES). Let's try _wrmdir() as well, which does work for
+		 * directory symlinks and NTFS junctions.
+		 */
+		if (!_wrmdir(wpathname))
+			return 0;
+
 		/*
 		 * We assume that some other process had the source or
 		 * destination file open at the wrong moment and retry.
@@ -2504,6 +2515,28 @@ pid_t waitpid(pid_t pid, int *status, int options)
 
 	errno = EINVAL;
 	return -1;
+}
+
+int mingw_is_mount_point(struct strbuf *path)
+{
+	WIN32_FIND_DATAW findbuf = { 0 };
+	HANDLE handle;
+	wchar_t wfilename[MAX_PATH];
+	int wlen = xutftowcs_path(wfilename, path->buf);
+	if (wlen < 0)
+		die(_("could not get long path for '%s'"), path->buf);
+
+	/* remove trailing slash, if any */
+	if (wlen > 0 && wfilename[wlen - 1] == L'/')
+		wfilename[--wlen] = L'\0';
+
+	handle = FindFirstFileW(wfilename, &findbuf);
+	if (handle == INVALID_HANDLE_VALUE)
+		return 0;
+	FindClose(handle);
+
+	return (findbuf.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) &&
+		(findbuf.dwReserved0 == IO_REPARSE_TAG_MOUNT_POINT);
 }
 
 int xutftowcsn(wchar_t *wcs, const char *utfs, size_t wcslen, int utflen)
