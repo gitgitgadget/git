@@ -2,3 +2,4 @@
 	path = sha1collisiondetection
 	url = https://github.com/cr-marcstevens/sha1collisiondetection.git
 	branch = master
+	ignore = dirty
