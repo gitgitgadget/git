@@ -4925,6 +4925,25 @@ static void merge_check_renames_reusable(struct merge_options *opt,
 	}
 
 	/*
+	 * With `merge.directoryNames=false`, the target path entries are not
+	 * added to `opt->priv->paths` for some reason, and therefore we cannot
+	 * use any cached rename information in that case.
+	 *
+	 * Note: This is a stop-gap solution to avoid `VERIFY_CI(newinfo)` in
+	 * `process_renames()` from throwing an assertion, and there is most
+	 * likely more work to be done here. Let's only use this band-aid to
+	 * move forward with the epic to replace libgit2-based rebases with `git
+	 * replay`-based ones, and investigate in more depth later: While the
+	 * result will still be correct, it may be possible (and in that
+	 * instance, also desirable) to re-enable the rename cache even with
+	 * directory renames turned off.
+	 */
+	if (!opt->detect_directory_renames) {
+		renames->cached_pairs_valid_side = 0; /* neither side valid */
+		return;
+	}
+
+	/*
 	 * Handle other cases; note that merge_trees[0..2] will only
 	 * be NULL if opti is, or if all three were manually set to
 	 * NULL by e.g. rename/rename(1to1) handling.
