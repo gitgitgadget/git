@@ -79,24 +79,49 @@ static int parse_line_range(const char *p,
 	return 0;
 }
 
+struct parser_state {
+	struct strbuf buf;
+	const char *line;
+	size_t next_line_offset;
+	enum {
+		MBOX_BEFORE_HEADER,
+		MBOX_IN_HEADER,
+		MBOX_AFTER_HEADERS,
+		MBOX_IN_COMMIT_MESSAGE,
+		MBOX_AFTER_TRIPLE_DASH,
+		MBOX_IN_DIFF
+	} state;
+};
+
+static inline int is_last_line(struct parser_state *s)
+{
+	return s->next_line_offset >= s->buf.len;
+}
+
 /*
  * This function finds the end of the line, replaces the newline character with
- * a NUL, and returns the offset of the start of the next line.
- *
- * If no newline character was found, it returns the offset of the trailing NUL
- * instead.
+ * a NUL, and updates `line`.
  */
-static inline int find_next_line(const char *line, size_t size)
+static inline int next_line(struct parser_state *s)
 {
-	char *eol;
+	char *p;
 
-	eol = memchr(line, '\n', size);
-	if (!eol)
-		return size;
+	s->line = s->buf.buf + s->next_line_offset;
 
-	*eol = '\0';
+	if (s->next_line_offset >= s->buf.len) {
+		s->line = NULL;
+		return 0;
+	}
 
-	return eol + 1 - line;
+	for (p = s->buf.buf + s->next_line_offset; *p; p++)
+		if (*p == '\n') {
+			*p = '\0';
+			p++;
+			break;
+		}
+
+	s->next_line_offset = p - s->buf.buf;
+	return 1;
 }
 
 static void skip_whitespace(const char **p)
@@ -117,73 +142,108 @@ static void skip_patch_prefix(const char **p)
 }
 
 /*
- * Parses a value of a mail header, starting at the `offset` of the `line` (the
- * offset points to the beginning of the value).
+ * Parses a value of a mail header, starting at the `value_offset` of the
+ * current line.
  *
  * If the value is too long (i.e. if the next line starts with a space to
- * indicate a continuation line), the `buf` is used to reconstruct the original,
- * long value.
+ * indicate a continuation line), the `scratch` buffer is used to reconstruct
+ * the original, long value.
  *
- * Returns the number of consumed bytes (starting at `line`).
+ * This function can also be used to merely skip a header (for example, the
+ * in-body `Date:` header) by passing `NULL` values for the `scratch` and
+ * `value` parameters).
+ *
+ * Returns the number of consumed bytes (starting at `buf`).
  */
-static int parse_header_value(const char *line, int len, int offset,
-			      size_t size,
-			      struct strbuf *buf, const char **value)
+static void parse_header_value(struct parser_state *s, const char *value_start,
+			       struct strbuf *scratch, const char **value)
 {
-	const char *orig_line = line;
-
-	if (len >= size || line[len] != ' ') {
-		*value = line + offset;
-		return len;
+	if (s->next_line_offset >= s->buf.len ||
+	    s->buf.buf[s->next_line_offset] != ' ') {
+		if (value)
+			*value = value_start;
+		return;
 	}
 
 	/* handle long header */
-	strbuf_reset(buf);
-	strbuf_addstr(buf, line + offset);
-	while (len < size && line[len] == ' ') {
-		line += len;
-		size -= len;
-		len = find_next_line(line, size);
-		strbuf_addstr(buf, line);
+	if (value) {
+		strbuf_reset(scratch);
+		strbuf_addstr(scratch, value_start);
+	}
+	while (s->next_line_offset < s->buf.len &&
+	       s->buf.buf[s->next_line_offset] == ' ') {
+		next_line(s);
+		if (value)
+			strbuf_addstr(scratch, s->line + 1);
 	}
 
-	*value = buf->buf;
-	return (line - orig_line) + len;
+	if (value)
+		*value = scratch->buf;
+}
+
+static int looks_like_a_header(const char *line)
+{
+	if (*line == ':')
+		return 0;
+	while (isalnum(*line) || *line == '-')
+		line++;
+	return *line == ':';
+}
+
+static void parse_headers(struct parser_state *s,
+			  struct strbuf *author_buf, const char **author,
+			  struct strbuf *subject_buf, const char **subject)
+{
+	const char *p;
+
+	do {
+		if (skip_prefix(s->line, "From: ", &p)) {
+			skip_whitespace(&p);
+			parse_header_value(s, p, author_buf, author);
+		} else if (skip_prefix(s->line, "Subject: ", &p)) {
+			skip_whitespace(&p);
+			skip_patch_prefix(&p);
+			parse_header_value(s, p, subject_buf, subject);
+		} else if (skip_prefix(s->line, "Date: ", &p)) {
+			/*
+			 * The Date: header is not used by `range-diff`, but it
+			 * is potentially part of the in-body headers and should
+			 * therefore be skipped.
+			 *
+			 * It _could_ be a long date string that is broken apart
+			 * across multiple lines, so we'll parse it even if we
+			 * do not use the parsed value.
+			 */
+			skip_whitespace(&p);
+			parse_header_value(s, p, NULL, NULL);
+		} else if (!*s->line || !looks_like_a_header(s->line))
+			break; /* empty line */
+	} while (next_line(s));
 }
 
 static int read_mbox(const char *path, struct string_list *list)
 {
-	struct strbuf buf = STRBUF_INIT, contents = STRBUF_INIT;
+	struct parser_state s = {
+		.buf = STRBUF_INIT,
+		.state = MBOX_BEFORE_HEADER
+	};
+	struct strbuf scratch = STRBUF_INIT;
 	struct strbuf author_buf = STRBUF_INIT, subject_buf = STRBUF_INIT;
 	struct patch_util *util = NULL;
-	enum {
-		MBOX_BEFORE_HEADER,
-		MBOX_IN_HEADER,
-		MBOX_IN_COMMIT_MESSAGE,
-		MBOX_AFTER_TRIPLE_DASH,
-		MBOX_IN_DIFF
-	} state = MBOX_BEFORE_HEADER;
-	char *line, *current_filename = NULL;
-	int len;
-	size_t size, old_count = 0, new_count = 0;
-	const char *author = NULL, *subject = NULL;
+	char *current_filename = NULL;
+	size_t old_count = 0, new_count = 0;
+	const char *author = NULL, *subject = NULL, *p;
 
 	if (!strcmp(path, "-")) {
-		if (strbuf_read(&contents, STDIN_FILENO, 0) < 0)
+		if (strbuf_read(&s.buf, STDIN_FILENO, 0) < 0)
 			return error_errno(_("could not read stdin"));
-	} else if (strbuf_read_file(&contents, path, 0) < 0)
+	} else if (strbuf_read_file(&s.buf, path, 0) < 0)
 		return error_errno(_("could not read '%s'"), path);
 
-	line = contents.buf;
-	size = contents.len;
-	for (; size; size -= len, line += len) {
-		const char *p;
-
-		len = find_next_line(line, size);
-
-		if (state == MBOX_BEFORE_HEADER) {
+	while (next_line(&s)) {
+		if (s.state == MBOX_BEFORE_HEADER) {
 parse_from_delimiter:
-			if (!skip_prefix(line, "From ", &p))
+			if (!skip_prefix(s.line, "From ", &p))
 				continue;
 
 			if (util)
@@ -194,18 +254,20 @@ parse_from_delimiter:
 			util->matching = -1;
 			author = subject = NULL;
 
-			state = MBOX_IN_HEADER;
+			s.state = MBOX_IN_HEADER;
 			continue;
 		}
 
-		if (starts_with(line, "diff --git ")) {
+		if (starts_with(s.line, "diff --git ")) {
 			struct patch patch = { 0 };
 			struct strbuf root = STRBUF_INIT;
-			int linenr = 0;
+			int linenr = 0, offset;
 			int orig_len;
+			unsigned int size;
 
-			if (len == size) {
-				error(_("incomplete diff header: '%s'"), line);
+			if (s.next_line_offset >= s.buf.len) {
+				error(_("incomplete diff header: '%s'"),
+				      s.line);
 fail:
 				release_patch(&patch);
 				free(util);
@@ -213,33 +275,37 @@ fail:
 				string_list_clear(list, 1);
 				strbuf_release(&author_buf);
 				strbuf_release(&subject_buf);
-				strbuf_release(&buf);
-				strbuf_release(&contents);
+				strbuf_release(&scratch);
+				strbuf_release(&s.buf);
 				return -1;
 			}
 
-			if (line[len - 2] == '\r') {
+			orig_len = strlen(s.line);
+			if (s.line[orig_len - 1] == '\r') {
 				error(_("cannot handle diff headers with "
 					"CR/LF line endings"));
 				goto fail;
 			}
 
-			state = MBOX_IN_DIFF;
+			s.state = MBOX_IN_DIFF;
 			old_count = new_count = 0;
-			strbuf_addch(&buf, '\n');
+			strbuf_addch(&scratch, '\n');
 			if (!util->diff_offset)
-				util->diff_offset = buf.len;
+				util->diff_offset = scratch.len;
 
-			orig_len = len;
-			/* `find_next_line()`'s replaced the LF with a NUL */
-			line[len - 1] = '\n';
-			len = parse_git_diff_header(&root, &linenr, 1, line,
-						    len, size, &patch);
-			if (len < 0) {
+			/* `next_line()`'s replaced the LF with a NUL */
+			s.buf.buf[s.next_line_offset - 1] = '\n';
+			s.next_line_offset -= orig_len + 1;
+			size = s.buf.len - s.next_line_offset;
+			offset = parse_git_diff_header(&root, &linenr, 1,
+						       s.line, orig_len + 1,
+						       size, &patch);
+			if (offset < 0) {
 				error(_("could not parse git header '%.*s'"),
-				      orig_len, line);
+				      orig_len, s.line);
 				goto fail;
 			}
+			s.next_line_offset += offset;
 
 			if (patch.old_name)
 				skip_prefix(patch.old_name, "a/",
@@ -248,15 +314,15 @@ fail:
 				skip_prefix(patch.new_name, "b/",
 					    (const char **)&patch.new_name);
 
-			strbuf_addstr(&buf, " ## ");
+			strbuf_addstr(&scratch, " ## ");
 			if (patch.is_new)
-				strbuf_addf(&buf, "%s (new)", patch.new_name);
+				strbuf_addf(&scratch, "%s (new)", patch.new_name);
 			else if (patch.is_delete)
-				strbuf_addf(&buf, "%s (deleted)", patch.old_name);
+				strbuf_addf(&scratch, "%s (deleted)", patch.old_name);
 			else if (patch.is_rename)
-				strbuf_addf(&buf, "%s => %s", patch.old_name, patch.new_name);
+				strbuf_addf(&scratch, "%s => %s", patch.old_name, patch.new_name);
 			else
-				strbuf_addstr(&buf, patch.new_name);
+				strbuf_addstr(&scratch, patch.new_name);
 
 			free(current_filename);
 			if (patch.is_delete)
@@ -266,52 +332,63 @@ fail:
 
 			if (patch.new_mode && patch.old_mode &&
 			    patch.old_mode != patch.new_mode)
-				strbuf_addf(&buf, " (mode change %06o => %06o)",
+				strbuf_addf(&scratch, " (mode change %06o => %06o)",
 					    patch.old_mode, patch.new_mode);
 
-			strbuf_addstr(&buf, " ##\n");
+			strbuf_addstr(&scratch, " ##\n");
 			util->diffsize++;
 			release_patch(&patch);
-		} else if (state == MBOX_IN_HEADER) {
-			if (!line[0]) {
-				state = MBOX_IN_COMMIT_MESSAGE;
-				strbuf_addstr(&buf, " ## Metadata ##\n");
+		} else if (s.state == MBOX_IN_HEADER) {
+			parse_headers(&s,
+				      &author_buf, &author,
+				      &subject_buf, &subject);
+			if (!*s.line) {
+				/* parse in-body headers, if any */
+				if (!is_last_line(&s) &&
+				    (starts_with(s.line + 1, "From: ") ||
+				     starts_with(s.line + 1, "Subject: ") ||
+				     starts_with(s.line + 1, "Date: "))) {
+					next_line(&s);
+					parse_headers(&s,
+						      &author_buf, &author,
+						      &subject_buf, &subject);
+				}
+				s.state = MBOX_IN_COMMIT_MESSAGE;
+
+				strbuf_addstr(&scratch, " ## Metadata ##\n");
 				if (author)
-					strbuf_addf(&buf, "Author: %s\n", author);
-				strbuf_addstr(&buf, "\n ## Commit message ##\n");
+					strbuf_addf(&scratch, "Author: %s\n",
+						    author);
+				strbuf_addstr(&scratch,
+					      "\n ## Commit message ##\n");
 				if (subject)
-					strbuf_addf(&buf, "    %s\n\n", subject);
-			} else if (skip_prefix(line, "From: ", &p)) {
-				skip_whitespace(&p);
-				len = parse_header_value(line, len, p - line, size,
-						   &author_buf, &author);
-			} else if (skip_prefix(line, "Subject: ", &p)) {
-				skip_whitespace(&p);
-				skip_patch_prefix(&p);
-				len = parse_header_value(line, len, p - line, size,
-						   &subject_buf, &subject);
+					strbuf_addf(&scratch, "    %s\n\n",
+						    subject);
+				if (*s.line)
+					goto in_commit_message;
 			}
-		} else if (state == MBOX_IN_COMMIT_MESSAGE) {
-			if (!line[0]) {
-				strbuf_addch(&buf, '\n');
-			} else if (strcmp(line, "---")) {
+		} else if (s.state == MBOX_IN_COMMIT_MESSAGE) {
+in_commit_message:
+			if (!*s.line) {
+				strbuf_addch(&scratch, '\n');
+			} else if (strcmp(s.line, "---")) {
 				int tabs = 0;
 
 				/* simulate tab expansion */
-				while (line[tabs] == '\t')
+				while (s.line[tabs] == '\t')
 					tabs++;
-				strbuf_addf(&buf, "%*s%s\n",
-					    4 + 8 * tabs, "", line + tabs);
+				strbuf_addf(&scratch, "%*s%s\n",
+					    4 + 8 * tabs, "", s.line + tabs);
 			} else {
 				/*
 				 * Trim the trailing newline that is added
 				 * by `format-patch`.
 				 */
-				strbuf_trim_trailing_newline(&buf);
-				state = MBOX_AFTER_TRIPLE_DASH;
+				// strbuf_trim_trailing_newline(&scratch);
+				s.state = MBOX_AFTER_TRIPLE_DASH;
 			}
-		} else if (state == MBOX_IN_DIFF) {
-			switch (line[0]) {
+		} else if (s.state == MBOX_IN_DIFF) {
+			switch (s.line[0]) {
 			case '\0':
 				/* diff might be followed by empty lines */
 				if (old_count || new_count)
@@ -324,51 +401,51 @@ fail:
 				/* A `-- ` line indicates the end of a diff */
 				if (!old_count && !new_count)
 					break;
-				if (old_count && line[0] != '+')
+				if (old_count && s.line[0] != '+')
 					old_count--;
-				if (new_count && line[0] != '-')
+				if (new_count && s.line[0] != '-')
 					new_count--;
 				/* fallthrough */
 			case '\\':
-				strbuf_addstr(&buf, line);
-				strbuf_addch(&buf, '\n');
+				strbuf_addstr(&scratch, s.line);
+				strbuf_addch(&scratch, '\n');
 				util->diffsize++;
 				continue;
 			case '@':
-				if (parse_line_range(line, &old_count,
+				if (parse_line_range(s.line, &old_count,
 						      &new_count, &p))
 					break;
 
-				strbuf_addstr(&buf, "@@");
+				strbuf_addstr(&scratch, "@@");
 				if (current_filename && *p)
-					strbuf_addf(&buf, " %s:",
+					strbuf_addf(&scratch, " %s:",
 						    current_filename);
-				strbuf_addstr(&buf, p);
-				strbuf_addch(&buf, '\n');
+				strbuf_addstr(&scratch, p);
+				strbuf_addch(&scratch, '\n');
 				util->diffsize++;
 				continue;
 			}
 
 			if (util) {
-				string_list_append(list, buf.buf)->util = util;
+				string_list_append(list, scratch.buf)->util = util;
 				util = NULL;
-				strbuf_reset(&buf);
+				strbuf_reset(&scratch);
 			}
-			state = MBOX_BEFORE_HEADER;
+			s.state = MBOX_BEFORE_HEADER;
 			goto parse_from_delimiter;
 		}
 	}
-	strbuf_release(&contents);
+	strbuf_release(&s.buf);
 
 	if (util) {
-		if (state == MBOX_IN_DIFF)
-			string_list_append(list, buf.buf)->util = util;
+		if (s.state == MBOX_IN_DIFF)
+			string_list_append(list, scratch.buf)->util = util;
 		else
 			free(util);
 	}
 	strbuf_release(&author_buf);
 	strbuf_release(&subject_buf);
-	strbuf_release(&buf);
+	strbuf_release(&scratch);
 	free(current_filename);
 
 	return 0;
