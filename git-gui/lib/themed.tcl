@@ -4,7 +4,7 @@
 
 namespace eval color {
 	# Variable colors
-	# Preffered way to set widget colors is using add_option.
+	# Preferred way to set widget colors is using add_option.
 	# In some cases, like with tags in_diff/in_sel, we use these colors.
 	variable select_bg				lightgray
 	variable select_fg				black
