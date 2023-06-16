@@ -146,4 +146,36 @@ int trailer_iterator_advance(struct trailer_iterator *iter);
  */
 void trailer_iterator_release(struct trailer_iterator *iter);
 
+int after_or_end(enum trailer_where where);
+size_t token_len_without_separator(const char *token, size_t len);
+
+struct conf_info {
+	char *name;
+	char *key;
+	char *command;
+	char *cmd;
+	enum trailer_where where;
+	enum trailer_if_exists if_exists;
+	enum trailer_if_missing if_missing;
+};
+
+struct trailer_item {
+	struct list_head list;
+	/*
+	 * If this is not a trailer line, the line is stored in value
+	 * (excluding the terminating newline) and token is NULL.
+	 */
+	char *token;
+	char *value;
+};
+
+struct arg_item {
+	struct list_head list;
+	char *token;
+	char *value;
+	struct conf_info conf;
+};
+
+int same_token(struct trailer_item *a, struct arg_item *b);
+
 #endif /* TRAILER_H */

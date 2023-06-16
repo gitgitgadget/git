@@ -13,34 +13,7 @@
  * Copyright (c) 2013, 2014 Christian Couder <chriscool@tuxfamily.org>
  */
 
-struct conf_info {
-	char *name;
-	char *key;
-	char *command;
-	char *cmd;
-	enum trailer_where where;
-	enum trailer_if_exists if_exists;
-	enum trailer_if_missing if_missing;
-};
-
 static struct conf_info default_conf_info;
-
-struct trailer_item {
-	struct list_head list;
-	/*
-	 * If this is not a trailer line, the line is stored in value
-	 * (excluding the terminating newline) and token is NULL.
-	 */
-	char *token;
-	char *value;
-};
-
-struct arg_item {
-	struct list_head list;
-	char *token;
-	char *value;
-	struct conf_info conf;
-};
 
 static LIST_HEAD(conf_head);
 
@@ -62,7 +35,7 @@ static const char *git_generated_prefixes[] = {
 		pos != (head); \
 		pos = is_reverse ? pos->prev : pos->next)
 
-static int after_or_end(enum trailer_where where)
+int after_or_end(enum trailer_where where)
 {
 	return (where == WHERE_AFTER) || (where == WHERE_END);
 }
@@ -73,14 +46,14 @@ static int after_or_end(enum trailer_where where)
  * 13, stripping the trailing punctuation but retaining
  * internal punctuation.
  */
-static size_t token_len_without_separator(const char *token, size_t len)
+size_t token_len_without_separator(const char *token, size_t len)
 {
 	while (len > 0 && !isalnum(token[len - 1]))
 		len--;
 	return len;
 }
 
-static int same_token(struct trailer_item *a, struct arg_item *b)
+int same_token(struct trailer_item *a, struct arg_item *b)
 {
 	size_t a_len, b_len, min_len;
 

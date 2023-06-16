@@ -2668,6 +2668,7 @@ scalar-objs: $(SCALAR_OBJS)
 
 UNIT_TEST_PROGRAMS += t-basic
 UNIT_TEST_PROGRAMS += t-strbuf
+UNIT_TEST_PROGRAMS += t-trailer
 UNIT_TEST_PROGS = $(patsubst %,t/unit-tests/%$X,$(UNIT_TEST_PROGRAMS))
 UNIT_TEST_OBJS = $(patsubst %,t/unit-tests/%.o,$(UNIT_TEST_PROGRAMS))
 UNIT_TEST_OBJS += t/unit-tests/test-lib.o
@@ -3845,6 +3846,10 @@ t/unit-tests/t-basic$X: t/unit-tests/t-basic.o t/unit-tests/test-lib.o $(GITLIBS
 		 $(filter %.o,$^) $(filter %.a,$^) $(LIBS)
 
 t/unit-tests/t-strbuf$X: t/unit-tests/t-strbuf.o t/unit-tests/test-lib.o $(GITLIBS) GIT-LDFLAGS
+	$(QUIET_LINK)$(CC) $(ALL_CFLAGS) -o $@ $(ALL_LDFLAGS) \
+		 $(filter %.o,$^) $(filter %.a,$^) $(LIBS)
+
+t/unit-tests/t-trailer$X: t/unit-tests/t-trailer.o t/unit-tests/test-lib.o builtin/interpret-trailers.o $(GITLIBS) GIT-LDFLAGS
 	$(QUIET_LINK)$(CC) $(ALL_CFLAGS) -o $@ $(ALL_LDFLAGS) \
 		 $(filter %.o,$^) $(filter %.a,$^) $(LIBS)
 
