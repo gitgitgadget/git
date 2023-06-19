@@ -20,7 +20,7 @@ SYNOPSIS
 	     [--] [<pathspec>...]]
 'git stash' save [-p | --patch] [-S | --staged] [-k | --[no-]keep-index] [-q | --quiet]
 	     [-u | --include-untracked] [-a | --all] [<message>]
-'git stash' clear
+'git stash' clear [-f | --force]
 'git stash' create [<message>]
 'git stash' store [(-m | --message) <message>] [-q | --quiet] <commit>
 
@@ -130,7 +130,7 @@ the stash entry is applied on top of the commit that was HEAD at the
 time `git stash` was run, it restores the originally stashed state
 with no conflicts.
 
-clear::
+clear [-f|--force]::
 	Remove all the stash entries. Note that those entries will then
 	be subject to pruning, and may be impossible to recover (see
 	'Examples' below for a possible strategy).
@@ -207,6 +207,14 @@ to learn how to operate the `--patch` mode.
 +
 The `--patch` option implies `--keep-index`.  You can use
 `--no-keep-index` to override this.
+
+-f::
+--force::
+	This option is only valid for `clear` command
++
+If the Git configuration variable stash.requireForce is set
+to true, 'git stash clear' will refuse to remove all the stash 
+entries unless given -f.
 
 -S::
 --staged::

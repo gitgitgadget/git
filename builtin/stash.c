@@ -53,7 +53,7 @@
 #define BUILTIN_STASH_CREATE_USAGE \
 	N_("git stash create [<message>]")
 #define BUILTIN_STASH_CLEAR_USAGE \
-	"git stash clear"
+	"git stash clear [-f | --force]"
 
 static const char * const git_stash_usage[] = {
 	BUILTIN_STASH_LIST_USAGE,
@@ -122,6 +122,7 @@ static const char * const git_stash_save_usage[] = {
 
 static const char ref_stash[] = "refs/stash";
 static struct strbuf stash_index_path = STRBUF_INIT;
+static int clear_require_force = 0;
 
 /*
  * w_commit is set to the commit containing the working tree
@@ -246,7 +247,9 @@ static int do_clear_stash(void)
 
 static int clear_stash(int argc, const char **argv, const char *prefix)
 {
+	int force = 0;
 	struct option options[] = {
+		OPT__FORCE(&force, N_("force"), PARSE_OPT_NOCOMPLETE),
 		OPT_END()
 	};
 
@@ -257,6 +260,9 @@ static int clear_stash(int argc, const char **argv, const char *prefix)
 	if (argc)
 		return error(_("git stash clear with arguments is "
 			       "unimplemented"));
+
+	if (!force && clear_require_force)
+		return error(_("fatal: stash.requireForce set to true and -f was not given; refusing to clear stash"));
 
 	return do_clear_stash();
 }
@@ -849,6 +855,10 @@ static int git_stash_config(const char *var, const char *value, void *cb)
 	}
 	if (!strcmp(var, "stash.showincludeuntracked")) {
 		show_include_untracked = git_config_bool(var, value);
+		return 0;
+	}
+	if (!strcmp(var, "stash.requireforce")) {
+		clear_require_force = git_config_bool(var, value);
 		return 0;
 	}
 	return git_diff_basic_config(var, value, cb);
