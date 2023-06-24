@@ -2732,6 +2732,7 @@ proc makewindow {} {
     bind $ctext <Button-1> {focus %W}
     bind $ctext <<Selection>> rehighlight_search_results
     bind . <$M1B-t> {resethead [selected_line_id]}
+    bind . <$M1B-o> {checkout [selected_line_heads] [selected_line_id]}
     for {set i 1} {$i < 10} {incr i} {
         bind . <$M1B-Key-$i> [list go_to_parent $i]
     }
@@ -2773,7 +2774,7 @@ proc makewindow {} {
 
     set headctxmenu .headctxmenu
     makemenu $headctxmenu {
-        {mc "Check out this branch" command cobranch}
+        {mc "Check out this branch" command {checkout [list $headmenuhead] $headmenuid}}
         {mc "Rename this branch" command mvbranch}
         {mc "Remove this branch" command rmbranch}
         {mc "Copy branch name" command {clipboard clear; clipboard append $headmenuhead}}
@@ -3224,6 +3225,7 @@ proc keys {} {
 [mc "<%s-minus>	Decrease font size" $M1T]
 [mc "<F5>		Update"]
 [mc "<%s-T>		Reset current branch to selected commit" $M1T]
+[mc "<%s-O>		Check out selected commit" $M1T]
 " \
             -justify left -bg $bgcolor -border 2 -relief groove
     pack $w.m -side top -fill both -padx 2 -pady 2
@@ -10019,25 +10021,60 @@ proc headmenu {x y id head} {
     tk_popup $headctxmenu $x $y
 }
 
-proc cobranch {} {
-    global headmenuid headmenuhead headids
+proc checkout {heads_on_commit id_to_checkout} {
+    global headids mainhead
     global showlocalchanges
 
     # check the tree is clean first??
-    set newhead $headmenuhead
+
+    # Filter out remote branches if local branch is also present
+    foreach remote_ix [lsearch -all $heads_on_commit "remotes/*"] {
+        set remote_head [lindex $heads_on_commit $remote_ix]
+        set local_head [string range $remote_head [expr [string last / $remote_head] + 1] end]
+        if {$local_head in $heads_on_commit} {
+            set heads_on_commit [lreplace $heads_on_commit $remote_ix $remote_ix]
+        }
+    }
+
+    if {[llength $heads_on_commit] == 1 && [lindex $heads_on_commit 0] eq $mainhead} {
+        # Only the currently active branch
+        return
+    }
+
+    # Filter out mainhead
+    set mainhead_ix [lsearch $heads_on_commit $mainhead]
+    if {$mainhead_ix != -1} {
+        set heads_on_commit [lreplace $heads_on_commit $mainhead_ix $mainhead_ix]
+    }
+    set nr_heads_on_commit [llength $heads_on_commit]
+
+    # The number of heads on the commit determines how to select what to checkout
+    if {$nr_heads_on_commit == 0} {
+        set head_to_checkout ""
+        set ref_to_checkout $id_to_checkout
+    } elseif {$nr_heads_on_commit == 1} {
+        set head_to_checkout [lindex $heads_on_commit 0]
+        set ref_to_checkout $head_to_checkout
+    } else {
+        # Branch selection dialog
+        set head_to_checkout [list_selection_dialog "Checkout branch" "Which branch to check out?" $heads_on_commit]
+        set ref_to_checkout $head_to_checkout
+        if {$head_to_checkout eq ""} return
+    }
+
+    # Handle remote branches
     set command [list | git checkout]
-    if {[string match "remotes/*" $newhead]} {
-        set remote $newhead
-        set newhead [string range $newhead [expr [string last / $newhead] + 1] end]
-        # The following check is redundant - the menu option should
-        # be disabled to begin with...
-        if {[info exists headids($newhead)]} {
-            error_popup [mc "A local branch named %s exists already" $newhead]
+    if {[string match "remotes/*" $head_to_checkout]} {
+        set remote $head_to_checkout
+        set head_to_checkout [string range $head_to_checkout [expr [string last / $head_to_checkout] + 1] end]
+        set ref_to_checkout $head_to_checkout
+        if {[info exists headids($head_to_checkout)]} {
+            error_popup [mc "A local branch named %s exists already" $head_to_checkout]
             return
         }
-        lappend command -b $newhead --track $remote
+        lappend command -b $head_to_checkout --track $remote
     } else {
-        lappend command $newhead
+        lappend command $ref_to_checkout
     }
     lappend command 2>@1
     nowbusy checkout [mc "Checking out"]
@@ -10052,11 +10089,11 @@ proc cobranch {} {
             dodiffindex
         }
     } else {
-        filerun $fd [list readcheckoutstat $fd $newhead $headmenuid]
+        filerun $fd [list readcheckoutstat $fd $head_to_checkout $ref_to_checkout $id_to_checkout]
     }
 }
 
-proc readcheckoutstat {fd newhead newheadid} {
+proc readcheckoutstat {fd head_to_checkout ref_to_checkout id_to_checkout} {
     global mainhead mainheadid headids idheads showlocalchanges progresscoords
     global viewmainheadid curview
 
@@ -10074,18 +10111,19 @@ proc readcheckoutstat {fd newhead newheadid} {
         error_popup $err
         return
     }
-    set oldmainid $mainheadid
-    if {! [info exists headids($newhead)]} {
-        set headids($newhead) $newheadid
-        lappend idheads($newheadid) $newhead
-        addedhead $newheadid $newhead
+    set old_main_id $mainheadid
+
+    if {$head_to_checkout ne "" && ! [info exists headids($head_to_checkout)]} {
+        set headids($head_to_checkout) $id_to_checkout
+        lappend idheads($id_to_checkout) $head_to_checkout
+        addedhead $id_to_checkout $head_to_checkout
     }
-    set mainhead $newhead
-    set mainheadid $newheadid
-    set viewmainheadid($curview) $newheadid
-    redrawtags $oldmainid
-    redrawtags $newheadid
-    selbyid $newheadid
+    set mainhead $ref_to_checkout
+    set mainheadid $id_to_checkout
+    set viewmainheadid($curview) $id_to_checkout
+    redrawtags $old_main_id
+    redrawtags $id_to_checkout
+    selbyid $id_to_checkout
     if {$showlocalchanges} {
         dodiffindex
     }
