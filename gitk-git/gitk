@@ -9938,27 +9938,40 @@ proc resethead {reset_target_id} {
     ttk_toplevel $w
     make_transient $w .
     wm title $w [mc "Confirm reset"]
+
     ${NS}::label $w.m -text \
         [mc "Reset branch %s to %s?" $mainhead [commit_name $reset_target_id 1]]
     pack $w.m -side top -fill x -padx 20 -pady 20
     ${NS}::labelframe $w.f -text [mc "Reset type:"]
+
     set resettype mixed
+
     ${NS}::radiobutton $w.f.soft -value soft -variable resettype \
         -text [mc "Soft: Leave working tree and index untouched"]
+    bind $w.f.soft <Key-Up> "set resettype hard"
+    bind $w.f.soft <Key-Down> "set resettype mixed"
     grid $w.f.soft -sticky w
+
     ${NS}::radiobutton $w.f.mixed -value mixed -variable resettype \
         -text [mc "Mixed: Leave working tree untouched, reset index"]
+    bind $w.f.mixed <Key-Up> "set resettype soft"
+    bind $w.f.mixed <Key-Down> "set resettype hard"
     grid $w.f.mixed -sticky w
+
     ${NS}::radiobutton $w.f.hard -value hard -variable resettype \
         -text [mc "Hard: Reset working tree and index\n(discard ALL local changes)"]
+    bind $w.f.hard <Key-Up> "set resettype mixed"
+    bind $w.f.hard <Key-Down> "set resettype soft"
     grid $w.f.hard -sticky w
     pack $w.f -side top -fill x -padx 4
+
     ${NS}::button $w.ok -text [mc OK] -command "set confirm_ok 1; destroy $w"
+    bind $w <Key-Return> "set confirm_ok 1; destroy $w"
     pack $w.ok -side left -fill x -padx 20 -pady 20
     ${NS}::button $w.cancel -text [mc Cancel] -command "destroy $w"
     bind $w <Key-Escape> [list destroy $w]
     pack $w.cancel -side right -fill x -padx 20 -pady 20
-    bind $w <Visibility> "grab $w; focus $w"
+    bind $w <Visibility> "grab $w; focus $w.f.mixed"
     tkwait window $w
     if {!$confirm_ok} return
     if {[catch {set fd [open \
