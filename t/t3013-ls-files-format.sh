@@ -143,4 +143,20 @@ test_expect_success 'git ls-files --format with --debug' '
 	test_cmp expect actual
 '
 
+test_expect_success 'git ls-files --format with skipworktree' '
+	test_when_finished "git sparse-checkout disable" &&
+	mkdir dir1 dir2 &&
+	echo "file1" >dir1/file1.txt &&
+	echo "file2" >dir2/file2.txt &&
+	git add dir1 dir2 &&
+	git commit -m skipworktree &&
+	git sparse-checkout set dir1 &&
+	git ls-files --format="%(skipworktree) %(path)" "dir*" >actual &&
+	cat >expect <<-\EOF &&
+	 dir1/file1.txt
+	1 dir2/file2.txt
+	EOF
+	test_cmp expect actual
+'
+
 test_done

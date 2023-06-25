@@ -314,6 +314,9 @@ static size_t expand_show_index(struct strbuf *sb, const char *start,
 			      data->pathname));
 	else if (skip_prefix(start, "(path)", &p))
 		write_name_to_buf(sb, data->pathname);
+	else if (skip_prefix(start, "(skipworktree)", &p))
+		strbuf_addstr(sb, ce_skip_worktree(data->ce) ?
+			      "1" : "");
 	else
 		die(_("bad ls-files format: %%%.*s"), (int)len, start);
 

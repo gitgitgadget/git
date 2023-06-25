@@ -289,6 +289,10 @@ eolattr::
 	that applies to the path.
 path::
 	The pathname of the file which is recorded in the index.
+skipworktree::
+	Whether the file in the index has the SKIP_WORKTREE bit set.
+	See link:technical/sparse-checkout.txt[sparse-checkout]
+	for more information.
 
 EXCLUDE PATTERNS
 ----------------

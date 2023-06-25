@@ -1,3 +1,6 @@
+Sparse Checkout Design Notes
+============================
+
 Table of contents:
 
   * Terminology
@@ -14,7 +17,8 @@ Table of contents:
   * Reference Emails
 
 
-=== Terminology ===
+Terminology
+-----------
 
 cone mode: one of two modes for specifying the desired subset of files
 	in a sparse-checkout.  In cone-mode, the user specifies
@@ -92,7 +96,8 @@ vivifying: When a command restores a tracked file to the working tree (and
 	file), this is referred to as "vivifying" the file.
 
 
-=== Purpose of sparse-checkouts ===
+Purpose of sparse-checkouts
+---------------------------
 
 sparse-checkouts exist to allow users to work with a subset of their
 files.
@@ -255,7 +260,8 @@ will perceive the checkout as dense, and commands should thus behave as if
 all files are present.
 
 
-=== Usecases of primary concern ===
+Usecases of primary concern
+---------------------------
 
 Most of the rest of this document will focus on Behavior A and Behavior
 B.  Some notes about the other two cases and why we are not focusing on
@@ -300,7 +306,8 @@ Behavior C do not assume they are part of the Behavior B camp and propose
 patches that break things for the real Behavior B folks.
 
 
-=== Oversimplified mental models ===
+Oversimplified mental models
+----------------------------
 
 An oversimplification of the differences in the above behaviors is:
 
@@ -313,7 +320,8 @@ An oversimplification of the differences in the above behaviors is:
 	      they can later lazily be populated instead.
 
 
-=== Desired behavior ===
+Desired behavior
+----------------
 
 As noted previously, despite the simple idea of just working with a subset
 of files, there are a range of different behavioral changes that need to be
@@ -544,7 +552,8 @@ understanding these differences can be beneficial.
   * gitk?
 
 
-=== Behavior classes ===
+Behavior classes
+----------------
 
 From the above there are a few classes of behavior:
 
@@ -611,7 +620,8 @@ From the above there are a few classes of behavior:
     specification.
 
 
-=== Subcommand-dependent defaults ===
+Subcommand-dependent defaults
+-----------------------------
 
 Note that we have different defaults depending on the command for the
 desired behavior :
@@ -751,7 +761,8 @@ desired behavior :
     implemented.
 
 
-=== Sparse specification vs. sparsity patterns ===
+Sparse specification vs. sparsity patterns
+------------------------------------------
 
 In a well-behaved situation, the sparse specification is given directly
 by the $GIT_DIR/info/sparse-checkout file.  However, it can transiently
@@ -823,7 +834,8 @@ under behavior B index operations are lumped with history and tend to
 operate full-tree.
 
 
-=== Implementation Questions ===
+Implementation Questions
+------------------------
 
   * Do the options --scope={sparse,all} sound good to others?  Are there better
     options?
@@ -894,7 +906,8 @@ operate full-tree.
     is seamless for them.
 
 
-=== Implementation Goals/Plans ===
+Implementation Goals/Plans
+--------------------------
 
  * Get buy-in on this document in general.
 
@@ -922,15 +935,16 @@ operate full-tree.
      commands.  IMPORTANT: make sure diff machinery changes don't mess with
      format-patch, fast-export, etc.
 
-=== Known bugs ===
+Known bugs
+----------
 
 This list used to be a lot longer (see e.g. [1,2,3,4,5,6,7,8,9]), but we've
 been working on it.
 
-0. Behavior A is not well supported in Git.  (Behavior B didn't used to
-   be either, but was the easier of the two to implement.)
+. Behavior A is not well supported in Git.  (Behavior B didn't used to
+be either, but was the easier of the two to implement.)
 
-1. am and apply:
+. am and apply:
 
    apply, without `--index` or `--cached`, relies on files being present
    in the working copy, and also writes to them unconditionally.  As
@@ -950,7 +964,7 @@ been working on it.
    files and then complain that those vivified files would be
    overwritten by merge.
 
-2. reset --hard:
+. reset --hard:
 
    reset --hard provides confusing error message (works correctly, but
    misleads the user into believing it didn't):
@@ -973,13 +987,13 @@ been working on it.
     `git reset --hard` DID remove addme from the index and the working tree, contrary
     to the error message, but in line with how reset --hard should behave.
 
-3. read-tree
+. read-tree
 
    `read-tree` doesn't apply the 'SKIP_WORKTREE' bit to *any* of the
    entries it reads into the index, resulting in all your files suddenly
    appearing to be "deleted".
 
-4. Checkout, restore:
+. Checkout, restore:
 
    These command do not handle path & revision arguments appropriately:
 
@@ -1032,7 +1046,7 @@ been working on it.
     S tracked
     H tracked-but-maybe-skipped
 
-5. checkout and restore --staged, continued:
+. checkout and restore --staged, continued:
 
    These commands do not correctly scope operations to the sparse
    specification, and make it worse by not setting important SKIP_WORKTREE
@@ -1048,11 +1062,12 @@ been working on it.
    the sparse specification, but then it will be important to set the
    SKIP_WORKTREE bits appropriately.
 
-6. Performance issues; see:
+. Performance issues; see:
     https://lore.kernel.org/git/CABPp-BEkJQoKZsQGCYioyga_uoDQ6iBeW+FKr8JhyuuTMK1RDw@mail.gmail.com/
 
 
-=== Reference Emails ===
+Reference Emails
+----------------
 
 Emails that detail various bugs we've had in sparse-checkout:
 
