@@ -2731,6 +2731,7 @@ proc makewindow {} {
     bind $ctext $ctxbut {pop_diff_menu %W %X %Y %x %y}
     bind $ctext <Button-1> {focus %W}
     bind $ctext <<Selection>> rehighlight_search_results
+    bind . <$M1B-p> {cherrypick [selected_line_id]}
     bind . <$M1B-t> {resethead [selected_line_id]}
     bind . <$M1B-o> {checkout [selected_line_heads] [selected_line_id]}
     bind . <$M1B-m> {rmbranch [selected_line_heads] [selected_line_id] 1}
@@ -2751,7 +2752,7 @@ proc makewindow {} {
         {mc "Copy commit reference" command copyreference}
         {mc "Write commit to file" command writecommit}
         {mc "Create new branch" command mkbranch}
-        {mc "Cherry-pick this commit" command cherrypick}
+        {mc "Cherry-pick this commit" command {cherrypick $rowmenuid}}
         {mc "Reset current branch to here" command {resethead $rowmenuid}}
         {mc "Mark this commit" command markhere}
         {mc "Return to mark" command gotomark}
@@ -3226,6 +3227,7 @@ proc keys {} {
 [mc "<%s-minus>	Decrease font size" $M1T]
 [mc "<F5>		Update"]
 [mc "<%s-T>		Reset current branch to selected commit" $M1T]
+[mc "<%s-P>		Cherry-pick selected commit to current branch" $M1T]
 [mc "<%s-O>		Check out selected commit" $M1T]
 [mc "<%s-M>		Remove selected branch" $M1T]
 " \
@@ -9797,24 +9799,24 @@ proc exec_citool {tool_args {baseid {}}} {
     array set env $save_env
 }
 
-proc cherrypick {} {
-    global rowmenuid curview
+proc cherrypick {id} {
+    global curview headids
     global mainhead mainheadid
     global gitdir
 
     set oldhead [exec git rev-parse HEAD]
-    set dheads [descheads $rowmenuid]
+    set dheads [descheads $id]
     if {$dheads ne {} && [lsearch -exact $dheads $oldhead] >= 0} {
         set ok [confirm_popup [mc "Commit %s is already\
                 included in branch %s -- really re-apply it?" \
-                                   [string range $rowmenuid 0 7] $mainhead]]
+                                   [string range $id 0 7] $mainhead]]
         if {!$ok} return
     }
     nowbusy cherrypick [mc "Cherry-picking"]
     update
     # Unfortunately git-cherry-pick writes stuff to stderr even when
     # no error occurs, and exec takes that as an indication of error...
-    if {[catch {exec sh -c "git cherry-pick -r $rowmenuid 2>&1"} err]} {
+    if {[catch {exec sh -c "git cherry-pick -r $id 2>&1"} err]} {
         notbusy cherrypick
         if {[regexp -line \
                  {Entry '(.*)' (would be overwritten by merge|not uptodate)} \
@@ -9830,7 +9832,7 @@ proc cherrypick {} {
                         resolve it?"]]} {
                 # Force citool to read MERGE_MSG
                 file delete [file join $gitdir "GITGUI_MSG"]
-                exec_citool {} $rowmenuid
+                exec_citool {} $id
             }
         } else {
             error_popup $err
