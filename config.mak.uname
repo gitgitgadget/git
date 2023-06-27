@@ -625,22 +625,22 @@ ifeq ($(uname_S),NONSTOP_KERNEL)
 endif
 
 ifeq ($(uname_S),OS/390)
-  PERL_PATH = perl
-  PERL_PATH_FOR_SCRIPTS = /bin/env perl
-  SHELL_PATH = bash
-  SHELL_PATH_FOR_SCRIPTS = /bin/env bash
-  PYTHON_PATH = python
-  NO_SYS_POLL_H = YesPlease
-  NO_STRCASESTR = YesPlease
-  NO_REGEX = YesPlease
-  NO_MMAP = YesPlease
-  NO_NSEC = YesPlease
-  NO_STRLCPY = YesPlease
-  NO_MKDTEMP = YesPlease
-  NO_MEMMEM = YesPlease
-  NO_GECOS_IN_PWENT = YesPlease
-  HAVE_STRINGS_H = YesPlease
-  NEEDS_MODE_TRANSLATION = YesPlease
+	PERL_PATH = perl
+	PERL_PATH_FOR_SCRIPTS = /bin/env perl
+	SHELL_PATH = bash
+	SHELL_PATH_FOR_SCRIPTS = /bin/env bash
+	PYTHON_PATH = python
+	NO_SYS_POLL_H = YesPlease
+	NO_STRCASESTR = YesPlease
+	NO_REGEX = YesPlease
+	NO_MMAP = YesPlease
+	NO_NSEC = YesPlease
+	NO_STRLCPY = YesPlease
+	NO_MKDTEMP = YesPlease
+	NO_MEMMEM = YesPlease
+	NO_GECOS_IN_PWENT = YesPlease
+	HAVE_STRINGS_H = YesPlease
+	NEEDS_MODE_TRANSLATION = YesPlease
 endif
 
 ifeq ($(uname_S),MINGW)
