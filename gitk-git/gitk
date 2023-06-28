@@ -2733,6 +2733,7 @@ proc makewindow {} {
     bind $ctext <<Selection>> rehighlight_search_results
     bind . <$M1B-t> {resethead [selected_line_id]}
     bind . <$M1B-o> {checkout [selected_line_heads] [selected_line_id]}
+    bind . <$M1B-m> {rmbranch [selected_line_heads] [selected_line_id] 1}
     for {set i 1} {$i < 10} {incr i} {
         bind . <$M1B-Key-$i> [list go_to_parent $i]
     }
@@ -2776,7 +2777,7 @@ proc makewindow {} {
     makemenu $headctxmenu {
         {mc "Check out this branch" command {checkout [list $headmenuhead] $headmenuid}}
         {mc "Rename this branch" command mvbranch}
-        {mc "Remove this branch" command rmbranch}
+        {mc "Remove this branch" command {rmbranch [list $headmenuhead] $headmenuid 0}}
         {mc "Copy branch name" command {clipboard clear; clipboard append $headmenuhead}}
     }
     $headctxmenu configure -tearoff 0
@@ -3226,6 +3227,7 @@ proc keys {} {
 [mc "<F5>		Update"]
 [mc "<%s-T>		Reset current branch to selected commit" $M1T]
 [mc "<%s-O>		Check out selected commit" $M1T]
+[mc "<%s-M>		Remove selected branch" $M1T]
 " \
             -justify left -bg $bgcolor -border 2 -relief groove
     pack $w.m -side top -fill both -padx 2 -pady 2
@@ -10129,32 +10131,70 @@ proc readcheckoutstat {fd head_to_checkout ref_to_checkout id_to_checkout} {
     }
 }
 
-proc rmbranch {} {
-    global headmenuid headmenuhead mainhead
+proc rmbranch {heads_on_commit id shouldComfirm} {
+    global mainhead
     global idheads
 
-    set head $headmenuhead
-    set id $headmenuid
-    # this check shouldn't be needed any more...
-    if {$head eq $mainhead} {
+    if {[llength $heads_on_commit] == 0} {
+        error_popup [mc "Cannot delete a detached head"]
+        return
+    }
+
+    if {[llength $heads_on_commit] == 1 && [lindex $heads_on_commit 0] eq $mainhead} {
         error_popup [mc "Cannot delete the currently checked-out branch"]
         return
     }
-    set dheads [descheads $id]
-    if {[llength $dheads] == 1 && $idheads($dheads) eq $head} {
-        # the stuff on this branch isn't on any other branch
-        if {![confirm_popup [mc "The commits on branch %s aren't on any other\
-                        branch.\nReally delete branch %s?" $head $head]]} return
+
+    # Filter out mainhead
+    set mainhead_ix [lsearch $heads_on_commit $mainhead]
+    if {$mainhead_ix != -1} {
+        set heads_on_commit [lreplace $heads_on_commit $mainhead_ix $mainhead_ix]
     }
+
+    # Filter out remote branches
+    foreach head_ix [lsearch -all $heads_on_commit "remotes/*"] {
+        set heads_on_commit [lreplace $heads_on_commit $head_ix $head_ix]
+    }
+
+    if {[llength $heads_on_commit] == 0} {
+        # Probably only current branch and its remote branch on commit
+        error_popup [mc "Cannot delete branch"]
+        return
+    }
+
+    set nr_heads_on_commit [llength $heads_on_commit]
+    set first_head [lindex $heads_on_commit 0]
+
+    if {$nr_heads_on_commit == 1} {
+        # Only a single head, simple comfirm dialogs
+
+        set head_to_remove $first_head
+        set dheads [descheads $id]
+
+        if {[llength $dheads] == 1 && $idheads($dheads) eq $head_to_remove} {
+            # the stuff on this branch isn't on any other branch
+            if {![confirm_popup [mc "The commits on branch %s aren't on any other\
+                            branch.\nReally delete branch %s?" $head_to_remove $head_to_remove]]} return
+        } elseif {$shouldComfirm} {
+            if {![confirm_popup [mc "Really delete branch %s?" $head_to_remove]]} return
+        }
+    } else {
+        # Branch selection dialog
+        set head_to_remove [list_selection_dialog "Delete branch" "Which branch to delete?" $heads_on_commit]
+        if {$head_to_remove eq ""} return
+    }
+
+    # Perform the command
+
     nowbusy rmbranch
     update
-    if {[catch {exec git branch -D $head} err]} {
+    if {[catch {exec git branch -D $head_to_remove} err]} {
         notbusy rmbranch
         error_popup $err
         return
     }
-    removehead $id $head
-    removedhead $id $head
+    removehead $id $head_to_remove
+    removedhead $id $head_to_remove
     redrawtags $id
     notbusy rmbranch
     dispneartags 0
