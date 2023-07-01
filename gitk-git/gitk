@@ -10025,10 +10025,6 @@ proc headmenu {x y id head} {
     set headmenuhead $head
     array set state {0 normal 1 normal 2 normal}
     if {[string match "remotes/*" $head]} {
-        set localhead [string range $head [expr [string last / $head] + 1] end]
-        if {[info exists headids($localhead)]} {
-            set state(0) disabled
-        }
         array set state {1 disabled 2 disabled}
     }
     if {$head eq $mainhead} {
@@ -10081,17 +10077,28 @@ proc checkout {heads_on_commit id_to_checkout} {
         if {$head_to_checkout eq ""} return
     }
 
-    # Handle remote branches
     set command [list | git checkout]
     if {[string match "remotes/*" $head_to_checkout]} {
-        set remote $head_to_checkout
+        # Handle remote branches
+        set remote_head $head_to_checkout
         set head_to_checkout [string range $head_to_checkout [expr [string last / $head_to_checkout] + 1] end]
-        set ref_to_checkout $head_to_checkout
         if {[info exists headids($head_to_checkout)]} {
-            error_popup [mc "A local branch named %s exists already" $head_to_checkout]
-            return
+            # The local branch exists
+            set id_to_checkout $headids($remote_head)
+            if {$headids($head_to_checkout) eq $id_to_checkout} {
+                # Remote and local are at the same commit
+                set ref_to_checkout $head_to_checkout
+            } else {
+                # Check out the detached head of the remote branch
+                set head_to_checkout ""
+                set ref_to_checkout $id_to_checkout
+            }
+            lappend command $ref_to_checkout
+        } else {
+            # Create local branch and checkout
+            set ref_to_checkout $head_to_checkout
+            lappend command -b $ref_to_checkout --track $remote_head
         }
-        lappend command -b $head_to_checkout --track $remote
     } else {
         lappend command $ref_to_checkout
     }
