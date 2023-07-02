@@ -2734,6 +2734,7 @@ proc makewindow {} {
     bind . <$M1B-p> {cherrypick [selected_line_id]}
     bind . <$M1B-t> {resethead [selected_line_id]}
     bind . <$M1B-o> {checkout [selected_line_heads] [selected_line_id]}
+    bind . <$M1B-b> {mkbranch [selected_line_id]}
     bind . <$M1B-m> {rmbranch [selected_line_heads] [selected_line_id] 1}
     for {set i 1} {$i < 10} {incr i} {
         bind . <$M1B-Key-$i> [list go_to_parent $i]
@@ -2751,7 +2752,7 @@ proc makewindow {} {
         {mc "Create tag" command mktag}
         {mc "Copy commit reference" command copyreference}
         {mc "Write commit to file" command writecommit}
-        {mc "Create new branch" command mkbranch}
+        {mc "Create new branch" command {mkbranch $rowmenuid}}
         {mc "Cherry-pick this commit" command {cherrypick $rowmenuid}}
         {mc "Reset current branch to here" command {resethead $rowmenuid}}
         {mc "Mark this commit" command markhere}
@@ -3229,6 +3230,7 @@ proc keys {} {
 [mc "<%s-T>		Reset current branch to selected commit" $M1T]
 [mc "<%s-P>		Cherry-pick selected commit to current branch" $M1T]
 [mc "<%s-O>		Check out selected commit" $M1T]
+[mc "<%s-B>		Create branch on selected commit" $M1T]
 [mc "<%s-M>		Remove selected branch" $M1T]
 " \
             -justify left -bg $bgcolor -border 2 -relief groove
@@ -9621,13 +9623,13 @@ proc wrcomcan {} {
     unset wrcomtop
 }
 
-proc mkbranch {} {
-    global NS rowmenuid
+proc mkbranch {id} {
+    global NS
 
     set top .branchdialog
 
     set val(name) ""
-    set val(id) $rowmenuid
+    set val(id) $id
     set val(command) [list mkbrgo $top]
 
     set ui(title) [mc "Create branch"]
