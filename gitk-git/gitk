@@ -1954,6 +1954,47 @@ proc make_transient {window origin} {
     }
 }
 
+# Opens a dialog with a list which lets the user selection one of the string
+# in $items. Returns "" if user cancels.
+proc list_selection_dialog {title label items} {
+    global confirm_ok sel_ix NS
+
+    set confirm_ok 0
+    set nr_items [llength $items]
+
+    set w ".selectitem"
+    ttk_toplevel $w
+    make_transient $w .
+    wm title $w [mc $title]
+    ${NS}::label $w.m -text [mc $label]
+    pack $w.m -side top -fill x -padx 20 -pady 20
+    ${NS}::frame $w.f
+
+    set sel_ix 0
+    for {set i 0} {$i < $nr_items} {incr i} {
+        ${NS}::radiobutton $w.f.id_$i -value $i -variable sel_ix \
+            -text [lindex $items $i]
+        bind $w.f.id_$i <Key-Up> "set sel_ix [expr ($i - 1) % $nr_items]"
+        bind $w.f.id_$i <Key-Down> "set sel_ix [expr ($i + 1) % $nr_items]"
+        grid $w.f.id_$i -sticky w -padx 20
+    }
+
+    pack $w.f -side top -fill x -padx 4
+    ${NS}::button $w.ok -text [mc OK] -command "set confirm_ok 1; destroy $w"
+    bind $w <Key-Return> "set confirm_ok 1; destroy $w"
+    pack $w.ok -side left -fill x -padx 20 -pady 20
+    ${NS}::button $w.cancel -text [mc Cancel] -command "destroy $w"
+    bind $w <Key-Escape> [list destroy $w]
+    pack $w.cancel -side right -fill x -padx 20 -pady 20
+    bind $w <Visibility> "grab $w; focus $w.f.id_$sel_ix"
+
+    tkwait window $w
+
+    if {!$confirm_ok} return ""
+
+    return [lindex $items $sel_ix]
+}
+
 proc show_error {w top msg} {
     global NS
     if {![info exists NS]} {set NS ""}
