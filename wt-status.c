@@ -33,7 +33,7 @@
 #define UF_DELAY_WARNING_IN_MS (2 * 1000)
 
 static const char cut_line[] =
-"------------------------ >8 ------------------------\n";
+"------------------------ >8 ------------------------";
 
 static char default_wt_status_colors[][COLOR_MAXLEN] = {
 	GIT_COLOR_NORMAL, /* WT_STATUS_HEADER */
@@ -1099,7 +1099,7 @@ void wt_status_append_cut_line(struct strbuf *buf)
 {
 	const char *explanation = _("Do not modify or remove the line above.\nEverything below it will be ignored.");
 
-	strbuf_commented_addf(buf, "%s", cut_line);
+	strbuf_commented_addf(buf, "%s\n", cut_line);
 	strbuf_add_commented_lines(buf, explanation, strlen(explanation));
 }
 
