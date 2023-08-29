@@ -242,6 +242,15 @@ static int read_mbox(const char *path, struct string_list *list)
 
 	while (next_line(&s)) {
 		if (s.state == MBOX_BEFORE_HEADER) {
+			if (starts_with(s.line, "diff --git ")) {
+				/* This is a patch without commit message */
+				util = xcalloc(1, sizeof(*util));
+				oidcpy(&util->oid, null_oid());
+				util->matching = -1;
+				author = subject = "(none)";
+				goto process_diff;
+			}
+
 parse_from_delimiter:
 			if (!skip_prefix(s.line, "From ", &p))
 				continue;
@@ -258,6 +267,7 @@ parse_from_delimiter:
 			continue;
 		}
 
+process_diff:
 		if (starts_with(s.line, "diff --git ")) {
 			struct patch patch = { 0 };
 			struct strbuf root = STRBUF_INIT;
