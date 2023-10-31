@@ -1893,8 +1893,14 @@ static void update_squash_message_for_fixup(struct strbuf *msg)
 	size_t orig_msg_len;
 	int i = 1;
 
-	strbuf_addf(&buf1, "# %s\n", _(first_commit_msg_str));
-	strbuf_addf(&buf2, "# %s\n", _(skip_first_commit_msg_str));
+	strbuf_commented_addf(&buf1,
+			      comment_line_char,
+			      "%s\n",
+			      _(first_commit_msg_str));
+	strbuf_commented_addf(&buf2,
+			      comment_line_char,
+			      "%s\n",
+			      _(skip_first_commit_msg_str));
 	s = start = orig_msg = strbuf_detach(msg, &orig_msg_len);
 	while (s) {
 		const char *next;
@@ -2269,8 +2275,10 @@ static int do_pick_commit(struct repository *r,
 		next = parent;
 		next_label = msg.parent_label;
 		if (opts->commit_use_reference) {
-			strbuf_addstr(&msgbuf,
-				"# *** SAY WHY WE ARE REVERTING ON THE TITLE LINE ***");
+			strbuf_commented_addf(&msgbuf,
+					      comment_line_char,
+					      "%s",
+					      "*** SAY WHY WE ARE REVERTING ON THE TITLE LINE ***");
 		} else if (skip_prefix(msg.subject, "Revert \"", &orig_subject) &&
 			   /*
 			    * We don't touch pre-existing repeated reverts, because
@@ -6082,7 +6090,8 @@ static int add_decorations_to_list(const struct commit *commit,
 		/* If the branch is checked out, then leave a comment instead. */
 		if ((path = branch_checked_out(decoration->name))) {
 			item->command = TODO_COMMENT;
-			strbuf_commented_addf(ctx->buf, comment_line_char,
+			strbuf_commented_addf(ctx->buf,
+					      comment_line_char,
 					      "Ref %s checked out at '%s'\n",
 					      decoration->name, path);
 		} else {
