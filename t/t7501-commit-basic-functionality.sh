@@ -541,6 +541,75 @@ test_expect_success 'signoff not confused by ---' '
 	test_cmp expected actual
 '
 
+test_expect_success 'signoff default mode adds when not last in trailers' '
+	cat >message <<-EOF &&
+		subject
+
+		body
+
+		Signed-off-by: $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL>
+		Signed-off-by: A. U. <author@example.com>
+	EOF
+	cat >expected <<-EOF &&
+		subject
+
+		body
+
+		Signed-off-by: $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL>
+		Signed-off-by: A. U. <author@example.com>
+		Signed-off-by: $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL>
+	EOF
+	git commit --allow-empty --signoff -F message &&
+	git log -1 --pretty=format:%B >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'signoff no-dedup mode adds when not last in trailers' '
+	cat >message <<-EOF &&
+		subject
+
+		body
+
+		Signed-off-by: $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL>
+		Signed-off-by: A. U. <author@example.com>
+	EOF
+	cat >expected <<-EOF &&
+		subject
+
+		body
+
+		Signed-off-by: $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL>
+		Signed-off-by: A. U. <author@example.com>
+		Signed-off-by: $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL>
+	EOF
+	git commit --allow-empty --signoff=no-dedup -F message &&
+	git log -1 --pretty=format:%B >actual &&
+	test_cmp expected actual
+'
+
+
+test_expect_success 'signoff dedup mode does not duplicate when not last in trailers' '
+	cat >message <<-EOF &&
+		subject
+
+		body
+
+		Signed-off-by: $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL>
+		Signed-off-by: A. U. <author@example.com>
+	EOF
+	cat >expected <<-EOF &&
+		subject
+
+		body
+
+		Signed-off-by: $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL>
+		Signed-off-by: A. U. <author@example.com>
+	EOF
+	git commit --allow-empty --signoff=dedup -F message &&
+	git log -1 --pretty=format:%B >actual &&
+	test_cmp expected actual
+'
+
 test_expect_success 'multiple -m' '
 
 	>negative &&

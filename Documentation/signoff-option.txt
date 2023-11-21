@@ -1,7 +1,7 @@
 ifdef::git-commit[]
--s::
+-s[<mode>]::
 endif::git-commit[]
---signoff::
+--signoff[=<mode>]::
 --no-signoff::
 	Add a `Signed-off-by` trailer by the committer at the end of the commit
 	log message.  The meaning of a signoff depends on the project
@@ -16,3 +16,13 @@ endif::git-commit[]
 +
 The --no-signoff option can be used to countermand an earlier --signoff
 option on the command line.
++
+The mode parameter is optional (defaults to no-dedup), and is used to specify
+if it should deduplicate the `Signed-off-by` trailer or not when trying to
+add it to the trailers.
++
+The possible options are:
++
+	- 'no-dedup' - Will add the trailer unless it's already the last line.
+	- 'dedup' - Will not add the trailer if it's already anywhere in the
+	  trailers.

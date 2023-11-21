@@ -48,7 +48,7 @@
 #include "pretty.h"
 
 static const char * const builtin_commit_usage[] = {
-	N_("git commit [-a | --interactive | --patch] [-s] [-v] [-u<mode>] [--amend]\n"
+	N_("git commit [-a | --interactive | --patch] [-s[<mode>]] [-v] [-u<mode>] [--amend]\n"
 	   "           [--dry-run] [(-c | -C | --squash) <commit> | --fixup [(amend|reword):]<commit>)]\n"
 	   "           [-F <file> | -m <msg>] [--reset-author] [--allow-empty]\n"
 	   "           [--allow-empty-message] [--no-verify] [-e] [--author=<author>]\n"
@@ -124,13 +124,13 @@ static const char *author_message, *author_message_buffer;
 static char *edit_message, *use_message;
 static char *fixup_message, *fixup_commit, *squash_message;
 static const char *fixup_prefix;
-static int all, also, interactive, patch_interactive, only, amend, signoff;
+static int all, also, interactive, patch_interactive, only, amend;
 static int edit_flag = -1; /* unspecified */
 static int quiet, verbose, no_verify, allow_empty, dry_run, renew_authorship;
 static int config_commit_verbose = -1; /* unspecified */
 static int no_post_rewrite, allow_empty_message, pathspec_file_nul;
 static char *untracked_files_arg, *force_date, *ignore_submodule_arg, *ignored_arg;
-static char *sign_commit, *pathspec_from_file;
+static char *sign_commit, *pathspec_from_file, *signoff_arg;
 static struct strvec trailer_args = STRVEC_INIT;
 
 /*
@@ -899,8 +899,14 @@ static int prepare_to_commit(const char *index_file, const char *prefix,
 	if (clean_message_contents)
 		strbuf_stripspace(&sb, '\0');
 
-	if (signoff)
-		append_signoff(&sb, ignore_non_trailer(sb.buf, sb.len), 0);
+	if (signoff_arg) {
+		if (!strcmp(signoff_arg, "dedup"))
+			append_signoff(&sb, ignore_non_trailer(sb.buf, sb.len), 1);
+		else if (!strcmp(signoff_arg, "no-dedup"))
+			append_signoff(&sb, ignore_non_trailer(sb.buf, sb.len), 0);
+		else
+			die(_("Invalid signoff mode: %s"), signoff_arg);
+	}
 
 	if (fwrite(sb.buf, 1, sb.len, s->fp) < sb.len)
 		die_errno(_("could not write commit template"));
@@ -1658,7 +1664,8 @@ int cmd_commit(int argc, const char **argv, const char *prefix)
 		OPT_STRING(0, "squash", &squash_message, N_("commit"), N_("use autosquash formatted message to squash specified commit")),
 		OPT_BOOL(0, "reset-author", &renew_authorship, N_("the commit is authored by me now (used with -C/-c/--amend)")),
 		OPT_CALLBACK_F(0, "trailer", &trailer_args, N_("trailer"), N_("add custom trailer(s)"), PARSE_OPT_NONEG, opt_pass_trailer),
-		OPT_BOOL('s', "signoff", &signoff, N_("add a Signed-off-by trailer")),
+		{ OPTION_STRING, 's', "signoff", &signoff_arg, N_("mode"),
+		  N_("add a Signed-off-by trailer, optional modes: no-dedup, dedup. (Default: no-dedup)"), PARSE_OPT_OPTARG, NULL, (intptr_t) "no-dedup" },
 		OPT_FILENAME('t', "template", &template_file, N_("use specified template file")),
 		OPT_BOOL('e', "edit", &edit_flag, N_("force edit of commit")),
 		OPT_CLEANUP(&cleanup_arg),
