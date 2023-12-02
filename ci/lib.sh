@@ -180,15 +180,26 @@ handle_failed_tests () {
 }
 
 create_failed_test_artifacts () {
+	# Handle timed-out tests
+	for test_out in t/test-results/*.out
+	do
+		test -f "${test_out%.out}.exit" ||
+		echo timed-out >"${test_out%.out}.exit"
+	done
+
 	mkdir -p t/failed-test-artifacts
 
 	for test_exit in t/test-results/*.exit
 	do
-		test 0 != "$(cat "$test_exit")" || continue
+		case "$(cat "$test_exit")" in
+		0) continue;;
+		timed-out) label="Timed-out";;
+		*) label="Failed";;
+		esac
 
 		test_name="${test_exit%.exit}"
 		test_name="${test_name##*/}"
-		printf "\\e[33m\\e[1m=== Failed test: ${test_name} ===\\e[m\\n"
+		printf "\\e[33m\\e[1m=== ${label} test: ${test_name} ===\\e[m\\n"
 		echo "The full logs are in the 'print test failures' step below."
 		echo "See also the 'failed-tests-*' artifacts attached to this run."
 		cat "t/test-results/$test_name.markup"

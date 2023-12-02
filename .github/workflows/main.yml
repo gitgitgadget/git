@@ -149,13 +149,19 @@ jobs:
       run: tar xf artifacts.tar.gz && tar xf tracked.tar.gz
     - uses: git-for-windows/setup-git-for-windows-sdk@v1
     - name: test
+      id: test
       shell: bash
+      timeout-minutes: 20
       run: . /etc/profile && ci/run-test-slice.sh ${{matrix.nr}} 10
+    - name: handle timed-out tests
+      if: failure() && steps.test.outcome == 'failure' && env.FAILED_TEST_ARTIFACTS == ''
+      shell: bash
+      run: . /etc/profile && . ci/lib.sh && { handle_failed_tests || test $? = 1; }
     - name: print test failures
       if: failure() && env.FAILED_TEST_ARTIFACTS != ''
       shell: bash
       run: ci/print-test-failures.sh
-    - name: Upload failed tests' directories
+    - name: Upload failed/timed-out tests' directories
       if: failure() && env.FAILED_TEST_ARTIFACTS != ''
       uses: actions/upload-artifact@v3
       with:
