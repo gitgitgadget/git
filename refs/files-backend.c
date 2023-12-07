@@ -1271,44 +1271,39 @@ static int files_delete_refs(struct ref_store *ref_store, const char *msg,
 	struct files_ref_store *refs =
 		files_downcast(ref_store, REF_STORE_WRITE, "delete_refs");
 	struct strbuf err = STRBUF_INIT;
-	int i, result = 0;
+	int i;
+	struct ref_transaction *transaction;
 
 	if (!refnames->nr)
 		return 0;
 
-	if (packed_refs_lock(refs->packed_ref_store, 0, &err))
+	transaction = ref_store_transaction_begin(&refs->base, &err);
+	if (!transaction)
 		goto error;
-
-	if (refs_delete_refs(refs->packed_ref_store, msg, refnames, flags)) {
-		packed_refs_unlock(refs->packed_ref_store);
-		goto error;
-	}
-
-	packed_refs_unlock(refs->packed_ref_store);
 
 	for (i = 0; i < refnames->nr; i++) {
 		const char *refname = refnames->items[i].string;
-
-		if (refs_delete_ref(&refs->base, msg, refname, NULL, flags))
-			result |= error(_("could not remove reference %s"), refname);
+		if (ref_transaction_delete(transaction, refname, NULL,
+					   flags, msg, &err))
+			goto error;
 	}
 
+	if (ref_transaction_commit(transaction, &err))
+		goto error;
+
+	ref_transaction_free(transaction);
 	strbuf_release(&err);
-	return result;
+	return 0;
 
 error:
-	/*
-	 * If we failed to rewrite the packed-refs file, then it is
-	 * unsafe to try to remove loose refs, because doing so might
-	 * expose an obsolete packed value for a reference that might
-	 * even point at an object that has been garbage collected.
-	 */
 	if (refnames->nr == 1)
 		error(_("could not delete reference %s: %s"),
 		      refnames->items[0].string, err.buf);
 	else
 		error(_("could not delete references: %s"), err.buf);
 
+	if (transaction)
+		ref_transaction_free(transaction);
 	strbuf_release(&err);
 	return -1;
 }

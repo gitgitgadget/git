@@ -134,4 +134,74 @@ test_expect_success 'interleaving hook calls succeed' '
 	test_cmp expect target-repo.git/actual
 '
 
+test_expect_success 'hook allows deleting loose ref if successful' '
+	test_when_finished "rm actual" &&
+	git branch to-be-deleted $PRE_OID &&
+	test_hook reference-transaction <<-\EOF &&
+		echo "$*" >>actual
+	EOF
+	cat >expect <<-EOF &&
+		aborted
+		prepared
+		committed
+	EOF
+	git branch -d to-be-deleted &&
+	test_cmp expect actual &&
+	test_must_fail git rev-parse refs/heads/to-be-deleted
+'
+
+test_expect_success 'hook allows deleting packed ref if successful' '
+	test_when_finished "rm actual" &&
+	git branch to-be-deleted $PRE_OID &&
+	git pack-refs --all --prune &&
+	test_hook reference-transaction <<-\EOF &&
+		echo "$*" >>actual
+	EOF
+	cat >expect <<-EOF &&
+		prepared
+		prepared
+		committed
+		committed
+	EOF
+	git branch -d to-be-deleted &&
+	test_cmp expect actual &&
+	test_must_fail git rev-parse refs/heads/to-be-deleted
+'
+
+test_expect_success 'hook aborts deleting loose ref in prepared state' '
+	test_when_finished "rm actual" &&
+	test_when_finished "git branch -d to-be-deleted" &&
+	git branch to-be-deleted $PRE_OID &&
+	test_hook reference-transaction <<-\EOF &&
+		echo "$*" >>actual
+		exit 1
+	EOF
+	cat >expect <<-EOF &&
+		aborted
+		prepared
+		aborted
+	EOF
+	test_must_fail git branch -d to-be-deleted &&
+	test_cmp expect actual &&
+	git rev-parse refs/heads/to-be-deleted
+'
+
+test_expect_success 'hook aborts deleting packed ref in prepared state' '
+	test_when_finished "rm actual" &&
+	test_when_finished "git branch -d to-be-deleted" &&
+	git branch to-be-deleted $PRE_OID &&
+	git pack-refs --all --prune &&
+	test_hook reference-transaction <<-\EOF &&
+		echo "$*" >>actual
+		exit 1
+	EOF
+	cat >expect <<-EOF &&
+		prepared
+		aborted
+	EOF
+	test_must_fail git branch -d to-be-deleted &&
+	test_cmp expect actual &&
+	git rev-parse refs/heads/to-be-deleted
+'
+
 test_done

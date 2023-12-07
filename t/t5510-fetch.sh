@@ -169,10 +169,10 @@ test_expect_success REFFILES 'fetch --prune fails to delete branches' '
 	git clone . prune-fail &&
 	cd prune-fail &&
 	git update-ref refs/remotes/origin/extrabranch main &&
-	: this will prevent --prune from locking packed-refs for deleting refs, but adding loose refs still succeeds  &&
-	>.git/packed-refs.new &&
+	: this will prevent --prune from locking refs/remotes/origin/extra for deletion &&
+	>.git/refs/remotes/origin/extrabranch.lock &&
 
-	test_must_fail git fetch --prune origin
+	test_must_fail git fetch --prune origin > outputs 2> errors
 '
 
 test_expect_success 'fetch --atomic works with a single branch' '
