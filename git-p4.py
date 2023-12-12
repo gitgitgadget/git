@@ -4267,6 +4267,7 @@ class P4Rebase(Command):
     def __init__(self):
         Command.__init__(self)
         self.options = [
+		optparse.make_option("--branch", dest="branch"),
                 optparse.make_option("--import-labels", dest="importLabels", action="store_true"),
         ]
         self.importLabels = False
@@ -4276,6 +4277,7 @@ class P4Rebase(Command):
     def run(self, args):
         sync = P4Sync()
         sync.importLabels = self.importLabels
+	sync.branch = self.branch
         sync.run([])
 
         return self.rebase()
