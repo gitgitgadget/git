@@ -26,8 +26,13 @@ test_ls_tree_format_mode_output () {
 		local mode="$1" &&
 		shift &&
 
-		test_expect_success "'ls-tree $opts${mode:+ $mode}' output" '
+		test_expect_success "'ls-tree ${mode:+$mode }$opts' output" '
 			git ls-tree ${mode:+$mode }$opts HEAD >actual &&
+			test_cmp expect actual
+		'
+
+		test_expect_success "'ls-tree ${mode:+$mode }$opts' (default HEAD) output" '
+			git ls-tree ${mode:+$mode }$opts >actual &&
 			test_cmp expect actual
 		'
 

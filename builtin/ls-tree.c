@@ -18,7 +18,7 @@
 #include "pathspec.h"
 
 static const char * const ls_tree_usage[] = {
-	N_("git ls-tree [<options>] <tree-ish> [<path>...]"),
+	N_("git ls-tree [<options>] [<tree-ish> [<path>...]]"),
 	NULL
 };
 
@@ -378,6 +378,8 @@ int cmd_ls_tree(int argc, const char **argv, const char *prefix)
 	};
 	struct ls_tree_cmdmode_to_fmt *m2f = ls_tree_cmdmode_format;
 	int ret;
+	/* If no positional args were passed, default <tree-ish> to HEAD. */
+	const char *fallback_args[] = { "HEAD", NULL };
 
 	git_config(git_default_config, NULL);
 
@@ -406,8 +408,11 @@ int cmd_ls_tree(int argc, const char **argv, const char *prefix)
 		usage_msg_opt(
 			_("--format can't be combined with other format-altering options"),
 			ls_tree_usage, ls_tree_options);
-	if (argc < 1)
-		usage_with_options(ls_tree_usage, ls_tree_options);
+	if (argc < 1) {
+		/* `git ls-tree [flags...]` -> `git ls-tree [flags...] HEAD`. */
+		argv = fallback_args;
+		argc = 1;
+	}
 	if (repo_get_oid(the_repository, argv[0], &oid))
 		die("Not a valid object name %s", argv[0]);
 

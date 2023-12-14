@@ -11,7 +11,7 @@ SYNOPSIS
 [verse]
 'git ls-tree' [-d] [-r] [-t] [-l] [-z]
 	    [--name-only] [--name-status] [--object-only] [--full-name] [--full-tree] [--abbrev[=<n>]] [--format=<format>]
-	    <tree-ish> [<path>...]
+	    [<tree-ish> [<path>...]]
 
 DESCRIPTION
 -----------
@@ -36,7 +36,7 @@ in the current working directory.  Note that:
 OPTIONS
 -------
 <tree-ish>::
-	Id of a tree-ish.
+	Id of a tree-ish. If omitted, defaults to "HEAD".
 
 -d::
 	Show only the named tree entry itself, not its children.
@@ -139,7 +139,7 @@ which is able to interpolate different fields using a `%(fieldname)` notation.
 For example, if you only care about the "objectname" and "path" fields, you
 can execute with a specific "--format" like
 
-	git ls-tree --format='%(objectname) %(path)' <tree-ish>
+	git ls-tree --format='%(objectname) %(path)' [<tree-ish>]
 
 FIELD NAMES
 -----------
