@@ -250,7 +250,7 @@ jobs:
       if: failure() && env.FAILED_TEST_ARTIFACTS != ''
       uses: actions/upload-artifact@v3
       with:
-        name: failed-tests-windows
+        name: failed-tests-vs
         path: ${{env.FAILED_TEST_ARTIFACTS}}
   regular:
     name: ${{matrix.vector.jobname}} (${{matrix.vector.pool}})
