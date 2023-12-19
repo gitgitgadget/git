@@ -117,7 +117,7 @@ jobs:
     - name: build
       shell: bash
       env:
-        HOME: ${{runner.workspace}}
+        HOME: ${{ github.workspace }}
         NO_PERL: 1
       run: . /etc/profile && ci/make-test-artifacts.sh artifacts
     - name: zip up tracked files
