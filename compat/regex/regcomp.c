@@ -21,6 +21,14 @@
 # include <locale/weight.h>
 #endif
 
+#if defined __TANDEM
+/* This is currently duplicated from git-compat-utils.h */
+#ifdef NO_INTPTR_T
+typedef long intptr_t;
+typedef unsigned long uintptr_t;
+#endif
+#endif
+
 static reg_errcode_t re_compile_internal (regex_t *preg, const char * pattern,
 					  size_t length, reg_syntax_t syntax);
 static void re_compile_fastmap_iter (regex_t *bufp,
@@ -302,7 +310,7 @@ re_compile_fastmap_iter (regex_t *bufp, const re_dfastate_t *init_state,
 	      p = buf;
 	      *p++ = dfa->nodes[node].opr.c;
 	      while (++node < dfa->nodes_len
-		     &&	dfa->nodes[node].type == CHARACTER
+		     && dfa->nodes[node].type == CHARACTER
 		     && dfa->nodes[node].mb_partial)
 		*p++ = dfa->nodes[node].opr.c;
 	      memset (&state, '\0', sizeof (state));

@@ -4139,7 +4139,7 @@ search_cur_bkref_entry (const re_match_context_t *mctx, Idx str_idx)
   last = right = mctx->nbkref_ents;
   for (left = 0; left < right;)
     {
-      mid = (left + right) / 2;
+      mid = left + (right - left) / 2;
       if (mctx->bkref_ents[mid].str_idx < str_idx)
 	left = mid + 1;
       else

@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <stddef.h>
+
 /* Definitions for data structures and routines for the regular
    expression library.
    Copyright (C) 1985, 1989-2023 Free Software Foundation, Inc.
@@ -26,6 +29,11 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#define regcomp git_regcomp
+#define regexec git_regexec
+#define regerror git_regerror
+#define regfree git_regfree
 
 /* Define __USE_GNU to declare GNU extensions that violate the
    POSIX name space rules.  */
