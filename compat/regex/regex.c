@@ -1,5 +1,5 @@
 /* Extended regular expression matching and search library.
-   Copyright (C) 2002, 2003, 2005 Free Software Foundation, Inc.
+   Copyright (C) 2002-2023 Free Software Foundation, Inc.
    This file is part of the GNU C Library.
    Contributed by Isamu Hasegawa <isamu@yamato.ibm.com>.
 
@@ -15,14 +15,25 @@
 
    You should have received a copy of the GNU Lesser General Public
    License along with the GNU C Library; if not, see
-   <http://www.gnu.org/licenses/>.  */
+   <https://www.gnu.org/licenses/>.  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
+#define __STDC_WANT_IEC_60559_BFP_EXT__
+
+#ifndef _LIBC
+# include <libc-config.h>
+
+# if __GNUC_PREREQ (4, 6)
+#  pragma GCC diagnostic ignored "-Wsuggest-attribute=pure"
+#  pragma GCC diagnostic ignored "-Wvla"
+# endif
+# if __GNUC_PREREQ (4, 3)
+#  pragma GCC diagnostic ignored "-Wold-style-definition"
+#  pragma GCC diagnostic ignored "-Wtype-limits"
+# endif
 #endif
 
 /* Make sure no one compiles this code with a C++ compiler.  */
-#ifdef __cplusplus
+#if defined __cplusplus && defined _LIBC
 # error "This is C code, use a C compiler"
 #endif
 
@@ -51,30 +62,15 @@
 # include "../locale/localeinfo.h"
 #endif
 
-#if defined (_MSC_VER)
-#include <stdio.h> /* for size_t */
-#endif
-
 /* On some systems, limits.h sets RE_DUP_MAX to a lower value than
    GNU regex allows.  Include it before <regex.h>, which correctly
    #undefs RE_DUP_MAX and sets it to the right value.  */
 #include <limits.h>
-#include <stdint.h>
-#include <stdlib.h>
 
-#ifdef GAWK
-#undef alloca
-#define alloca alloca_is_bad_you_should_never_use_it
-#endif
 #include <regex.h>
 #include "regex_internal.h"
 
 #include "regex_internal.c"
-#ifdef GAWK
-#define bool int
-#define true (1)
-#define false (0)
-#endif
 #include "regcomp.c"
 #include "regexec.c"
 
