@@ -20,13 +20,13 @@
 #define __STDC_WANT_IEC_60559_BFP_EXT__
 
 #ifndef _LIBC
-# include <libc-config.h>
+# include <git-compat-util.h>
 
-# if __GNUC_PREREQ (4, 6)
+# if GIT_GNUC_PREREQ (4, 6)
 #  pragma GCC diagnostic ignored "-Wsuggest-attribute=pure"
 #  pragma GCC diagnostic ignored "-Wvla"
 # endif
-# if __GNUC_PREREQ (4, 3)
+# if GIT_GNUC_PREREQ (4, 3)
 #  pragma GCC diagnostic ignored "-Wold-style-definition"
 #  pragma GCC diagnostic ignored "-Wtype-limits"
 # endif
