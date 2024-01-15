@@ -1839,6 +1839,45 @@ test_expect_success '--update-refs adds label and update-ref commands' '
 	)
 '
 
+test_expect_success '--update-refs works with core.commentChar' '
+	git checkout -b update-refs-with-commentchar no-conflict-branch &&
+	test_config core.commentChar : &&
+	git branch -f base HEAD~4 &&
+	git branch -f first HEAD~3 &&
+	git branch -f second HEAD~3 &&
+	git branch -f third HEAD~1 &&
+	git commit --allow-empty --fixup=third &&
+	git branch -f is-not-reordered &&
+	git commit --allow-empty --fixup=HEAD~4 &&
+	git branch -f shared-tip &&
+	git checkout update-refs &&
+	(
+		write_script fake-editor.sh <<-\EOF &&
+		grep "^[^:]" "$1"
+		exit 1
+		EOF
+		test_set_editor "$(pwd)/fake-editor.sh" &&
+
+		cat >expect <<-EOF &&
+		pick $(git log -1 --format=%h J) J
+		fixup $(git log -1 --format=%h update-refs) fixup! J : empty
+		update-ref refs/heads/second
+		update-ref refs/heads/first
+		pick $(git log -1 --format=%h K) K
+		pick $(git log -1 --format=%h L) L
+		fixup $(git log -1 --format=%h is-not-reordered) fixup! L : empty
+		update-ref refs/heads/third
+		pick $(git log -1 --format=%h M) M
+		update-ref refs/heads/no-conflict-branch
+		update-ref refs/heads/is-not-reordered
+		update-ref refs/heads/update-refs-with-commentchar
+		EOF
+
+		test_must_fail git rebase -i --autosquash --update-refs primary shared-tip >todo &&
+		test_cmp expect todo
+	)
+'
+
 test_expect_success '--update-refs adds commands with --rebase-merges' '
 	git checkout -b update-refs-with-merge no-conflict-branch &&
 	git branch -f base HEAD~4 &&
