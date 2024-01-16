@@ -1798,7 +1798,7 @@ proc readrefs {} {
     global tagids idtags headids idheads tagobjid
     global otherrefids idotherrefs mainhead mainheadid
     global selecthead selectheadid
-    global hideremotes
+    global hideremotes hideunknown
     global tclencoding
 
     foreach v {tagids idtags headids idheads otherrefids idotherrefs} {
@@ -1835,8 +1835,10 @@ proc readrefs {} {
             set tagids($name) $id
             lappend idtags($id) $name
         } else {
-            set otherrefids($name) $id
-            lappend idotherrefs($id) $name
+	    if {[string match "stash" $name] || !$hideunknown} {
+		set otherrefids($name) $id
+		lappend idotherrefs($id) $name
+	    }
         }
     }
     catch {close $refd}
@@ -11577,7 +11579,7 @@ proc create_prefs_page {w} {
 proc prefspage_general {notebook} {
     global NS maxwidth maxgraphpct showneartags showlocalchanges
     global tabstop limitdiffs autoselect autosellen extdifftool perfile_attrs
-    global hideremotes want_ttk have_ttk maxrefs web_browser
+    global hideremotes hideunknown want_ttk have_ttk maxrefs web_browser
 
     set page [create_prefs_page $notebook.general]
 
@@ -11601,6 +11603,9 @@ proc prefspage_general {notebook} {
     ${NS}::checkbutton $page.hideremotes -text [mc "Hide remote refs"] \
         -variable hideremotes
     grid x $page.hideremotes -sticky w
+    ${NS}::checkbutton $page.hideunknown -text [mc "Hide unknown refs"] \
+        -variable hideunknown
+    grid x $page.hideunknown -sticky w
 
     ${NS}::label $page.ddisp -text [mc "Diff display options"]
     grid $page.ddisp - -sticky w -pady 10
@@ -11725,7 +11730,7 @@ proc doprefs {} {
     global oldprefs prefstop showneartags showlocalchanges
     global uicolor bgcolor fgcolor ctext diffcolors selectbgcolor markbgcolor
     global tabstop limitdiffs autoselect autosellen extdifftool perfile_attrs
-    global hideremotes want_ttk have_ttk
+    global hideremotes hideunknown want_ttk have_ttk
 
     set top .gitkprefs
     set prefstop $top
@@ -11734,7 +11739,7 @@ proc doprefs {} {
         return
     }
     foreach v {maxwidth maxgraphpct showneartags showlocalchanges \
-                   limitdiffs tabstop perfile_attrs hideremotes want_ttk} {
+                   limitdiffs tabstop perfile_attrs hideremotes hideunknown want_ttk} {
         set oldprefs($v) [set $v]
     }
     ttk_toplevel $top
@@ -11860,7 +11865,7 @@ proc prefscan {} {
     global oldprefs prefstop
 
     foreach v {maxwidth maxgraphpct showneartags showlocalchanges \
-                   limitdiffs tabstop perfile_attrs hideremotes want_ttk} {
+                   limitdiffs tabstop perfile_attrs hideremotes hideunknown want_ttk} {
         global $v
         set $v $oldprefs($v)
     }
@@ -11874,7 +11879,7 @@ proc prefsok {} {
     global oldprefs prefstop showneartags showlocalchanges
     global fontpref mainfont textfont uifont
     global limitdiffs treediffs perfile_attrs
-    global hideremotes
+    global hideremotes hideunknown
 
     catch {destroy $prefstop}
     unset prefstop
@@ -11920,7 +11925,7 @@ proc prefsok {} {
           $limitdiffs != $oldprefs(limitdiffs)} {
         reselectline
     }
-    if {$hideremotes != $oldprefs(hideremotes)} {
+    if {$hideremotes != $oldprefs(hideremotes) || $hideunknown != $oldprefs(hideunknown)} {
         rereadrefs
     }
 }
@@ -12394,6 +12399,7 @@ set cmitmode "patch"
 set wrapcomment "none"
 set showneartags 1
 set hideremotes 0
+set hideunknown 0
 set maxrefs 20
 set visiblerefs {"master"}
 set maxlinelen 200
@@ -12498,7 +12504,7 @@ config_check_tmp_exists 50
 set config_variables {
     mainfont textfont uifont tabstop findmergefiles maxgraphpct maxwidth
     cmitmode wrapcomment autoselect autosellen showneartags maxrefs visiblerefs
-    hideremotes showlocalchanges datetimeformat limitdiffs uicolor want_ttk
+    hideremotes hideunknown showlocalchanges datetimeformat limitdiffs uicolor want_ttk
     bgcolor fgcolor uifgcolor uifgdisabledcolor colors diffcolors mergecolors
     markbgcolor diffcontext selectbgcolor foundbgcolor currentsearchhitbgcolor
     extdifftool perfile_attrs headbgcolor headfgcolor headoutlinecolor
