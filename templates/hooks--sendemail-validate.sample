@@ -45,8 +45,7 @@ validate_series () {
 
 # main -------------------------------------------------------------------------
 
-if test "$GIT_SENDEMAIL_FILE_COUNTER" = 1
-then
+if [ "$GIT_SENDEMAIL_FILE_COUNTER" = 1 ]; then
 	remote=$(git config --default origin --get sendemail.validateRemote) &&
 	ref=$(git config --default HEAD --get sendemail.validateRemoteRef) &&
 	worktree=$(mktemp --tmpdir -d sendemail-validate.XXXXXXX) &&
@@ -62,15 +61,13 @@ fi || {
 unset GIT_DIR GIT_WORK_TREE
 cd "$worktree" &&
 
-if grep -q "^diff --git " "$1"
-then
+if grep -q "^diff --git " "$1"; then
 	validate_patch "$1"
 else
 	validate_cover_letter "$1"
 fi &&
 
-if test "$GIT_SENDEMAIL_FILE_COUNTER" = "$GIT_SENDEMAIL_FILE_TOTAL"
-then
+if [ "$GIT_SENDEMAIL_FILE_COUNTER" = "$GIT_SENDEMAIL_FILE_TOTAL" ]; then
 	git config --unset-all sendemail.validateWorktree &&
 	trap 'git worktree remove -ff "$worktree"' EXIT &&
 	validate_series

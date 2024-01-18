@@ -47,32 +47,27 @@ die () {
 # the working tree, you will have to adapt your code accordingly, e.g.
 # by adding "cd .." or using relative paths.
 
-if ! git update-index -q --ignore-submodules --refresh
-then
+if ! git update-index -q --ignore-submodules --refresh; then
 	die "Up-to-date check failed"
 fi
 
-if ! git diff-files --quiet --ignore-submodules --
-then
+if ! git diff-files --quiet --ignore-submodules --; then
 	die "Working directory has unstaged changes"
 fi
 
 # This is a rough translation of:
 #
 #   head_has_history() ? "HEAD" : EMPTY_TREE_SHA1_HEX
-if git cat-file -e HEAD 2>/dev/null
-then
+if git cat-file -e HEAD 2>/dev/null; then
 	head=HEAD
 else
 	head=$(git hash-object -t tree --stdin </dev/null)
 fi
 
-if ! git diff-index --quiet --cached --ignore-submodules $head --
-then
+if ! git diff-index --quiet --cached --ignore-submodules "$head" --; then
 	die "Working directory has staged changes"
 fi
 
-if ! git read-tree -u -m "$commit"
-then
+if ! git read-tree -u -m "$commit"; then
 	die "Could not update working tree to new HEAD"
 fi
