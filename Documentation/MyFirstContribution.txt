@@ -35,9 +35,11 @@ announcements, design discussions, and more take place. Those interested in
 contributing are welcome to post questions here. The Git list requires
 plain-text-only emails and prefers inline and bottom-posting when replying to
 mail; you will be CC'd in all replies to you. Optionally, you can subscribe to
-the list by sending an email to majordomo@vger.kernel.org with "subscribe git"
-in the body. The https://lore.kernel.org/git[archive] of this mailing list is
-available to view in a browser.
+the list by visiting https://subspace.kernel.org/vger.kernel.org.html and using
+the `sub` link next to the `git` list (this is a mailto link; you can leave
+subject and body blank, but you still have to send the email). The
+https://lore.kernel.org/git[archive] of this mailing list is available to view
+in a browser.
 
 ==== https://groups.google.com/forum/#!forum/git-mentoring[git-mentoring@googlegroups.com]
 
