@@ -1916,4 +1916,16 @@ test_expect_success 'suppress --- handling' '
 	test_cmp expected actual
 '
 
+test_expect_success 'whitespace in token' '
+	echo "real trailer: just right" >expected &&
+
+	git interpret-trailers --parse >actual <<-\EOF &&
+	subject
+
+	real trailer: just right
+	EOF
+
+	test_cmp expected actual
+'
+
 test_done

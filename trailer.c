@@ -612,11 +612,10 @@ static int token_matches_item(const char *tok, struct arg_item *item, size_t tok
 }
 
 /*
- * If the given line is of the form
- * "<token><optional whitespace><separator>..." or "<separator>...", return the
- * location of the separator. Otherwise, return -1.  The optional whitespace
- * is allowed there primarily to allow things like "Bug #43" where <token> is
- * "Bug" and <separator> is "#".
+ * If the given line is of the form "<token><separator>..." or
+ * "<separator>...", return the location of the separator. Otherwise, return
+ * -1.  Whitespace is allowed within the token primarily to allow things like
+ * "Bug #43" where <token> is "Bug" and <separator> is "#".
  *
  * The separator-starts-line case (in which this function returns 0) is
  * distinguished from the non-well-formed-line case (in which this function
@@ -624,15 +623,13 @@ static int token_matches_item(const char *tok, struct arg_item *item, size_t tok
  */
 static ssize_t find_separator(const char *line, const char *separators)
 {
-	int whitespace_found = 0;
 	const char *c;
 	for (c = line; *c; c++) {
 		if (strchr(separators, *c))
 			return c - line;
-		if (!whitespace_found && (isalnum(*c) || *c == '-'))
-			continue;
-		if (c != line && (*c == ' ' || *c == '\t')) {
-			whitespace_found = 1;
+		if (isalnum(*c) ||
+		    *c == '-' ||
+		    (c != line && (*c == ' ' || *c == '\t'))) {
 			continue;
 		}
 		break;
