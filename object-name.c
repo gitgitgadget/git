@@ -1481,7 +1481,7 @@ int repo_get_oid_mb(struct repository *r,
 		    struct object_id *oid)
 {
 	struct commit *one, *two;
-	struct commit_list *mbs;
+	struct commit_list *mbs = NULL;
 	struct object_id oid_tmp;
 	const char *dots;
 	int st;
@@ -1509,7 +1509,10 @@ int repo_get_oid_mb(struct repository *r,
 	two = lookup_commit_reference_gently(r, &oid_tmp, 0);
 	if (!two)
 		return -1;
-	mbs = repo_get_merge_bases(r, one, two);
+	if (repo_get_merge_bases(r, one, two, &mbs) < 0) {
+		free_commit_list(mbs);
+		return -1;
+	}
 	if (!mbs || mbs->next)
 		st = -1;
 	else {
