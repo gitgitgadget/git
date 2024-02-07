@@ -74,7 +74,9 @@ static const char *curl_http_proxy;
 static const char *http_proxy_authmethod;
 
 static const char *http_proxy_ssl_cert;
+static const char *http_proxy_ssl_cert_type;
 static const char *http_proxy_ssl_key;
+static const char *http_proxy_ssl_key_type;
 static const char *http_proxy_ssl_ca_info;
 static struct credential proxy_cert_auth = CREDENTIAL_INIT;
 static int proxy_ssl_cert_password_required;
@@ -443,9 +445,13 @@ static int http_options(const char *var, const char *value,
 
 	if (!strcmp("http.proxysslcert", var))
 		return git_config_string(&http_proxy_ssl_cert, var, value);
+	if (!strcmp("http.proxysslcerttype", var))
+		return git_config_string(&http_proxy_ssl_cert_type, var, value);
 
 	if (!strcmp("http.proxysslkey", var))
 		return git_config_string(&http_proxy_ssl_key, var, value);
+	if (!strcmp("http.proxysslkeytype", var))
+		return git_config_string(&http_proxy_ssl_key_type, var, value);
 
 	if (!strcmp("http.proxysslcainfo", var))
 		return git_config_string(&http_proxy_ssl_ca_info, var, value);
@@ -1176,9 +1182,13 @@ static CURL *get_curl_handle(void)
 
 			if (http_proxy_ssl_cert)
 				curl_easy_setopt(result, CURLOPT_PROXY_SSLCERT, http_proxy_ssl_cert);
+			if (http_proxy_ssl_cert_type)
+				curl_easy_setopt(result, CURLOPT_PROXY_SSLCERTTYPE, http_proxy_ssl_cert_type);
 
 			if (http_proxy_ssl_key)
 				curl_easy_setopt(result, CURLOPT_PROXY_SSLKEY, http_proxy_ssl_key);
+			if (http_proxy_ssl_key_type)
+				curl_easy_setopt(result, CURLOPT_PROXY_SSLKEYTYPE, http_proxy_ssl_key_type);
 
 			if (has_proxy_cert_password())
 				curl_easy_setopt(result, CURLOPT_PROXY_KEYPASSWD, proxy_cert_auth.password);
@@ -1315,7 +1325,9 @@ void http_init(struct remote *remote, const char *url, int proactive_auth)
 		max_requests = DEFAULT_MAX_REQUESTS;
 
 	set_from_env(&http_proxy_ssl_cert, "GIT_PROXY_SSL_CERT");
+	set_from_env(&http_proxy_ssl_cert_type, "GIT_PROXY_SSL_CERT_TYPE");
 	set_from_env(&http_proxy_ssl_key, "GIT_PROXY_SSL_KEY");
+	set_from_env(&http_proxy_ssl_key_type, "GIT_PROXY_SSL_KEY_TYPE");
 	set_from_env(&http_proxy_ssl_ca_info, "GIT_PROXY_SSL_CAINFO");
 
 	if (getenv("GIT_PROXY_SSL_CERT_PASSWORD_PROTECTED"))

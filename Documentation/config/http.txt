@@ -34,10 +34,24 @@ http.proxySSLCert::
 	with an HTTPS proxy. Can be overridden by the `GIT_PROXY_SSL_CERT` environment
 	variable.
 
+http.proxySSLCertType::
+	Format of the client certificate used to authenticate with an HTTPS proxy.
+	Example values are `PEM` and `ENG`. The format `ENG` enables loading from
+	a crypto engine. Can be overridden by the `GIT_PROXY_SSL_CERT_TYPE` environment
+	variable. For more information on accepted values, see libcurl's
+	`CURLOPT_PROXY_SSLCERTTYPE`.
+
 http.proxySSLKey::
 	The pathname of a file that stores a private key to use to authenticate with
 	an HTTPS proxy. Can be overridden by the `GIT_PROXY_SSL_KEY` environment
 	variable.
+
+http.proxySSLKeyType::
+	Format of the client private key used to authenticate with an HTTPS proxy.
+	Example values are `PEM` and `ENG`. The format `ENG` enables loading from
+	a crypto engine. Can be overridden by the `GIT_PROXY_SSL_KEY_TYPE` environment
+	variable. For more information on accepted values, see libcurl's
+	`CURLOPT_PROXY_SSLKEYTYPE`.
 
 http.proxySSLCertPasswordProtected::
 	Enable Git's password prompt for the proxy SSL certificate.  Otherwise OpenSSL
@@ -161,10 +175,24 @@ http.sslCert::
 	over HTTPS. Can be overridden by the `GIT_SSL_CERT` environment
 	variable.
 
+http.sslCertType::
+	Format of the SSL certificate used to authenticate over HTTPS.
+	Example values are `PEM` and `ENG`. The format `ENG` enables loading from
+	a crypto engine. Can be overridden by the `GIT_SSL_CERT_TYPE` environment
+	variable. For more information on accepted values, see libcurl's
+	`CURLOPT_SSLCERTTYPE`.
+
 http.sslKey::
 	File containing the SSL private key when fetching or pushing
 	over HTTPS. Can be overridden by the `GIT_SSL_KEY` environment
 	variable.
+
+http.sslKeyType::
+	Format of the SSL private key used to authenticate over HTTPS.
+	Example values are `PEM` and `ENG`. The format `ENG` enables loading from
+	a crypto engine. Can be overridden by the `GIT_SSL_KEY_TYPE` environment
+	variable. For more information on accepted values, see libcurl's
+	`CURLOPT_SSLKEYTYPE`.
 
 http.sslCertPasswordProtected::
 	Enable Git's password prompt for the SSL certificate.  Otherwise
