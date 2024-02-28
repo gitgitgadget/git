@@ -676,10 +676,12 @@ include_directories(${CMAKE_BINARY_DIR})
 #build
 #libgit
 parse_makefile_for_sources(libgit_SOURCES "LIB_OBJS")
+parse_makefile_for_sources(std_lib_SOURCES "STD_LIB_OBJS")
 
 list(TRANSFORM libgit_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/")
+list(TRANSFORM std_lib_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/")
 list(TRANSFORM compat_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/")
-add_library(libgit ${libgit_SOURCES} ${compat_SOURCES})
+add_library(libgit ${libgit_SOURCES} ${std_lib_SOURCES} ${compat_SOURCES})
 
 #libxdiff
 parse_makefile_for_sources(libxdiff_SOURCES "XDIFF_OBJS")
