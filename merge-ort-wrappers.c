@@ -54,8 +54,10 @@ int merge_ort_recursive(struct merge_options *opt,
 	struct tree *head = repo_get_commit_tree(opt->repo, side1);
 	struct merge_result tmp;
 
-	if (unclean(opt, head))
+	if (unclean(opt, head)) {
+		free_commit_list(merge_bases);
 		return -1;
+	}
 
 	memset(&tmp, 0, sizeof(tmp));
 	merge_incore_recursive(opt, merge_bases, side1, side2, &tmp);

@@ -3647,14 +3647,18 @@ static int merge_recursive_internal(struct merge_options *opt,
 		opt->branch1 = "Temporary merge branch 1";
 		opt->branch2 = "Temporary merge branch 2";
 		if (merge_recursive_internal(opt, merged_merge_bases, iter->item,
-					     NULL, &merged_merge_bases) < 0)
-			return -1;
+					     NULL, &merged_merge_bases) < 0) {
+			clean = -1;
+			goto out;
+		}
 		opt->branch1 = saved_b1;
 		opt->branch2 = saved_b2;
 		opt->priv->call_depth--;
 
-		if (!merged_merge_bases)
-			return err(opt, _("merge returned no commit"));
+		if (!merged_merge_bases) {
+			clean = err(opt, _("merge returned no commit"));
+			goto out;
+		}
 	}
 
 	/*
@@ -3677,8 +3681,11 @@ static int merge_recursive_internal(struct merge_options *opt,
 				     repo_get_commit_tree(opt->repo,
 							  merged_merge_bases),
 				     &result_tree);
+
+out:
 	strbuf_release(&merge_base_abbrev);
 	opt->ancestor = NULL;  /* avoid accidental re-use of opt->ancestor */
+	free_commit_list(merge_bases);
 	if (clean < 0) {
 		flush_output(opt);
 		return clean;
@@ -3724,6 +3731,9 @@ static int merge_start(struct merge_options *opt, struct tree *head)
 	assert(!opt->record_conflict_msgs_as_headers);
 	assert(!opt->msg_header_prefix);
 
+	CALLOC_ARRAY(opt->priv, 1);
+	string_list_init_dup(&opt->priv->df_conflict_file_set);
+
 	/* Sanity check on repo state; index must match head */
 	if (repo_index_has_changes(opt->repo, head, &sb)) {
 		err(opt, _("Your local changes to the following files would be overwritten by merge:\n  %s"),
@@ -3732,16 +3742,13 @@ static int merge_start(struct merge_options *opt, struct tree *head)
 		return -1;
 	}
 
-	CALLOC_ARRAY(opt->priv, 1);
-	string_list_init_dup(&opt->priv->df_conflict_file_set);
 	return 0;
 }
 
 static void merge_finalize(struct merge_options *opt)
 {
 	flush_output(opt);
-	if (!opt->priv->call_depth && opt->buffer_output < 2)
-		strbuf_release(&opt->obuf);
+	strbuf_release(&opt->obuf);
 	if (show(opt, 2))
 		diff_warn_rename_limit("merge.renamelimit",
 				       opt->priv->needed_rename_limit, 0);
@@ -3758,8 +3765,10 @@ int merge_trees(struct merge_options *opt,
 
 	assert(opt->ancestor != NULL);
 
-	if (merge_start(opt, head))
+	if (merge_start(opt, head)) {
+		merge_finalize(opt);
 		return -1;
+	}
 	clean = merge_trees_internal(opt, head, merge, merge_base, &ignored);
 	merge_finalize(opt);
 
@@ -3780,8 +3789,11 @@ int merge_recursive(struct merge_options *opt,
 	prepare_repo_settings(opt->repo);
 	opt->repo->settings.command_requires_full_index = 1;
 
-	if (merge_start(opt, repo_get_commit_tree(opt->repo, h1)))
+	if (merge_start(opt, repo_get_commit_tree(opt->repo, h1))) {
+		free_commit_list(merge_bases);
+		merge_finalize(opt);
 		return -1;
+	}
 	clean = merge_recursive_internal(opt, h1, h2, merge_bases, result);
 	merge_finalize(opt);
 

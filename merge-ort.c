@@ -5049,8 +5049,10 @@ static void merge_ort_internal(struct merge_options *opt,
 		opt->branch1 = "Temporary merge branch 1";
 		opt->branch2 = "Temporary merge branch 2";
 		merge_ort_internal(opt, NULL, prev, next, result);
-		if (result->clean < 0)
+		if (result->clean < 0) {
+			free_commit_list(merge_bases);
 			return;
+		}
 		opt->branch1 = saved_b1;
 		opt->branch2 = saved_b2;
 		opt->priv->call_depth--;
