@@ -259,10 +259,10 @@ __git_ps1_colorize_gitstring ()
 	else
 		# Using \001 and \002 around colors is necessary to prevent
 		# issues with command line editing/browsing/completion!
-		local c_red=$'\001\e[31m\002'
-		local c_green=$'\001\e[32m\002'
-		local c_lblue=$'\001\e[1;34m\002'
-		local c_clear=$'\001\e[0m\002'
+		local c_red=$'\\001\e[31m\\002'
+		local c_green=$'\\001\e[32m\\002'
+		local c_lblue=$'\\001\e[1;34m\\002'
+		local c_clear=$'\\001\e[0m\\002'
 	fi
 	local bad_color=$c_red
 	local ok_color=$c_green
