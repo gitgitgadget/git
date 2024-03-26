@@ -292,6 +292,11 @@ newline. The available atoms are:
 `objecttype`::
 	The type of the object (the same as `cat-file -t` reports).
 
+`objectmode`::
+	If the specified object has mode information (such as a tree or
+	index entry), the mode expressed as an octal integer. Otherwise,
+	empty string.
+
 `objectsize`::
 	The size, in bytes, of the object (the same as `cat-file -s`
 	reports).
@@ -406,6 +411,11 @@ and is subject to change during a repack.
 Note also that multiple copies of an object may be present in the object
 database; in this case, it is undefined which copy's size or delta base
 will be reported.
+
+Submodules are handled specially in `git cat-file`, as the objects
+corresponding to the recorded OIDs are not expected to be present in the
+current repository. For that reason, submodules are reported as having
+type `submodule` and mode 1600000 and all other fields are zeroed out.
 
 GIT
 ---

@@ -128,7 +128,9 @@ static int cat_one_file(int opt, const char *exp_type, const char *obj_name,
 	switch (opt) {
 	case 't':
 		oi.type_name = &sb;
-		if (oid_object_info_extended(the_repository, &oid, &oi, flags) < 0)
+		if (obj_context.mode == S_IFGITLINK)
+			strbuf_addstr(&sb, "submodule");
+		else if (oid_object_info_extended(the_repository, &oid, &oi, flags) < 0)
 			die("git cat-file: could not get object info");
 		if (sb.len) {
 			printf("%s\n", sb.buf);
@@ -272,6 +274,7 @@ struct expand_data {
 	struct object_id oid;
 	enum object_type type;
 	unsigned long size;
+	unsigned short mode;
 	off_t disk_size;
 	const char *rest;
 	struct object_id delta_base_oid;
@@ -303,6 +306,7 @@ struct expand_data {
 	 */
 	unsigned skip_object_info : 1;
 };
+#define EXPAND_DATA_INIT  { .mode = S_IFINVALID }
 
 static int is_atom(const char *atom, const char *s, int slen)
 {
@@ -317,17 +321,26 @@ static void expand_atom(struct strbuf *sb, const char *atom, int len,
 		if (!data->mark_query)
 			strbuf_addstr(sb, oid_to_hex(&data->oid));
 	} else if (is_atom("objecttype", atom, len)) {
-		if (data->mark_query)
+		if (data->mode == S_IFGITLINK) {
+			if (!data->mark_query)
+				strbuf_addstr(sb, "submodule");
+		} else if (data->mark_query)
 			data->info.typep = &data->type;
 		else
 			strbuf_addstr(sb, type_name(data->type));
 	} else if (is_atom("objectsize", atom, len)) {
-		if (data->mark_query)
+		if (data->mode == S_IFGITLINK) {
+			if (!data->mark_query)
+				strbuf_addstr(sb, "0");
+		} else if (data->mark_query)
 			data->info.sizep = &data->size;
 		else
 			strbuf_addf(sb, "%"PRIuMAX , (uintmax_t)data->size);
 	} else if (is_atom("objectsize:disk", atom, len)) {
-		if (data->mark_query)
+		if (data->mode == S_IFGITLINK) {
+			if (!data->mark_query)
+				strbuf_addstr(sb, "0");
+		} else if (data->mark_query)
 			data->info.disk_sizep = &data->disk_size;
 		else
 			strbuf_addf(sb, "%"PRIuMAX, (uintmax_t)data->disk_size);
@@ -342,6 +355,9 @@ static void expand_atom(struct strbuf *sb, const char *atom, int len,
 		else
 			strbuf_addstr(sb,
 				      oid_to_hex(&data->delta_base_oid));
+	} else if (is_atom("objectmode", atom, len)) {
+		if (!data->mark_query && !(S_IFINVALID == data->mode))
+			strbuf_addf(sb, "%06o", data->mode);
 	} else
 		die("unknown format element: %.*s", len, atom);
 }
@@ -443,7 +459,8 @@ static void print_default_format(struct strbuf *scratch, struct expand_data *dat
 				 struct batch_options *opt)
 {
 	strbuf_addf(scratch, "%s %s %"PRIuMAX"%c", oid_to_hex(&data->oid),
-		    type_name(data->type),
+		    data->mode == S_IFGITLINK ?
+		    "submodule" : type_name(data->type),
 		    (uintmax_t)data->size, opt->output_delim);
 }
 
@@ -465,7 +482,15 @@ static void batch_object_write(const char *obj_name,
 		if (use_mailmap)
 			data->info.typep = &data->type;
 
-		if (pack)
+		if (data->mode == S_IFGITLINK) {
+			data->type = OBJ_BAD; /* `type_name()` does not know submodules */
+			data->size = 0;
+			data->disk_size = 0;
+			data->rest = NULL;
+			oidcpy(&data->delta_base_oid, null_oid());
+			memset(&data->info, 0, sizeof(data->info));
+			ret = 0; /* no info to look up */
+		} else if (pack)
 			ret = packed_object_info(the_repository, pack, offset,
 						 &data->info);
 		else
@@ -562,6 +587,7 @@ static void batch_one_object(const char *obj_name,
 		return;
 	}
 
+	data->mode = ctx.mode;
 	batch_object_write(obj_name, scratch, opt, data, NULL, 0);
 }
 
@@ -766,7 +792,7 @@ static int batch_objects(struct batch_options *opt)
 {
 	struct strbuf input = STRBUF_INIT;
 	struct strbuf output = STRBUF_INIT;
-	struct expand_data data;
+	struct expand_data data = EXPAND_DATA_INIT;
 	int save_warning;
 	int retval = 0;
 
@@ -775,7 +801,6 @@ static int batch_objects(struct batch_options *opt)
 	 * object_info to be handed to oid_object_info_extended for each
 	 * object.
 	 */
-	memset(&data, 0, sizeof(data));
 	data.mark_query = 1;
 	expand_format(&output,
 		      opt->format ? opt->format : DEFAULT_FORMAT,

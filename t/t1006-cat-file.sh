@@ -112,65 +112,67 @@ strlen () {
 
 run_tests () {
     type=$1
-    sha1=$2
-    size=$3
-    content=$4
-    pretty_content=$5
+    object_name=$2
+    oid=$(git rev-parse --verify $object_name)
+    mode=$3
+    size=$4
+    content=$5
+    pretty_content=$6
 
-    batch_output="$sha1 $type $size
+    batch_output="$oid $type $size
 $content"
 
     test_expect_success "$type exists" '
-	git cat-file -e $sha1
+	git cat-file -e $object_name
     '
 
     test_expect_success "Type of $type is correct" '
 	echo $type >expect &&
-	git cat-file -t $sha1 >actual &&
+	git cat-file -t $object_name >actual &&
 	test_cmp expect actual
     '
 
     test_expect_success "Size of $type is correct" '
 	echo $size >expect &&
-	git cat-file -s $sha1 >actual &&
+	git cat-file -s $object_name >actual &&
 	test_cmp expect actual
     '
 
     test_expect_success "Type of $type is correct using --allow-unknown-type" '
 	echo $type >expect &&
-	git cat-file -t --allow-unknown-type $sha1 >actual &&
+	git cat-file -t --allow-unknown-type $object_name >actual &&
 	test_cmp expect actual
     '
 
     test_expect_success "Size of $type is correct using --allow-unknown-type" '
 	echo $size >expect &&
-	git cat-file -s --allow-unknown-type $sha1 >actual &&
+	git cat-file -s --allow-unknown-type $object_name >actual &&
 	test_cmp expect actual
     '
 
     test -z "$content" ||
     test_expect_success "Content of $type is correct" '
 	echo_without_newline "$content" >expect &&
-	git cat-file $type $sha1 >actual &&
+	git cat-file $type $object_name >actual &&
 	test_cmp expect actual
     '
 
     test_expect_success "Pretty content of $type is correct" '
 	echo_without_newline "$pretty_content" >expect &&
-	git cat-file -p $sha1 >actual &&
+	git cat-file -p $object_name >actual &&
 	test_cmp expect actual
     '
 
     test -z "$content" ||
     test_expect_success "--batch output of $type is correct" '
 	echo "$batch_output" >expect &&
-	echo $sha1 | git cat-file --batch >actual &&
+	echo $object_name | git cat-file --batch >actual &&
 	test_cmp expect actual
     '
 
     test_expect_success "--batch-check output of $type is correct" '
-	echo "$sha1 $type $size" >expect &&
-	echo_without_newline $sha1 | git cat-file --batch-check >actual &&
+	echo "$oid $type $size" >expect &&
+	echo_without_newline $object_name | git cat-file --batch-check >actual &&
 	test_cmp expect actual
     '
 
@@ -179,34 +181,40 @@ $content"
 	test -z "$content" ||
 		test_expect_success "--batch-command $opt output of $type content is correct" '
 		echo "$batch_output" >expect &&
-		test_write_lines "contents $sha1" | git cat-file --batch-command $opt >actual &&
+		test_write_lines "contents $object_name" | git cat-file --batch-command $opt >actual &&
 		test_cmp expect actual
 	'
 
 	test_expect_success "--batch-command $opt output of $type info is correct" '
-		echo "$sha1 $type $size" >expect &&
-		test_write_lines "info $sha1" |
+		echo "$oid $type $size" >expect &&
+		test_write_lines "info $object_name" |
 		git cat-file --batch-command $opt >actual &&
 		test_cmp expect actual
 	'
     done
 
     test_expect_success "custom --batch-check format" '
-	echo "$type $sha1" >expect &&
-	echo $sha1 | git cat-file --batch-check="%(objecttype) %(objectname)" >actual &&
+	echo "$type $oid" >expect &&
+	echo $object_name | git cat-file --batch-check="%(objecttype) %(objectname)" >actual &&
 	test_cmp expect actual
     '
 
     test_expect_success "custom --batch-command format" '
-	echo "$type $sha1" >expect &&
-	echo "info $sha1" | git cat-file --batch-command="%(objecttype) %(objectname)" >actual &&
+	echo "$type $oid" >expect &&
+	echo "info $object_name" | git cat-file --batch-command="%(objecttype) %(objectname)" >actual &&
 	test_cmp expect actual
     '
 
     test_expect_success '--batch-check with %(rest)' '
 	echo "$type this is some extra content" >expect &&
-	echo "$sha1    this is some extra content" |
+	echo "$object_name    this is some extra content" |
 		git cat-file --batch-check="%(objecttype) %(rest)" >actual &&
+	test_cmp expect actual
+    '
+
+    test_expect_success '--batch-check with %(objectmode)' '
+	echo "$mode $oid" >expect &&
+	echo $object_name | git cat-file --batch-check="%(objectmode) %(objectname)" >actual &&
 	test_cmp expect actual
     '
 
@@ -216,7 +224,7 @@ $content"
 		echo "$size" &&
 		echo "$content"
 	} >expect &&
-	echo $sha1 | git cat-file --batch="%(objectsize)" >actual &&
+	echo $object_name | git cat-file --batch="%(objectsize)" >actual &&
 	test_cmp expect actual
     '
 
@@ -226,7 +234,7 @@ $content"
 		echo "$type" &&
 		echo "$content"
 	} >expect &&
-	echo $sha1 | git cat-file --batch="%(objecttype)" >actual &&
+	echo $object_name | git cat-file --batch="%(objecttype)" >actual &&
 	test_cmp expect actual
     '
 }
@@ -240,7 +248,7 @@ test_expect_success "setup" '
 	git update-index --add hello
 '
 
-run_tests 'blob' $hello_sha1 $hello_size "$hello_content" "$hello_content"
+run_tests 'blob' $hello_sha1 "" $hello_size "$hello_content" "$hello_content"
 
 test_expect_success '--batch-command --buffer with flush for blob info' '
 	echo "$hello_sha1 blob $hello_size" >expect &&
@@ -270,7 +278,8 @@ tree_sha1=$(git write-tree)
 tree_size=$(($(test_oid rawsz) + 13))
 tree_pretty_content="100644 blob $hello_sha1	hello${LF}"
 
-run_tests 'tree' $tree_sha1 $tree_size "" "$tree_pretty_content"
+run_tests 'tree' $tree_sha1 "" $tree_size "" "$tree_pretty_content"
+run_tests 'blob' "$tree_sha1:hello" "100644" $hello_size "" "$hello_content"
 
 commit_message="Initial commit"
 commit_sha1=$(echo_without_newline "$commit_message" | git commit-tree $tree_sha1)
@@ -281,7 +290,7 @@ committer $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL> $GIT_COMMITTER_DATE
 
 $commit_message"
 
-run_tests 'commit' $commit_sha1 $commit_size "$commit_content" "$commit_content"
+run_tests 'commit' $commit_sha1 "" $commit_size "$commit_content" "$commit_content"
 
 tag_header_without_timestamp="object $hello_sha1
 type blob
@@ -295,7 +304,7 @@ $tag_description"
 tag_sha1=$(echo_without_newline "$tag_content" | git hash-object -t tag --stdin -w)
 tag_size=$(strlen "$tag_content")
 
-run_tests 'tag' $tag_sha1 $tag_size "$tag_content" "$tag_content"
+run_tests 'tag' $tag_sha1 "" $tag_size "$tag_content" "$tag_content"
 
 test_expect_success "Reach a blob from a tag pointing to it" '
 	echo_without_newline "$hello_content" >expect &&
@@ -1166,6 +1175,16 @@ test_expect_success 'cat-file --batch-check respects replace objects' '
 	$orig
 	EOF
 	echo "$orig commit $fake_size" >expect &&
+	test_cmp expect actual
+'
+
+test_expect_success 'batch-command with a submodule' '
+	printf "160000 commit %0.*d\tsub\n" $(test_oid hexsz) 17 >tree-with-sub &&
+	tree=$(git mktree <tree-with-sub) &&
+	git cat-file --batch-check >actual <<-EOF &&
+	$tree:sub
+	EOF
+	printf "%0.*d submodule 0\n" $(test_oid hexsz) 17 >expect &&
 	test_cmp expect actual
 '
 
