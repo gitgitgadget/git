@@ -8,7 +8,8 @@ git-survey - Measure various repository dimensions of scale
 SYNOPSIS
 --------
 [synopsis]
-git survey [--[no-]progress]
+git survey [--[no-]progress] [--all-refs]
+	[--branches] [--tags] [--remotes] [--detached] [--other]
 
 DESCRIPTION
 -----------
@@ -20,11 +21,39 @@ performance problems.  `git-survey` attempts to measure and report on
 known problem areas.
 
 THIS COMMAND IS EXPERIMENTAL. ITS BEHAVIOR MAY CHANGE IN THE FUTURE.
+
 OPTIONS
 -------
 
 `--[no-]progress`::
 	Show progress.  This is automatically enabled when interactive.
+
+Ref Selection
+~~~~~~~~~~~~~
+
+The following options control the set of refs that `git survey` will examine.
+By default, `git survey` will look at tags, local branches, and remote refs.
+If any of the following options are given, the default set is cleared and
+only refs for the given options are added.
+
+`--all-refs`::
+	Use all refs.  This includes local branches, tags, remote refs,
+	notes, and stashes.  This option overrides all of the following.
+
+`--branches`::
+	Add local branches (`refs/heads/`) to the set.
+
+`--tags`::
+	Add tags (`refs/tags/`) to the set.
+
+`--remotes`::
+	Add remote branches (`refs/remote/`) to the set.
+
+`--detached`::
+	Add HEAD to the set.
+
+`--other`::
+	Add notes (`refs/notes/`) and stashes (`refs/stash/`) to the set.
 
 OUTPUT
 ------
