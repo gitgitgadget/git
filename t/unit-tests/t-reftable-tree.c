@@ -6,11 +6,8 @@ license that can be found in the LICENSE file or at
 https://developers.google.com/open-source/licenses/bsd
 */
 
-#include "system.h"
-#include "tree.h"
-
-#include "test_framework.h"
-#include "reftable-tests.h"
+#include "test-lib.h"
+#include "reftable/tree.h"
 
 static int test_compare(const void *a, const void *b)
 {
@@ -24,37 +21,36 @@ struct curry {
 static void check_increasing(void *arg, void *key)
 {
 	struct curry *c = arg;
-	if (c->last) {
-		EXPECT(test_compare(c->last, key) < 0);
-	}
+	if (c->last)
+		check_int(test_compare(c->last, key), <, 0);
 	c->last = key;
 }
 
 static void test_tree(void)
 {
 	struct tree_node *root = NULL;
+	void *values[11] = { 0 };
+	struct tree_node *nodes[11] = { 0 };
+	size_t i = 1;
+	struct curry c = { 0 };
 
-	void *values[11] = { NULL };
-	struct tree_node *nodes[11] = { NULL };
-	int i = 1;
-	struct curry c = { NULL };
 	do {
 		nodes[i] = tree_search(values + i, &root, &test_compare, 1);
 		i = (i * 7) % 11;
 	} while (i != 1);
 
 	for (i = 1; i < ARRAY_SIZE(nodes); i++) {
-		EXPECT(values + i == nodes[i]->key);
-		EXPECT(nodes[i] ==
-		       tree_search(values + i, &root, &test_compare, 0));
+		check_pointer_eq(values + i, nodes[i]->key);
+		check_pointer_eq(nodes[i], tree_search(values + i, &root, &test_compare, 0));
 	}
 
 	infix_walk(root, check_increasing, &c);
 	tree_free(root);
 }
 
-int tree_test_main(int argc, const char *argv[])
+int cmd_main(int argc, const char *argv[])
 {
-	RUN_TEST(test_tree);
-	return 0;
+	TEST(test_tree(), "tree_search and infix_walk work");
+
+	return test_done();
 }
