@@ -1032,7 +1032,18 @@ test_expect_success 'fsck warning on symlink target with excessive length' '
 	warning in blob $symlink_target: symlinkTargetLength: symlink target too long
 	EOF
 	git fsck --no-dangling >actual 2>&1 &&
-	test_cmp expected actual
+	test_cmp expected actual &&
+
+	test_when_finished "git tag -d symlink-target-length" &&
+	git tag symlink-target-length $tree &&
+	test_when_finished "rm -rf throwaway.git" &&
+	git init --bare throwaway.git &&
+	git --git-dir=throwaway.git config receive.fsckObjects true &&
+	git --git-dir=throwaway.git config receive.fsck.symlinkTargetLength error &&
+	test_must_fail git push throwaway.git symlink-target-length &&
+	git --git-dir=throwaway.git config --unset receive.fsck.symlinkTargetLength &&
+	git push throwaway.git symlink-target-length 2>err &&
+	grep "warning.*symlinkTargetLength" err
 '
 
 test_expect_success 'fsck warning on symlink target pointing inside git dir' '
