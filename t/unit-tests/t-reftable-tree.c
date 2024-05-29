@@ -26,14 +26,13 @@ static void check_increasing(void *arg, void *key)
 	c->last = key;
 }
 
-static void test_tree(void)
+static void test_tree_search(void)
 {
 	struct tree_node *root = NULL;
 
 	void *values[11] = { NULL };
 	struct tree_node *nodes[11] = { NULL };
 	int i = 1;
-	struct curry c = { NULL };
 	do {
 		nodes[i] = tree_search(values + i, &root, &test_compare, 1);
 		i = (i * 7) % 11;
@@ -44,13 +43,29 @@ static void test_tree(void)
 		check(nodes[i] == tree_search(values + i, &root, &test_compare, 0));
 	}
 
-	infix_walk(root, check_increasing, &c);
+	tree_free(root);
+}
+
+static void test_infix_walk(void)
+{
+	struct tree_node *root = NULL;
+
+	void *values[13] = { NULL };
+	struct curry c = { NULL };
+	int i = 1;
+	do {
+		tree_search(values + i, &root, &test_compare, 1);
+		i = (i * 5) % 13;
+	} while (i != 1);
+
+	infix_walk(root, &check_increasing, &c);
 	tree_free(root);
 }
 
 int cmd_main(int argc, const char *argv[])
 {
-	TEST(test_tree(), "tree_search and infix_walk work");
+	TEST(test_tree_search(), "tree_search works");
+	TEST(test_infix_walk(), "infix_walk works");
 
 	return test_done();
 }
