@@ -16,6 +16,9 @@ struct tree_node *tree_search(void *key, struct tree_node **rootp,
 			      int insert)
 {
 	int res;
+
+	if (!rootp)
+		return NULL;
 	if (!*rootp) {
 		if (!insert) {
 			return NULL;
@@ -39,6 +42,8 @@ struct tree_node *tree_search(void *key, struct tree_node **rootp,
 void infix_walk(struct tree_node *t, void (*action)(void *arg, void *key),
 		void *arg)
 {
+	if (!t)
+		return;
 	if (t->left) {
 		infix_walk(t->left, action, arg);
 	}
