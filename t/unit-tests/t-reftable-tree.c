@@ -43,6 +43,7 @@ static void test_tree_search(void)
 		check(nodes[i] == tree_search(values + i, &root, &test_compare, 0));
 	}
 
+	check(!tree_search(values, &root, &test_compare, 0));
 	tree_free(root);
 }
 
