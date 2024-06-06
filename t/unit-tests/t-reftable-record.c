@@ -98,6 +98,28 @@ static void test_reftable_ref_record_comparison(void)
 	check(!reftable_record_cmp(&in[0], &in[1]));
 }
 
+static void test_reftable_ref_record_compare_name(void)
+{
+	struct reftable_ref_record recs[14] = { 0 };
+	size_t N = ARRAY_SIZE(recs), i;
+
+	for (i = 0; i < N; i++)
+		recs[i].refname = xstrfmt("%02"PRIuMAX, (uintmax_t)i);
+
+	QSORT(recs, N, reftable_ref_record_compare_name);
+
+	for (i = 1; i < N; i++) {
+		check_int(strcmp(recs[i - 1].refname, recs[i].refname), <, 0);
+		check_int(reftable_ref_record_compare_name(&recs[i], &recs[i]), ==, 0);
+	}
+
+	for (i = 0; i < N - 1; i++)
+		check_int(reftable_ref_record_compare_name(&recs[i + 1], &recs[i]), >, 0);
+
+	for (i = 0; i < N; i++)
+		reftable_ref_record_release(&recs[i]);
+}
+
 static void test_reftable_ref_record_roundtrip(void)
 {
 	struct strbuf scratch = STRBUF_INIT;
@@ -493,6 +515,7 @@ int cmd_main(int argc, const char *argv[])
 	TEST(test_reftable_log_record_comparison(), "comparison operations work on log record");
 	TEST(test_reftable_index_record_comparison(), "comparison operations work on index record");
 	TEST(test_reftable_obj_record_comparison(), "comparison operations work on obj record");
+	TEST(test_reftable_ref_record_compare_name(), "reftable_ref_record_compare_name works");
 	TEST(test_reftable_log_record_roundtrip(), "record operations work on log record");
 	TEST(test_reftable_ref_record_roundtrip(), "record operations work on ref record");
 	TEST(test_varint_roundtrip(), "put_var_int and get_var_int work");
