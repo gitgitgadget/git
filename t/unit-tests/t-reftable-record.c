@@ -211,6 +211,37 @@ static void test_reftable_log_record_comparison(void)
 	check(!reftable_record_cmp(&in[0], &in[1]));
 }
 
+static void test_reftable_log_record_compare_key(void)
+{
+	struct reftable_log_record logs[14] = { 0 };
+	size_t N = ARRAY_SIZE(logs), i;
+
+	for (i = 0; i < N; i++) {
+		if (i < N / 2) {
+			logs[i].refname = xstrfmt("%02"PRIuMAX, (uintmax_t)i);
+			logs[i].update_index = i;
+		} else {
+			logs[i].refname = xstrdup("refs/heads/master");
+			logs[i].update_index = i;
+		}
+	}
+
+	QSORT(logs, N, reftable_log_record_compare_key);
+
+	for (i = 1; i < N / 2; i++)
+		check_int(strcmp(logs[i - 1].refname, logs[i].refname), <, 0);
+	for (i = N / 2 + 1; i < N; i++)
+		check_int(logs[i - 1].update_index, >, logs[i].update_index);
+
+	for (i = 0; i < N - 1; i++) {
+		check_int(reftable_log_record_compare_key(&logs[i], &logs[i]), ==, 0);
+		check_int(reftable_log_record_compare_key(&logs[i + 1], &logs[i]), >, 0);
+	}
+
+	for (i = 0; i < N; i++)
+		reftable_log_record_release(&logs[i]);
+}
+
 static void test_reftable_log_record_roundtrip(void)
 {
 	struct reftable_log_record in[] = {
@@ -516,6 +547,7 @@ int cmd_main(int argc, const char *argv[])
 	TEST(test_reftable_index_record_comparison(), "comparison operations work on index record");
 	TEST(test_reftable_obj_record_comparison(), "comparison operations work on obj record");
 	TEST(test_reftable_ref_record_compare_name(), "reftable_ref_record_compare_name works");
+	TEST(test_reftable_log_record_compare_key(), "reftable_log_record_compare_key works");
 	TEST(test_reftable_log_record_roundtrip(), "record operations work on log record");
 	TEST(test_reftable_ref_record_roundtrip(), "record operations work on ref record");
 	TEST(test_varint_roundtrip(), "put_var_int and get_var_int work");
