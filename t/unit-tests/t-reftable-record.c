@@ -387,6 +387,7 @@ static void test_reftable_obj_record_roundtrip(void)
 		int n, m;
 		uint8_t extra;
 
+		check(!reftable_record_is_deletion(&in));
 		test_copy(&in);
 		reftable_record_key(&in, &key);
 		n = reftable_record_encode(&in, dest, GIT_SHA1_RAWSZ);
