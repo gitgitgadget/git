@@ -105,6 +105,7 @@ static void test_reftable_ref_record_roundtrip(void)
 	for (int i = REFTABLE_REF_DELETION; i < REFTABLE_NR_REF_VALUETYPES; i++) {
 		struct reftable_record in = {
 			.type = BLOCK_TYPE_REF,
+			.u.ref.value_type = i,
 		};
 		struct reftable_record out = { .type = BLOCK_TYPE_REF };
 		struct strbuf key = STRBUF_INIT;
@@ -135,6 +136,7 @@ static void test_reftable_ref_record_roundtrip(void)
 		test_copy(&in);
 
 		check_int(reftable_record_val_type(&in), ==, i);
+		check_int(reftable_record_is_deletion(&in), ==, i == REFTABLE_REF_DELETION);
 
 		reftable_record_key(&in, &key);
 		n = reftable_record_encode(&in, dest, GIT_SHA1_RAWSZ);
