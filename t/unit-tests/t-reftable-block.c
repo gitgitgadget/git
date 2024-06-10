@@ -15,8 +15,8 @@ https://developers.google.com/open-source/licenses/bsd
 static void test_block_read_write(void)
 {
 	const int header_off = 21; /* random */
-	char *names[30];
-	const size_t N = ARRAY_SIZE(names);
+	struct reftable_record recs[30];
+	const size_t N = ARRAY_SIZE(recs);
 	const size_t block_size = 1024;
 	struct reftable_block block = { 0 };
 	struct block_writer bw = {
@@ -47,11 +47,11 @@ static void test_block_read_write(void)
 		char name[100];
 		snprintf(name, sizeof(name), "branch%02"PRIuMAX , (uintmax_t)i);
 
-		rec.u.ref.refname = name;
+		rec.u.ref.refname = xstrdup(name);
 		rec.u.ref.value_type = REFTABLE_REF_VAL1;
 		memset(rec.u.ref.value.val1, i, GIT_SHA1_RAWSZ);
 
-		names[i] = xstrdup(name);
+		recs[i] = rec;
 		n = block_writer_add(&bw, &rec);
 		rec.u.ref.refname = NULL;
 		rec.u.ref.value_type = REFTABLE_REF_DELETION;
@@ -72,7 +72,7 @@ static void test_block_read_write(void)
 		check_int(r, >=, 0);
 		if (r > 0)
 			break;
-		check_str(names[j], rec.u.ref.refname);
+		check(reftable_record_equal(&recs[j], &rec, GIT_SHA1_RAWSZ));
 		j++;
 	}
 
@@ -82,7 +82,7 @@ static void test_block_read_write(void)
 	for (i = 0; i < N; i++) {
 		struct block_iter it = BLOCK_ITER_INIT;
 		strbuf_reset(&want);
-		strbuf_addstr(&want, names[i]);
+		strbuf_addstr(&want, recs[i].u.ref.refname);
 
 		n = block_iter_seek_key(&it, &br, &want);
 		check_int(n, ==, 0);
@@ -90,7 +90,7 @@ static void test_block_read_write(void)
 		n = block_iter_next(&it, &rec);
 		check_int(n, ==, 0);
 
-		check_str(names[i], rec.u.ref.refname);
+		check(reftable_record_equal(&recs[i], &rec, GIT_SHA1_RAWSZ));
 
 		want.len--;
 		n = block_iter_seek_key(&it, &br, &want);
@@ -98,7 +98,7 @@ static void test_block_read_write(void)
 
 		n = block_iter_next(&it, &rec);
 		check_int(n, ==, 0);
-		check_str(names[10 * (i / 10)], rec.u.ref.refname);
+		check(reftable_record_equal(&recs[10 * (i / 10)], &rec, GIT_SHA1_RAWSZ));
 
 		block_iter_close(&it);
 	}
@@ -108,7 +108,7 @@ static void test_block_read_write(void)
 	reftable_block_done(&br.block);
 	strbuf_release(&want);
 	for (i = 0; i < N; i++)
-		reftable_free(names[i]);
+		reftable_record_release(&recs[i]);
 }
 
 int cmd_main(int argc, const char *argv[])
