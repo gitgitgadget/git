@@ -15,15 +15,14 @@ static int test_compare(const void *a, const void *b)
 }
 
 struct curry {
-	void *last;
+	void **arr;
+	size_t i;
 };
 
-static void check_increasing(void *arg, void *key)
+static void store(void *arg, void *key)
 {
 	struct curry *c = arg;
-	if (c->last)
-		check_int(test_compare(c->last, key), <, 0);
-	c->last = key;
+	c->arr[c->i++] = key;
 }
 
 static void test_tree_search(void)
@@ -51,6 +50,7 @@ static void test_infix_walk(void)
 {
 	struct tree_node *root = NULL;
 	void *values[11] = { 0 };
+	void *out[20] = { 0 };
 	struct curry c = { 0 };
 	size_t i = 1;
 
@@ -59,7 +59,11 @@ static void test_infix_walk(void)
 		i = (i * 7) % 11;
 	} while (i != 1);
 
-	infix_walk(root, &check_increasing, &c);
+	c.arr = (void **) &out;
+	infix_walk(root, &store, &c);
+	for (i = 1; i < ARRAY_SIZE(values); i++)
+		check_pointer_eq(values + i, out[i - 1]);
+	check(!out[i]);
 	tree_free(root);
 }
 
