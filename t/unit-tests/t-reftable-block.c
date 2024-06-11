@@ -29,7 +29,6 @@ static void test_block_read_write(void)
 	int n;
 	struct block_reader br = { 0 };
 	struct block_iter it = BLOCK_ITER_INIT;
-	size_t j = 0;
 	struct strbuf want = STRBUF_INIT;
 
 	REFTABLE_CALLOC_ARRAY(block.data, block_size);
@@ -67,13 +66,12 @@ static void test_block_read_write(void)
 
 	block_iter_seek_start(&it, &br);
 
-	while (1) {
+	for (i = 0; ; i++) {
 		int r = block_iter_next(&it, &rec);
 		check_int(r, >=, 0);
 		if (r > 0)
 			break;
-		check(reftable_record_equal(&recs[j], &rec, GIT_SHA1_RAWSZ));
-		j++;
+		check(reftable_record_equal(&recs[i], &rec, GIT_SHA1_RAWSZ));
 	}
 
 	for (i = 0; i < N; i++) {
