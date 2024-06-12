@@ -177,7 +177,9 @@ See linkgit:git-rebase[1] for details.
 	the commit author is then copied from the first such commit found.
 
 --date=<date>::
-	Override the author date used in the commit.
+	Override the author date used in the commit. Special
+	strings such as `now`, `yesterday`, `noon`, `tea` can be
+	passed as value for the date.
 
 -m <msg>::
 --message=<msg>::
