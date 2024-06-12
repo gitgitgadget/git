@@ -227,6 +227,7 @@ core.autocrlf::
 	working directory and the repository has LF line endings.
 	This variable can be set to 'input',
 	in which case no output conversion is performed.
+	The default value is false.
 
 core.checkRoundtripEncoding::
 	A comma and/or whitespace separated list of encodings that Git
