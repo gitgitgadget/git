@@ -25,6 +25,29 @@ commit_msg () {
 	fi
 }
 
+prepare_time_locale () {
+	if test -z "$GIT_TEST_TIME_LOCALE"
+	then
+		case "${LC_ALL:-$LANG}" in
+		C | C.* | POSIX | POSIX.* | en_US | en_US.* )
+			GIT_TEST_TIME_LOCALE=$(locale -a | sed -n '/^\(C\|POSIX\|en_US\)/I !{
+				p
+				q
+			}')
+			;;
+		*)
+			GIT_TEST_TIME_LOCALE="${LC_ALL:-$LANG}"
+			;;
+		esac
+	fi
+	if test -n "$GIT_TEST_TIME_LOCALE"
+	then
+		test_set_prereq TIME_LOCALE
+	else
+		say "# No non-us locale available, some tests are skipped"
+	fi
+}
+
 test_expect_success 'set up basic repos' '
 	>foo &&
 	>bar &&
@@ -547,6 +570,14 @@ test_expect_success '--date=short %ad%cd is the same as %as%cs' '
 test_expect_success '--date=human %ad%cd is the same as %ah%ch' '
 	git log --format=%ad%n%cd --date=human >expected &&
 	git log --format=%ah%n%ch >actual &&
+	test_cmp expected actual
+'
+
+prepare_time_locale
+test_expect_success TIME_LOCALE '--date=format:%c does not need gettext' '
+	rm -fr no-such-dir &&
+	LC_ALL=$GIT_TEST_TIME_LOCALE git log --date=format:%c HEAD^1..HEAD >expected &&
+	GIT_TEXTDOMAINDIR=no-such-dir LC_ALL=$GIT_TEST_TIME_LOCALE git log --date=format:%c HEAD^1..HEAD >actual &&
 	test_cmp expected actual
 '
 

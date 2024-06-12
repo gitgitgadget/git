@@ -107,6 +107,8 @@ void git_setup_gettext(void)
 	const char *podir = getenv(GIT_TEXT_DOMAIN_DIR_ENVIRONMENT);
 	char *p = NULL;
 
+	setlocale(LC_TIME, "");
+
 	if (!podir)
 		podir = p = system_path(GIT_LOCALE_PATH);
 
@@ -117,7 +119,6 @@ void git_setup_gettext(void)
 
 	bindtextdomain("git", podir);
 	setlocale(LC_MESSAGES, "");
-	setlocale(LC_TIME, "");
 	init_gettext_charset("git");
 	textdomain("git");
 
