@@ -136,6 +136,12 @@ void remove_merge_branch_state(struct repository *r);
 void remove_branch_state(struct repository *r, int verbose);
 
 /*
+ * Remove information about the state of working on the current
+ * branch, *except* merge state.
+ */
+void remove_branch_state_except_merge(struct repository *r, int verbose);
+
+/*
  * Configure local branch "local" as downstream to branch "remote"
  * from remote "origin".  Used by git branch --set-upstream.
  * Returns 0 on success.
