@@ -190,6 +190,7 @@ proc show_other_diff {path w m cont_info} {
 		set max_sz 100000
 		set type unknown
 		if {[catch {
+				if {[string index $path 0] eq {~}} {set path ./$path}
 				set type [file type $path]
 				switch -- $type {
 				directory {
