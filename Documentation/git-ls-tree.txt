@@ -11,6 +11,7 @@ SYNOPSIS
 [verse]
 'git ls-tree' [-d] [-r] [-t] [-l] [-z]
 	    [--name-only] [--name-status] [--object-only] [--full-name] [--full-tree] [--abbrev[=<n>]] [--format=<format>]
+	    [--sparse-filter-oid=<blob-ish>]
 	    <tree-ish> [<path>...]
 
 DESCRIPTION
@@ -47,6 +48,11 @@ OPTIONS
 -t::
 	Show tree entries even when going to recurse them. Has no effect
 	if `-r` was not passed. `-d` implies `-t`.
+
+--sparse-filter-oid=<blob-ish>::
+	Omit showing tree objects and paths that do not match the
+	sparse-checkout specification contained in the blob
+	(or blob-expression) <blob-ish>.
 
 -l::
 --long::

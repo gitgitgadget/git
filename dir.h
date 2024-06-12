@@ -431,6 +431,11 @@ int path_in_sparse_checkout(const char *path,
 int path_in_cone_mode_sparse_checkout(const char *path,
 				      struct index_state *istate);
 
+int recursively_match_path_with_sparse_patterns(const char *path,
+						struct index_state *istate,
+						int dtype,
+						struct pattern_list *pl);
+
 struct dir_entry *dir_add_ignored(struct dir_struct *dir,
 				  struct index_state *istate,
 				  const char *pathname, int len);

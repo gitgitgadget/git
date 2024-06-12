@@ -1481,14 +1481,39 @@ int init_sparse_checkout_patterns(struct index_state *istate)
 	return 0;
 }
 
+int recursively_match_path_with_sparse_patterns(const char *path,
+						struct index_state *istate,
+						int dtype,
+						struct pattern_list *pl)
+{
+	enum pattern_match_result match = UNDECIDED;
+	const char *end, *slash;
+	/*
+	 * If UNDECIDED, use the match from the parent dir (recursively), or
+	 * fall back to NOT_MATCHED at the topmost level. Note that cone mode
+	 * never returns UNDECIDED, so we will execute only one iteration in
+	 * this case.
+	 */
+	for (end = path + strlen(path); end > path && match == UNDECIDED;
+	     end = slash) {
+		for (slash = end - 1; slash > path && *slash != '/'; slash--)
+			; /* do nothing */
+
+		match = path_matches_pattern_list(path, end - path,
+				slash > path ? slash + 1 : path, &dtype,
+				pl, istate);
+
+		/* We are going to match the parent dir now */
+		dtype = DT_DIR;
+	}
+
+	return match;
+}
+
 static int path_in_sparse_checkout_1(const char *path,
 				     struct index_state *istate,
 				     int require_cone_mode)
 {
-	int dtype = DT_REG;
-	enum pattern_match_result match = UNDECIDED;
-	const char *end, *slash;
-
 	/*
 	 * We default to accepting a path if the path is empty, there are no
 	 * patterns, or the patterns are of the wrong type.
@@ -1499,27 +1524,7 @@ static int path_in_sparse_checkout_1(const char *path,
 	     !istate->sparse_checkout_patterns->use_cone_patterns))
 		return 1;
 
-	/*
-	 * If UNDECIDED, use the match from the parent dir (recursively), or
-	 * fall back to NOT_MATCHED at the topmost level. Note that cone mode
-	 * never returns UNDECIDED, so we will execute only one iteration in
-	 * this case.
-	 */
-	for (end = path + strlen(path);
-	     end > path && match == UNDECIDED;
-	     end = slash) {
-
-		for (slash = end - 1; slash > path && *slash != '/'; slash--)
-			; /* do nothing */
-
-		match = path_matches_pattern_list(path, end - path,
-				slash > path ? slash + 1 : path, &dtype,
-				istate->sparse_checkout_patterns, istate);
-
-		/* We are going to match the parent dir now */
-		dtype = DT_DIR;
-	}
-	return match > 0;
+	return recursively_match_path_with_sparse_patterns(path, istate, DT_REG, istate->sparse_checkout_patterns) > 0;
 }
 
 int path_in_sparse_checkout(const char *path,
