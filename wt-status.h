@@ -184,5 +184,10 @@ int require_clean_work_tree(struct repository *repo,
 			    const char *hint,
 			    int ignore_submodules,
 			    int gently);
+int require_clean_index(struct repository *repo,
+			    const char *action,
+			    const char *hint,
+			    int ignore_submodules,
+			    int gently);
 
 #endif /* STATUS_H */
