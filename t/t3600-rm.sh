@@ -792,7 +792,7 @@ test_expect_success SYMLINKS 'rm across a symlinked leading path (no index)' '
 	test_path_is_file e/f
 '
 
-test_expect_failure SYMLINKS 'rm across a symlinked leading path (w/ index)' '
+test_expect_success SYMLINKS 'rm across a symlinked leading path (w/ index)' '
 	rm -rf d e &&
 	mkdir d &&
 	echo content >d/f &&
@@ -800,10 +800,10 @@ test_expect_failure SYMLINKS 'rm across a symlinked leading path (w/ index)' '
 	git commit -m "d/f exists" &&
 	mv d e &&
 	ln -s e d &&
-	test_must_fail git rm d/f &&
-	git rev-parse --verify :d/f &&
+	test_todo test_must_fail git rm d/f &&
+	test_todo git rev-parse --verify :d/f &&
 	test -h d &&
-	test_path_is_file e/f
+	test_todo test_path_is_file e/f
 '
 
 test_expect_success 'setup for testing rm messages' '

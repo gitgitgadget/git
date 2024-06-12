@@ -34,15 +34,15 @@ test_expect_success 'setup test repository' '
 	git commit -m "Five letters ought to be enough for anybody"
 '
 
-test_expect_failure 'rebase (apply-backend)' '
-	test_when_finished "git rebase --abort" &&
+test_expect_success 'rebase (apply-backend)' '
+	test_when_finished "test_might_fail git rebase --abort" &&
 	git checkout -B testing localmods &&
 	# rebase (--apply) should not drop commits that start empty
 	git rebase --apply upstream &&
 
 	test_write_lines D C B A >expect &&
 	git log --format=%s >actual &&
-	test_cmp expect actual
+	test_todo test_cmp expect actual
 '
 
 test_expect_success 'rebase --merge --empty=drop' '

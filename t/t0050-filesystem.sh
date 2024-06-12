@@ -100,7 +100,7 @@ test_expect_success CASE_INSENSITIVE_FS 'add directory (with different case)' '
 	test_cmp expected actual
 '
 
-test_expect_failure CASE_INSENSITIVE_FS 'add (with different case)' '
+test_expect_success CASE_INSENSITIVE_FS 'add (with different case)' '
 	git reset --hard initial &&
 	rm camelcase &&
 	echo 1 >CamelCase &&
@@ -108,7 +108,7 @@ test_expect_failure CASE_INSENSITIVE_FS 'add (with different case)' '
 	git ls-files >tmp &&
 	camel=$(grep -i camelcase tmp) &&
 	test $(echo "$camel" | wc -l) = 1 &&
-	test "z$(git cat-file blob :$camel)" = z1
+	test_todo test "z$(git cat-file blob :$camel)" = z1
 '
 
 test_expect_success "setup unicode normalization tests" '

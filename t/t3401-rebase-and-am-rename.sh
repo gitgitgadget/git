@@ -52,7 +52,7 @@ test_expect_success 'rebase --interactive: directory rename detected' '
 	)
 '
 
-test_expect_failure 'rebase --apply: directory rename detected' '
+test_expect_success 'rebase --apply: directory rename detected' '
 	(
 		cd dir-rename &&
 
@@ -63,8 +63,8 @@ test_expect_failure 'rebase --apply: directory rename detected' '
 		git ls-files -s >out &&
 		test_line_count = 5 out &&
 
-		test_path_is_file y/d &&
-		test_path_is_missing x/d
+		test_todo test_path_is_file y/d &&
+		test_todo test_path_is_missing x/d
 	)
 '
 
@@ -84,7 +84,7 @@ test_expect_success 'rebase --merge: directory rename detected' '
 	)
 '
 
-test_expect_failure 'am: directory rename detected' '
+test_expect_success 'am: directory rename detected' '
 	(
 		cd dir-rename &&
 
@@ -97,8 +97,8 @@ test_expect_failure 'am: directory rename detected' '
 		git ls-files -s >out &&
 		test_line_count = 5 out &&
 
-		test_path_is_file y/d &&
-		test_path_is_missing x/d
+		test_todo test_path_is_file y/d &&
+		test_todo test_path_is_missing x/d
 	)
 '
 

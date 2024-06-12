@@ -565,7 +565,7 @@ test_expect_success 'unstash must re-create the file' '
 	test bar = "$(cat file)"
 '
 
-test_expect_failure 'stash directory to file' '
+test_expect_success 'stash directory to file' '
 	git reset --hard &&
 	mkdir dir &&
 	echo foo >dir/file &&
@@ -576,12 +576,12 @@ test_expect_failure 'stash directory to file' '
 	git stash save "directory to file" &&
 	test_path_is_dir dir &&
 	test foo = "$(cat dir/file)" &&
-	test_must_fail git stash apply &&
-	test bar = "$(cat dir)" &&
+	test_todo test_must_fail git stash apply &&
+	test_todo test bar = "$(cat dir)" &&
 	git reset --soft HEAD^
 '
 
-test_expect_failure 'stash file to directory' '
+test_expect_success 'stash file to directory' '
 	git reset --hard &&
 	rm file &&
 	mkdir file &&
@@ -590,8 +590,8 @@ test_expect_failure 'stash file to directory' '
 	test_path_is_file file &&
 	test bar = "$(cat file)" &&
 	git stash apply &&
-	test_path_is_file file/file &&
-	test foo = "$(cat file/file)"
+	test_todo test_path_is_file file/file &&
+	test_todo test foo = "$(cat file/file)"
 '
 
 test_expect_success 'giving too many ref arguments does not modify files' '

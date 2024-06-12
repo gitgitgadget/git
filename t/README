@@ -921,6 +921,10 @@ see test-lib-functions.sh for the full list and their options.
 
  - test_expect_failure [<prereq>] <message> <script>
 
+   Where possible new tests should use test_expect_success and mark
+   the individual failing commands with test_todo (see below) rather
+   than using test_expect_failure.
+
    This is NOT the opposite of test_expect_success, but is used
    to mark a test that demonstrates a known breakage.  Unlike
    the usual test_expect_success tests, which say "ok" on
@@ -930,6 +934,14 @@ see test-lib-functions.sh for the full list and their options.
 
    Like test_expect_success this function can optionally use a three
    argument invocation with a prerequisite as the first argument.
+
+ - test_todo <command>
+
+   This is used to mark commands that should succeed but do not due to
+   a known issue. The test will be reported as a known failure if the
+   issue still exists and won’t cause -i (immediate) to stop. If the
+   command unexpectedly succeeds then the test will be reported as a
+   failing. test_todo cannot be used in a subshell.
 
  - test_debug <script>
 

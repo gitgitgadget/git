@@ -141,6 +141,98 @@ test_expect_success 'subtest: a passing TODO test' '
 	EOF
 '
 
+test_expect_success 'subtest: a failing test_todo' '
+	write_and_run_sub_test_lib_test failing-test-todo <<-\EOF &&
+	test_false () {
+		false
+	}
+	test_expect_success "passing test" "true"
+	test_expect_success "known todo" "test_todo test_false"
+	test_done
+	EOF
+	check_sub_test_lib_test failing-test-todo <<-\EOF
+	> ok 1 - passing test
+	> not ok 2 - known todo # TODO known breakage
+	> # still have 1 known breakage(s)
+	> # passed all remaining 1 test(s)
+	> 1..2
+	EOF
+'
+
+test_expect_success 'subtest: a passing test_todo' '
+	write_and_run_sub_test_lib_test_err passing-test-todo <<-\EOF &&
+	test_true () {
+		true
+	}
+	test_expect_success "pretend we have fixed a test_todo breakage" \
+		"test_todo test_true"
+	test_done
+	EOF
+	check_sub_test_lib_test passing-test-todo <<-\EOF
+	> not ok 1 - pretend we have fixed a test_todo breakage
+	> #	test_todo test_true
+	> # failed 1 among 1 test(s)
+	> 1..1
+	EOF
+'
+
+test_expect_success 'subtest: test_todo allowed arguments' '
+	write_and_run_sub_test_lib_test_err acceptable-test-todo <<-\EOF &&
+	# This an acceptable command for test_todo but not test_must_fail
+	test_true () {
+		  return 0
+	}
+	test_expect_success "test_todo skips env and accepts good command" \
+		"test_todo env Var=Value git --invalid-option"
+	test_expect_success "test_todo skips env and rejects bad command" \
+		"test_todo env Var=Value false"
+	test_expect_success "test_todo test_must_fail accepts good command" \
+		"test_todo test_must_fail git --version"
+	test_expect_success "test_todo test_must_fail rejects bad command" \
+		"test_todo test_must_fail test_true"
+	test_expect_success "test_todo accepts grep" \
+		"echo a >a && test_todo grep b <a"
+	test_expect_success "test_todo accepts ! grep" \
+		"echo a >a && test_todo ! grep -v b <a"
+	test_expect_success "test_todo detects grep errors" \
+		"echo a >a && test_todo grep --invalid-option b <a"
+	test_expect_success "test_todo detects ! grep errors" \
+		"echo a >a && test_todo ! grep --invalid-option -v b <a"
+	test_expect_success "test_todo accepts test" \
+		"test_todo test -z a"
+	test_expect_success "test_todo detects test errors" \
+		"test_todo test a xxx b"
+	test_expect_success "test_todo skips verbose and accepts good command" \
+		"test_todo verbose test -z a"
+	test_expect_success "test_todo skips verbose and rejects bad command" \
+		"test_todo verbose false"
+	test_done
+	EOF
+	check_sub_test_lib_test acceptable-test-todo <<-\EOF
+	> not ok 1 - test_todo skips env and accepts good command # TODO known breakage
+	> not ok 2 - test_todo skips env and rejects bad command
+	> #	test_todo env Var=Value false
+	> not ok 3 - test_todo test_must_fail accepts good command # TODO known breakage
+	> not ok 4 - test_todo test_must_fail rejects bad command
+	> #	test_todo test_must_fail test_true
+	> not ok 5 - test_todo accepts grep # TODO known breakage
+	> not ok 6 - test_todo accepts ! grep # TODO known breakage
+	> not ok 7 - test_todo detects grep errors
+	> #	echo a >a && test_todo grep --invalid-option b <a
+	> not ok 8 - test_todo detects ! grep errors
+	> #	echo a >a && test_todo ! grep --invalid-option -v b <a
+	> not ok 9 - test_todo accepts test # TODO known breakage
+	> not ok 10 - test_todo detects test errors
+	> #	test_todo test a xxx b
+	> not ok 11 - test_todo skips verbose and accepts good command # TODO known breakage
+	> not ok 12 - test_todo skips verbose and rejects bad command
+	> #	test_todo verbose false
+	> # still have 6 known breakage(s)
+	> # failed 6 among remaining 6 test(s)
+	> 1..12
+	EOF
+'
+
 test_expect_success 'subtest: 2 TODO tests, one passin' '
 	write_and_run_sub_test_lib_test partially-passing-todos <<-\EOF &&
 	test_expect_failure "pretend we have a known breakage" "false"

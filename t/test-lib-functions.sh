@@ -874,6 +874,7 @@ test_expect_failure () {
 	export test_prereq
 	if ! test_skip "$@"
 	then
+		test_todo_=test_expect_failure
 		test -n "$test_skip_test_preamble" ||
 		say >&3 "checking known breakage of $TEST_NUMBER.$test_count '$1': $2"
 		if test_run_ "$2" expecting_failure
@@ -897,9 +898,15 @@ test_expect_success () {
 	then
 		test -n "$test_skip_test_preamble" ||
 		say >&3 "expecting success of $TEST_NUMBER.$test_count '$1': $2"
+		test_todo_=test_expect_success
 		if test_run_ "$2"
 		then
-			test_ok_ "$1"
+			if test "$test_todo_" = "todo"
+			then
+				test_known_broken_failure_ "$1"
+			else
+				test_ok_ "$1"
+			fi
 		else
 			test_failure_ "$@"
 		fi
@@ -1076,10 +1083,24 @@ list_contains () {
 }
 
 # Returns success if the arguments indicate that a command should be
-# accepted by test_must_fail(). If the command is run with env, the env
-# and its corresponding variable settings will be stripped before we
-# test the command being run.
+# accepted by test_must_fail() or test_todo(). If the command is run
+# with env, the env and its corresponding variable settings will be
+# stripped before we we test the command being run.
+#
+# test_todo() allows "grep", "test" or any of the assertions beginning
+# test_ such as test_cmp in addition the commands allowed by
+# test_must_fail().
+
 test_must_fail_acceptable () {
+	local name
+	name="$1"
+	shift
+
+	if test "$name" = "todo" && test "$1" = "verbose"
+	then
+		shift
+	fi
+
 	if test "$1" = "env"
 	then
 		shift
@@ -1100,11 +1121,136 @@ test_must_fail_acceptable () {
 	git|__git*|scalar|test-tool|test_terminal)
 		return 0
 		;;
+	test_might_fail|test_todo|test_when_finished)
+		return 1
+		;;
+	test_must_fail)
+		if test "$name" = "todo"
+		then
+			shift
+			test_must_fail_acceptable must_fail "$@"
+			return $?
+		fi
+		return 1
+		;;
+	grep|test|test_*)
+		if test "$name" = "todo"
+		then
+			test_todo_command_="$1"
+			return 0
+		fi
+		return 1
+		;;
+	'!')
+		if test "$name" = "todo" && test "$2" = "grep"
+		then
+			test_todo_command_=grep
+			return 0
+		fi
+		return 1
+		;;
 	*)
 		return 1
 		;;
 	esac
 }
+
+test_must_fail_helper () {
+	test_todo_command_=
+	test_must_fail_name_="$1"
+	shift
+	case "$1" in
+	ok=*)
+		_test_ok=${1#ok=}
+		shift
+		;;
+	*)
+		_test_ok=
+		;;
+	esac
+	if ! test_must_fail_acceptable $test_must_fail_name_ "$@"
+	then
+		echo >&7 "test_$test_must_fail_name_: only 'git' is allowed: $*"
+		return 1
+	fi
+	test_invert_exit_code_=
+	if test "$1" = "!"
+	then
+		test_invert_exit_code_=1
+		shift
+	fi
+	"$@" 2>&7
+	exit_code=$?
+	if test -n "$test_invert_exit_code_"
+	# We only invert the exit code of grep. An exit code greater
+	# than 1 indicates an error rather than a failed match so
+	# we only want to swap zero and one.
+	then
+		if test $exit_code -eq 0
+		then
+			exit_code=1
+		elif test $exit_code -eq 1
+		then
+			exit_code=0
+		fi
+	fi
+	if test $exit_code -eq 0 && ! list_contains "$_test_ok" success
+	then
+		echo >&4 "test_$test_must_fail_name_: command succeeded: $*"
+		return 1
+	elif test_match_signal 13 $exit_code && list_contains "$_test_ok" sigpipe
+	then
+		return 0
+	elif test $exit_code -gt 129 && test $exit_code -le 192
+	then
+		echo >&4 "test_$test_must_fail_name_: died by signal $(($exit_code - 128)): $*"
+		return 1
+	elif test $exit_code -eq 127
+	then
+		echo >&4 "test_$test_must_fail_name_: command not found: $*"
+		return 1
+	elif test $exit_code -eq 126
+	then
+		echo >&4 "test_$test_must_fail_name_: valgrind error: $*"
+		return 1
+	else
+		case "$test_todo_command_" in
+		grep|test)
+			if test $exit_code -ne 1
+			then
+			       echo >&4 "test_todo: $test_todo_command_ error: $*"
+			       return 1
+			fi;;
+		esac
+	fi
+
+	return 0
+} 7>&2 2>&4
+
+# This is used to mark commands that should succeed but do not due to
+# a known issue. Marking the individual commands that fail rather than
+# using test_expect_failure allows us to detect any unexpected
+# failures. As with test_must_fail if the command is killed by a
+# signal the test will fail. If the command unexpectedly succeeds then
+# the test will also fail. For example:
+#
+#	test_expect_success 'test a known failure' '
+#		git foo 2>err &&
+#		test_todo test_must_be_empty err
+#	'
+#
+# This test will fail if "git foo" fails or err is unexpectedly empty.
+# test_todo can be used with "git", "grep", "test" or any of the
+# "test_*" assertions such as test_cmp().
+
+test_todo () {
+	if test "$test_todo_" = "test_expect_failure"
+	then
+		BUG "test_todo_ cannot be used inside test_expect_failure"
+	fi
+	test_todo_=todo
+	test_must_fail_helper todo "$@" 2>&7
+} 7>&2 2>&4
 
 # This is not among top-level (test_expect_success | test_expect_failure)
 # but is a prefix that can be used in the test script, like:
@@ -1138,43 +1284,7 @@ test_must_fail_acceptable () {
 #    ! grep pattern output
 
 test_must_fail () {
-	case "$1" in
-	ok=*)
-		_test_ok=${1#ok=}
-		shift
-		;;
-	*)
-		_test_ok=
-		;;
-	esac
-	if ! test_must_fail_acceptable "$@"
-	then
-		echo >&7 "test_must_fail: only 'git' is allowed: $*"
-		return 1
-	fi
-	"$@" 2>&7
-	exit_code=$?
-	if test $exit_code -eq 0 && ! list_contains "$_test_ok" success
-	then
-		echo >&4 "test_must_fail: command succeeded: $*"
-		return 1
-	elif test_match_signal 13 $exit_code && list_contains "$_test_ok" sigpipe
-	then
-		return 0
-	elif test $exit_code -gt 129 && test $exit_code -le 192
-	then
-		echo >&4 "test_must_fail: died by signal $(($exit_code - 128)): $*"
-		return 1
-	elif test $exit_code -eq 127
-	then
-		echo >&4 "test_must_fail: command not found: $*"
-		return 1
-	elif test $exit_code -eq 126
-	then
-		echo >&4 "test_must_fail: valgrind error: $*"
-		return 1
-	fi
-	return 0
+	test_must_fail_helper must_fail "$@" 2>&7
 } 7>&2 2>&4
 
 # Similar to test_must_fail, but tolerates success, too.  This is
@@ -1191,7 +1301,7 @@ test_must_fail () {
 # Accepts the same options as test_must_fail.
 
 test_might_fail () {
-	test_must_fail ok=success "$@" 2>&7
+	test_must_fail_helper might_fail ok=success "$@" 2>&7
 } 7>&2 2>&4
 
 # Similar to test_must_fail and test_might_fail, but check that a
