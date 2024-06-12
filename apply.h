@@ -95,8 +95,11 @@ struct apply_state {
 	/*
 	 * Records filenames that have been touched, in order to handle
 	 * the case where more than one patches touch the same file.
+	 * Two separate structures because with ignorecase, one of them
+	 * needs to be case-insensitive and the other not.
 	 */
-	struct string_list fn_table;
+	struct string_list fs_fn_table;
+	struct string_list index_fn_table;
 
 	/*
 	 * This is to save reporting routines before using

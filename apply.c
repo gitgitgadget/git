@@ -115,7 +115,9 @@ int init_apply_state(struct apply_state *state,
 	state->ws_error_action = warn_on_ws_error;
 	state->ws_ignore_action = ignore_ws_none;
 	state->linenr = 1;
-	string_list_init_nodup(&state->fn_table);
+	string_list_init_nodup(&state->fs_fn_table);
+	state->fs_fn_table.cmp = fspathcmp;
+	string_list_init_nodup(&state->index_fn_table);
 	string_list_init_nodup(&state->limit_by_name);
 	strset_init(&state->removed_symlinks);
 	strset_init(&state->kept_symlinks);
@@ -136,7 +138,10 @@ void clear_apply_state(struct apply_state *state)
 	strset_clear(&state->kept_symlinks);
 	strbuf_release(&state->root);
 
-	/* &state->fn_table is cleared at the end of apply_patch() */
+	/*
+	 * &state->fs_fn_table and &state->index_fn_table are cleared at the
+	 * end of apply_patch()
+	 */
 }
 
 static void mute_routine(const char *msg UNUSED, va_list params UNUSED)
@@ -3305,14 +3310,28 @@ static int read_file_or_gitlink(const struct cache_entry *ce, struct strbuf *buf
 	return read_blob_object(buf, &ce->oid, ce->ce_mode);
 }
 
-static struct patch *in_fn_table(struct apply_state *state, const char *name)
+static struct patch *in_fs_fn_table(struct apply_state *state, const char *name)
 {
 	struct string_list_item *item;
 
 	if (!name)
 		return NULL;
 
-	item = string_list_lookup(&state->fn_table, name);
+	item = string_list_lookup(&state->fs_fn_table, name);
+	if (item)
+		return (struct patch *)item->util;
+
+	return NULL;
+}
+
+static struct patch *in_index_fn_table(struct apply_state *state, const char *name)
+{
+	struct string_list_item *item;
+
+	if (!name)
+		return NULL;
+
+	item = string_list_lookup(&state->index_fn_table, name);
 	if (item)
 		return (struct patch *)item->util;
 
@@ -3344,7 +3363,7 @@ static int was_deleted(struct patch *patch)
 	return patch == PATH_WAS_DELETED;
 }
 
-static void add_to_fn_table(struct apply_state *state, struct patch *patch)
+static void add_to_fn_tables(struct apply_state *state, struct patch *patch)
 {
 	struct string_list_item *item;
 
@@ -3354,7 +3373,9 @@ static void add_to_fn_table(struct apply_state *state, struct patch *patch)
 	 * file creations and copies
 	 */
 	if (patch->new_name) {
-		item = string_list_insert(&state->fn_table, patch->new_name);
+		item = string_list_insert(&state->fs_fn_table, patch->new_name);
+		item->util = patch;
+		item = string_list_insert(&state->index_fn_table, patch->new_name);
 		item->util = patch;
 	}
 
@@ -3363,7 +3384,9 @@ static void add_to_fn_table(struct apply_state *state, struct patch *patch)
 	 * later chunks shouldn't patch old names
 	 */
 	if ((patch->new_name == NULL) || (patch->is_rename)) {
-		item = string_list_insert(&state->fn_table, patch->old_name);
+		item = string_list_insert(&state->fs_fn_table, patch->old_name);
+		item->util = PATH_WAS_DELETED;
+		item = string_list_insert(&state->index_fn_table, patch->old_name);
 		item->util = PATH_WAS_DELETED;
 	}
 }
@@ -3376,7 +3399,9 @@ static void prepare_fn_table(struct apply_state *state, struct patch *patch)
 	while (patch) {
 		if ((patch->new_name == NULL) || (patch->is_rename)) {
 			struct string_list_item *item;
-			item = string_list_insert(&state->fn_table, patch->old_name);
+			item = string_list_insert(&state->fs_fn_table, patch->old_name);
+			item->util = PATH_TO_BE_DELETED;
+			item = string_list_insert(&state->index_fn_table, patch->old_name);
 			item->util = PATH_TO_BE_DELETED;
 		}
 		patch = patch->next;
@@ -3406,7 +3431,7 @@ static struct patch *previous_patch(struct apply_state *state,
 	if (patch->is_copy || patch->is_rename)
 		return NULL; /* "git" patches do not depend on the order */
 
-	previous = in_fn_table(state, patch->old_name);
+	previous = in_index_fn_table(state, patch->old_name);
 	if (!previous)
 		return NULL;
 
@@ -3719,7 +3744,7 @@ static int apply_data(struct apply_state *state, struct patch *patch,
 	}
 	patch->result = image.buf;
 	patch->resultsize = image.len;
-	add_to_fn_table(state, patch);
+	add_to_fn_tables(state, patch);
 	free(image.line_allocated);
 
 	if (0 < patch->is_delete && patch->resultsize)
@@ -3827,11 +3852,12 @@ static int check_preimage(struct apply_state *state,
 
 static int check_to_create(struct apply_state *state,
 			   const char *new_name,
-			   int ok_if_exists)
+			   int ok_if_exists_in_fs,
+			   int ok_if_exists_in_index)
 {
 	struct stat nst;
 
-	if (state->check_index && (!ok_if_exists || !state->cached)) {
+	if (state->check_index && (!ok_if_exists_in_index || !state->cached)) {
 		int pos;
 
 		pos = index_name_pos(state->repo->index, new_name, strlen(new_name));
@@ -3839,7 +3865,7 @@ static int check_to_create(struct apply_state *state,
 			struct cache_entry *ce = state->repo->index->cache[pos];
 
 			/* allow ITA, as they do not yet exist in the index */
-			if (!ok_if_exists && !(ce->ce_flags & CE_INTENT_TO_ADD))
+			if (!ok_if_exists_in_index && !(ce->ce_flags & CE_INTENT_TO_ADD))
 				return EXISTS_IN_INDEX;
 
 			/* ITA entries can never match working tree files */
@@ -3852,7 +3878,7 @@ static int check_to_create(struct apply_state *state,
 		return 0;
 
 	if (!lstat(new_name, &nst)) {
-		if (S_ISDIR(nst.st_mode) || ok_if_exists)
+		if (S_ISDIR(nst.st_mode) || ok_if_exists_in_fs)
 			return 0;
 		/*
 		 * A leading component of new_name might be a symlink
@@ -3962,7 +3988,8 @@ static int check_patch(struct apply_state *state, struct patch *patch)
 	const char *name = old_name ? old_name : new_name;
 	struct cache_entry *ce = NULL;
 	struct patch *tpatch;
-	int ok_if_exists;
+	int ok_if_exists_in_fs;
+	int ok_if_exists_in_index;
 	int status;
 
 	patch->rejected = 1; /* we will drop this after we succeed */
@@ -3985,16 +4012,29 @@ static int check_patch(struct apply_state *state, struct patch *patch)
 	 * B; ask to_be_deleted() about the later rename.  Removal of
 	 * B and rename from A to B is handled the same way by asking
 	 * was_deleted().
+	 *
+	 * These exemptions account for the core.ignorecase config -
+	 * a file that differs only by case is also considered "deleted"
+	 * if git is configured to ignore case. This means a case-only
+	 * rename, in a case-insensitive filesystem, is treated here as
+	 * a "self-swap" or mode change.
 	 */
-	if ((tpatch = in_fn_table(state, new_name)) &&
+	if ((tpatch = in_fs_fn_table(state, new_name)) &&
 	    (was_deleted(tpatch) || to_be_deleted(tpatch)))
-		ok_if_exists = 1;
+		ok_if_exists_in_fs = 1;
 	else
-		ok_if_exists = 0;
+		ok_if_exists_in_fs = 0;
+
+	if ((tpatch = in_index_fn_table(state, new_name)) &&
+	    (was_deleted(tpatch) || to_be_deleted(tpatch)))
+		ok_if_exists_in_index = 1;
+	else
+		ok_if_exists_in_index = 0;
 
 	if (new_name &&
 	    ((0 < patch->is_new) || patch->is_rename || patch->is_copy)) {
-		int err = check_to_create(state, new_name, ok_if_exists);
+		int err = check_to_create(state, new_name, ok_if_exists_in_fs,
+					  ok_if_exists_in_index);
 
 		if (err && state->threeway) {
 			patch->direct_to_threeway = 1;
@@ -4899,7 +4939,8 @@ static int apply_patch(struct apply_state *state,
 end:
 	free_patch_list(list);
 	strbuf_release(&buf);
-	string_list_clear(&state->fn_table, 0);
+	string_list_clear(&state->fs_fn_table, 0);
+	string_list_clear(&state->index_fn_table, 0);
 	return res;
 }
 

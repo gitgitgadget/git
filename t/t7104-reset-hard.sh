@@ -44,4 +44,15 @@ test_expect_success 'reset --hard did not corrupt index or cache-tree' '
 
 '
 
+test_expect_failure CASE_INSENSITIVE_FS 'reset --hard handles index-only case-insensitive duplicate' '
+	test_commit "initial" file1 "initial commit with file1" initial &&
+	file1blob=$(git rev-parse :file1) &&
+	git update-index --add --cacheinfo 100644,$file1blob,File1 &&
+
+	# reset --hard accidentally leaves the working tree with a deleted file.
+	git reset --hard &&
+	git status --porcelain -uno >wt_changes_remaining &&
+	test_must_be_empty wt_changes_remaining
+'
+
 test_done
