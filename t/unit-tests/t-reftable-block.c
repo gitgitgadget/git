@@ -81,8 +81,7 @@ static void test_block_read_write(void)
 
 	for (i = 0; i < N; i++) {
 		struct block_iter it = BLOCK_ITER_INIT;
-		strbuf_reset(&want);
-		strbuf_addstr(&want, recs[i].u.ref.refname);
+		reftable_record_key(&recs[i], &want);
 
 		n = block_iter_seek_key(&it, &br, &want);
 		check_int(n, ==, 0);
