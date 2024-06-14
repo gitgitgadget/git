@@ -103,6 +103,7 @@ static void test_block_read_write(void)
 		block_iter_close(&it);
 	}
 
+	block_reader_release(&br);
 	reftable_record_release(&rec);
 	reftable_block_done(&br.block);
 	strbuf_release(&want);
