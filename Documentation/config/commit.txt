@@ -27,3 +27,7 @@ commit.template::
 commit.verbose::
 	A boolean or int to specify the level of verbosity with `git commit`.
 	See linkgit:git-commit[1].
+
+commit.sigoff::
+	A boolean value which lets you enable the `-s/--signoff` option of
+	commit by default.
