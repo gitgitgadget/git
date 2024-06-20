@@ -725,18 +725,9 @@ test_expect_success TTY 'git discards pager non-zero exit without SIGPIPE' '
 	test_path_is_file pager-used
 '
 
-test_expect_success TTY 'git skips paging nonexisting command' '
-	test_when_finished "rm trace.normal" &&
+test_expect_success TTY 'git errors when asked to execute nonexisting pager' '
 	test_config core.pager "does-not-exist" &&
-	GIT_TRACE2="$(pwd)/trace.normal" &&
-	export GIT_TRACE2 &&
-	test_when_finished "unset GIT_TRACE2" &&
-
-	test_terminal git log &&
-
-	grep child_exit trace.normal >child-exits &&
-	test_line_count = 1 child-exits &&
-	grep " code:-1 " child-exits
+	test_must_fail test_terminal git log
 '
 
 test_expect_success TTY 'git returns SIGPIPE on propagated signals from pager' '
@@ -762,7 +753,7 @@ test_expect_success TTY 'git returns SIGPIPE on propagated signals from pager' '
 
 test_expect_success TTY 'non-existent pager doesnt cause crash' '
 	test_config pager.show invalid-pager &&
-	test_terminal git show
+	test_must_fail test_terminal git show
 '
 
 test_done
