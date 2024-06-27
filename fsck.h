@@ -140,6 +140,14 @@ int fsck_error_cb_print_missing_gitmodules(struct fsck_objects_options *objects_
 					   enum fsck_msg_type msg_type,
 					   enum fsck_msg_id msg_id,
 					   const char *message);
+int fsck_refs_error_function(struct fsck_objects_options *objects_options,
+			     struct fsck_refs_options *refs_options,
+			     const struct object_id *oid,
+			     enum object_type object_type,
+			     const char *checked_ref_name,
+			     enum fsck_msg_type msg_type,
+			     enum fsck_msg_id msg_id,
+			     const char *message);
 
 struct fsck_options {
 	fsck_error error_func;
@@ -150,6 +158,17 @@ struct fsck_options {
 struct fsck_refs_options {
 	struct fsck_options fsck_options;
 };
+#define FSCK_REFS_OPTIONS_DEFAULT { \
+	.fsck_options = { \
+		.error_func = fsck_refs_error_function, \
+	}, \
+}
+#define FSCK_REFS_OPTIONS_STRICT { \
+	.fsck_options = { \
+		.error_func = fsck_refs_error_function, \
+		.strict = 1, \
+	}, \
+}
 
 struct fsck_objects_options {
 	struct fsck_options fsck_options;
