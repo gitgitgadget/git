@@ -93,6 +93,7 @@ enum fsck_msg_id {
 #undef MSG_ID
 
 struct fsck_options;
+struct fsck_refs_options;
 struct fsck_objects_options;
 struct object;
 
@@ -115,19 +116,27 @@ int is_valid_msg_type(const char *msg_id, const char *msg_type);
 typedef int (*fsck_walk_func)(struct object *obj, enum object_type object_type,
 			      void *data, struct fsck_objects_options *options);
 
-/* callback for fsck_object, type is FSCK_ERROR or FSCK_WARN */
-typedef int (*fsck_error)(struct fsck_objects_options *o,
+/*
+ * callback function for reporting errors when checking either objects or refs
+ */
+typedef int (*fsck_error)(struct fsck_objects_options *objects_options,
+			  struct fsck_refs_options *refs_options,
 			  const struct object_id *oid, enum object_type object_type,
+			  const char *checked_ref_name,
 			  enum fsck_msg_type msg_type, enum fsck_msg_id msg_id,
 			  const char *message);
 
-int fsck_error_function(struct fsck_objects_options *o,
+int fsck_error_function(struct fsck_objects_options *objects_options,
+			struct fsck_refs_options *refs_options,
 			const struct object_id *oid, enum object_type object_type,
+			const char *checked_ref_name,
 			enum fsck_msg_type msg_type, enum fsck_msg_id msg_id,
 			const char *message);
-int fsck_error_cb_print_missing_gitmodules(struct fsck_objects_options *o,
+int fsck_error_cb_print_missing_gitmodules(struct fsck_objects_options *objects_options,
+					   struct fsck_refs_options *refs_options,
 					   const struct object_id *oid,
 					   enum object_type object_type,
+					   const char *checked_ref_name,
 					   enum fsck_msg_type msg_type,
 					   enum fsck_msg_id msg_id,
 					   const char *message);
@@ -222,6 +231,28 @@ int fsck_tag_standalone(const struct object_id *oid, const char *buffer,
  * checks.
  */
 int fsck_finish(struct fsck_objects_options *options);
+
+/*
+ * Provide a unified interface for either fscking refs or objects.
+ * It will get the current msg error type and call the error_func callback
+ * which is registered in the "fsck_options" struct. For refs, the caller
+ * should pass NULL for "objs_options". For objects, the caller should pass
+ * NULL for "refs_options".
+ */
+__attribute__((format (printf, 7, 8)))
+int fsck_report(struct fsck_objects_options *objects_options,
+		struct fsck_refs_options *refs_options,
+		const struct object_id *oid,
+		enum object_type object_type,
+		const char *checked_ref_name,
+		enum fsck_msg_id msg_id, const char *fmt, ...);
+
+__attribute__((format (printf, 5, 6)))
+int fsck_refs_report(struct fsck_refs_options *refs_options,
+		     const struct object_id *oid,
+		     const char *checked_ref_name,
+		     enum fsck_msg_id msg_id,
+		     const char *fmt, ...);
 
 /*
  * Subsystem for storing human-readable names for each object.

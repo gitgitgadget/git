@@ -230,19 +230,23 @@ static int object_on_skiplist(const struct object_id *oid)
 	return oid && oidset_contains(&fsck_configs.oid_skiplist, oid);
 }
 
-__attribute__((format (printf, 5, 6)))
-static int report(struct fsck_objects_options *options,
-		  const struct object_id *oid, enum object_type object_type,
-		  enum fsck_msg_id msg_id, const char *fmt, ...)
+static int vfsck_report(struct fsck_objects_options *objects_options,
+			struct fsck_refs_options *refs_options,
+			const struct object_id *oid,
+			enum object_type object_type,
+			const char *checked_ref_name,
+			enum fsck_msg_id msg_id, const char *fmt, va_list ap)
 {
-	va_list ap;
+	va_list ap_copy;
 	struct strbuf sb = STRBUF_INIT;
 	struct fsck_options *fsck_options;
 	enum fsck_msg_type msg_type;
 	int result;
 
-	if (options)
-		fsck_options = &options->fsck_options;
+	if (objects_options)
+		fsck_options = &objects_options->fsck_options;
+	else if (refs_options)
+		fsck_options = &refs_options->fsck_options;
 	else
 		BUG("fsck_options is not set");
 
@@ -261,13 +265,59 @@ static int report(struct fsck_objects_options *options,
 	prepare_msg_ids();
 	strbuf_addf(&sb, "%s: ", msg_id_info[msg_id].camelcased);
 
-	va_start(ap, fmt);
-	strbuf_vaddf(&sb, fmt, ap);
-	result = fsck_options->error_func(options, oid, object_type,
+	va_copy(ap_copy, ap);
+	strbuf_vaddf(&sb, fmt, ap_copy);
+	result = fsck_options->error_func(objects_options, NULL,
+					  oid, object_type, checked_ref_name,
 					  msg_type, msg_id, sb.buf);
 	strbuf_release(&sb);
 	va_end(ap);
 
+	return result;
+}
+
+__attribute__((format (printf, 5, 6)))
+static int report(struct fsck_objects_options *objects_options,
+		  const struct object_id *oid, enum object_type object_type,
+		  enum fsck_msg_id msg_id, const char *fmt, ...)
+{
+	va_list ap;
+	int result;
+	va_start(ap, fmt);
+	result = vfsck_report(objects_options, NULL, oid, object_type, "",
+			      msg_id, fmt, ap);
+	va_end(ap);
+	return result;
+}
+
+int fsck_report(struct fsck_objects_options *objects_options,
+		struct fsck_refs_options *refs_options,
+		const struct object_id *oid,
+		enum object_type object_type,
+		const char *checked_ref_name,
+		enum fsck_msg_id msg_id, const char *fmt, ...)
+{
+	va_list ap;
+	int result;
+	va_start(ap, fmt);
+	result = vfsck_report(objects_options, refs_options, oid, object_type,
+			      checked_ref_name, msg_id, fmt, ap);
+	va_end(ap);
+	return result;
+
+}
+
+int fsck_refs_report(struct fsck_refs_options *refs_options,
+		     const struct object_id *oid,
+		     const char *checked_ref_name,
+		     enum fsck_msg_id msg_id, const char *fmt, ...)
+{
+	va_list ap;
+	int result;
+	va_start(ap, fmt);
+	result = fsck_report(NULL, refs_options, oid, OBJ_NONE,
+			     checked_ref_name, msg_id, fmt, ap);
+	va_end(ap);
 	return result;
 }
 
@@ -1216,18 +1266,22 @@ int fsck_buffer(const struct object_id *oid, enum object_type type,
 		      type);
 }
 
-int fsck_error_function(struct fsck_objects_options *o,
+int fsck_error_function(struct fsck_objects_options *objects_options,
+			struct fsck_refs_options *refs_options UNUSED,
 			const struct object_id *oid,
 			enum object_type object_type UNUSED,
+			const char *checked_ref_name UNUSED,
 			enum fsck_msg_type msg_type,
 			enum fsck_msg_id msg_id UNUSED,
 			const char *message)
 {
 	if (msg_type == FSCK_WARN) {
-		warning("object %s: %s", fsck_describe_object(o, oid), message);
+		warning("object %s: %s",
+			fsck_describe_object(objects_options, oid), message);
 		return 0;
 	}
-	error("object %s: %s", fsck_describe_object(o, oid), message);
+	error("object %s: %s",
+	      fsck_describe_object(objects_options, oid), message);
 	return 1;
 }
 
@@ -1320,9 +1374,11 @@ int git_fsck_config(const char *var, const char *value,
  * Custom error callbacks that are used in more than one place.
  */
 
-int fsck_error_cb_print_missing_gitmodules(struct fsck_objects_options *o,
+int fsck_error_cb_print_missing_gitmodules(struct fsck_objects_options *objects_options,
+					   struct fsck_refs_options *refs_options,
 					   const struct object_id *oid,
 					   enum object_type object_type,
+					   const char *checked_ref_name,
 					   enum fsck_msg_type msg_type,
 					   enum fsck_msg_id msg_id,
 					   const char *message)
@@ -1331,5 +1387,7 @@ int fsck_error_cb_print_missing_gitmodules(struct fsck_objects_options *o,
 		puts(oid_to_hex(oid));
 		return 0;
 	}
-	return fsck_error_function(o, oid, object_type, msg_type, msg_id, message);
+	return fsck_error_function(objects_options, refs_options,
+				   oid, object_type, checked_ref_name,
+				   msg_type, msg_id, message);
 }

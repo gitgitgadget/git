@@ -2472,12 +2472,14 @@ int repo_has_object_file(struct repository *r,
  * report the minimal fsck error here, and rely on the caller to
  * give more context.
  */
-static int hash_format_check_report(struct fsck_objects_options *opts UNUSED,
-				     const struct object_id *oid UNUSED,
-				     enum object_type object_type UNUSED,
-				     enum fsck_msg_type msg_type UNUSED,
-				     enum fsck_msg_id msg_id UNUSED,
-				     const char *message)
+static int hash_format_check_report(struct fsck_objects_options *objects_options UNUSED,
+				    struct fsck_refs_options *refs_options UNUSED,
+				    const struct object_id *oid UNUSED,
+				    enum object_type object_type UNUSED,
+				    const char *chekced_ref_name UNUSED,
+				    enum fsck_msg_type msg_type UNUSED,
+				    enum fsck_msg_id msg_id UNUSED,
+				    const char *message)
 {
 	error(_("object fails fsck: %s"), message);
 	return 1;

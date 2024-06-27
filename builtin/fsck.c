@@ -89,9 +89,11 @@ static int objerror(struct object *obj, const char *err)
 	return -1;
 }
 
-static int fsck_error_func(struct fsck_objects_options *o UNUSED,
+static int fsck_error_func(struct fsck_objects_options *objects_options UNUSED,
+			   struct fsck_refs_options *refs_options UNUSED,
 			   const struct object_id *oid,
 			   enum object_type object_type,
+			   const char *checked_ref_name UNUSED,
 			   enum fsck_msg_type msg_type,
 			   enum fsck_msg_id msg_id UNUSED,
 			   const char *message)
