@@ -135,8 +135,6 @@ struct fsck_objects_options {
 	fsck_walk_func walk;
 	fsck_error error_func;
 	unsigned strict:1;
-	enum fsck_msg_type *msg_type;
-	struct oidset skiplist;
 	struct oidset gitmodules_found;
 	struct oidset gitmodules_done;
 	struct oidset gitattributes_found;
@@ -145,7 +143,6 @@ struct fsck_objects_options {
 };
 
 #define FSCK_OBJECTS_OPTIONS_DEFAULT { \
-	.skiplist = OIDSET_INIT, \
 	.gitmodules_found = OIDSET_INIT, \
 	.gitmodules_done = OIDSET_INIT, \
 	.gitattributes_found = OIDSET_INIT, \
