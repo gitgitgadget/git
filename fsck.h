@@ -92,15 +92,16 @@ enum fsck_msg_id {
 };
 #undef MSG_ID
 
+struct fsck_options;
 struct fsck_objects_options;
 struct object;
 
-void fsck_set_msg_type_from_ids(struct fsck_objects_options *options,
+void fsck_set_msg_type_from_ids(struct fsck_options *options,
 				enum fsck_msg_id msg_id,
 				enum fsck_msg_type msg_type);
-void fsck_set_msg_type(struct fsck_objects_options *options,
+void fsck_set_msg_type(struct fsck_options *options,
 		       const char *msg_id, const char *msg_type);
-void fsck_set_msg_types(struct fsck_objects_options *options, const char *values);
+void fsck_set_msg_types(struct fsck_options *options, const char *values);
 int is_valid_msg_type(const char *msg_id, const char *msg_type);
 
 /*
@@ -131,10 +132,15 @@ int fsck_error_cb_print_missing_gitmodules(struct fsck_objects_options *o,
 					   enum fsck_msg_id msg_id,
 					   const char *message);
 
-struct fsck_objects_options {
-	fsck_walk_func walk;
+struct fsck_options {
 	fsck_error error_func;
-	unsigned strict:1;
+	unsigned verbose:1,
+		 strict:1;
+};
+
+struct fsck_objects_options {
+	struct fsck_options fsck_options;
+	fsck_walk_func walk;
 	struct oidset gitmodules_found;
 	struct oidset gitmodules_done;
 	struct oidset gitattributes_found;
@@ -143,27 +149,33 @@ struct fsck_objects_options {
 };
 
 #define FSCK_OBJECTS_OPTIONS_DEFAULT { \
+	.fsck_options = { \
+		.error_func = fsck_error_function, \
+	}, \
 	.gitmodules_found = OIDSET_INIT, \
 	.gitmodules_done = OIDSET_INIT, \
 	.gitattributes_found = OIDSET_INIT, \
 	.gitattributes_done = OIDSET_INIT, \
-	.error_func = fsck_error_function \
 }
 #define FSCK_OBJECTS_OPTIONS_STRICT { \
-	.strict = 1, \
+	.fsck_options = { \
+		.error_func = fsck_error_function, \
+		.strict = 1, \
+	}, \
 	.gitmodules_found = OIDSET_INIT, \
 	.gitmodules_done = OIDSET_INIT, \
 	.gitattributes_found = OIDSET_INIT, \
 	.gitattributes_done = OIDSET_INIT, \
-	.error_func = fsck_error_function, \
 }
 #define FSCK_OBJECTS_OPTIONS_MISSING_GITMODULES { \
-	.strict = 1, \
+	.fsck_options = { \
+		.error_func = fsck_error_cb_print_missing_gitmodules, \
+		.strict = 1, \
+	}, \
 	.gitmodules_found = OIDSET_INIT, \
 	.gitmodules_done = OIDSET_INIT, \
 	.gitattributes_found = OIDSET_INIT, \
 	.gitattributes_done = OIDSET_INIT, \
-	.error_func = fsck_error_cb_print_missing_gitmodules, \
 }
 
 /* descend in all linked child objects

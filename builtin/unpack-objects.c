@@ -635,7 +635,7 @@ int cmd_unpack_objects(int argc, const char **argv, const char *prefix UNUSED)
 			}
 			if (skip_prefix(arg, "--strict=", &arg)) {
 				strict = 1;
-				fsck_set_msg_types(&fsck_objects_options, arg);
+				fsck_set_msg_types(&fsck_objects_options.fsck_options, arg);
 				continue;
 			}
 			if (starts_with(arg, "--pack_header=")) {

@@ -107,7 +107,7 @@ void list_config_fsck_msg_ids(struct string_list *list, const char *prefix)
 }
 
 static enum fsck_msg_type fsck_msg_type(enum fsck_msg_id msg_id,
-					struct fsck_objects_options *options)
+					struct fsck_options *options)
 {
 	assert(msg_id >= 0 && msg_id < FSCK_MSG_MAX);
 
@@ -142,7 +142,7 @@ int is_valid_msg_type(const char *msg_id, const char *msg_type)
 	return 1;
 }
 
-void fsck_set_msg_type_from_ids(struct fsck_objects_options *options,
+void fsck_set_msg_type_from_ids(struct fsck_options *options,
 				enum fsck_msg_id msg_id,
 				enum fsck_msg_type msg_type)
 {
@@ -158,7 +158,7 @@ void fsck_set_msg_type_from_ids(struct fsck_objects_options *options,
 	fsck_configs.msg_type[msg_id] = msg_type;
 }
 
-void fsck_set_msg_type(struct fsck_objects_options *options,
+void fsck_set_msg_type(struct fsck_options *options,
 		       const char *msg_id_str, const char *msg_type_str)
 {
 	int msg_id = parse_msg_id(msg_id_str);
@@ -187,7 +187,7 @@ void fsck_set_msg_type(struct fsck_objects_options *options,
 	free(to_free);
 }
 
-void fsck_set_msg_types(struct fsck_objects_options *options, const char *values)
+void fsck_set_msg_types(struct fsck_options *options, const char *values)
 {
 	char *buf = xstrdup(values), *to_free = buf;
 	int done = 0;
@@ -237,9 +237,16 @@ static int report(struct fsck_objects_options *options,
 {
 	va_list ap;
 	struct strbuf sb = STRBUF_INIT;
-	enum fsck_msg_type msg_type = fsck_msg_type(msg_id, options);
+	struct fsck_options *fsck_options;
+	enum fsck_msg_type msg_type;
 	int result;
 
+	if (options)
+		fsck_options = &options->fsck_options;
+	else
+		BUG("fsck_options is not set");
+
+	msg_type = fsck_msg_type(msg_id, fsck_options);
 	if (msg_type == FSCK_IGNORE)
 		return 0;
 
@@ -256,8 +263,8 @@ static int report(struct fsck_objects_options *options,
 
 	va_start(ap, fmt);
 	strbuf_vaddf(&sb, fmt, ap);
-	result = options->error_func(options, oid, object_type,
-				     msg_type, msg_id, sb.buf);
+	result = fsck_options->error_func(options, oid, object_type,
+					  msg_type, msg_id, sb.buf);
 	strbuf_release(&sb);
 	va_end(ap);
 
@@ -711,7 +718,7 @@ static int fsck_tree(const struct object_id *tree_oid,
 		 * bits..
 		 */
 		case S_IFREG | 0664:
-			if (!options->strict)
+			if (!options->fsck_options.strict)
 				break;
 			/* fallthrough */
 		default:
@@ -1283,7 +1290,7 @@ int fsck_finish(struct fsck_objects_options *options)
 int git_fsck_config(const char *var, const char *value,
 		    const struct config_context *ctx, void *cb)
 {
-	struct fsck_objects_options *options = cb;
+	struct fsck_options *options = cb;
 	const char *msg_id;
 
 	if (strcmp(var, "fsck.skiplist") == 0) {

@@ -939,9 +939,9 @@ int cmd_fsck(int argc, const char **argv, const char *prefix)
 
 	fsck_walk_options.walk = mark_object;
 	fsck_obj_options.walk = mark_used;
-	fsck_obj_options.error_func = fsck_error_func;
+	fsck_obj_options.fsck_options.error_func = fsck_error_func;
 	if (check_strict)
-		fsck_obj_options.strict = 1;
+		fsck_obj_options.fsck_options.strict = 1;
 
 	if (show_progress == -1)
 		show_progress = isatty(2);
@@ -956,7 +956,7 @@ int cmd_fsck(int argc, const char **argv, const char *prefix)
 	if (name_objects)
 		fsck_enable_object_names(&fsck_walk_options);
 
-	git_config(git_fsck_config, &fsck_obj_options);
+	git_config(git_fsck_config, &fsck_obj_options.fsck_options);
 	prepare_repo_settings(the_repository);
 
 	if (connectivity_only) {
