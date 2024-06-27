@@ -127,7 +127,7 @@ static int nr_threads;
 static int from_stdin;
 static int strict;
 static int do_fsck_object;
-static struct fsck_options fsck_options = FSCK_OPTIONS_MISSING_GITMODULES;
+static struct fsck_objects_options fsck_objects_options = FSCK_OBJECTS_OPTIONS_MISSING_GITMODULES;
 static int verbose;
 static const char *progress_title;
 static int show_resolving_progress;
@@ -220,7 +220,7 @@ static void cleanup_thread(void)
 
 static int mark_link(struct object *obj, enum object_type type,
 		     void *data UNUSED,
-		     struct fsck_options *options UNUSED)
+		     struct fsck_objects_options *options UNUSED)
 {
 	if (!obj)
 		return -1;
@@ -852,7 +852,7 @@ static void sha1_object(const void *data, struct object_entry *obj_entry,
 			else
 				die(_("invalid blob object %s"), oid_to_hex(oid));
 			if (do_fsck_object &&
-			    fsck_object(&blob->object, (void *)data, size, &fsck_options))
+			    fsck_object(&blob->object, (void *)data, size, &fsck_objects_options))
 				die(_("fsck error in packed object"));
 		} else {
 			struct object *obj;
@@ -871,9 +871,9 @@ static void sha1_object(const void *data, struct object_entry *obj_entry,
 			if (!obj)
 				die(_("invalid %s"), type_name(type));
 			if (do_fsck_object &&
-			    fsck_object(obj, buf, size, &fsck_options))
+			    fsck_object(obj, buf, size, &fsck_objects_options))
 				die(_("fsck error in packed object"));
-			if (strict && fsck_walk(obj, NULL, &fsck_options))
+			if (strict && fsck_walk(obj, NULL, &fsck_objects_options))
 				die(_("Not all child objects of %s are reachable"), oid_to_hex(&obj->oid));
 
 			if (obj->type == OBJ_TREE) {
@@ -1746,7 +1746,7 @@ int cmd_index_pack(int argc, const char **argv, const char *prefix)
 		usage(index_pack_usage);
 
 	disable_replace_refs();
-	fsck_options.walk = mark_link;
+	fsck_objects_options.walk = mark_link;
 
 	reset_pack_idx_option(&opts);
 	opts.flags |= WRITE_REV;
@@ -1770,13 +1770,13 @@ int cmd_index_pack(int argc, const char **argv, const char *prefix)
 			} else if (skip_to_optional_arg(arg, "--strict", &arg)) {
 				strict = 1;
 				do_fsck_object = 1;
-				fsck_set_msg_types(&fsck_options, arg);
+				fsck_set_msg_types(&fsck_objects_options, arg);
 			} else if (!strcmp(arg, "--check-self-contained-and-connected")) {
 				strict = 1;
 				check_self_contained_and_connected = 1;
 			} else if (skip_to_optional_arg(arg, "--fsck-objects", &arg)) {
 				do_fsck_object = 1;
-				fsck_set_msg_types(&fsck_options, arg);
+				fsck_set_msg_types(&fsck_objects_options, arg);
 			} else if (!strcmp(arg, "--verify")) {
 				verify = 1;
 			} else if (!strcmp(arg, "--verify-stat")) {
@@ -1943,7 +1943,7 @@ int cmd_index_pack(int argc, const char **argv, const char *prefix)
 	else
 		close(input_fd);
 
-	if (do_fsck_object && fsck_finish(&fsck_options))
+	if (do_fsck_object && fsck_finish(&fsck_objects_options))
 		die(_("fsck error in pack objects"));
 
 	free(opts.anomaly);

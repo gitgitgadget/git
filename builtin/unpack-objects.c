@@ -25,7 +25,7 @@ static unsigned int offset, len;
 static off_t consumed_bytes;
 static off_t max_input_size;
 static git_hash_ctx ctx;
-static struct fsck_options fsck_options = FSCK_OPTIONS_STRICT;
+static struct fsck_objects_options fsck_objects_options = FSCK_OBJECTS_OPTIONS_STRICT;
 static struct progress *progress;
 
 /*
@@ -212,7 +212,7 @@ static void write_cached_object(struct object *obj, struct obj_buffer *obj_buf)
  */
 static int check_object(struct object *obj, enum object_type type,
 			void *data UNUSED,
-			struct fsck_options *options UNUSED)
+			struct fsck_objects_options *options UNUSED)
 {
 	struct obj_buffer *obj_buf;
 
@@ -237,10 +237,10 @@ static int check_object(struct object *obj, enum object_type type,
 	obj_buf = lookup_object_buffer(obj);
 	if (!obj_buf)
 		die("Whoops! Cannot find object '%s'", oid_to_hex(&obj->oid));
-	if (fsck_object(obj, obj_buf->buffer, obj_buf->size, &fsck_options))
+	if (fsck_object(obj, obj_buf->buffer, obj_buf->size, &fsck_objects_options))
 		die("fsck error in packed object");
-	fsck_options.walk = check_object;
-	if (fsck_walk(obj, NULL, &fsck_options))
+	fsck_objects_options.walk = check_object;
+	if (fsck_walk(obj, NULL, &fsck_objects_options))
 		die("Error on reachable objects of %s", oid_to_hex(&obj->oid));
 	write_cached_object(obj, obj_buf);
 	return 0;
@@ -635,7 +635,7 @@ int cmd_unpack_objects(int argc, const char **argv, const char *prefix UNUSED)
 			}
 			if (skip_prefix(arg, "--strict=", &arg)) {
 				strict = 1;
-				fsck_set_msg_types(&fsck_options, arg);
+				fsck_set_msg_types(&fsck_objects_options, arg);
 				continue;
 			}
 			if (starts_with(arg, "--pack_header=")) {
@@ -671,7 +671,7 @@ int cmd_unpack_objects(int argc, const char **argv, const char *prefix UNUSED)
 	the_hash_algo->final_oid_fn(&oid, &tmp_ctx);
 	if (strict) {
 		write_rest();
-		if (fsck_finish(&fsck_options))
+		if (fsck_finish(&fsck_objects_options))
 			die(_("fsck error in pack objects"));
 	}
 	if (!hasheq(fill(the_hash_algo->rawsz), oid.hash))

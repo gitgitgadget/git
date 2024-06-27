@@ -42,8 +42,8 @@ static int check_full = 1;
 static int connectivity_only;
 static int check_strict;
 static int keep_cache_objects;
-static struct fsck_options fsck_walk_options = FSCK_OPTIONS_DEFAULT;
-static struct fsck_options fsck_obj_options = FSCK_OPTIONS_DEFAULT;
+static struct fsck_objects_options fsck_walk_options = FSCK_OBJECTS_OPTIONS_DEFAULT;
+static struct fsck_objects_options fsck_obj_options = FSCK_OBJECTS_OPTIONS_DEFAULT;
 static int errors_found;
 static int write_lost_and_found;
 static int verbose;
@@ -89,7 +89,7 @@ static int objerror(struct object *obj, const char *err)
 	return -1;
 }
 
-static int fsck_error_func(struct fsck_options *o UNUSED,
+static int fsck_error_func(struct fsck_objects_options *o UNUSED,
 			   const struct object_id *oid,
 			   enum object_type object_type,
 			   enum fsck_msg_type msg_type,
@@ -118,7 +118,7 @@ static int fsck_error_func(struct fsck_options *o UNUSED,
 static struct object_array pending;
 
 static int mark_object(struct object *obj, enum object_type type,
-		       void *data, struct fsck_options *options UNUSED)
+		       void *data, struct fsck_objects_options *options UNUSED)
 {
 	struct object *parent = data;
 
@@ -204,7 +204,8 @@ static int traverse_reachable(void)
 }
 
 static int mark_used(struct object *obj, enum object_type type UNUSED,
-		     void *data UNUSED, struct fsck_options *options UNUSED)
+		     void *data UNUSED,
+		     struct fsck_objects_options *options UNUSED)
 {
 	if (!obj)
 		return 1;
@@ -214,7 +215,7 @@ static int mark_used(struct object *obj, enum object_type type UNUSED,
 
 static void mark_unreachable_referents(const struct object_id *oid)
 {
-	struct fsck_options options = FSCK_OPTIONS_DEFAULT;
+	struct fsck_objects_options options = FSCK_OBJECTS_OPTIONS_DEFAULT;
 	struct object *obj = lookup_object(the_repository, oid);
 
 	if (!obj || !(obj->flags & HAS_OBJ))

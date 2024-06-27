@@ -99,7 +99,7 @@ void list_config_fsck_msg_ids(struct string_list *list, const char *prefix)
 }
 
 static enum fsck_msg_type fsck_msg_type(enum fsck_msg_id msg_id,
-	struct fsck_options *options)
+					struct fsck_objects_options *options)
 {
 	assert(msg_id >= 0 && msg_id < FSCK_MSG_MAX);
 
@@ -134,7 +134,7 @@ int is_valid_msg_type(const char *msg_id, const char *msg_type)
 	return 1;
 }
 
-void fsck_set_msg_type_from_ids(struct fsck_options *options,
+void fsck_set_msg_type_from_ids(struct fsck_objects_options *options,
 				enum fsck_msg_id msg_id,
 				enum fsck_msg_type msg_type)
 {
@@ -150,7 +150,7 @@ void fsck_set_msg_type_from_ids(struct fsck_options *options,
 	options->msg_type[msg_id] = msg_type;
 }
 
-void fsck_set_msg_type(struct fsck_options *options,
+void fsck_set_msg_type(struct fsck_objects_options *options,
 		       const char *msg_id_str, const char *msg_type_str)
 {
 	int msg_id = parse_msg_id(msg_id_str);
@@ -179,7 +179,7 @@ void fsck_set_msg_type(struct fsck_options *options,
 	free(to_free);
 }
 
-void fsck_set_msg_types(struct fsck_options *options, const char *values)
+void fsck_set_msg_types(struct fsck_objects_options *options, const char *values)
 {
 	char *buf = xstrdup(values), *to_free = buf;
 	int done = 0;
@@ -217,14 +217,14 @@ void fsck_set_msg_types(struct fsck_options *options, const char *values)
 	free(to_free);
 }
 
-static int object_on_skiplist(struct fsck_options *opts,
+static int object_on_skiplist(struct fsck_objects_options *opts,
 			      const struct object_id *oid)
 {
 	return opts && oid && oidset_contains(&opts->skiplist, oid);
 }
 
 __attribute__((format (printf, 5, 6)))
-static int report(struct fsck_options *options,
+static int report(struct fsck_objects_options *options,
 		  const struct object_id *oid, enum object_type object_type,
 		  enum fsck_msg_id msg_id, const char *fmt, ...)
 {
@@ -257,13 +257,13 @@ static int report(struct fsck_options *options,
 	return result;
 }
 
-void fsck_enable_object_names(struct fsck_options *options)
+void fsck_enable_object_names(struct fsck_objects_options *options)
 {
 	if (!options->object_names)
 		options->object_names = kh_init_oid_map();
 }
 
-const char *fsck_get_object_name(struct fsck_options *options,
+const char *fsck_get_object_name(struct fsck_objects_options *options,
 				 const struct object_id *oid)
 {
 	khiter_t pos;
@@ -275,7 +275,7 @@ const char *fsck_get_object_name(struct fsck_options *options,
 	return kh_value(options->object_names, pos);
 }
 
-void fsck_put_object_name(struct fsck_options *options,
+void fsck_put_object_name(struct fsck_objects_options *options,
 			  const struct object_id *oid,
 			  const char *fmt, ...)
 {
@@ -296,7 +296,7 @@ void fsck_put_object_name(struct fsck_options *options,
 	va_end(ap);
 }
 
-const char *fsck_describe_object(struct fsck_options *options,
+const char *fsck_describe_object(struct fsck_objects_options *options,
 				 const struct object_id *oid)
 {
 	static struct strbuf bufs[] = {
@@ -316,7 +316,8 @@ const char *fsck_describe_object(struct fsck_options *options,
 	return buf->buf;
 }
 
-static int fsck_walk_tree(struct tree *tree, void *data, struct fsck_options *options)
+static int fsck_walk_tree(struct tree *tree, void *data,
+			  struct fsck_objects_options *options)
 {
 	struct tree_desc desc;
 	struct name_entry entry;
@@ -364,7 +365,8 @@ static int fsck_walk_tree(struct tree *tree, void *data, struct fsck_options *op
 	return res;
 }
 
-static int fsck_walk_commit(struct commit *commit, void *data, struct fsck_options *options)
+static int fsck_walk_commit(struct commit *commit, void *data,
+			    struct fsck_objects_options *options)
 {
 	int counter = 0, generation = 0, name_prefix_len = 0;
 	struct commit_list *parents;
@@ -433,7 +435,8 @@ static int fsck_walk_commit(struct commit *commit, void *data, struct fsck_optio
 	return res;
 }
 
-static int fsck_walk_tag(struct tag *tag, void *data, struct fsck_options *options)
+static int fsck_walk_tag(struct tag *tag, void *data,
+			 struct fsck_objects_options *options)
 {
 	const char *name = fsck_get_object_name(options, &tag->object.oid);
 
@@ -444,7 +447,8 @@ static int fsck_walk_tag(struct tag *tag, void *data, struct fsck_options *optio
 	return options->walk(tag->tagged, OBJ_ANY, data, options);
 }
 
-int fsck_walk(struct object *obj, void *data, struct fsck_options *options)
+int fsck_walk(struct object *obj, void *data,
+	      struct fsck_objects_options *options)
 {
 	if (!obj)
 		return -1;
@@ -580,7 +584,7 @@ static int verify_ordered(unsigned mode1, const char *name1,
 
 static int fsck_tree(const struct object_id *tree_oid,
 		     const char *buffer, unsigned long size,
-		     struct fsck_options *options)
+		     struct fsck_objects_options *options)
 {
 	int retval = 0;
 	int has_null_sha1 = 0;
@@ -793,7 +797,7 @@ static int fsck_tree(const struct object_id *tree_oid,
  */
 static int verify_headers(const void *data, unsigned long size,
 			  const struct object_id *oid, enum object_type type,
-			  struct fsck_options *options)
+			  struct fsck_objects_options *options)
 {
 	const char *buffer = (const char *)data;
 	unsigned long i;
@@ -825,7 +829,7 @@ static int verify_headers(const void *data, unsigned long size,
 
 static int fsck_ident(const char **ident,
 		      const struct object_id *oid, enum object_type type,
-		      struct fsck_options *options)
+		      struct fsck_objects_options *options)
 {
 	const char *p = *ident;
 	char *end;
@@ -885,7 +889,7 @@ static int fsck_ident(const char **ident,
 
 static int fsck_commit(const struct object_id *oid,
 		       const char *buffer, unsigned long size,
-		       struct fsck_options *options)
+		       struct fsck_objects_options *options)
 {
 	struct object_id tree_oid, parent_oid;
 	unsigned author_count;
@@ -946,7 +950,7 @@ static int fsck_commit(const struct object_id *oid,
 }
 
 static int fsck_tag(const struct object_id *oid, const char *buffer,
-		    unsigned long size, struct fsck_options *options)
+		    unsigned long size, struct fsck_objects_options *options)
 {
 	struct object_id tagged_oid;
 	int tagged_type;
@@ -955,7 +959,7 @@ static int fsck_tag(const struct object_id *oid, const char *buffer,
 }
 
 int fsck_tag_standalone(const struct object_id *oid, const char *buffer,
-			unsigned long size, struct fsck_options *options,
+			unsigned long size, struct fsck_objects_options *options,
 			struct object_id *tagged_oid,
 			int *tagged_type)
 {
@@ -1050,7 +1054,7 @@ done:
 
 struct fsck_gitmodules_data {
 	const struct object_id *oid;
-	struct fsck_options *options;
+	struct fsck_objects_options *options;
 	int ret;
 };
 
@@ -1100,7 +1104,8 @@ static int fsck_gitmodules_fn(const char *var, const char *value,
 }
 
 static int fsck_blob(const struct object_id *oid, const char *buf,
-		     unsigned long size, struct fsck_options *options)
+		     unsigned long size,
+		     struct fsck_objects_options *options)
 {
 	int ret = 0;
 
@@ -1170,7 +1175,7 @@ static int fsck_blob(const struct object_id *oid, const char *buf,
 }
 
 int fsck_object(struct object *obj, void *data, unsigned long size,
-	struct fsck_options *options)
+		struct fsck_objects_options *options)
 {
 	if (!obj)
 		return report(options, NULL, OBJ_NONE, FSCK_MSG_BAD_OBJECT_SHA1, "no valid object to fsck");
@@ -1180,7 +1185,7 @@ int fsck_object(struct object *obj, void *data, unsigned long size,
 
 int fsck_buffer(const struct object_id *oid, enum object_type type,
 		const void *data, unsigned long size,
-		struct fsck_options *options)
+		struct fsck_objects_options *options)
 {
 	if (type == OBJ_BLOB)
 		return fsck_blob(oid, data, size, options);
@@ -1197,7 +1202,7 @@ int fsck_buffer(const struct object_id *oid, enum object_type type,
 		      type);
 }
 
-int fsck_error_function(struct fsck_options *o,
+int fsck_error_function(struct fsck_objects_options *o,
 			const struct object_id *oid,
 			enum object_type object_type UNUSED,
 			enum fsck_msg_type msg_type,
@@ -1214,7 +1219,8 @@ int fsck_error_function(struct fsck_options *o,
 
 static int fsck_blobs(struct oidset *blobs_found, struct oidset *blobs_done,
 		      enum fsck_msg_id msg_missing, enum fsck_msg_id msg_type,
-		      struct fsck_options *options, const char *blob_type)
+		      struct fsck_objects_options *options,
+		      const char *blob_type)
 {
 	int ret = 0;
 	struct oidset_iter iter;
@@ -1253,7 +1259,7 @@ static int fsck_blobs(struct oidset *blobs_found, struct oidset *blobs_done,
 	return ret;
 }
 
-int fsck_finish(struct fsck_options *options)
+int fsck_finish(struct fsck_objects_options *options)
 {
 	int ret = 0;
 
@@ -1270,7 +1276,7 @@ int fsck_finish(struct fsck_options *options)
 int git_fsck_config(const char *var, const char *value,
 		    const struct config_context *ctx, void *cb)
 {
-	struct fsck_options *options = cb;
+	struct fsck_objects_options *options = cb;
 	const char *msg_id;
 
 	if (strcmp(var, "fsck.skiplist") == 0) {
@@ -1300,7 +1306,7 @@ int git_fsck_config(const char *var, const char *value,
  * Custom error callbacks that are used in more than one place.
  */
 
-int fsck_error_cb_print_missing_gitmodules(struct fsck_options *o,
+int fsck_error_cb_print_missing_gitmodules(struct fsck_objects_options *o,
 					   const struct object_id *oid,
 					   enum object_type object_type,
 					   enum fsck_msg_type msg_type,
