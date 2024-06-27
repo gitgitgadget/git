@@ -138,6 +138,10 @@ struct fsck_options {
 		 strict:1;
 };
 
+struct fsck_refs_options {
+	struct fsck_options fsck_options;
+};
+
 struct fsck_objects_options {
 	struct fsck_options fsck_options;
 	fsck_walk_func walk;
