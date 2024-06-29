@@ -505,7 +505,7 @@ static int cmd_log_walk_no_free(struct rev_info *rev)
 	int saved_nrl = 0;
 	int saved_dcctc = 0;
 
-	if (rev->remerge_diff) {
+	if (rev->remerge_diff || rev->remerge_diff_only) {
 		rev->remerge_objdir = tmp_objdir_create("remerge-diff");
 		if (!rev->remerge_objdir)
 			die(_("unable to create temporary object directory"));
@@ -551,7 +551,7 @@ static int cmd_log_walk_no_free(struct rev_info *rev)
 	rev->diffopt.degraded_cc_to_c = saved_dcctc;
 	rev->diffopt.needed_rename_limit = saved_nrl;
 
-	if (rev->remerge_diff) {
+	if (rev->remerge_diff || rev->remerge_diff_only) {
 		tmp_objdir_destroy(rev->remerge_objdir);
 		rev->remerge_objdir = NULL;
 	}
@@ -2248,6 +2248,8 @@ int cmd_format_patch(int argc, const char **argv, const char *prefix)
 		die(_("--check does not make sense"));
 	if (rev.remerge_diff)
 		die(_("--remerge-diff does not make sense"));
+	if (rev.remerge_diff_only)
+		die(_("--remerge-diff-only does not make sense"));
 
 	if (!use_patch_format &&
 		(!rev.diffopt.output_format ||

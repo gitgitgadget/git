@@ -59,6 +59,12 @@ ifdef::git-log[]
 	Produce remerge-diff output for merge commits.
 	Shortcut for '--diff-merges=remerge -p'.
 
+--remerge-diff-only:::
+	Produce remerge-diff output for merge commits, and for
+	cherry-picks and reverts.  Do not show diff output for
+	single-parent commits that are not cherry-picks or reverts.
+	Shortcut for '--diff-merges=remerge-only -p'.
+
 --no-diff-merges::
 	Synonym for '--diff-merges=off'.
 
@@ -109,6 +115,19 @@ remerge, r::
 The output emitted when this option is used is subject to change, and
 so is its interaction with other options (unless explicitly
 documented).
++
+remerge-only, ro::
+	Similar to remerge, but also looks for messages in single
+	parent commits suggesting the commit is a cherry-pick or a
+	revert.  If it finds such a note, it will create a temporary
+	tree representing a redo of the cherry-pick or revert,
+	possibly including conflict markers.  It will then show a diff
+	between that temporary tree and the actual commit.  Further,
+	with this flag, single parent commits which are not
+	cherry-picks or reverts will be skipped.
++
+Much like remerge, the output emitted with this option and interactions
+with other options is subject to change.
 --
 
 --combined-all-paths::
