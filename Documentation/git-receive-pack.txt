@@ -46,6 +46,16 @@ OPTIONS
 	`$GIT_URL/info/refs?service=git-receive-pack` requests. See
 	`--http-backend-info-refs` in linkgit:git-upload-pack[1].
 
+--show-service::
+	Output the "# service=git-receive-pack" pktline and the
+	"0000" flush pktline firstly. Since the git client needs
+	the git server to send the first pktline
+	"# service=$servicename", this option allows the git
+	server to delegate the functionality of sending this pktline
+	to `git-receive-pack`.
+	Note that this option can only be used together with
+	`--http-backend-info-refs`.
+
 PRE-RECEIVE HOOK
 ----------------
 Before any ref is updated, if $GIT_DIR/hooks/pre-receive file exists
