@@ -32,6 +32,7 @@ static int show_deleted;
 static int show_cached;
 static int show_others;
 static int show_stage;
+static int object_only;
 static int show_unmerged;
 static int show_resolve_undo;
 static int show_modified;
@@ -333,10 +334,15 @@ static void show_ce(struct repository *repo, struct dir_struct *dir,
 		if (!show_stage) {
 			fputs(tag, stdout);
 		} else {
+			const char *object_name = repo_find_unique_abbrev(repo, &ce->oid, abbrev);
+			if (object_only) {
+				printf("%s%c", object_name, line_terminator);
+				return;
+			}
 			printf("%s%06o %s %d\t",
 			       tag,
 			       ce->ce_mode,
-			       repo_find_unique_abbrev(repo, &ce->oid, abbrev),
+			       object_name,
 			       ce_stage(ce));
 		}
 		write_eolinfo(repo->index, ce, fullname);
@@ -366,6 +372,10 @@ static void show_ru_info(struct index_state *istate)
 		for (i = 0; i < 3; i++) {
 			if (!ui->mode[i])
 				continue;
+			if (object_only) {
+				printf("%s%c", find_unique_abbrev(&ui->oid[i], abbrev), line_terminator);
+				continue;
+			}
 			printf("%s%06o %s %d\t", tag_resolve_undo, ui->mode[i],
 			       repo_find_unique_abbrev(the_repository, &ui->oid[i], abbrev),
 			       i + 1);
@@ -591,6 +601,8 @@ int cmd_ls_files(int argc, const char **argv, const char *cmd_prefix)
 			DIR_SHOW_IGNORED),
 		OPT_BOOL('s', "stage", &show_stage,
 			N_("show staged contents' object name in the output")),
+		OPT_BOOL(0, "object-only", &object_only,
+			N_("only show staged contents' object name in the output")),
 		OPT_BOOL('k', "killed", &show_killed,
 			N_("show files on the filesystem that need to be removed")),
 		OPT_BIT(0, "directory", &dir.flags,
@@ -699,6 +711,10 @@ int cmd_ls_files(int argc, const char **argv, const char *cmd_prefix)
 	if (recurse_submodules && error_unmatch)
 		die("ls-files --recurse-submodules does not support "
 		    "--error-unmatch");
+
+	if (object_only && !show_stage && !show_resolve_undo)
+		die(_("ls-files --object-only only used with --stage "
+		    "or --resolve-undo"));
 
 	parse_pathspec(&pathspec, 0,
 		       PATHSPEC_PREFER_CWD,
