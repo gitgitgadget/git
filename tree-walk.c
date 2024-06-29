@@ -664,7 +664,12 @@ enum get_oid_result get_tree_entry_follow_symlinks(struct repository *r,
 	struct object_id current_tree_oid;
 	struct strbuf namebuf = STRBUF_INIT;
 	struct tree_desc t;
-	int follows_remaining = GET_TREE_ENTRY_FOLLOW_SYMLINKS_MAX_LINKS;
+	int follows_remaining =
+		max_symlink_depth > -1 &&
+				max_symlink_depth <=
+					GET_TREE_ENTRY_FOLLOW_SYMLINKS_MAX_LINKS ?
+			max_symlink_depth :
+			GET_TREE_ENTRY_FOLLOW_SYMLINKS_MAX_LINKS;
 
 	init_tree_desc(&t, NULL, NULL, 0UL);
 	strbuf_addstr(&namebuf, name);
@@ -816,6 +821,17 @@ enum get_oid_result get_tree_entry_follow_symlinks(struct repository *r,
 			contents_start = contents;
 
 			parent = &parents[parents_nr - 1];
+
+			if (follows_remaining == 0 &&
+			    symlink_resolution_mode ==
+				    SYMLINK_RESOLUTION_MODE_BEST_EFFORT) {
+				strbuf_addstr(result_path, contents);
+				oidcpy(result, &current_tree_oid);
+				free(contents);
+				retval = FOUND;
+				goto done;
+			}
+
 			init_tree_desc(&t, &parent->oid, parent->tree, parent->size);
 			strbuf_splice(&namebuf, 0, len,
 				      contents_start, link_len);

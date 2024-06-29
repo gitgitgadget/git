@@ -141,6 +141,14 @@ extern size_t delta_base_cache_limit;
 extern unsigned long big_file_threshold;
 extern unsigned long pack_size_limit_cfg;
 extern int max_allowed_tree_depth;
+extern int max_symlink_depth;
+
+enum symlink_resolution_mode {
+	SYMLINK_RESOLUTION_MODE_ERROR = 0,
+	SYMLINK_RESOLUTION_MODE_BEST_EFFORT
+};
+
+extern enum symlink_resolution_mode symlink_resolution_mode;
 
 /*
  * Accessors for the core.sharedrepository config which lazy-load the value

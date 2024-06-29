@@ -878,6 +878,9 @@ test_expect_success 'cat-file -t and -s on corrupt loose object' '
 test_expect_success 'prep for symlink tests' '
 	echo_without_newline "$hello_content" >morx &&
 	test_ln_s_add morx same-dir-link &&
+	test_ln_s_add same-dir-link link-to-symlink-1 &&
+	test_ln_s_add link-to-symlink-1 link-to-symlink-2 &&
+	test_ln_s_add link-to-symlink-2 link-to-symlink-3 &&
 	test_ln_s_add dir link-to-dir &&
 	test_ln_s_add ../fleem out-of-repo-link &&
 	test_ln_s_add .. out-of-repo-link-dir &&
@@ -1093,6 +1096,49 @@ test_expect_success 'git cat-file --batch-check --follow-symlink -Z breaks loops
 test_expect_success 'git cat-file --batch --follow-symlink returns correct sha and mode' '
 	echo HEAD:morx | git cat-file --batch >expect &&
 	echo HEAD:morx | git cat-file --batch --follow-symlinks >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'git cat-file --batch --follow-symlink stop resolving symlinks' '
+	printf "loop 22\nHEAD:link-to-symlink-3\n">expect &&
+	printf 'HEAD:link-to-symlink-3' | git -c core.maxsymlinkdepth=1 cat-file --batch="%(objectname) %(objecttype) %(objectsize)" --follow-symlinks > actual &&
+	test_cmp expect actual &&
+	printf 'HEAD:link-to-symlink-3' | git -c core.maxsymlinkdepth=2 cat-file --batch="%(objectname) %(objecttype) %(objectsize)" --follow-symlinks > actual &&
+	test_cmp expect actual &&
+	printf 'HEAD:link-to-symlink-3' | git -c core.maxsymlinkdepth=3 cat-file --batch="%(objectname) %(objecttype) %(objectsize)" --follow-symlinks > actual &&
+	test_cmp expect actual &&
+	oid=$(git rev-parse HEAD:morx) &&
+	printf "${oid} blob 11\nHello World\n" >expect &&
+	printf 'HEAD:link-to-symlink-3' | git -c core.maxsymlinkdepth=4 cat-file --batch="%(objectname) %(objecttype) %(objectsize)" --follow-symlinks > actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'git cat-file --batch --follow-symlink stop resolving symlink at designated depth with error mode config' '
+	printf "loop 22\nHEAD:link-to-symlink-3\n">expect &&
+	printf 'HEAD:link-to-symlink-3' | git -c core.maxsymlinkdepth=1 -c core.symlinkresolutionmode=error cat-file --batch="%(objectname) %(objecttype) %(objectsize)" --follow-symlinks > actual &&
+	test_cmp expect actual &&
+	printf 'HEAD:link-to-symlink-3' | git -c core.maxsymlinkdepth=2 -c core.symlinkresolutionmode=error cat-file --batch="%(objectname) %(objecttype) %(objectsize)" --follow-symlinks > actual &&
+	test_cmp expect actual &&
+	printf 'HEAD:link-to-symlink-3' | git -c core.maxsymlinkdepth=3 -c core.symlinkresolutionmode=error cat-file --batch="%(objectname) %(objecttype) %(objectsize)" --follow-symlinks > actual &&
+	test_cmp expect actual &&
+	oid=$(git rev-parse HEAD:morx) &&
+	printf "${oid} blob 11\nHello World\n" >expect &&
+	printf 'HEAD:link-to-symlink-3' | git -c core.maxsymlinkdepth=4 cat-file --batch="%(objectname) %(objecttype) %(objectsize)" --follow-symlinks > actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'git cat-file --batch --follow-symlink return object info at designated depth' '
+	oid=$(git rev-parse HEAD:link-to-symlink-1) &&
+	printf "${oid} blob 13\nsame-dir-link\n" >expect &&
+	printf 'HEAD:link-to-symlink-1' | git -c core.maxsymlinkdepth=1  -c core.symlinkresolutionmode=best-effort cat-file --batch="%(objectname) %(objecttype) %(objectsize)" --follow-symlinks >actual &&
+	test_cmp expect actual &&
+	oid=$(git rev-parse HEAD:same-dir-link) &&
+	printf "${oid} blob 4\nmorx\n" > expect &&
+	printf 'HEAD:link-to-symlink-1' | git -c core.maxsymlinkdepth=2  -c core.symlinkresolutionmode=best-effort cat-file --batch="%(objectname) %(objecttype) %(objectsize)" --follow-symlinks >actual &&
+	test_cmp expect actual &&
+	oid=$(git rev-parse HEAD:morx) &&
+	printf "${oid} blob 11\nHello World\n" > expect &&
+	printf 'HEAD:link-to-symlink-1' | git -c core.maxsymlinkdepth=3  -c core.symlinkresolutionmode=best-effort cat-file --batch="%(objectname) %(objecttype) %(objectsize)" --follow-symlinks >actual &&
 	test_cmp expect actual
 '
 
