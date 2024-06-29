@@ -7,6 +7,7 @@
 #include "revision.h"
 #include "list-objects-filter.h"
 #include "list-objects-filter-options.h"
+#include "list-objects-filter-extensions.h"
 #include "oidmap.h"
 #include "oidset.h"
 #include "object-name.h"
@@ -619,6 +620,88 @@ static void filter_object_type__init(
 	filter->free_fn = free;
 }
 
+/*
+ * A filter which passes the objects to a compile-time extension.
+ * The extension needs to implement the filter_extension interface
+ * defined in list-objects-filter-extension.h.
+ * See contrib/filter-extensions/README.md
+ */
+
+struct filter_extension_data {
+	const struct filter_extension *extension;
+	void *context;
+};
+
+static enum list_objects_filter_result filter_extension_filter_object(
+	struct repository *r,
+	enum list_objects_filter_situation filter_situation,
+	struct object *obj,
+	const char *pathname,
+	const char *filename,
+	struct oidset *omits,
+	void *filter_data)
+{
+	struct filter_extension_data *d = filter_data;
+
+	enum list_objects_filter_omit omit_it = LOFO_IGNORE;
+
+	enum list_objects_filter_result ret =
+		d->extension->filter_object_fn(
+			r,
+			filter_situation,
+			obj,
+			pathname,
+			filename,
+			&omit_it,
+			d->context);
+
+	if (omits) {
+		if (omit_it == LOFO_KEEP)
+			oidset_remove(omits, &obj->oid);
+		else if (omit_it == LOFO_OMIT)
+			oidset_insert(omits, &obj->oid);
+	}
+	return ret;
+}
+
+static void filter_extension_free(void *filter_data)
+{
+	struct filter_extension_data *d = filter_data;
+	d->extension->free_fn(the_repository, d->context);
+	free(d);
+}
+
+static void filter_extension__init(
+	struct list_objects_filter_options *filter_options,
+	struct filter *filter)
+{
+	struct filter_extension_data *d = xcalloc(1, sizeof(*d));
+	int i, r;
+
+	for (i = 0; filter_extensions[i] != NULL; i++) {
+		if (!strcmp(
+			filter_options->extension_name,
+			filter_extensions[i]->name))
+			break;
+	}
+	if (filter_extensions[i] == NULL) {
+		die(_("No filter extension found with name %s"),
+			filter_options->extension_name);
+	}
+	d->extension = filter_extensions[i];
+
+	r = d->extension->init_fn(
+		the_repository, filter_options->extension_value, &d->context);
+	if (r) {
+		die(_("Error initialising filter extension %s: %d"),
+			filter_options->extension_name, r);
+	}
+
+	filter->filter_data = d;
+	filter->filter_object_fn = &filter_extension_filter_object;
+	filter->free_fn = &filter_extension_free;
+}
+
 /* A filter which only shows objects shown by all sub-filters. */
 struct combine_filter_data {
 	struct subfilter *sub;
@@ -758,6 +841,7 @@ static filter_init_fn s_filters[] = {
 	filter_trees_depth__init,
 	filter_sparse_oid__init,
 	filter_object_type__init,
+	filter_extension__init,
 	filter_combine__init,
 };
 

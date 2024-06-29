@@ -17,6 +17,7 @@ enum list_objects_filter_choice {
 	LOFC_TREE_DEPTH,
 	LOFC_SPARSE_OID,
 	LOFC_OBJECT_TYPE,
+	LOFC_EXTENSION,
 	LOFC_COMBINE,
 	LOFC__COUNT /* must be last */
 };
@@ -59,6 +60,11 @@ struct list_objects_filter_options {
 	unsigned long blob_limit_value;
 	unsigned long tree_exclude_depth;
 	enum object_type object_type;
+
+	/* LOFC_EXTENSION values */
+
+	char *extension_name;
+	char *extension_value;
 
 	/* LOFC_COMBINE values */
 

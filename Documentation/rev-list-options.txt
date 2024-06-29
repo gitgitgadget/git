@@ -977,6 +977,10 @@ Note that the form '--filter=sparse:path=<path>' that wants to read
 from an arbitrary path on the filesystem has been dropped for security
 reasons.
 +
+The form '--filter=extension:<name>[=<arg>]' uses a compile-time extension
+to implement a named filter. Filter extensions may take an argument string
+which is passed via `<arg>`.
++
 Multiple '--filter=' flags can be specified to combine filters. Only
 objects which are accepted by every filter are included.
 +

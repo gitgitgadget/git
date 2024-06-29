@@ -92,8 +92,9 @@ The Steps of Build Git with VS2008
    the git operations.
 
 3. Inside Git's directory run the command:
-       make generated-hdrs
-   to generate the header file needed to compile git.
+       make command-list.h config-list.h list-objects-filter-extensions.c
+   to generate those source files that are not included in the repo, but
+   instead are automatically generated from other files.
 
 4. Then either build Git with the GNU Make Makefile in the Git projects
    root

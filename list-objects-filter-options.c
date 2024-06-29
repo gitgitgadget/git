@@ -12,6 +12,11 @@ static int parse_combine_filter(
 	const char *arg,
 	struct strbuf *errbuf);
 
+static int parse_extension_filter(
+	struct list_objects_filter_options *filter_options,
+	const char *arg,
+	struct strbuf *errbuf);
+
 const char *list_object_filter_config_name(enum list_objects_filter_choice c)
 {
 	switch (c) {
@@ -28,6 +33,8 @@ const char *list_object_filter_config_name(enum list_objects_filter_choice c)
 		return "sparse:oid";
 	case LOFC_OBJECT_TYPE:
 		return "object:type";
+	case LOFC_EXTENSION:
+		return "extension";
 	case LOFC_COMBINE:
 		return "combine";
 	case LOFC__COUNT:
@@ -72,6 +79,9 @@ int gently_parse_list_objects_filter(
 		filter_options->sparse_oid_name = xstrdup(v0);
 		filter_options->choice = LOFC_SPARSE_OID;
 		return 0;
+
+	} else if (skip_prefix(arg, "extension:", &v0)) {
+		return parse_extension_filter(filter_options, v0, errbuf);
 
 	} else if (skip_prefix(arg, "sparse:path=", &v0)) {
 		if (errbuf) {
@@ -187,6 +197,41 @@ cleanup:
 	strbuf_list_free(subspecs);
 	if (result)
 		list_objects_filter_release(filter_options);
+	return result;
+}
+
+static int parse_extension_filter(
+	struct list_objects_filter_options *filter_options,
+	const char *arg,
+	struct strbuf *errbuf)
+{
+	int result = 0;
+	struct strbuf **params = strbuf_split_str(arg, '=', 2);
+
+	if (!params[0]) {
+		strbuf_addstr(errbuf, _("expected 'extension:<name>[=<parameter>]'"));
+		result = 1;
+		goto cleanup;
+	}
+
+	if (params[1]) {
+		// This extension has a parameter. Remove trailing "=" from the name.
+		size_t last = params[0]->len - 1;
+		assert(params[0]->buf[last] == '=');
+		strbuf_remove(params[0], last, 1);
+
+		filter_options->extension_value = xstrdup(params[1]->buf);
+	}
+
+	filter_options->extension_name = xstrdup(params[0]->buf);
+	filter_options->choice = LOFC_EXTENSION;
+
+cleanup:
+	strbuf_list_free(params);
+	if (result) {
+		list_objects_filter_release(filter_options);
+		memset(filter_options, 0, sizeof(*filter_options));
+	}
 	return result;
 }
 
@@ -323,6 +368,8 @@ void list_objects_filter_release(
 		return;
 	strbuf_release(&filter_options->filter_spec);
 	free(filter_options->sparse_oid_name);
+	free(filter_options->extension_name);
+	free(filter_options->extension_value);
 	for (sub = 0; sub < filter_options->sub_nr; sub++)
 		list_objects_filter_release(&filter_options->sub[sub]);
 	free(filter_options->sub);
@@ -403,6 +450,8 @@ void list_objects_filter_copy(
 	strbuf_init(&dest->filter_spec, 0);
 	strbuf_addbuf(&dest->filter_spec, &src->filter_spec);
 	dest->sparse_oid_name = xstrdup_or_null(src->sparse_oid_name);
+	dest->extension_name = xstrdup_or_null(src->extension_name);
+	dest->extension_value = xstrdup_or_null(src->extension_value);
 
 	ALLOC_ARRAY(dest->sub, dest->sub_alloc);
 	for (i = 0; i < src->sub_nr; i++)
