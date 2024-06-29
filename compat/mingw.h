@@ -448,12 +448,6 @@ HANDLE winansi_get_osfhandle(int fd);
  * git specific compatibility
  */
 
-static inline void convert_slashes(char *path)
-{
-	for (; *path; path++)
-		if (*path == '\\')
-			*path = '/';
-}
 #define PATH_SEP ';'
 char *mingw_query_user_email(void);
 #define query_user_email mingw_query_user_email
