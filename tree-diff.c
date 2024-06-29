@@ -8,6 +8,7 @@
 #include "tree.h"
 #include "tree-walk.h"
 #include "environment.h"
+#include "commit.h"
 
 /*
  * Some mode bits are also used internally for computations.
@@ -699,6 +700,22 @@ static void try_to_follow_renames(const struct object_id *old_oid,
 	q->nr = 1;
 }
 
+static struct object_id *peel_to_tree(const struct object_id *oid, struct object_id *out)
+{
+	if (!oid)
+		oidcpy(out, null_oid());
+	else {
+		struct object *o = parse_object(the_repository, oid);
+
+		if (o->type == OBJ_TREE)
+			oidcpy(out, oid);
+		else
+			oidcpy(out, get_commit_tree_oid((struct commit *)o));
+	}
+
+	return out;
+}
+
 static void ll_diff_tree_oid(const struct object_id *old_oid,
 			     const struct object_id *new_oid,
 			     struct strbuf *base, struct diff_options *opt)
@@ -708,6 +725,30 @@ static void ll_diff_tree_oid(const struct object_id *old_oid,
 
 	phead.next = NULL;
 	opt->pathchange = emit_diff_first_parent_only;
+
+	/*
+	 * Allow --find-object to find the root tree by adding a diff pair with
+	 * empty path.
+	 *
+	 * We might need to peel the provided OIDs to tree OIDs because
+	 * `diff_tree_combined()` passes commit OIDs instead of tree OIDs.
+	 */
+	if (opt->objfind) {
+		struct object_id old_tree_oid, new_tree_oid;
+
+		peel_to_tree(old_oid, &old_tree_oid);
+		peel_to_tree(new_oid, &new_tree_oid);
+
+		if (!oideq(&old_tree_oid, &new_tree_oid)) {
+			p = path_appendnew(&phead, 1, base, "", 0, S_IFREG | 0755, &new_tree_oid);
+			p->parent[0].mode = p->mode;
+			oidcpy(&p->parent[0].oid, &old_tree_oid);
+			opt->pathchange(opt, p);
+
+			FREE_AND_NULL(phead.next);
+		}
+	}
+
 	diff_tree_paths(&phead, new_oid, &old_oid, 1, base, opt);
 
 	for (p = phead.next; p;) {
