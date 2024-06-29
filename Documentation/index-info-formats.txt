@@ -1,0 +1,13 @@
+    . mode SP type SP sha1          TAB path
++
+This format is to use `git ls-tree` output.
+
+    . mode         SP sha1 SP stage TAB path
++
+This format allows higher order stages to appear and
+matches 'git ls-files --stage' output.
+
+    . mode         SP sha1          TAB path
++
+This format is no longer produced by any Git command, but is
+and will continue to be supported.
