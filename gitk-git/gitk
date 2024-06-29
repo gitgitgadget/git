@@ -1800,6 +1800,7 @@ proc readrefs {} {
     global selecthead selectheadid
     global hideremotes
     global tclencoding
+    global hideprefetch
 
     foreach v {tagids idtags headids idheads otherrefids idotherrefs} {
         unset -nocomplain $v
@@ -1834,6 +1835,7 @@ proc readrefs {} {
             }
             set tagids($name) $id
             lappend idtags($id) $name
+        } elseif {[string match "prefetch/*" $name] && $hideprefetch} {
         } else {
             set otherrefids($name) $id
             lappend idotherrefs($id) $name
@@ -11577,7 +11579,7 @@ proc create_prefs_page {w} {
 proc prefspage_general {notebook} {
     global NS maxwidth maxgraphpct showneartags showlocalchanges
     global tabstop limitdiffs autoselect autosellen extdifftool perfile_attrs
-    global hideremotes want_ttk have_ttk maxrefs web_browser
+    global hideremotes want_ttk have_ttk maxrefs web_browser hideprefetch
 
     set page [create_prefs_page $notebook.general]
 
@@ -11601,6 +11603,9 @@ proc prefspage_general {notebook} {
     ${NS}::checkbutton $page.hideremotes -text [mc "Hide remote refs"] \
         -variable hideremotes
     grid x $page.hideremotes -sticky w
+    ${NS}::checkbutton $page.hideprefetch -text [mc "Hide prefetch refs"] \
+        -variable hideprefetch
+    grid x $page.hideprefetch -sticky w
 
     ${NS}::label $page.ddisp -text [mc "Diff display options"]
     grid $page.ddisp - -sticky w -pady 10
@@ -11725,7 +11730,7 @@ proc doprefs {} {
     global oldprefs prefstop showneartags showlocalchanges
     global uicolor bgcolor fgcolor ctext diffcolors selectbgcolor markbgcolor
     global tabstop limitdiffs autoselect autosellen extdifftool perfile_attrs
-    global hideremotes want_ttk have_ttk
+    global hideremotes want_ttk have_ttk hideprefetch
 
     set top .gitkprefs
     set prefstop $top
@@ -11734,7 +11739,8 @@ proc doprefs {} {
         return
     }
     foreach v {maxwidth maxgraphpct showneartags showlocalchanges \
-                   limitdiffs tabstop perfile_attrs hideremotes want_ttk} {
+                   limitdiffs tabstop perfile_attrs hideremotes want_ttk \
+                   hideprefetch} {
         set oldprefs($v) [set $v]
     }
     ttk_toplevel $top
@@ -11860,7 +11866,8 @@ proc prefscan {} {
     global oldprefs prefstop
 
     foreach v {maxwidth maxgraphpct showneartags showlocalchanges \
-                   limitdiffs tabstop perfile_attrs hideremotes want_ttk} {
+                   limitdiffs tabstop perfile_attrs hideremotes want_ttk \
+                   hideprefetch} {
         global $v
         set $v $oldprefs($v)
     }
@@ -11874,7 +11881,7 @@ proc prefsok {} {
     global oldprefs prefstop showneartags showlocalchanges
     global fontpref mainfont textfont uifont
     global limitdiffs treediffs perfile_attrs
-    global hideremotes
+    global hideremotes hideprefetch
 
     catch {destroy $prefstop}
     unset prefstop
@@ -11920,7 +11927,8 @@ proc prefsok {} {
           $limitdiffs != $oldprefs(limitdiffs)} {
         reselectline
     }
-    if {$hideremotes != $oldprefs(hideremotes)} {
+    if {$hideremotes != $oldprefs(hideremotes) ||
+          $hideprefetch != $oldprefs(hideprefetch)} {
         rereadrefs
     }
 }
@@ -12394,6 +12402,7 @@ set cmitmode "patch"
 set wrapcomment "none"
 set showneartags 1
 set hideremotes 0
+set hideprefetch 1
 set maxrefs 20
 set visiblerefs {"master"}
 set maxlinelen 200
@@ -12506,7 +12515,7 @@ set config_variables {
     filesepbgcolor filesepfgcolor linehoverbgcolor linehoverfgcolor
     linehoveroutlinecolor mainheadcirclecolor workingfilescirclecolor
     indexcirclecolor circlecolors linkfgcolor circleoutlinecolor diffbgcolors
-    web_browser
+    web_browser hideprefetch
 }
 foreach var $config_variables {
     config_init_trace $var
