@@ -106,6 +106,9 @@ IndentCaseLabels: false
 # #endif
 IndentPPDirectives: AfterHash
 
+# Insert a newline at end of file if missing
+InsertNewlineAtEOF: true
+
 # Don't indent a function definition or declaration if it is wrapped after the
 # type
 IndentWrappedFunctionNames: false
