@@ -117,6 +117,11 @@ IndentWrappedFunctionNames: false
 # int *a;
 PointerAlignment: Right
 
+# Remove optional braces of control statements (if, else, for, and while)
+# according to the LLVM coding style
+# This avoids braces on simple single-statement bodies of statements.
+RemoveBracesLLVM: true
+
 # Don't insert a space after a cast
 # x = (int32)y;    not    x = (int32) y;
 SpaceAfterCStyleCast: false
