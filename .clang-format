@@ -134,8 +134,6 @@ SpaceBeforeAssignmentOperators: true
 # }
 SpaceBeforeParens: ControlStatements
 
-# Don't insert spaces inside empty '()'
-SpaceInEmptyParentheses: false
 
 # The number of spaces before trailing line comments (// - comments).
 # This does not affect trailing block comments (/* - comments).
@@ -149,9 +147,10 @@ SpacesInCStyleCastParentheses: false
 # var arr = [1, 2, 3];    not    var arr = [ 1, 2, 3 ];
 SpacesInContainerLiterals: false
 
-# Don't insert spaces after '(' or before ')'
-# f(arg);    not    f( arg );
-SpacesInParentheses: false
+SpacesInParens: Custom
+SpacesInParensOptions:
+  # Don't insert spaces inside empty '()'
+  InEmptyParentheses: false
 
 # Don't insert spaces after '[' or before ']'
 # int a[5];    not    int a[ 5 ];
