@@ -43,7 +43,7 @@ ubuntu-*)
 		make libssl-dev libcurl4-openssl-dev libexpat-dev wget sudo default-jre \
 		tcl tk gettext zlib1g-dev perl-modules liberror-perl libauthen-sasl-perl \
 		libemail-valid-perl libio-pty-perl libio-socket-ssl-perl libnet-smtp-ssl-perl libdbd-sqlite3-perl libcgi-pm-perl \
-		${CC_PACKAGE:-${CC:-gcc}} $PYTHON_PACKAGE
+		${CC_PACKAGE:-${CC:-gcc}} $PYTHON_PACKAGE clang-format
 
 	mkdir --parents "$CUSTOM_PATH"
 	wget --quiet --directory-prefix="$CUSTOM_PATH" \
