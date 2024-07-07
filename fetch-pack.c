@@ -1361,9 +1361,9 @@ static int send_fetch_request(struct fetch_negotiator *negotiator, int fd_out,
 
 	write_fetch_command_and_capabilities(&req_buf, args->server_options);
 
-	if (args->use_thin_pack)
+	if (args->use_thin_pack) {
 		packet_buf_write(&req_buf, "thin-pack");
-	if (args->no_progress)
+	} if (args->no_progress)
 		packet_buf_write(&req_buf, "no-progress");
 	if (args->include_tag)
 		packet_buf_write(&req_buf, "include-tag");

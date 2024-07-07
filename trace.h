@@ -82,7 +82,7 @@
 struct trace_key {
 	const char * const key;
 	int fd;
-	unsigned int initialized : 1;
+	unsigned int initialized :  1;
 	unsigned int  need_close : 1;
 };
 
