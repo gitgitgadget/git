@@ -1169,7 +1169,7 @@ char *mingw_getcwd(char *pointer, int len)
 	}
 	if (xwcstoutf(pointer, wpointer, len) < 0)
 		return NULL;
-	convert_slashes(pointer);
+	change_path_separators(pointer);
 	return pointer;
 }
 
@@ -2639,7 +2639,7 @@ static void setup_windows_environment(void)
 		 * executable (by not mistaking the dir separators
 		 * for escape characters).
 		 */
-		convert_slashes(tmp);
+		change_path_separators(tmp);
 	}
 
 	/* simulate TERM to enable auto-color (see color.c) */
