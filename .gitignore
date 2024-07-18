@@ -194,6 +194,7 @@
 /config-list.h
 /command-list.h
 /hook-list.h
+/list-objects-filter-extensions.c
 *.tar.gz
 *.dsc
 *.deb

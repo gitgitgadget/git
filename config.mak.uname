@@ -789,8 +789,8 @@ vcxproj:
 	git add -f git/LinkOrCopyBuiltins.targets git-remote-http/LinkOrCopyRemoteHttp.targets
 
 	# Add generated headers
-	$(MAKE) MSVC=1 SKIP_VCPKG=1 prefix=/mingw64 $(GENERATED_H)
-	git add -f $(GENERATED_H)
+	$(MAKE) MSVC=1 SKIP_VCPKG=1 prefix=/mingw64 $(GENERATED_H) $(GENERATED_C)
+	git add -f $(GENERATED_H) $(GENERATED_C)
 
 	# Add scripts
 	rm -f perl/perl.mak

@@ -669,6 +669,12 @@ if(NOT EXISTS ${CMAKE_BINARY_DIR}/hook-list.h)
 	execute_process(COMMAND ${SH_EXE} ${CMAKE_SOURCE_DIR}/generate-hooklist.sh
 			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 			OUTPUT_FILE ${CMAKE_BINARY_DIR}/hook-list.h)
+
+if(NOT EXISTS ${CMAKE_BINARY_DIR}/list-objects-filter-extensions.c)
+	message("Generating list-objects-filter-extensions.c")
+	execute_process(COMMAND ${SH_EXE} ${CMAKE_SOURCE_DIR}/generate-list-objects-filter-extensions.sh
+			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+			OUTPUT_FILE ${CMAKE_BINARY_DIR}/list-objects-filter-extensions.c)
 endif()
 
 include_directories(${CMAKE_BINARY_DIR})
