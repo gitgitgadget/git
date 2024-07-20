@@ -13,7 +13,7 @@ SYNOPSIS
 	  [`--separate-git-dir` _<git-dir>_] [++--object-format=++__<format>__]
 	  [++--ref-format=++__<format>__]
 	  [`-b` _<branch-name>_ | ++--initial-branch=++__<branch-name>__]
-	  [++--shared++[++=++__<permissions>__]] [_<directory>_]
+	  [`--shared`[++=++__<permissions>__]] [__<directory>__]
 
 
 DESCRIPTION

@@ -39,10 +39,35 @@ module Git
         output
       end
     end
+
+    class SynopsisBlock < Asciidoctor::Extensions::Preprocessor
+
+      def process document, reader
+        lines = reader.lines # get raw lines
+        in_verse = false
+        lines.map! do |l|
+          if l == '[verse]'
+            begin
+              in_verse = true
+              l
+            end
+          elsif in_verse
+            begin
+              in_verse = (l != '')
+              l.gsub('[', '{empty}[{empty}').gsub(']', '{empty}]{empty}')
+            end
+          else
+            l
+          end
+        end
+        Asciidoctor::Reader.new lines.join "\n"
+      end
+    end
   end
 end
 
 Asciidoctor::Extensions.register do
   inline_macro Git::Documentation::LinkGitProcessor, :linkgit
+  preprocessor Git::Documentation::SynopsisBlock
   postprocessor Git::Documentation::DocumentPostProcessor
 end
