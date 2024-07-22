@@ -774,7 +774,10 @@ Synopsis Syntax
    [_<file>_...]
    (Zero or more of <file>.)
 
-   ++--exec-path++[++=++__<path>__]
+ An optional parameter needs to be typeset with unconstrained pairs
+   [__<repository>__]
+
+   `--exec-path`[++=++__<path>__]
    (Option with an optional argument.  Note that the "=" is inside the
    brackets.)
 
@@ -793,23 +796,23 @@ Synopsis Syntax
 
  Don't use spacing around "|" tokens when they're used to separate the
  alternate arguments of an option:
-    Do: ++--track++[++=++(`direct`|`inherit`)]`
-    Don't: ++--track++[++=++(`direct` | `inherit`)]
+    Do: `--track`[`=`(`direct`|`inherit`)]
+    Don't: `--track`[`=`(`direct` | `inherit`)]
 
  Parentheses are used for grouping:
-   [(_<rev>_ | _<range>_)...]
+   [(_<rev>_|_<range>_)...]
    (Any number of either <rev> or <range>.  Parens are needed to make
    it clear that "..." pertains to both <rev> and <range>.)
 
    [(`-p` _<parent>_)...]
    (Any number of option -p, each with one <parent> argument.)
 
-   `git remote set-head` _<name>_ (`-a` | `-d` | _<branch>_)
+   `git remote set-head` _<name>_ (`-a`|`-d`|_<branch>_)
    (One and only one of "-a", "-d" or "<branch>" _must_ (no square
    brackets) be provided.)
 
  And a somewhat more contrived example:
-   `--diff-filter=[(A|C|D|M|R|T|U|X|B)...[*]]`
+   `--diff-filter=`[(`A`|`C`|`D`|`M`|`R`|`T`|`U`|`X`|`B`)...[*]]`
    Here "=" is outside the brackets, because "--diff-filter=" is a
    valid usage.  "*" has its own pair of brackets, because it can
    (optionally) be specified only when one or more of the letters is
