@@ -333,6 +333,10 @@ include shared.mak
 # If it isn't set, fallback to $LC_ALL, $LANG or use the first utf-8
 # locale returned by "locale -a".
 #
+# Define GIT_TEST_TIME_LOCALE to preferred non-us locale for testing.
+# If it isn't set, fallback to $LC_ALL, $LANG or use the first non-us
+# locale returned by "locale -a".
+#
 # Define HAVE_CLOCK_GETTIME if your platform has clock_gettime.
 #
 # Define HAVE_CLOCK_MONOTONIC if your platform has CLOCK_MONOTONIC.
@@ -3165,6 +3169,9 @@ ifdef GIT_TEST_CMP_USE_COPIED_CONTEXT
 endif
 ifdef GIT_TEST_UTF8_LOCALE
 	@echo GIT_TEST_UTF8_LOCALE=\''$(subst ','\'',$(subst ','\'',$(GIT_TEST_UTF8_LOCALE)))'\' >>$@+
+endif
+ifdef GIT_TEST_TIME_LOCALE
+	@echo GIT_TEST_TIME_LOCALE=\''$(subst ','\'',$(subst ','\'',$(GIT_TEST_TIME_LOCALE)))'\' >>$@+
 endif
 	@echo NO_GETTEXT=\''$(subst ','\'',$(subst ','\'',$(NO_GETTEXT)))'\' >>$@+
 ifdef GIT_PERF_REPEAT_COUNT
