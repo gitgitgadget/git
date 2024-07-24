@@ -1,5 +1,6 @@
-#include "cache.h"
-#include "alloc.h"
+#define USE_THE_REPOSITORY_VARIABLE
+
+#include "git-compat-util.h"
 #include "environment.h"
 #include "hex.h"
 #include "lockfile.h"
@@ -7,10 +8,13 @@
 #include "tree-walk.h"
 #include "cache-tree.h"
 #include "bulk-checkin.h"
-#include "object-store.h"
+#include "object-file.h"
+#include "object-store-ll.h"
+#include "read-cache-ll.h"
 #include "replace-object.h"
 #include "promisor-remote.h"
-#include "sparse-index.h"
+#include "trace.h"
+#include "trace2.h"
 
 #ifndef DEBUG_CACHE_TREE
 #define DEBUG_CACHE_TREE 0
@@ -420,7 +424,7 @@ static int update_one(struct cache_tree *it,
 		/*
 		 * "sub" can be an empty tree if all subentries are i-t-a.
 		 */
-		if (contains_ita && is_empty_tree_oid(oid))
+		if (contains_ita && is_empty_tree_oid(oid, the_repository->hash_algo))
 			continue;
 
 		strbuf_grow(&buffer, entlen + 100);
@@ -445,7 +449,7 @@ static int update_one(struct cache_tree *it,
 		hash_object_file(the_hash_algo, buffer.buf, buffer.len,
 				 OBJ_TREE, &it->oid);
 	} else if (write_object_file_flags(buffer.buf, buffer.len, OBJ_TREE,
-					   &it->oid, flags & WRITE_TREE_SILENT
+					   &it->oid, NULL, flags & WRITE_TREE_SILENT
 					   ? HASH_SILENT : 0)) {
 		strbuf_release(&buffer);
 		return -1;
@@ -576,7 +580,8 @@ static struct cache_tree *read_one(const char **buffer, unsigned long *size_p)
 	if (0 <= it->entry_count) {
 		if (size < rawsz)
 			goto free_return;
-		oidread(&it->oid, (const unsigned char *)buf);
+		oidread(&it->oid, (const unsigned char *)buf,
+			the_repository->hash_algo);
 		buf += rawsz;
 		size -= rawsz;
 	}
@@ -767,7 +772,7 @@ static void prime_cache_tree_rec(struct repository *r,
 
 	oidcpy(&it->oid, &tree->object.oid);
 
-	init_tree_desc(&desc, tree->buffer, tree->size);
+	init_tree_desc(&desc, &tree->object.oid, tree->buffer, tree->size);
 	cnt = 0;
 	while (tree_entry(&desc, &entry)) {
 		if (!S_ISDIR(entry.mode))
@@ -776,8 +781,8 @@ static void prime_cache_tree_rec(struct repository *r,
 			struct cache_tree_sub *sub;
 			struct tree *subtree = lookup_tree(r, &entry.oid);
 
-			if (!subtree->object.parsed)
-				parse_tree(subtree);
+			if (parse_tree(subtree) < 0)
+				exit(128);
 			sub = cache_tree_sub(it, entry.path);
 			sub->cache_tree = cache_tree();
 

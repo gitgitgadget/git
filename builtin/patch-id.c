@@ -1,10 +1,11 @@
-#include "cache.h"
 #include "builtin.h"
 #include "config.h"
 #include "diff.h"
 #include "gettext.h"
+#include "hash.h"
 #include "hex.h"
 #include "parse-options.h"
+#include "setup.h"
 
 static void flush_current_id(int patchlen, struct object_id *id, struct object_id *result)
 {
@@ -69,7 +70,7 @@ static int get_one_patchid(struct object_id *next_oid, struct object_id *result,
 	git_hash_ctx ctx;
 
 	the_hash_algo->init_fn(&ctx);
-	oidclr(result);
+	oidclr(result, the_repository->hash_algo);
 
 	while (strbuf_getwholeline(line_buf, stdin, '\n') != EOF) {
 		char *line = line_buf->buf;
@@ -165,7 +166,7 @@ static int get_one_patchid(struct object_id *next_oid, struct object_id *result,
 	}
 
 	if (!found_next)
-		oidclr(next_oid);
+		oidclr(next_oid, the_repository->hash_algo);
 
 	flush_one_hunk(result, &ctx);
 
@@ -178,7 +179,7 @@ static void generate_id_list(int stable, int verbatim)
 	int patchlen;
 	struct strbuf line_buf = STRBUF_INIT;
 
-	oidclr(&oid);
+	oidclr(&oid, the_repository->hash_algo);
 	while (!feof(stdin)) {
 		patchlen = get_one_patchid(&n, &result, &line_buf, stable, verbatim);
 		flush_current_id(patchlen, &oid, &result);
@@ -196,7 +197,8 @@ struct patch_id_opts {
 	int verbatim;
 };
 
-static int git_patch_id_config(const char *var, const char *value, void *cb)
+static int git_patch_id_config(const char *var, const char *value,
+			       const struct config_context *ctx, void *cb)
 {
 	struct patch_id_opts *opts = cb;
 
@@ -209,7 +211,7 @@ static int git_patch_id_config(const char *var, const char *value, void *cb)
 		return 0;
 	}
 
-	return git_default_config(var, value, cb);
+	return git_default_config(var, value, ctx, cb);
 }
 
 int cmd_patch_id(int argc, const char **argv, const char *prefix)
@@ -235,6 +237,18 @@ int cmd_patch_id(int argc, const char **argv, const char *prefix)
 
 	argc = parse_options(argc, argv, prefix, builtin_patch_id_options,
 			     patch_id_usage, 0);
+
+	/*
+	 * We rely on `the_hash_algo` to compute patch IDs. This is dubious as
+	 * it means that the hash algorithm now depends on the object hash of
+	 * the repository, even though git-patch-id(1) clearly defines that
+	 * patch IDs always use SHA1.
+	 *
+	 * NEEDSWORK: This hack should be removed in favor of converting
+	 * the code that computes patch IDs to always use SHA1.
+	 */
+	if (!the_hash_algo)
+		repo_set_hash_algo(the_repository, GIT_HASH_SHA1);
 
 	generate_id_list(opts ? opts > 1 : config.stable,
 			 opts ? opts == 3 : config.verbatim);

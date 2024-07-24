@@ -1,16 +1,20 @@
-#include "cache.h"
-#include "object-store.h"
+#define USE_THE_REPOSITORY_VARIABLE
+
+#include "git-compat-util.h"
+#include "object-store-ll.h"
 #include "commit.h"
-#include "blob.h"
+#include "convert.h"
 #include "diff.h"
 #include "diffcore.h"
 #include "environment.h"
 #include "hex.h"
+#include "object-name.h"
 #include "quote.h"
 #include "xdiff-interface.h"
 #include "xdiff/xmacros.h"
 #include "log-tree.h"
 #include "refs.h"
+#include "tree.h"
 #include "userdiff.h"
 #include "oid-array.h"
 #include "revision.h"
@@ -335,6 +339,8 @@ static char *grab_blob(struct repository *r,
 		free_filespec(df);
 	} else {
 		blob = repo_read_object_file(r, oid, &type, size);
+		if (!blob)
+			die(_("unable to read %s"), oid_to_hex(oid));
 		if (type != OBJ_BLOB)
 			die("object '%s' is not a blob!", oid_to_hex(oid));
 	}
@@ -1062,7 +1068,8 @@ static void show_patch_diff(struct combine_diff_path *elem, int num_parent,
 			elem->mode = canon_mode(st.st_mode);
 		} else if (S_ISDIR(st.st_mode)) {
 			struct object_id oid;
-			if (resolve_gitlink_ref(elem->path, "HEAD", &oid) < 0)
+			if (repo_resolve_gitlink_ref(the_repository, elem->path,
+						     "HEAD", &oid) < 0)
 				result = grab_blob(opt->repo, &elem->oid,
 						   elem->mode, &result_size,
 						   NULL, NULL);

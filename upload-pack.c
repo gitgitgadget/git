@@ -1,4 +1,6 @@
-#include "cache.h"
+#define USE_THE_REPOSITORY_VARIABLE
+
+#include "git-compat-util.h"
 #include "config.h"
 #include "environment.h"
 #include "gettext.h"
@@ -7,14 +9,12 @@
 #include "pkt-line.h"
 #include "sideband.h"
 #include "repository.h"
-#include "object-store.h"
-#include "tag.h"
+#include "object-store-ll.h"
+#include "oid-array.h"
 #include "object.h"
 #include "commit.h"
 #include "diff.h"
 #include "revision.h"
-#include "list-objects.h"
-#include "list-objects-filter.h"
 #include "list-objects-filter-options.h"
 #include "run-command.h"
 #include "connect.h"
@@ -22,15 +22,15 @@
 #include "version.h"
 #include "string-list.h"
 #include "strvec.h"
-#include "prio-queue.h"
+#include "trace2.h"
 #include "protocol.h"
-#include "quote.h"
 #include "upload-pack.h"
-#include "serve.h"
 #include "commit-graph.h"
 #include "commit-reach.h"
 #include "shallow.h"
 #include "write-or-die.h"
+#include "json-writer.h"
+#include "strmap.h"
 
 /* Remember to update object flag allocation in object.h */
 #define THEY_HAVE	(1u << 11)
@@ -64,12 +64,11 @@ struct upload_pack_data {
 	struct string_list symref;				/* v0 only */
 	struct object_array want_obj;
 	struct object_array have_obj;
-	struct oid_array haves;					/* v2 only */
-	struct string_list wanted_refs;				/* v2 only */
-	struct string_list hidden_refs;
+	struct strmap wanted_refs;				/* v2 only */
+	struct strvec hidden_refs;
 
 	struct object_array shallows;
-	struct string_list deepen_not;
+	struct oidset deepen_not;
 	struct object_array extra_edge_obj;
 	int depth;
 	timestamp_t deepen_since;
@@ -97,7 +96,7 @@ struct upload_pack_data {
 
 	struct packet_writer writer;
 
-	const char *pack_objects_hook;
+	char *pack_objects_hook;
 
 	unsigned stateless_rpc : 1;				/* v0 only */
 	unsigned no_done : 1;					/* v0 only */
@@ -116,19 +115,21 @@ struct upload_pack_data {
 	unsigned done : 1;					/* v2 only */
 	unsigned allow_ref_in_want : 1;				/* v2 only */
 	unsigned allow_sideband_all : 1;			/* v2 only */
+	unsigned seen_haves : 1;				/* v2 only */
+	unsigned allow_packfile_uris : 1;			/* v2 only */
 	unsigned advertise_sid : 1;
+	unsigned sent_capabilities : 1;
 };
 
 static void upload_pack_data_init(struct upload_pack_data *data)
 {
 	struct string_list symref = STRING_LIST_INIT_DUP;
-	struct string_list wanted_refs = STRING_LIST_INIT_DUP;
-	struct string_list hidden_refs = STRING_LIST_INIT_DUP;
+	struct strmap wanted_refs = STRMAP_INIT;
+	struct strvec hidden_refs = STRVEC_INIT;
 	struct object_array want_obj = OBJECT_ARRAY_INIT;
 	struct object_array have_obj = OBJECT_ARRAY_INIT;
-	struct oid_array haves = OID_ARRAY_INIT;
 	struct object_array shallows = OBJECT_ARRAY_INIT;
-	struct string_list deepen_not = STRING_LIST_INIT_DUP;
+	struct oidset deepen_not = OID_ARRAY_INIT;
 	struct string_list uri_protocols = STRING_LIST_INIT_DUP;
 	struct object_array extra_edge_obj = OBJECT_ARRAY_INIT;
 	struct string_list allowed_filters = STRING_LIST_INIT_DUP;
@@ -139,7 +140,6 @@ static void upload_pack_data_init(struct upload_pack_data *data)
 	data->hidden_refs = hidden_refs;
 	data->want_obj = want_obj;
 	data->have_obj = have_obj;
-	data->haves = haves;
 	data->shallows = shallows;
 	data->deepen_not = deepen_not;
 	data->uri_protocols = uri_protocols;
@@ -157,13 +157,12 @@ static void upload_pack_data_init(struct upload_pack_data *data)
 static void upload_pack_data_clear(struct upload_pack_data *data)
 {
 	string_list_clear(&data->symref, 1);
-	string_list_clear(&data->wanted_refs, 1);
-	string_list_clear(&data->hidden_refs, 0);
+	strmap_clear(&data->wanted_refs, 1);
+	strvec_clear(&data->hidden_refs);
 	object_array_clear(&data->want_obj);
 	object_array_clear(&data->have_obj);
-	oid_array_clear(&data->haves);
 	object_array_clear(&data->shallows);
-	string_list_clear(&data->deepen_not, 0);
+	oidset_clear(&data->deepen_not);
 	object_array_clear(&data->extra_edge_obj);
 	list_objects_filter_release(&data->filter_options);
 	string_list_clear(&data->allowed_filters, 0);
@@ -465,7 +464,7 @@ static void create_pack_file(struct upload_pack_data *pack_data,
 
  fail:
 	free(output_state);
-	send_client_data(3, abort_msg, sizeof(abort_msg),
+	send_client_data(3, abort_msg, strlen(abort_msg),
 			 pack_data->use_sideband);
 	die("git upload-pack: %s", abort_msg);
 }
@@ -473,7 +472,9 @@ static void create_pack_file(struct upload_pack_data *pack_data,
 static int do_got_oid(struct upload_pack_data *data, const struct object_id *oid)
 {
 	int we_knew_they_have = 0;
-	struct object *o = parse_object(the_repository, oid);
+	struct object *o = parse_object_with_flags(the_repository, oid,
+						   PARSE_OBJECT_SKIP_HASH_CHECK |
+						   PARSE_OBJECT_DISCARD_TREE);
 
 	if (!o)
 		die("oops (%s)", oid_to_hex(oid));
@@ -529,8 +530,6 @@ static int get_common_commits(struct upload_pack_data *data,
 	int got_common = 0;
 	int got_other = 0;
 	int sent_ready = 0;
-
-	save_commit_buffer = 0;
 
 	for (;;) {
 		const char *arg;
@@ -598,11 +597,37 @@ static int get_common_commits(struct upload_pack_data *data,
 	}
 }
 
+static int allow_hidden_refs(enum allow_uor allow_uor)
+{
+	if ((allow_uor & ALLOW_ANY_SHA1) == ALLOW_ANY_SHA1)
+		return 1;
+	return !(allow_uor & (ALLOW_TIP_SHA1 | ALLOW_REACHABLE_SHA1));
+}
+
+static void for_each_namespaced_ref_1(each_ref_fn fn,
+				      struct upload_pack_data *data)
+{
+	const char **excludes = NULL;
+	/*
+	 * If `data->allow_uor` allows fetching hidden refs, we need to
+	 * mark all references (including hidden ones), to check in
+	 * `is_our_ref()` below.
+	 *
+	 * Otherwise, we only care about whether each reference's object
+	 * has the OUR_REF bit set or not, so do not need to visit
+	 * hidden references.
+	 */
+	if (allow_hidden_refs(data->allow_uor))
+		excludes = hidden_refs_to_excludes(&data->hidden_refs);
+
+	refs_for_each_namespaced_ref(get_main_ref_store(the_repository),
+				     excludes, fn, data);
+}
+
+
 static int is_our_ref(struct object *o, enum allow_uor allow_uor)
 {
-	int allow_hidden_ref = (allow_uor &
-				(ALLOW_TIP_SHA1 | ALLOW_REACHABLE_SHA1));
-	return o->flags & ((allow_hidden_ref ? HIDDEN_REF : 0) | OUR_REF);
+	return o->flags & ((allow_hidden_refs(allow_uor) ? 0 : HIDDEN_REF) | OUR_REF);
 }
 
 /*
@@ -773,11 +798,12 @@ error:
 	for (i = 0; i < data->want_obj.nr; i++) {
 		struct object *o = data->want_obj.objects[i].item;
 		if (!is_our_ref(o, data->allow_uor)) {
+			error("git upload-pack: not our ref %s",
+			      oid_to_hex(&o->oid));
 			packet_writer_error(&data->writer,
 					    "upload-pack: not our ref %s",
 					    oid_to_hex(&o->oid));
-			die("git upload-pack: not our ref %s",
-			    oid_to_hex(&o->oid));
+			exit(128);
 		}
 	}
 }
@@ -850,8 +876,9 @@ static void deepen(struct upload_pack_data *data, int depth)
 		 * Checking for reachable shallows requires that our refs be
 		 * marked with OUR_REF.
 		 */
-		head_ref_namespaced(check_ref, data);
-		for_each_namespaced_ref(check_ref, data);
+		refs_head_ref_namespaced(get_main_ref_store(the_repository),
+					 check_ref, data);
+		for_each_namespaced_ref_1(check_ref, data);
 
 		get_reachable_list(data, &reachable_shallows);
 		result = get_shallow_commits(&reachable_shallows,
@@ -902,12 +929,13 @@ static int send_shallow_list(struct upload_pack_data *data)
 		strvec_push(&av, "rev-list");
 		if (data->deepen_since)
 			strvec_pushf(&av, "--max-age=%"PRItime, data->deepen_since);
-		if (data->deepen_not.nr) {
+		if (oidset_size(&data->deepen_not)) {
+			const struct object_id *oid;
+			struct oidset_iter iter;
 			strvec_push(&av, "--not");
-			for (i = 0; i < data->deepen_not.nr; i++) {
-				struct string_list_item *s = data->deepen_not.items + i;
-				strvec_push(&av, s->string);
-			}
+			oidset_iter_init(&data->deepen_not, &iter);
+			while ((oid = oidset_iter_next(&iter)))
+				strvec_push(&av, oid_to_hex(oid));
 			strvec_push(&av, "--not");
 		}
 		for (i = 0; i < data->want_obj.nr; i++) {
@@ -983,7 +1011,7 @@ static int process_deepen_since(const char *line, timestamp_t *deepen_since, int
 	return 0;
 }
 
-static int process_deepen_not(const char *line, struct string_list *deepen_not, int *deepen_rev_list)
+static int process_deepen_not(const char *line, struct oidset *deepen_not, int *deepen_rev_list)
 {
 	const char *arg;
 	if (skip_prefix(line, "deepen-not ", &arg)) {
@@ -991,7 +1019,7 @@ static int process_deepen_not(const char *line, struct string_list *deepen_not, 
 		struct object_id oid;
 		if (expand_ref(the_repository, arg, strlen(arg), &oid, &ref) != 1)
 			die("git upload-pack: ambiguous deepen-not: %s", line);
-		string_list_append(deepen_not, ref);
+		oidset_insert(deepen_not, &oid);
 		free(ref);
 		*deepen_rev_list = 1;
 		return 1;
@@ -1067,7 +1095,7 @@ static void receive_needs(struct upload_pack_data *data,
 		const char *features;
 		struct object_id oid_buf;
 		const char *arg;
-		int feature_len;
+		size_t feature_len;
 
 		reset_timeout(data->timeout);
 		if (packet_reader_read(reader) != PACKET_READ_NORMAL)
@@ -1127,7 +1155,9 @@ static void receive_needs(struct upload_pack_data *data,
 			free(client_sid);
 		}
 
-		o = parse_object(the_repository, &oid_buf);
+		o = parse_object_with_flags(the_repository, &oid_buf,
+					    PARSE_OBJECT_SKIP_HASH_CHECK |
+					    PARSE_OBJECT_DISCARD_TREE);
 		if (!o) {
 			packet_writer_error(&data->writer,
 					    "upload-pack: not our ref %s",
@@ -1166,7 +1196,7 @@ static void receive_needs(struct upload_pack_data *data,
 
 /* return non-zero if the ref is hidden, otherwise 0 */
 static int mark_our_ref(const char *refname, const char *refname_full,
-			const struct object_id *oid, const struct string_list *hidden_refs)
+			const struct object_id *oid, const struct strvec *hidden_refs)
 {
 	struct object *o = lookup_unknown_object(the_repository, oid);
 
@@ -1203,18 +1233,17 @@ static void format_session_id(struct strbuf *buf, struct upload_pack_data *d) {
 		strbuf_addf(buf, " session-id=%s", trace2_session_id());
 }
 
-static int send_ref(const char *refname, const struct object_id *oid,
-		    int flag UNUSED, void *cb_data)
+static void write_v0_ref(struct upload_pack_data *data,
+			const char *refname, const char *refname_nons,
+			const struct object_id *oid)
 {
 	static const char *capabilities = "multi_ack thin-pack side-band"
 		" side-band-64k ofs-delta shallow deepen-since deepen-not"
 		" deepen-relative no-progress include-tag multi_ack_detailed";
-	const char *refname_nons = strip_namespace(refname);
 	struct object_id peeled;
-	struct upload_pack_data *data = cb_data;
 
 	if (mark_our_ref(refname_nons, refname, oid, &data->hidden_refs))
-		return 0;
+		return;
 
 	if (capabilities) {
 		struct strbuf symref_info = STRBUF_INIT;
@@ -1237,12 +1266,20 @@ static int send_ref(const char *refname, const struct object_id *oid,
 			     git_user_agent_sanitized());
 		strbuf_release(&symref_info);
 		strbuf_release(&session_id);
+		data->sent_capabilities = 1;
 	} else {
 		packet_fwrite_fmt(stdout, "%s %s\n", oid_to_hex(oid), refname_nons);
 	}
 	capabilities = NULL;
-	if (!peel_iterated_oid(oid, &peeled))
+	if (!peel_iterated_oid(the_repository, oid, &peeled))
 		packet_fwrite_fmt(stdout, "%s %s^{}\n", oid_to_hex(&peeled), refname_nons);
+	return;
+}
+
+static int send_ref(const char *refname, const struct object_id *oid,
+		    int flag UNUSED, void *cb_data)
+{
+	write_v0_ref(cb_data, refname, strip_namespace(refname), oid);
 	return 0;
 }
 
@@ -1255,7 +1292,8 @@ static int find_symref(const char *refname,
 
 	if ((flag & REF_ISSYMREF) == 0)
 		return 0;
-	symref_target = resolve_ref_unsafe(refname, 0, NULL, &flag);
+	symref_target = refs_resolve_ref_unsafe(get_main_ref_store(the_repository),
+						refname, 0, NULL, &flag);
 	if (!symref_target || (flag & REF_ISSYMREF) == 0)
 		die("'%s' is a symref but it is not?", refname);
 	item = string_list_append(cb_data, strip_namespace(refname));
@@ -1264,7 +1302,8 @@ static int find_symref(const char *refname,
 }
 
 static int parse_object_filter_config(const char *var, const char *value,
-				       struct upload_pack_data *data)
+				      const struct key_value_info *kvi,
+				      struct upload_pack_data *data)
 {
 	struct strbuf buf = STRBUF_INIT;
 	const char *sub, *key;
@@ -1291,14 +1330,17 @@ static int parse_object_filter_config(const char *var, const char *value,
 		}
 		string_list_insert(&data->allowed_filters, buf.buf)->util =
 			(void *)(intptr_t)1;
-		data->tree_filter_max_depth = git_config_ulong(var, value);
+		data->tree_filter_max_depth = git_config_ulong(var, value,
+							       kvi);
 	}
 
 	strbuf_release(&buf);
 	return 0;
 }
 
-static int upload_pack_config(const char *var, const char *value, void *cb_data)
+static int upload_pack_config(const char *var, const char *value,
+			      const struct config_context *ctx,
+			      void *cb_data)
 {
 	struct upload_pack_data *data = cb_data;
 
@@ -1318,7 +1360,7 @@ static int upload_pack_config(const char *var, const char *value, void *cb_data)
 		else
 			data->allow_uor &= ~ALLOW_ANY_SHA1;
 	} else if (!strcmp("uploadpack.keepalive", var)) {
-		data->keepalive = git_config_int(var, value);
+		data->keepalive = git_config_int(var, value, ctx->kvi);
 		if (!data->keepalive)
 			data->keepalive = -1;
 	} else if (!strcmp("uploadpack.allowfilter", var)) {
@@ -1327,19 +1369,24 @@ static int upload_pack_config(const char *var, const char *value, void *cb_data)
 		data->allow_ref_in_want = git_config_bool(var, value);
 	} else if (!strcmp("uploadpack.allowsidebandall", var)) {
 		data->allow_sideband_all = git_config_bool(var, value);
+	} else if (!strcmp("uploadpack.blobpackfileuri", var)) {
+		if (value)
+			data->allow_packfile_uris = 1;
 	} else if (!strcmp("core.precomposeunicode", var)) {
 		precomposed_unicode = git_config_bool(var, value);
 	} else if (!strcmp("transfer.advertisesid", var)) {
 		data->advertise_sid = git_config_bool(var, value);
 	}
 
-	if (parse_object_filter_config(var, value, data) < 0)
+	if (parse_object_filter_config(var, value, ctx->kvi, data) < 0)
 		return -1;
 
 	return parse_hide_refs_config(var, value, "uploadpack", &data->hidden_refs);
 }
 
-static int upload_pack_protected_config(const char *var, const char *value, void *cb_data)
+static int upload_pack_protected_config(const char *var, const char *value,
+					const struct config_context *ctx UNUSED,
+					void *cb_data)
 {
 	struct upload_pack_data *data = cb_data;
 
@@ -1348,10 +1395,13 @@ static int upload_pack_protected_config(const char *var, const char *value, void
 	return 0;
 }
 
-static void get_upload_pack_config(struct upload_pack_data *data)
+static void get_upload_pack_config(struct repository *r,
+				   struct upload_pack_data *data)
 {
-	git_config(upload_pack_config, data);
+	repo_config(r, upload_pack_config, data);
 	git_protected_config(upload_pack_protected_config, data);
+
+	data->allow_sideband_all |= git_env_bool("GIT_TEST_SIDEBAND_ALL", 0);
 }
 
 void upload_pack(const int advertise_refs, const int stateless_rpc,
@@ -1361,21 +1411,27 @@ void upload_pack(const int advertise_refs, const int stateless_rpc,
 	struct upload_pack_data data;
 
 	upload_pack_data_init(&data);
-	get_upload_pack_config(&data);
+	get_upload_pack_config(the_repository, &data);
 
 	data.stateless_rpc = stateless_rpc;
 	data.timeout = timeout;
 	if (data.timeout)
 		data.daemon_mode = 1;
 
-	head_ref_namespaced(find_symref, &data.symref);
+	refs_head_ref_namespaced(get_main_ref_store(the_repository),
+				 find_symref, &data.symref);
 
 	if (advertise_refs || !data.stateless_rpc) {
 		reset_timeout(data.timeout);
 		if (advertise_refs)
 			data.no_done = 1;
-		head_ref_namespaced(send_ref, &data);
-		for_each_namespaced_ref(send_ref, &data);
+		refs_head_ref_namespaced(get_main_ref_store(the_repository),
+					 send_ref, &data);
+		for_each_namespaced_ref_1(send_ref, &data);
+		if (!data.sent_capabilities) {
+			const char *refname = "capabilities^{}";
+			write_v0_ref(&data, refname, refname, null_oid());
+		}
 		/*
 		 * fflush stdout before calling advertise_shallow_grafts because send_ref
 		 * uses stdio.
@@ -1384,8 +1440,9 @@ void upload_pack(const int advertise_refs, const int stateless_rpc,
 		advertise_shallow_grafts(1);
 		packet_flush(1);
 	} else {
-		head_ref_namespaced(check_ref, &data);
-		for_each_namespaced_ref(check_ref, &data);
+		refs_head_ref_namespaced(get_main_ref_store(the_repository),
+					 check_ref, &data);
+		for_each_namespaced_ref_1(check_ref, &data);
 	}
 
 	if (!advertise_refs) {
@@ -1427,7 +1484,8 @@ static int parse_want(struct packet_writer *writer, const char *line,
 			    "expected to get oid, not '%s'", line);
 
 		o = parse_object_with_flags(the_repository, &oid,
-					    PARSE_OBJECT_SKIP_HASH_CHECK);
+					    PARSE_OBJECT_SKIP_HASH_CHECK |
+					    PARSE_OBJECT_DISCARD_TREE);
 
 		if (!o) {
 			packet_writer_error(writer,
@@ -1449,27 +1507,29 @@ static int parse_want(struct packet_writer *writer, const char *line,
 }
 
 static int parse_want_ref(struct packet_writer *writer, const char *line,
-			  struct string_list *wanted_refs,
-			  struct string_list *hidden_refs,
+			  struct strmap *wanted_refs,
+			  struct strvec *hidden_refs,
 			  struct object_array *want_obj)
 {
 	const char *refname_nons;
 	if (skip_prefix(line, "want-ref ", &refname_nons)) {
 		struct object_id oid;
-		struct string_list_item *item;
 		struct object *o = NULL;
 		struct strbuf refname = STRBUF_INIT;
 
 		strbuf_addf(&refname, "%s%s", get_git_namespace(), refname_nons);
 		if (ref_is_hidden(refname_nons, refname.buf, hidden_refs) ||
-		    read_ref(refname.buf, &oid)) {
+		    refs_read_ref(get_main_ref_store(the_repository), refname.buf, &oid)) {
 			packet_writer_error(writer, "unknown ref %s", refname_nons);
 			die("unknown ref %s", refname_nons);
 		}
 		strbuf_release(&refname);
 
-		item = string_list_append(wanted_refs, refname_nons);
-		item->util = oiddup(&oid);
+		if (strmap_put(wanted_refs, refname_nons, oiddup(&oid))) {
+			packet_writer_error(writer, "duplicate want-ref %s",
+					    refname_nons);
+			die("duplicate want-ref %s", refname_nons);
+		}
 
 		if (!starts_with(refname_nons, "refs/tags/")) {
 			struct commit *commit = lookup_commit_in_graph(the_repository, &oid);
@@ -1491,19 +1551,42 @@ static int parse_want_ref(struct packet_writer *writer, const char *line,
 	return 0;
 }
 
-static int parse_have(const char *line, struct oid_array *haves)
+static int parse_have(const char *line, struct upload_pack_data *data)
 {
 	const char *arg;
 	if (skip_prefix(line, "have ", &arg)) {
 		struct object_id oid;
 
-		if (get_oid_hex(arg, &oid))
-			die("git upload-pack: expected SHA1 object, got '%s'", arg);
-		oid_array_append(haves, &oid);
+		got_oid(data, arg, &oid);
+		data->seen_haves = 1;
 		return 1;
 	}
 
 	return 0;
+}
+
+static void trace2_fetch_info(struct upload_pack_data *data)
+{
+	struct json_writer jw = JSON_WRITER_INIT;
+
+	jw_object_begin(&jw, 0);
+	jw_object_intmax(&jw, "haves", data->have_obj.nr);
+	jw_object_intmax(&jw, "wants", data->want_obj.nr);
+	jw_object_intmax(&jw, "want-refs", strmap_get_size(&data->wanted_refs));
+	jw_object_intmax(&jw, "depth", data->depth);
+	jw_object_intmax(&jw, "shallows", data->shallows.nr);
+	jw_object_bool(&jw, "deepen-since", data->deepen_since);
+	jw_object_intmax(&jw, "deepen-not", oidset_size(&data->deepen_not));
+	jw_object_bool(&jw, "deepen-relative", data->deepen_relative);
+	if (data->filter_options.choice)
+		jw_object_string(&jw, "filter", list_object_filter_config_name(data->filter_options.choice));
+	else
+		jw_object_null(&jw, "filter");
+	jw_end(&jw);
+
+	trace2_data_json("upload-pack", the_repository, "fetch-info", &jw);
+
+	jw_release(&jw);
 }
 
 static void process_args(struct packet_reader *request,
@@ -1521,7 +1604,7 @@ static void process_args(struct packet_reader *request,
 				   &data->hidden_refs, &data->want_obj))
 			continue;
 		/* process have line */
-		if (parse_have(arg, &data->haves))
+		if (parse_have(arg, data))
 			continue;
 
 		/* process args like thin-pack */
@@ -1573,14 +1656,17 @@ static void process_args(struct packet_reader *request,
 			continue;
 		}
 
-		if ((git_env_bool("GIT_TEST_SIDEBAND_ALL", 0) ||
-		     data->allow_sideband_all) &&
+		if (data->allow_sideband_all &&
 		    !strcmp(arg, "sideband-all")) {
 			data->writer.use_sideband = 1;
 			continue;
 		}
 
-		if (skip_prefix(arg, "packfile-uris ", &p)) {
+		if (data->allow_packfile_uris &&
+		    skip_prefix(arg, "packfile-uris ", &p)) {
+			if (data->uri_protocols.nr)
+				send_err_and_die(data,
+						 "multiple packfile-uris lines forbidden");
 			string_list_split(&data->uri_protocols, p, ',', -1);
 			continue;
 		}
@@ -1594,29 +1680,12 @@ static void process_args(struct packet_reader *request,
 
 	if (request->status != PACKET_READ_FLUSH)
 		die(_("expected flush after fetch arguments"));
+
+	if (trace2_is_enabled())
+		trace2_fetch_info(data);
 }
 
-static int process_haves(struct upload_pack_data *data, struct oid_array *common)
-{
-	int i;
-
-	/* Process haves */
-	for (i = 0; i < data->haves.nr; i++) {
-		const struct object_id *oid = &data->haves.oid[i];
-
-		if (!repo_has_object_file_with_flags(the_repository, oid,
-						     OBJECT_INFO_QUICK | OBJECT_INFO_SKIP_FETCH_OBJECT))
-			continue;
-
-		oid_array_append(common, oid);
-
-		do_got_oid(data, oid);
-	}
-
-	return 0;
-}
-
-static int send_acks(struct upload_pack_data *data, struct oid_array *acks)
+static int send_acks(struct upload_pack_data *data, struct object_array *acks)
 {
 	int i;
 
@@ -1628,7 +1697,7 @@ static int send_acks(struct upload_pack_data *data, struct oid_array *acks)
 
 	for (i = 0; i < acks->nr; i++) {
 		packet_writer_write(&data->writer, "ACK %s\n",
-				    oid_to_hex(&acks->oid[i]));
+				    oid_to_hex(&acks->objects[i].item->oid));
 	}
 
 	if (!data->wait_for_done && ok_to_give_up(data)) {
@@ -1642,13 +1711,11 @@ static int send_acks(struct upload_pack_data *data, struct oid_array *acks)
 
 static int process_haves_and_send_acks(struct upload_pack_data *data)
 {
-	struct oid_array common = OID_ARRAY_INIT;
 	int ret = 0;
 
-	process_haves(data, &common);
 	if (data->done) {
 		ret = 1;
-	} else if (send_acks(data, &common)) {
+	} else if (send_acks(data, &data->have_obj)) {
 		packet_writer_delim(&data->writer);
 		ret = 1;
 	} else {
@@ -1657,24 +1724,23 @@ static int process_haves_and_send_acks(struct upload_pack_data *data)
 		ret = 0;
 	}
 
-	oid_array_clear(&data->haves);
-	oid_array_clear(&common);
 	return ret;
 }
 
 static void send_wanted_ref_info(struct upload_pack_data *data)
 {
-	const struct string_list_item *item;
+	struct hashmap_iter iter;
+	const struct strmap_entry *e;
 
-	if (!data->wanted_refs.nr)
+	if (strmap_empty(&data->wanted_refs))
 		return;
 
 	packet_writer_write(&data->writer, "wanted-refs\n");
 
-	for_each_string_list_item(item, &data->wanted_refs) {
+	strmap_for_each_entry(&data->wanted_refs, &iter, e) {
 		packet_writer_write(&data->writer, "%s %s\n",
-				    oid_to_hex(item->util),
-				    item->string);
+				    oid_to_hex(e->value),
+				    e->key);
 	}
 
 	packet_writer_delim(&data->writer);
@@ -1703,7 +1769,7 @@ enum fetch_state {
 	FETCH_DONE,
 };
 
-int upload_pack_v2(struct repository *r UNUSED, struct packet_reader *request)
+int upload_pack_v2(struct repository *r, struct packet_reader *request)
 {
 	enum fetch_state state = FETCH_PROCESS_ARGS;
 	struct upload_pack_data data;
@@ -1712,7 +1778,7 @@ int upload_pack_v2(struct repository *r UNUSED, struct packet_reader *request)
 
 	upload_pack_data_init(&data);
 	data.use_sideband = LARGE_PACKET_MAX;
-	get_upload_pack_config(&data);
+	get_upload_pack_config(r, &data);
 
 	while (state != FETCH_DONE) {
 		switch (state) {
@@ -1728,7 +1794,7 @@ int upload_pack_v2(struct repository *r UNUSED, struct packet_reader *request)
 				 * they didn't want anything.
 				 */
 				state = FETCH_DONE;
-			} else if (data.haves.nr) {
+			} else if (data.seen_haves) {
 				/*
 				 * Request had 'have' lines, so lets ACK them.
 				 */
@@ -1771,41 +1837,28 @@ int upload_pack_v2(struct repository *r UNUSED, struct packet_reader *request)
 int upload_pack_advertise(struct repository *r,
 			  struct strbuf *value)
 {
-	if (value) {
-		int allow_filter_value;
-		int allow_ref_in_want;
-		int allow_sideband_all_value;
-		char *str = NULL;
+	struct upload_pack_data data;
 
+	upload_pack_data_init(&data);
+	get_upload_pack_config(r, &data);
+
+	if (value) {
 		strbuf_addstr(value, "shallow wait-for-done");
 
-		if (!repo_config_get_bool(r,
-					 "uploadpack.allowfilter",
-					 &allow_filter_value) &&
-		    allow_filter_value)
+		if (data.allow_filter)
 			strbuf_addstr(value, " filter");
 
-		if (!repo_config_get_bool(r,
-					 "uploadpack.allowrefinwant",
-					 &allow_ref_in_want) &&
-		    allow_ref_in_want)
+		if (data.allow_ref_in_want)
 			strbuf_addstr(value, " ref-in-want");
 
-		if (git_env_bool("GIT_TEST_SIDEBAND_ALL", 0) ||
-		    (!repo_config_get_bool(r,
-					   "uploadpack.allowsidebandall",
-					   &allow_sideband_all_value) &&
-		     allow_sideband_all_value))
+		if (data.allow_sideband_all)
 			strbuf_addstr(value, " sideband-all");
 
-		if (!repo_config_get_string(r,
-					    "uploadpack.blobpackfileuri",
-					    &str) &&
-		    str) {
+		if (data.allow_packfile_uris)
 			strbuf_addstr(value, " packfile-uris");
-			free(str);
-		}
 	}
+
+	upload_pack_data_clear(&data);
 
 	return 1;
 }

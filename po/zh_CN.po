@@ -14,6 +14,7 @@
 #   - 依云 <lilydjwg AT gmail.com>
 #   - Yichao Yu <yyc1992 AT gmail.com>
 #   - Zhuang Ya <zhuangya AT me.com>
+#   - Teng Long <dyroneteng AT gmail.com>
 #
 #  Git glossary for Chinese translators
 #
@@ -22,11 +23,13 @@
 #   3-way merge                      |  三方合并
 #   abbreviate                       |  简写（的 SHA-1 值）
 #   alternate object database        |  备用对象库
+#   attribute source                 |  属性来源
 #   amend                            |  修补
 #   ancestor                         |  祖先，祖先提交
 #   annotated tag                    |  附注标签
 #   bare repository                  |  纯仓库
 #   bisect                           |  二分查找
+#   bitmap                           |  位图
 #   blob object                      |  数据对象
 #   bloom filter                     |  布隆过滤器
 #   branch                           |  分支
@@ -43,6 +46,7 @@
 #   commit                           |  提交
 #   commit message                   |  提交说明
 #   commit object                    |  提交对象
+#   commit-graph                     |  提交图
 #   commit-ish (also committish)     |  提交号
 #   cone                             |  锥形（稀疏检出模型）；锥（稀疏检出）
 #   conflict                         |  冲突
@@ -74,6 +78,7 @@
 #   index entry                      |  索引条目
 #   loose object                     |  松散对象
 #   loose refs                       |  松散引用
+#   magic                            |  神奇前缀（路径规格支持的一种前缀表达式）
 #   master                           |  master（默认分支名）
 #   merge                            |  合并
 #   object                           |  对象
@@ -83,6 +88,7 @@
 #   object type                      |  对象类型
 #   octopus                          |  章鱼式合并（两分支以上的合并）
 #   origin                           |  origin（默认的远程名称）
+#   orphan                           |  孤立（一般指孤立分支，即没有任何提交的分支）
 #   pack                             |  包
 #   pack index                       |  包索引
 #   packfile                         |  包文件
@@ -94,14 +100,17 @@
 #   plumbing                         |  管件（Git 底层核心命令的别称）
 #   porcelain                        |  瓷件（Git 上层封装命令的别称）
 #   precious-objects repo            |  珍品仓库
+#   preferred pack                   |  首选包（多包索引中引入的首选包概念）
 #   promisor                         |  承诺者
 #   prune                            |  清除
+#   pseudorefs                       |  伪引用
 #   pull                             |  拉，拉取
 #   push                             |  推，推送
 #   reachable                        |  可达
 #   rebase                           |  变基
 #   ref                              |  引用
 #   reflog                           |  引用日志
+#   refmap                           |  引用映射
 #   refspec                          |  引用规格
 #   remote                           |  远程，远程仓库
 #   remote-tracking branch           |  远程跟踪分支
@@ -145,10 +154,10 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Git\n"
 "Report-Msgid-Bugs-To: Git Mailing List <git@vger.kernel.org>\n"
-"POT-Creation-Date: 2023-03-07 23:37+0000\n"
-"PO-Revision-Date: 2023-03-07 23:40+0000\n"
-"Last-Translator: Fangyi Zhou <me@fangyi.io>\n"
-"Language-Team: GitHub <https://github.com/fangyi-zhou/git-po/>\n"
+"POT-Creation-Date: 2024-04-28 19:59+0800\n"
+"PO-Revision-Date: 2024-04-28 20:31+0800\n"
+"Last-Translator: Teng Long <dyroneteng@gmail.com>\n"
+"Language-Team: GitHub <https://github.com/dyrone/git/>\n"
 "Language: zh_CN\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -718,12 +727,12 @@ msgid ""
 "---\n"
 "To remove '%c' lines, make them ' ' lines (context).\n"
 "To remove '%c' lines, delete them.\n"
-"Lines starting with %c will be removed.\n"
+"Lines starting with %s will be removed.\n"
 msgstr ""
 "---\n"
 "要删除 '%c' 开始的行，使其成为 ' ' 开始的行（上下文）。\n"
 "要删除 '%c' 开始的行，删除它们。\n"
-"以 %c 开始的行将被删除。\n"
+"以 %s 开始的行将被删除。\n"
 
 #: add-patch.c
 msgid ""
@@ -775,6 +784,7 @@ msgid ""
 "/ - search for a hunk matching the given regex\n"
 "s - split the current hunk into smaller hunks\n"
 "e - manually edit the current hunk\n"
+"p - print the current hunk\n"
 "? - print help\n"
 msgstr ""
 "j - 维持该块未决状态，查看下一个未决块\n"
@@ -785,6 +795,7 @@ msgstr ""
 "/ - 查找和给定正则表达式匹配的块\n"
 "s - 拆分当前块为更小的块\n"
 "e - 手动编辑当前块\n"
+"p - 显示当前块\n"
 "? - 显示帮助\n"
 
 #: add-patch.c
@@ -864,8 +875,8 @@ msgstr ""
 
 #: advice.c
 #, c-format
-msgid "%shint: %.*s%s\n"
-msgstr "%s提示：%.*s%s\n"
+msgid "%shint:%s%.*s%s\n"
+msgstr "%s提示：%s%.*s%s\n"
 
 #: advice.c
 msgid "Cherry-picking is not possible because you have unmerged files."
@@ -888,9 +899,8 @@ msgid "Reverting is not possible because you have unmerged files."
 msgstr "无法回退，因为您有未合并的文件。"
 
 #: advice.c
-#, c-format
-msgid "It is not possible to %s because you have unmerged files."
-msgstr "无法 %s，因为您有未合并的文件。"
+msgid "Rebasing is not possible because you have unmerged files."
+msgstr "无法变基，因为您有未合并的文件。"
 
 #: advice.c
 msgid ""
@@ -915,6 +925,24 @@ msgstr "请在合并前先提交您的修改。"
 #: advice.c
 msgid "Exiting because of unfinished merge."
 msgstr "因为存在未完成的合并而退出。"
+
+#: advice.c
+msgid ""
+"Diverging branches can't be fast-forwarded, you need to either:\n"
+"\n"
+"\tgit merge --no-ff\n"
+"\n"
+"or:\n"
+"\n"
+"\tgit rebase\n"
+msgstr ""
+"无法在偏离的分支上进行快进操作，您需要:\n"
+"\n"
+"\tgit merge --no-ff\n"
+"\n"
+"或者：\n"
+"\n"
+"\tgit rebase\n"
 
 #: advice.c
 msgid "Not possible to fast-forward, aborting."
@@ -1008,7 +1036,7 @@ msgid "unclosed quote"
 msgstr "未关闭的引号"
 
 #: alias.c builtin/cat-file.c builtin/notes.c builtin/prune-packed.c
-#: builtin/receive-pack.c builtin/tag.c
+#: builtin/receive-pack.c builtin/tag.c t/helper/test-pkt-line.c
 msgid "too many arguments"
 msgstr "太多参数"
 
@@ -1022,14 +1050,16 @@ msgstr "未能识别的空白字符选项 '%s'"
 msgid "unrecognized whitespace ignore option '%s'"
 msgstr "未能识别的空白字符忽略选项 '%s'"
 
-#: apply.c archive.c builtin/add.c builtin/branch.c builtin/checkout.c
-#: builtin/clone.c builtin/commit.c builtin/describe.c builtin/diff-tree.c
-#: builtin/difftool.c builtin/fast-export.c builtin/fetch.c builtin/help.c
-#: builtin/index-pack.c builtin/init-db.c builtin/log.c builtin/ls-files.c
-#: builtin/merge-base.c builtin/merge.c builtin/pack-objects.c builtin/push.c
-#: builtin/rebase.c builtin/repack.c builtin/reset.c builtin/rev-list.c
-#: builtin/show-branch.c builtin/stash.c builtin/submodule--helper.c
-#: builtin/tag.c builtin/worktree.c parse-options.c range-diff.c revision.c
+#: apply.c archive.c builtin/add.c builtin/branch.c builtin/checkout-index.c
+#: builtin/checkout.c builtin/clean.c builtin/clone.c builtin/commit.c
+#: builtin/describe.c builtin/diff-tree.c builtin/difftool.c
+#: builtin/fast-export.c builtin/fetch.c builtin/help.c builtin/index-pack.c
+#: builtin/init-db.c builtin/log.c builtin/ls-files.c builtin/merge-base.c
+#: builtin/merge-tree.c builtin/merge.c builtin/pack-objects.c builtin/rebase.c
+#: builtin/repack.c builtin/replay.c builtin/reset.c builtin/rev-list.c
+#: builtin/rev-parse.c builtin/show-branch.c builtin/stash.c
+#: builtin/submodule--helper.c builtin/tag.c builtin/worktree.c parse-options.c
+#: range-diff.c revision.c
 #, c-format
 msgid "options '%s' and '%s' cannot be used together"
 msgstr "选项 '%s' 和 '%s' 不能同时使用"
@@ -1038,6 +1068,14 @@ msgstr "选项 '%s' 和 '%s' 不能同时使用"
 #, c-format
 msgid "'%s' outside a repository"
 msgstr "'%s' 在仓库之外"
+
+#: apply.c
+msgid "failed to read patch"
+msgstr "无法读取补丁"
+
+#: apply.c
+msgid "patch too large"
+msgstr "补丁过大"
 
 #: apply.c
 #, c-format
@@ -1436,13 +1474,13 @@ msgstr[1] "应用 %%s 个补丁，其中 %d 个被拒绝..."
 
 #: apply.c
 #, c-format
-msgid "truncating .rej filename to %.*s.rej"
-msgstr "截短 .rej 文件名为 %.*s.rej"
-
-#: apply.c
-#, c-format
 msgid "cannot open %s"
 msgstr "不能打开 %s"
+
+#: apply.c rerere.c
+#, c-format
+msgid "cannot unlink '%s'"
+msgstr "不能删除 '%s'"
 
 #: apply.c
 #, c-format
@@ -1493,7 +1531,7 @@ msgid_plural "%d lines applied after fixing whitespace errors."
 msgstr[0] "修复空白错误后，应用了 %d 行。"
 msgstr[1] "修复空白错误后，应用了 %d 行。"
 
-#: apply.c builtin/add.c builtin/mv.c builtin/rm.c
+#: apply.c builtin/mv.c builtin/rm.c
 msgid "Unable to write new index file"
 msgstr "无法写入新索引文件"
 
@@ -1681,6 +1719,11 @@ msgstr "git archive --remote <仓库> [--exec <命令>] --list"
 msgid "cannot read '%s'"
 msgstr "不能读取 '%s'"
 
+#: archive.c
+#, c-format
+msgid "pathspec '%s' matches files outside the current directory"
+msgstr "路径规格 '%s' 匹配了当前目录外的文件'"
+
 #: archive.c builtin/add.c builtin/rm.c
 #, c-format
 msgid "pathspec '%s' did not match any files"
@@ -1700,10 +1743,6 @@ msgstr "不是一个有效的对象名：%s"
 #, c-format
 msgid "not a tree object: %s"
 msgstr "不是一个树对象：%s"
-
-#: archive.c
-msgid "current working directory is untracked"
-msgstr "当前工作目录未被跟踪"
 
 #: archive.c
 #, c-format
@@ -1823,6 +1862,11 @@ msgstr "未知参数 --output"
 
 #: archive.c
 #, c-format
+msgid "extra command line parameter '%s'"
+msgstr "额外的命令行参数：'%s'"
+
+#: archive.c
+#, c-format
 msgid "Unknown archive format '%s'"
 msgstr "未知归档格式 '%s'"
 
@@ -1872,6 +1916,21 @@ msgstr "忽略过大的 gitattributes 文件 '%s'"
 #, c-format
 msgid "ignoring overly large gitattributes blob '%s'"
 msgstr "忽略过大的 gitattributes 数据对象 '%s'"
+
+#: attr.c
+msgid "bad --attr-source or GIT_ATTR_SOURCE"
+msgstr "错误的 --attr-source 或 GIT_ATTR_SOURCE"
+
+#: attr.c read-cache.c
+#, c-format
+msgid "unable to stat '%s'"
+msgstr "无法对 %s 执行 stat"
+
+#: bisect.c builtin/cat-file.c builtin/index-pack.c builtin/notes.c
+#: builtin/pack-objects.c combine-diff.c rerere.c
+#, c-format
+msgid "unable to read %s"
+msgstr "不能读 %s"
 
 #: bisect.c
 #, c-format
@@ -1952,6 +2011,11 @@ msgstr "需要一个 %s 版本"
 msgid "could not create file '%s'"
 msgstr "不能创建文件 '%s'"
 
+#: bisect.c builtin/notes.c
+#, c-format
+msgid "unable to start 'show' for object '%s'"
+msgstr "不能为对象 '%s' 开始 'show'"
+
 #: bisect.c builtin/merge.c
 #, c-format
 msgid "could not read file '%s'"
@@ -1997,15 +2061,11 @@ msgid "--contents and --reverse do not blend well."
 msgstr "--contents 和 --reverse 不能混用。"
 
 #: blame.c
-msgid "cannot use --contents with final commit object name"
-msgstr "不能将 --contents 和最终的提交对象名共用"
-
-#: blame.c
 msgid "--reverse and --first-parent together require specified latest commit"
 msgstr "--reverse 和 --first-parent 共用，需要指定最新的提交"
 
 #: blame.c builtin/commit.c builtin/log.c builtin/merge.c
-#: builtin/pack-objects.c builtin/shortlog.c midx.c pack-bitmap.c ref-filter.c
+#: builtin/pack-objects.c builtin/shortlog.c midx-write.c pack-bitmap.c
 #: remote.c sequencer.c submodule.c
 msgid "revision walk setup failed"
 msgstr "版本遍历初始化失败"
@@ -2123,6 +2183,10 @@ msgstr ""
 msgid "'%s' is not a valid branch name"
 msgstr "'%s' 不是一个有效的分支名称"
 
+#: branch.c builtin/branch.c
+msgid "See `man git check-ref-format`"
+msgstr "查阅 `man git check-ref-format`"
+
 #: branch.c
 #, c-format
 msgid "a branch named '%s' already exists"
@@ -2130,8 +2194,8 @@ msgstr "一个名为 '%s' 的分支已经存在"
 
 #: branch.c
 #, c-format
-msgid "cannot force update the branch '%s' checked out at '%s'"
-msgstr "无法强制更新检出于 '%2$s' 的分支 '%1$s'"
+msgid "cannot force update the branch '%s' used by worktree at '%s'"
+msgstr "无法强制更新被工作区 '%2$s' 所使用的分支 '%1$s'"
 
 #: branch.c
 #, c-format
@@ -2197,13 +2261,8 @@ msgstr "子模组 '%s'：不能创建分支 '%s'"
 
 #: branch.c
 #, c-format
-msgid "'%s' is already checked out at '%s'"
-msgstr "'%s' 已经检出到 '%s'"
-
-#: branch.c
-#, c-format
-msgid "HEAD of working tree %s is not updated"
-msgstr "工作区 %s 的 HEAD 指向没有被更新"
+msgid "'%s' is already used by worktree at '%s'"
+msgstr "'%s' 已经被工作区 '%s' 使用"
 
 #: builtin/add.c
 msgid "git add [<options>] [--] <pathspec>..."
@@ -2213,20 +2272,6 @@ msgstr "git add [<选项>] [--] <路径规格>..."
 #, c-format
 msgid "cannot chmod %cx '%s'"
 msgstr "不能 chmod %cx '%s'"
-
-#: builtin/add.c
-#, c-format
-msgid "unexpected diff status %c"
-msgstr "意外的差异状态 %c"
-
-#: builtin/add.c builtin/commit.c
-msgid "updating files failed"
-msgstr "更新文件失败"
-
-#: builtin/add.c
-#, c-format
-msgid "remove '%s'\n"
-msgstr "删除 '%s'\n"
 
 #: builtin/add.c
 msgid "Unstaged changes after refreshing the index:"
@@ -2240,30 +2285,26 @@ msgstr ""
 "设置 add.interactive.useBuiltin 已经被移除！\n"
 "查看 'git help config' 中的相关条目以获取更多信息。"
 
-#: builtin/add.c builtin/rev-parse.c
-msgid "Could not read the index"
-msgstr "不能读取索引"
-
 #: builtin/add.c
-msgid "Could not write patch"
-msgstr "不能生成补丁"
+msgid "could not read the index"
+msgstr "不能读取索引"
 
 #: builtin/add.c
 msgid "editing patch failed"
 msgstr "编辑补丁失败"
 
-#: builtin/add.c
+#: builtin/add.c read-cache.c
 #, c-format
-msgid "Could not stat '%s'"
+msgid "could not stat '%s'"
 msgstr "不能对 '%s' 调用 stat"
 
 #: builtin/add.c
-msgid "Empty patch. Aborted."
-msgstr "空补丁。异常终止。"
+msgid "empty patch. aborted"
+msgstr "空补丁。异常终止"
 
 #: builtin/add.c
 #, c-format
-msgid "Could not apply '%s'"
+msgid "could not apply '%s'"
 msgstr "不能应用 '%s'"
 
 #: builtin/add.c
@@ -2376,14 +2417,8 @@ msgid "adding embedded git repository: %s"
 msgstr "正在添加嵌入式 git 仓库：%s"
 
 #: builtin/add.c
-msgid ""
-"Use -f if you really want to add them.\n"
-"Turn this message off by running\n"
-"\"git config advice.addIgnoredFile false\""
-msgstr ""
-"如果您确实要添加它们，使用 -f 参数。\n"
-"运行下面的命令来关闭本消息\n"
-"\"git config advice.addIgnoredFile false\""
+msgid "Use -f if you really want to add them."
+msgstr "如果您确实想添加它们，请使用 -f 选项。"
 
 #: builtin/add.c
 msgid "adding files failed"
@@ -2406,14 +2441,8 @@ msgid "Nothing specified, nothing added.\n"
 msgstr "没有指定文件，也没有文件被添加。\n"
 
 #: builtin/add.c
-msgid ""
-"Maybe you wanted to say 'git add .'?\n"
-"Turn this message off by running\n"
-"\"git config advice.addEmptyPathspec false\""
-msgstr ""
-"也许您想要执行 'git add .'？\n"
-"运行下面的命令来关闭本消息\n"
-"\"git config advice.addEmptyPathspec false\""
+msgid "Maybe you wanted to say 'git add .'?"
+msgstr "也许您想要执行 'git add .'？"
 
 #: builtin/add.c builtin/check-ignore.c builtin/checkout.c builtin/clean.c
 #: builtin/commit.c builtin/diff-tree.c builtin/grep.c builtin/mv.c
@@ -2422,14 +2451,19 @@ msgstr ""
 msgid "index file corrupt"
 msgstr "索引文件损坏"
 
+#: builtin/add.c builtin/am.c builtin/checkout.c builtin/clone.c
+#: builtin/commit.c builtin/stash.c merge.c rerere.c
+msgid "unable to write new index file"
+msgstr "无法写新的索引文件"
+
 #: builtin/am.c builtin/mailinfo.c mailinfo.c
 #, c-format
 msgid "bad action '%s' for '%s'"
 msgstr "'%2$s' 的错误动作 '%1$s'"
 
 #: builtin/am.c builtin/blame.c builtin/fetch.c builtin/pack-objects.c
-#: builtin/pull.c diff-merges.c gpg-interface.c ls-refs.c parallel-checkout.c
-#: sequencer.c setup.c
+#: builtin/pull.c builtin/revert.c config.c diff-merges.c gpg-interface.c
+#: ls-refs.c parallel-checkout.c sequencer.c setup.c
 #, c-format
 msgid "invalid value for '%s': '%s'"
 msgstr "'%s' 的值无效：'%s'"
@@ -2472,7 +2506,7 @@ msgstr "fseek 失败"
 msgid "could not open '%s' for reading"
 msgstr "无法打开 '%s' 进行读取"
 
-#: builtin/am.c builtin/rebase.c sequencer.c strbuf.c wrapper.c
+#: builtin/am.c builtin/rebase.c editor.c sequencer.c wrapper.c
 #, c-format
 msgid "could not open '%s' for writing"
 msgstr "无法打开 '%s' 进行写入"
@@ -2513,18 +2547,19 @@ msgstr "无法拆分补丁。"
 
 #: builtin/am.c
 #, c-format
-msgid "When you have resolved this problem, run \"%s --continue\"."
-msgstr "当您解决这一问题，执行 \"%s --continue\"。"
+msgid "When you have resolved this problem, run \"%s --continue\".\n"
+msgstr "当您解决这一问题之后，执行 \"%s --continue\"。\n"
 
 #: builtin/am.c
 #, c-format
-msgid "If you prefer to skip this patch, run \"%s --skip\" instead."
-msgstr "如果您想要跳过这一补丁，则执行 \"%s --skip\"。"
+msgid "If you prefer to skip this patch, run \"%s --skip\" instead.\n"
+msgstr "如果您想要跳过这一补丁，则执行 \"%s --skip\"。\n"
 
 #: builtin/am.c
 #, c-format
-msgid "To record the empty patch as an empty commit, run \"%s --allow-empty\"."
-msgstr "若要把空补丁记录为空提交，执行 \"%s --allow-empty\"。"
+msgid ""
+"To record the empty patch as an empty commit, run \"%s --allow-empty\".\n"
+msgstr "若要把空补丁记录为空提交，执行 \"%s --allow-empty\"。\n"
 
 #: builtin/am.c
 #, c-format
@@ -2582,8 +2617,7 @@ msgstr "git write-tree 无法写入树对象"
 msgid "applying to an empty history"
 msgstr "正应用到一个空历史上"
 
-#: builtin/am.c builtin/commit.c builtin/merge.c sequencer.c
-#: t/helper/test-fast-rebase.c
+#: builtin/am.c builtin/commit.c builtin/merge.c builtin/replay.c sequencer.c
 msgid "failed to write commit object"
 msgstr "无法写提交对象"
 
@@ -2671,11 +2705,6 @@ msgstr ""
 "您应该对已经冲突解决的每一个文件执行 'git add' 来标记已经完成。 \n"
 "您可以对 \"由他们删除\" 的文件执行 `git rm` 命令。"
 
-#: builtin/am.c builtin/checkout.c builtin/clone.c builtin/stash.c merge.c
-#: rerere.c
-msgid "unable to write new index file"
-msgstr "无法写新的索引文件"
-
 #: builtin/am.c builtin/reset.c
 #, c-format
 msgid "Could not parse object '%s'."
@@ -2695,11 +2724,6 @@ msgstr "您好像在上一次 'am' 失败后移动了 HEAD。未回退至 ORIG_H
 #, c-format
 msgid "failed to read '%s'"
 msgstr "无法读取 '%s'"
-
-#: builtin/am.c
-#, c-format
-msgid "options '%s=%s' and '%s=%s' cannot be used together"
-msgstr "选项 '%s=%s' 和 '%s=%s' 不能同时使用"
 
 #: builtin/am.c
 msgid "git am [<options>] [(<mbox> | <Maildir>)...]"
@@ -2755,10 +2779,6 @@ msgid "pass --keep-cr flag to git-mailsplit for mbox format"
 msgstr "针对 mbox 格式，向 git-mailsplit 传递 --keep-cr 参数"
 
 #: builtin/am.c
-msgid "do not pass --keep-cr flag to git-mailsplit independent of am.keepcr"
-msgstr "不向 git-mailsplit 传递 --keep-cr 参数，覆盖 am.keepcr 的设置"
-
-#: builtin/am.c
 msgid "strip everything before a scissors line"
 msgstr "丢弃裁切线前的所有内容"
 
@@ -2777,8 +2797,9 @@ msgid "n"
 msgstr "n"
 
 #: builtin/am.c builtin/branch.c builtin/bugreport.c builtin/cat-file.c
-#: builtin/diagnose.c builtin/for-each-ref.c builtin/ls-files.c
-#: builtin/ls-tree.c builtin/replace.c builtin/tag.c builtin/verify-tag.c
+#: builtin/clone.c builtin/diagnose.c builtin/for-each-ref.c builtin/init-db.c
+#: builtin/ls-files.c builtin/ls-tree.c builtin/replace.c builtin/tag.c
+#: builtin/verify-tag.c
 msgid "format"
 msgstr "格式"
 
@@ -2908,10 +2929,10 @@ msgstr "git archive：应有一个 flush 包"
 
 #: builtin/bisect.c
 msgid ""
-"git bisect start [--term-{new,bad}=<term> --term-{old,good}=<term>]    [--no-"
+"git bisect start [--term-(new|bad)=<term> --term-(old|good)=<term>]    [--no-"
 "checkout] [--first-parent] [<bad> [<good>...]] [--]    [<pathspec>...]"
 msgstr ""
-"git bisect start [--term-{new,bad}=<术语> --term-{old,good}=<术语>]    [--no-"
+"git bisect start [--term-{new|bad}=<术语> --term-{old|good}=<术语>]    [--no-"
 "checkout] [--first-parent] [<坏> [<好>...]] [--]    [<路径规格>...]"
 
 #: builtin/bisect.c
@@ -2931,8 +2952,8 @@ msgid "git bisect replay <logfile>"
 msgstr "git bisect replay <日志文件>"
 
 #: builtin/bisect.c
-msgid "git bisect run <cmd>..."
-msgstr "git bisect run <命令>..."
+msgid "git bisect run <cmd> [<arg>...]"
+msgstr "git bisect run <命令> [<参数>...]"
 
 #: builtin/bisect.c
 #, c-format
@@ -3447,37 +3468,38 @@ msgstr "git branch [<选项>] [-r | -a] [--format]"
 #, c-format
 msgid ""
 "deleting branch '%s' that has been merged to\n"
-"         '%s', but not yet merged to HEAD."
+"         '%s', but not yet merged to HEAD"
 msgstr ""
 "将要删除的分支 '%s' 已经被合并到\n"
-"         '%s'，但未合并到 HEAD。"
+"         '%s'，但未合并到 HEAD"
 
 #  译者：保持原换行格式，在输出时 %s 的替代内容会让字符串变长
 #: builtin/branch.c
 #, c-format
 msgid ""
 "not deleting branch '%s' that is not yet merged to\n"
-"         '%s', even though it is merged to HEAD."
+"         '%s', even though it is merged to HEAD"
 msgstr ""
-"并未删除分支 '%s'， 虽然它已经合并到 HEAD，\n"
-"         然而却尚未被合并到分支 '%s' 。"
+"并未删除分支 '%s'，虽然它已经合并到 HEAD，\n"
+"         然而却尚未被合并到分支 '%s'"
 
 #: builtin/branch.c
 #, c-format
-msgid "Couldn't look up commit object for '%s'"
+msgid "couldn't look up commit object for '%s'"
 msgstr "无法查询 '%s' 指向的提交对象"
 
 #: builtin/branch.c
 #, c-format
-msgid ""
-"The branch '%s' is not fully merged.\n"
-"If you are sure you want to delete it, run 'git branch -D %s'."
-msgstr ""
-"分支 '%s' 没有完全合并。\n"
-"如果您确认要删除它，执行 'git branch -D %s'。"
+msgid "the branch '%s' is not fully merged"
+msgstr "分支 '%s' 没有完全合并"
 
 #: builtin/branch.c
-msgid "Update of config-file failed"
+#, c-format
+msgid "If you are sure you want to delete it, run 'git branch -D %s'"
+msgstr "如果您确认要删除它，执行 'git branch -D %s'"
+
+#: builtin/branch.c
+msgid "update of config-file failed"
 msgstr "更新配置文件失败"
 
 #: builtin/branch.c
@@ -3486,18 +3508,27 @@ msgstr "不能将 -a 和 -d 同时使用"
 
 #: builtin/branch.c
 #, c-format
-msgid "Cannot delete branch '%s' checked out at '%s'"
-msgstr "无法删除检出于 '%2$s' 的分支 '%1$s'。"
+msgid "cannot delete branch '%s' used by worktree at '%s'"
+msgstr "无法强制更新被工作区 '%2$s' 所使用的分支 '%1$s'"
 
 #: builtin/branch.c
 #, c-format
-msgid "remote-tracking branch '%s' not found."
-msgstr "未能找到远程跟踪分支 '%s'。"
+msgid "remote-tracking branch '%s' not found"
+msgstr "未能找到远程跟踪分支 '%s'"
 
 #: builtin/branch.c
 #, c-format
-msgid "branch '%s' not found."
-msgstr "分支 '%s' 未发现。"
+msgid ""
+"branch '%s' not found.\n"
+"Did you forget --remote?"
+msgstr ""
+"分支 '%s' 未找到。\n"
+"是否忘记指定 --remote 选项？"
+
+#: builtin/branch.c
+#, c-format
+msgid "branch '%s' not found"
+msgstr "分支 '%s' 未发现"
 
 #: builtin/branch.c
 #, c-format
@@ -3524,58 +3555,63 @@ msgstr "HEAD (%s) 指向 refs/heads/ 之外"
 
 #: builtin/branch.c
 #, c-format
-msgid "Branch %s is being rebased at %s"
+msgid "branch %s is being rebased at %s"
 msgstr "分支 %s 正被变基到 %s"
 
 #: builtin/branch.c
 #, c-format
-msgid "Branch %s is being bisected at %s"
+msgid "branch %s is being bisected at %s"
 msgstr "分支 %s 正被二分查找于 %s"
 
 #: builtin/branch.c
 #, c-format
-msgid "Invalid branch name: '%s'"
+msgid "HEAD of working tree %s is not updated"
+msgstr "工作区 %s 的 HEAD 指向没有被更新"
+
+#: builtin/branch.c
+#, c-format
+msgid "invalid branch name: '%s'"
 msgstr "无效的分支名：'%s'"
 
 #: builtin/branch.c
 #, c-format
-msgid "No commit on branch '%s' yet."
-msgstr "分支 '%s' 尚无提交。"
+msgid "no commit on branch '%s' yet"
+msgstr "分支 '%s' 尚无提交"
 
 #: builtin/branch.c
 #, c-format
-msgid "No branch named '%s'."
-msgstr "没有分支 '%s'。"
+msgid "no branch named '%s'"
+msgstr "没有分支 '%s'"
 
 #: builtin/branch.c
-msgid "Branch rename failed"
+msgid "branch rename failed"
 msgstr "分支重命名失败"
 
 #: builtin/branch.c
-msgid "Branch copy failed"
+msgid "branch copy failed"
 msgstr "分支拷贝失败"
 
 #: builtin/branch.c
 #, c-format
-msgid "Created a copy of a misnamed branch '%s'"
+msgid "created a copy of a misnamed branch '%s'"
 msgstr "已为错误命名的分支 '%s' 创建了一个副本"
 
 #: builtin/branch.c
 #, c-format
-msgid "Renamed a misnamed branch '%s' away"
+msgid "renamed a misnamed branch '%s' away"
 msgstr "已将错误命名的分支 '%s' 重命名"
 
 #: builtin/branch.c
 #, c-format
-msgid "Branch renamed to %s, but HEAD is not updated!"
-msgstr "分支重命名为 %s，但 HEAD 没有更新！"
+msgid "branch renamed to %s, but HEAD is not updated"
+msgstr "分支重命名为 %s，但 HEAD 没有更新"
 
 #: builtin/branch.c
-msgid "Branch is renamed, but update of config-file failed"
+msgid "branch is renamed, but update of config-file failed"
 msgstr "分支被重命名，但更新配置文件失败"
 
 #: builtin/branch.c
-msgid "Branch is copied, but update of config-file failed"
+msgid "branch is copied, but update of config-file failed"
 msgstr "分支已拷贝，但更新配置文件失败"
 
 #: builtin/branch.c
@@ -3583,11 +3619,11 @@ msgstr "分支已拷贝，但更新配置文件失败"
 msgid ""
 "Please edit the description for the branch\n"
 "  %s\n"
-"Lines starting with '%c' will be stripped.\n"
+"Lines starting with '%s' will be stripped.\n"
 msgstr ""
 "请编辑分支的描述\n"
 "  %s\n"
-"以 '%c' 开头的行将被过滤。\n"
+"以 '%s' 开头的行将被过滤。\n"
 
 #: builtin/branch.c
 msgid "Generic options"
@@ -3661,6 +3697,10 @@ msgstr "移动/重命名一个分支，以及它的引用日志"
 msgid "move/rename a branch, even if target exists"
 msgstr "移动/重命名一个分支，即使目标已存在"
 
+#: builtin/branch.c builtin/for-each-ref.c builtin/tag.c
+msgid "do not output a newline after empty formatted refs"
+msgstr "在格式化引用结果为空之后，不输出换行符"
+
 #: builtin/branch.c
 msgid "copy a branch and its reflog"
 msgstr "拷贝一个分支和它的引用日志"
@@ -3722,9 +3762,9 @@ msgstr "在子模组中递归"
 msgid "format to use for the output"
 msgstr "输出格式"
 
-#: builtin/branch.c builtin/submodule--helper.c submodule.c
-msgid "Failed to resolve HEAD as a valid ref."
-msgstr "无法将 HEAD 解析为有效引用。"
+#: builtin/branch.c
+msgid "failed to resolve HEAD as a valid ref"
+msgstr "无法将 HEAD 解析为有效引用"
 
 #: builtin/branch.c builtin/clone.c
 msgid "HEAD not found below refs/heads!"
@@ -3746,7 +3786,7 @@ msgid "branch name required"
 msgstr "必须提供分支名"
 
 #: builtin/branch.c
-msgid "Cannot give description to detached HEAD"
+msgid "cannot give description to detached HEAD"
 msgstr "不能向分离头指针提供描述"
 
 #: builtin/branch.c
@@ -3754,12 +3794,12 @@ msgid "cannot edit description of more than one branch"
 msgstr "不能为一个以上的分支编辑描述"
 
 #: builtin/branch.c
-msgid "cannot copy the current branch while not on any."
-msgstr "不处于任何分支上，无法拷贝当前分支。"
+msgid "cannot copy the current branch while not on any"
+msgstr "不处于任何分支上，无法拷贝当前分支"
 
 #: builtin/branch.c
-msgid "cannot rename the current branch while not on any."
-msgstr "不处于任何分支上，无法重命名当前分支。"
+msgid "cannot rename the current branch while not on any"
+msgstr "不处于任何分支上，无法重命名当前分支"
 
 #: builtin/branch.c
 msgid "too many branches for a copy operation"
@@ -3776,8 +3816,8 @@ msgstr "为设置新上游提供了太多的参数"
 #: builtin/branch.c
 #, c-format
 msgid ""
-"could not set upstream of HEAD to %s when it does not point to any branch."
-msgstr "无法设置 HEAD 的上游为 %s，因为 HEAD 没有指向任何分支。"
+"could not set upstream of HEAD to %s when it does not point to any branch"
+msgstr "无法设置 HEAD 的上游为 %s，因为 HEAD 没有指向任何分支"
 
 #: builtin/branch.c
 #, c-format
@@ -3794,17 +3834,17 @@ msgid "too many arguments to unset upstream"
 msgstr "为取消上游设置操作提供了太多的参数"
 
 #: builtin/branch.c
-msgid "could not unset upstream of HEAD when it does not point to any branch."
+msgid "could not unset upstream of HEAD when it does not point to any branch"
 msgstr "无法取消 HEAD 的上游设置因为它没有指向一个分支"
 
 #: builtin/branch.c
 #, c-format
-msgid "Branch '%s' has no upstream information"
+msgid "branch '%s' has no upstream information"
 msgstr "分支 '%s' 没有上游信息"
 
 #: builtin/branch.c
 msgid ""
-"The -a, and -r, options to 'git branch' do not take a branch name.\n"
+"the -a, and -r, options to 'git branch' do not take a branch name.\n"
 "Did you mean to use: -a|-r --list <pattern>?"
 msgstr ""
 "'git branch' 的 -a 和 -r 选项不带一个分支名。\n"
@@ -3813,9 +3853,8 @@ msgstr ""
 #: builtin/branch.c
 msgid ""
 "the '--set-upstream' option is no longer supported. Please use '--track' or "
-"'--set-upstream-to' instead."
-msgstr ""
-"不再支持选项 '--set-upstream'。请使用 '--track' 或 '--set-upstream-to'。"
+"'--set-upstream-to' instead"
+msgstr "不再支持选项 '--set-upstream'。请使用 '--track' 或 '--set-upstream-to'"
 
 #: builtin/bugreport.c
 msgid "git version:\n"
@@ -3840,10 +3879,12 @@ msgstr "不是在 git 仓库中执行 - 没有可显示的钩子\n"
 
 #: builtin/bugreport.c
 msgid ""
-"git bugreport [(-o | --output-directory) <path>] [(-s | --suffix) <format>]\n"
+"git bugreport [(-o | --output-directory) <path>]\n"
+"              [(-s | --suffix) <format> | --no-suffix]\n"
 "              [--diagnose[=<mode>]]"
 msgstr ""
-"git bugreport [-o|--output-directory <文件>] [(-s|--suffix) <格式>]\n"
+"git bugreport [-o | --output-directory <文件>]\n"
+"              [(-s | --suffix) <格式> | --no-suffix]\n"
 "              [--diagnose[=<模式>]"
 
 #: builtin/bugreport.c
@@ -3898,6 +3939,11 @@ msgstr "指定错误报告文件的目标位置"
 msgid "specify a strftime format suffix for the filename(s)"
 msgstr "指定文件的 strftime 格式后缀"
 
+#: builtin/bugreport.c
+#, c-format
+msgid "unknown argument `%s'"
+msgstr "未知参数 `%s'"
+
 #: builtin/bugreport.c builtin/diagnose.c
 #, c-format
 msgid "could not create leading directories for '%s'"
@@ -3928,12 +3974,10 @@ msgstr "在 '%s' 创建了新报告。\n"
 
 #: builtin/bundle.c
 msgid ""
-"git bundle create [-q | --quiet | --progress | --all-progress] [--all-"
-"progress-implied]\n"
+"git bundle create [-q | --quiet | --progress]\n"
 "                  [--version=<version>] <file> <git-rev-list-args>"
 msgstr ""
-"git bundle create [-q | --quiet | --progress | --all-progress] [--all-"
-"progress-implied]\n"
+"git bundle create [-q | --quiet | --progress]\n"
 "                  [--version=<版本>] <文件> <git-rev-list-参数>"
 
 #: builtin/bundle.c
@@ -3960,13 +4004,13 @@ msgstr "不显示进度表"
 msgid "show progress meter"
 msgstr "显示进度表"
 
-#: builtin/bundle.c builtin/pack-objects.c
-msgid "show progress meter during object writing phase"
-msgstr "在对象写入阶段显示进度表"
+#: builtin/bundle.c
+msgid "historical; same as --progress"
+msgstr "老的参数；等同于 --progress"
 
-#: builtin/bundle.c builtin/pack-objects.c
-msgid "similar to --all-progress when progress meter is shown"
-msgstr "当进度表显示时类似于 --all-progress"
+#: builtin/bundle.c
+msgid "historical; does nothing"
+msgstr "老的参数；无作用"
 
 #: builtin/bundle.c
 msgid "specify bundle format version"
@@ -4039,23 +4083,23 @@ msgstr "git cat-file (-t | -s) [--allow-unknown-type] <对象>"
 
 #: builtin/cat-file.c
 msgid ""
-"git cat-file (--batch | --batch-check | --batch-command) [--batch-all-"
-"objects]\n"
-"             [--buffer] [--follow-symlinks] [--unordered]\n"
-"             [--textconv | --filters] [-z]"
-msgstr ""
-"git cat-file (--batch | --batch-check | --batch-command) [--batch-all-"
-"objects]\n"
-"             [--buffer] [--follow-symlinks] [--unordered]\n"
-"             [--textconv | --filters] [-z]"
-
-#: builtin/cat-file.c
-msgid ""
 "git cat-file (--textconv | --filters)\n"
 "             [<rev>:<path|tree-ish> | --path=<path|tree-ish> <rev>]"
 msgstr ""
 "git cat-file (--textconv | --filters)\n"
 "             [<版本>:<路径|树对象> | --path=<路径|树对象> <版本>]"
+
+#: builtin/cat-file.c
+msgid ""
+"git cat-file (--batch | --batch-check | --batch-command) [--batch-all-"
+"objects]\n"
+"             [--buffer] [--follow-symlinks] [--unordered]\n"
+"             [--textconv | --filters] [-Z]"
+msgstr ""
+"git cat-file (--batch | --batch-check | --batch-command) [--batch-all-"
+"objects]\n"
+"             [--buffer] [--follow-symlinks] [--unordered]\n"
+"             [--textconv | --filters] [-Z]"
 
 #: builtin/cat-file.c
 msgid "Check object existence or emit object contents"
@@ -4104,6 +4148,10 @@ msgstr "类似于 --batch，但不输出 <内容>"
 #: builtin/cat-file.c
 msgid "stdin is NUL-terminated"
 msgstr "标准输入以 NUL 字符分隔"
+
+#: builtin/cat-file.c
+msgid "stdin and stdout is NUL-terminated"
+msgstr "标准输入和标准输出以 NUL 字符分隔"
 
 #: builtin/cat-file.c
 msgid "read commands from stdin"
@@ -4430,8 +4478,19 @@ msgstr "'%s' 或 '%s' 不能和 %s 一起使用"
 
 #: builtin/checkout.c
 #, c-format
+msgid "'%s', '%s', or '%s' cannot be used when checking out of a tree"
+msgstr "'%s'、'%s' 或 '%s' 不能在检出一个树时使用"
+
+#: builtin/checkout.c
+#, c-format
 msgid "path '%s' is unmerged"
 msgstr "路径 '%s' 未合并"
+
+#: builtin/checkout.c builtin/grep.c builtin/merge-tree.c builtin/reset.c
+#: merge-ort.c reset.c sequencer.c tree-walk.c
+#, c-format
+msgid "unable to read tree (%s)"
+msgstr "无法读取树（%s）"
 
 #: builtin/checkout.c
 msgid "you need to resolve your current index first"
@@ -4455,7 +4514,7 @@ msgstr "不能对 '%s' 执行 reflog 操作：%s\n"
 msgid "HEAD is now at"
 msgstr "HEAD 目前位于"
 
-#: builtin/checkout.c builtin/clone.c t/helper/test-fast-rebase.c
+#: builtin/checkout.c builtin/clone.c
 msgid "unable to update HEAD"
 msgstr "不能更新 HEAD"
 
@@ -4700,6 +4759,11 @@ msgid "missing branch or commit argument"
 msgstr "缺少分支或提交参数"
 
 #: builtin/checkout.c
+#, c-format
+msgid "unknown conflict style '%s'"
+msgstr "未知的冲突风格 '%s'"
+
+#: builtin/checkout.c
 msgid "perform a 3-way merge with the new branch"
 msgstr "和新的分支执行三方合并"
 
@@ -4724,8 +4788,8 @@ msgid "new-branch"
 msgstr "新分支"
 
 #: builtin/checkout.c
-msgid "new unparented branch"
-msgstr "新的没有父提交的分支"
+msgid "new unborn branch"
+msgstr "新的未诞生的分支"
 
 #: builtin/checkout.c builtin/merge.c
 msgid "update ignored files (default)"
@@ -4791,7 +4855,7 @@ msgstr ""
 msgid "you must specify path(s) to restore"
 msgstr "您必须指定要恢复的路径"
 
-#: builtin/checkout.c builtin/clone.c builtin/remote.c
+#: builtin/checkout.c builtin/clone.c builtin/remote.c builtin/replay.c
 #: builtin/submodule--helper.c builtin/worktree.c
 msgid "branch"
 msgstr "分支"
@@ -5001,7 +5065,8 @@ msgid "remove whole directories"
 msgstr "删除整个目录"
 
 #: builtin/clean.c builtin/describe.c builtin/grep.c builtin/log.c
-#: builtin/ls-files.c builtin/name-rev.c builtin/show-ref.c
+#: builtin/ls-files.c builtin/name-rev.c builtin/pack-refs.c builtin/show-ref.c
+#: ref-filter.h
 msgid "pattern"
 msgstr "模式"
 
@@ -5018,22 +5083,8 @@ msgid "remove only ignored files"
 msgstr "只删除忽略的文件"
 
 #: builtin/clean.c
-msgid ""
-"clean.requireForce set to true and neither -i, -n, nor -f given; refusing to "
-"clean"
-msgstr ""
-"clean.requireForce 设置为 true 且未提供 -i、-n 或 -f 选项，拒绝执行清理动作"
-
-#: builtin/clean.c
-msgid ""
-"clean.requireForce defaults to true and neither -i, -n, nor -f given; "
-"refusing to clean"
-msgstr ""
-"clean.requireForce 默认为 true 且未提供 -i、-n 或 -f 选项，拒绝执行清理动作"
-
-#: builtin/clean.c
-msgid "-x and -X cannot be used together"
-msgstr "-x 和 -X 不能同时使用"
+msgid "clean.requireForce is true and -f not given: refusing to clean"
+msgstr "clean.requireForce 设置为 true 且未提供 -f 选项：拒绝执行清理动作"
 
 #: builtin/clone.c
 msgid "git clone [<options>] [--] <repo> [<dir>]"
@@ -5052,8 +5103,8 @@ msgid "create a bare repository"
 msgstr "创建一个纯仓库"
 
 #: builtin/clone.c
-msgid "create a mirror repository (implies bare)"
-msgstr "创建一个镜像仓库（也是纯仓库）"
+msgid "create a mirror repository (implies --bare)"
+msgstr "创建一个镜像仓库（隐含 --bare）"
 
 #: builtin/clone.c
 msgid "to clone from a local repository"
@@ -5113,7 +5164,7 @@ msgstr "检出 <分支> 而不是远程 HEAD"
 msgid "path to git-upload-pack on the remote"
 msgstr "远程 git-upload-pack 路径"
 
-#: builtin/clone.c builtin/fetch.c builtin/grep.c builtin/pull.c
+#: builtin/clone.c builtin/fetch.c builtin/pull.c
 msgid "depth"
 msgstr "深度"
 
@@ -5126,6 +5177,7 @@ msgid "create a shallow clone since a specific time"
 msgstr "从一个特定时间创建一个浅克隆"
 
 #: builtin/clone.c builtin/fetch.c builtin/pull.c builtin/rebase.c
+#: builtin/replay.c
 msgid "revision"
 msgstr "版本"
 
@@ -5153,6 +5205,10 @@ msgstr "git目录"
 msgid "separate git dir from working tree"
 msgstr "git目录和工作区分离"
 
+#: builtin/clone.c builtin/init-db.c
+msgid "specify the reference format to use"
+msgstr "指定要使用的引用格式"
+
 #: builtin/clone.c
 msgid "key=value"
 msgstr "key=value"
@@ -5170,14 +5226,6 @@ msgstr "server-specific"
 #: builtin/push.c builtin/send-pack.c
 msgid "option to transmit"
 msgstr "传输选项"
-
-#: builtin/clone.c builtin/fetch.c builtin/pull.c builtin/push.c
-msgid "use IPv4 addresses only"
-msgstr "只使用 IPv4 地址"
-
-#: builtin/clone.c builtin/fetch.c builtin/pull.c builtin/push.c
-msgid "use IPv6 addresses only"
-msgstr "只使用 IPv6 地址"
 
 #: builtin/clone.c
 msgid "apply partial clone filters to submodules"
@@ -5213,6 +5261,11 @@ msgstr "无法对 '%s' 调用 stat"
 #, c-format
 msgid "%s exists and is not a directory"
 msgstr "%s 存在且不是一个目录"
+
+#: builtin/clone.c
+#, c-format
+msgid "'%s' is a symlink, refusing to clone with --local"
+msgstr "'%s' 为符号链接，拒绝用 --local 克隆"
 
 #: builtin/clone.c
 #, c-format
@@ -5305,11 +5358,10 @@ msgstr "太多参数。"
 msgid "You must specify a repository to clone."
 msgstr "您必须指定一个仓库来克隆。"
 
-#: builtin/clone.c
-msgid ""
-"--bundle-uri is incompatible with --depth, --shallow-since, and --shallow-"
-"exclude"
-msgstr "--bundle-uri 与 --depth、--shallow-since 和 --shallow-exclude 不兼容"
+#: builtin/clone.c builtin/init-db.c setup.c
+#, c-format
+msgid "unknown ref storage format '%s'"
+msgstr "未知的引用存储格式 '%s'"
 
 #: builtin/clone.c
 #, c-format
@@ -5454,6 +5506,11 @@ msgid "padding space between columns"
 msgstr "两列之间的填充空间"
 
 #: builtin/column.c
+#, c-format
+msgid "%s must be non-negative"
+msgstr "%s 必须为非负整数"
+
+#: builtin/column.c
 msgid "--command must be the first argument"
 msgstr "--command 必须是第一个参数"
 
@@ -5470,7 +5527,7 @@ msgid ""
 "--stdin-commits]\n"
 "                       [--changed-paths] [--[no-]max-new-filters <n>] [--"
 "[no-]progress]\n"
-"                       <split options>"
+"                       <split-options>"
 msgstr ""
 "git commit-graph write [--object-dir <目录>] [--append]\n"
 "                       [--split[=<策略>]] [--reachable | --stdin-packs | --"
@@ -5489,12 +5546,17 @@ msgstr "保存图形的对象目录"
 
 #: builtin/commit-graph.c
 msgid "if the commit-graph is split, only verify the tip file"
-msgstr "如果提交图形被拆分，只验证头一个文件"
+msgstr "如果提交图被拆分，只验证头一个文件"
 
 #: builtin/commit-graph.c
 #, c-format
 msgid "Could not open commit-graph '%s'"
-msgstr "无法打开提交图形 '%s'"
+msgstr "无法打开提交图 '%s'"
+
+#: builtin/commit-graph.c
+#, c-format
+msgid "could not open commit-graph chain '%s'"
+msgstr "无法打开提交图链 '%s'"
 
 #: builtin/commit-graph.c
 #, c-format
@@ -5538,15 +5600,15 @@ msgstr "启用变更路径的计算"
 
 #: builtin/commit-graph.c
 msgid "allow writing an incremental commit-graph file"
-msgstr "允许写一个增量提交图形文件"
+msgstr "允许写一个增量提交图文件"
 
 #: builtin/commit-graph.c
 msgid "maximum number of commits in a non-base split commit-graph"
-msgstr "在非基本拆分提交图形中的最大提交数"
+msgstr "在非基本拆分提交图中的最大提交数"
 
 #: builtin/commit-graph.c
 msgid "maximum ratio between two levels of a split commit-graph"
-msgstr "一个拆分提交图形的两个级别之间的最大比率"
+msgstr "一个拆分提交图的两个级别之间的最大比率"
 
 #: builtin/commit-graph.c
 msgid "only expire files older than a given date-time"
@@ -5708,6 +5770,10 @@ msgstr ""
 "    git cherry-pick --skip\n"
 "\n"
 
+#: builtin/commit.c read-cache.c
+msgid "updating files failed"
+msgstr "更新文件失败"
+
 #: builtin/commit.c
 msgid "failed to unpack HEAD tree object"
 msgstr "无法解包 HEAD 树对象"
@@ -5731,10 +5797,6 @@ msgstr "无法更新临时索引"
 #: builtin/commit.c
 msgid "Failed to update main cache tree"
 msgstr "不能更新树的主缓存"
-
-#: builtin/commit.c
-msgid "unable to write new_index file"
-msgstr "无法写 new_index 文件"
 
 #: builtin/commit.c
 msgid "cannot do a partial commit during a merge."
@@ -5781,10 +5843,10 @@ msgid ""
 "in the current commit message"
 msgstr "无法选择一个未被当前提交说明使用的注释字符"
 
-#: builtin/commit.c builtin/merge-tree.c
+#: builtin/commit.c
 #, c-format
-msgid "could not lookup commit %s"
-msgstr "不能查询提交 %s"
+msgid "could not lookup commit '%s'"
+msgstr "不能查询提交 '%s'"
 
 #: builtin/commit.c builtin/shortlog.c
 #, c-format
@@ -5826,35 +5888,35 @@ msgstr "不能写提交模版"
 #, c-format
 msgid ""
 "Please enter the commit message for your changes. Lines starting\n"
-"with '%c' will be ignored.\n"
-msgstr "请为您的变更输入提交说明。以 '%c' 开始的行将被忽略。\n"
+"with '%s' will be ignored.\n"
+msgstr "请为您的变更输入提交说明。以 '%s' 开始的行将被忽略。\n"
 
 #: builtin/commit.c
 #, c-format
 msgid ""
 "Please enter the commit message for your changes. Lines starting\n"
-"with '%c' will be ignored, and an empty message aborts the commit.\n"
+"with '%s' will be ignored, and an empty message aborts the commit.\n"
 msgstr ""
-"请为您的变更输入提交说明。以 '%c' 开始的行将被忽略，而一个空的提交\n"
+"请为您的变更输入提交说明。以 '%s' 开始的行将被忽略，而一个空的提交\n"
 "说明将会终止提交。\n"
 
 #: builtin/commit.c
 #, c-format
 msgid ""
 "Please enter the commit message for your changes. Lines starting\n"
-"with '%c' will be kept; you may remove them yourself if you want to.\n"
+"with '%s' will be kept; you may remove them yourself if you want to.\n"
 msgstr ""
-"请为您的变更输入提交说明。以 '%c' 开始的行将被保留，如果您愿意\n"
+"请为您的变更输入提交说明。以 '%s' 开始的行将被保留，如果您愿意\n"
 "也可以删除它们。\n"
 
 #: builtin/commit.c
 #, c-format
 msgid ""
 "Please enter the commit message for your changes. Lines starting\n"
-"with '%c' will be kept; you may remove them yourself if you want to.\n"
+"with '%s' will be kept; you may remove them yourself if you want to.\n"
 "An empty message aborts the commit.\n"
 msgstr ""
-"请为您的变更输入提交说明。以 '%c' 开始的行将被保留，如果您愿意\n"
+"请为您的变更输入提交说明。以 '%s' 开始的行将被保留，如果您愿意\n"
 "也可以删除它们。一个空的提交说明将会终止提交。\n"
 
 #: builtin/commit.c
@@ -6001,7 +6063,7 @@ msgstr "计算完整的领先/落后值"
 msgid "version"
 msgstr "版本"
 
-#: builtin/commit.c builtin/push.c builtin/worktree.c
+#: builtin/commit.c builtin/fetch.c builtin/push.c builtin/worktree.c
 msgid "machine-readable output"
 msgstr "机器可读的输出"
 
@@ -6083,7 +6145,7 @@ msgstr "日期"
 msgid "override date for commit"
 msgstr "提交时覆盖日期"
 
-#: builtin/commit.c builtin/merge-tree.c parse-options.h ref-filter.h
+#: builtin/commit.c parse-options.h ref-filter.h
 msgid "commit"
 msgstr "提交"
 
@@ -6224,10 +6286,10 @@ msgstr "因提交说明的正文为空而终止提交。\n"
 #: builtin/commit.c
 msgid ""
 "repository has been updated, but unable to write\n"
-"new_index file. Check that disk is not full and quota is\n"
+"new index file. Check that disk is not full and quota is\n"
 "not exceeded, and then \"git restore --staged :/\" to recover."
 msgstr ""
-"仓库已更新，但无法写 new_index 文件。检查是否磁盘已满或\n"
+"仓库已更新，但无法写入索引文件。检查是否磁盘已满或\n"
 "磁盘配额已耗尽，然后执行 \"git restore --staged :/\" 恢复。"
 
 #: builtin/config.c
@@ -6408,6 +6470,10 @@ msgid "with --get, use default value when missing entry"
 msgstr "使用 --get 参数，当缺少设置时使用默认值"
 
 #: builtin/config.c
+msgid "human-readable comment string (# will be prepended as needed)"
+msgstr "人类可读的注释字符串（# 将根据需要添加到前面）"
+
+#: builtin/config.c
 #, c-format
 msgid "wrong number of arguments, should be %d"
 msgstr "错误的参数个数，应该为 %d 个"
@@ -6518,6 +6584,10 @@ msgstr "--show-origin 仅适用于 --get、--get-all、--get-regexp 和 --list"
 #: builtin/config.c
 msgid "--default is only applicable to --get"
 msgstr "--default 仅适用于 --get"
+
+#: builtin/config.c
+msgid "--comment is only applicable to add/set/replace operations"
+msgstr "--comment 仅适用于 add/set/replace 操作"
 
 #: builtin/config.c
 msgid "--fixed-value only applies with 'value-pattern'"
@@ -6785,7 +6855,7 @@ msgstr "--merge-base 仅适用于两个提交"
 #: builtin/diff.c
 #, c-format
 msgid "'%s': not a regular file or symlink"
-msgstr "'%s'：不是一个正规文件或符号链接"
+msgstr "'%s'：不是一个普通文件或符号链接"
 
 #: builtin/diff.c
 msgid "no merge given, only parents."
@@ -7076,144 +7146,14 @@ msgstr "git fetch --all [<选项>]"
 msgid "fetch.parallel cannot be negative"
 msgstr "fetch.parallel 不能为负数"
 
-#: builtin/fetch.c builtin/pull.c
-msgid "fetch from all remotes"
-msgstr "从所有的远程抓取"
-
-#: builtin/fetch.c builtin/pull.c
-msgid "set upstream for git pull/fetch"
-msgstr "为 git pull/fetch 设置上游"
-
-#: builtin/fetch.c builtin/pull.c
-msgid "append to .git/FETCH_HEAD instead of overwriting"
-msgstr "追加到 .git/FETCH_HEAD 而不是覆盖它"
-
-#: builtin/fetch.c
-msgid "use atomic transaction to update references"
-msgstr "使用原子事务更新引用"
-
-#: builtin/fetch.c builtin/pull.c
-msgid "path to upload pack on remote end"
-msgstr "上传包到远程的路径"
-
-#: builtin/fetch.c
-msgid "force overwrite of local reference"
-msgstr "强制覆盖本地引用"
-
-#: builtin/fetch.c
-msgid "fetch from multiple remotes"
-msgstr "从多个远程抓取"
-
-#: builtin/fetch.c builtin/pull.c
-msgid "fetch all tags and associated objects"
-msgstr "抓取所有的标签和关联对象"
-
-#: builtin/fetch.c
-msgid "do not fetch all tags (--no-tags)"
-msgstr "不抓取任何标签(--no-tags)"
-
-#: builtin/fetch.c
-msgid "number of submodules fetched in parallel"
-msgstr "子模组获取的并发数"
-
-#: builtin/fetch.c
-msgid "modify the refspec to place all refs within refs/prefetch/"
-msgstr "修改引用规格以将所有引用放入 refs/prefetch/"
-
-#: builtin/fetch.c builtin/pull.c
-msgid "prune remote-tracking branches no longer on remote"
-msgstr "清除远程已经不存在的分支的跟踪分支"
-
-#: builtin/fetch.c
-msgid "prune local tags no longer on remote and clobber changed tags"
-msgstr "清除远程不存在的本地标签，并且替换变更标签"
-
-#  译者：可选值，不能翻译
-#: builtin/fetch.c builtin/pull.c
-msgid "on-demand"
-msgstr "on-demand"
-
-#: builtin/fetch.c
-msgid "control recursive fetching of submodules"
-msgstr "控制子模组的递归抓取"
-
-#: builtin/fetch.c
-msgid "write fetched references to the FETCH_HEAD file"
-msgstr "将获取到的引用写入 FETCH_HEAD 文件"
-
-#: builtin/fetch.c builtin/pull.c
-msgid "keep downloaded pack"
-msgstr "保持下载包"
-
-#: builtin/fetch.c
-msgid "allow updating of HEAD ref"
-msgstr "允许更新 HEAD 引用"
-
-#: builtin/fetch.c builtin/pull.c
-msgid "deepen history of shallow clone"
-msgstr "深化浅克隆的历史"
-
-#: builtin/fetch.c builtin/pull.c
-msgid "deepen history of shallow repository based on time"
-msgstr "基于时间来深化浅克隆的历史"
-
-#: builtin/fetch.c builtin/pull.c
-msgid "convert to a complete repository"
-msgstr "转换为一个完整的仓库"
-
-#: builtin/fetch.c
-msgid "re-fetch without negotiating common commits"
-msgstr "不协商共有提交重新获取"
-
-#: builtin/fetch.c
-msgid "prepend this to submodule path output"
-msgstr "在子模组路径输出的前面加上此目录"
-
-#: builtin/fetch.c
-msgid ""
-"default for recursive fetching of submodules (lower priority than config "
-"files)"
-msgstr "递归获取子模组的缺省值（比配置文件优先级低）"
-
-#: builtin/fetch.c builtin/pull.c
-msgid "accept refs that update .git/shallow"
-msgstr "接受更新 .git/shallow 的引用"
-
-#: builtin/fetch.c builtin/pull.c
-msgid "refmap"
-msgstr "引用映射"
-
-#: builtin/fetch.c builtin/pull.c
-msgid "specify fetch refmap"
-msgstr "指定获取操作的引用映射"
-
-#: builtin/fetch.c builtin/pull.c
-msgid "report that we have only objects reachable from this object"
-msgstr "报告我们只拥有从该对象开始可达的对象"
-
-#: builtin/fetch.c
-msgid "do not fetch a packfile; instead, print ancestors of negotiation tips"
-msgstr "不获取包文件；而是打印协商的祖先提交"
-
-#: builtin/fetch.c
-msgid "run 'maintenance --auto' after fetching"
-msgstr "获取后执行 'maintenance --auto'"
-
-#: builtin/fetch.c builtin/pull.c
-msgid "check for forced-updates on all updated branches"
-msgstr "在所有更新分支上检查强制更新"
-
-#: builtin/fetch.c
-msgid "write the commit-graph after fetching"
-msgstr "抓取后写提交图"
-
-#: builtin/fetch.c
-msgid "accept refspecs from stdin"
-msgstr "从标准输入获取引用规格"
-
 #: builtin/fetch.c
 msgid "couldn't find remote ref HEAD"
 msgstr "无法发现远程 HEAD 引用"
+
+#: builtin/fetch.c
+#, c-format
+msgid "From %.*s\n"
+msgstr "来自 %.*s\n"
 
 #: builtin/fetch.c
 #, c-format
@@ -7299,11 +7239,6 @@ msgstr "%s 未发送所有必需的对象\n"
 #, c-format
 msgid "rejected %s because shallow roots are not allowed to be updated"
 msgstr "拒绝 %s 因为浅克隆的根不允许被更新"
-
-#: builtin/fetch.c
-#, c-format
-msgid "From %.*s\n"
-msgstr "来自 %.*s\n"
 
 #: builtin/fetch.c
 #, c-format
@@ -7414,6 +7349,141 @@ msgstr "未指定远程仓库；请指定一个用于获取新版本的 URL 或�
 #: builtin/fetch.c
 msgid "you need to specify a tag name"
 msgstr "您需要指定一个标签名称"
+
+#: builtin/fetch.c builtin/pull.c
+msgid "fetch from all remotes"
+msgstr "从所有远程抓取"
+
+#: builtin/fetch.c builtin/pull.c
+msgid "set upstream for git pull/fetch"
+msgstr "为 git pull/fetch 设置上游"
+
+#: builtin/fetch.c builtin/pull.c
+msgid "append to .git/FETCH_HEAD instead of overwriting"
+msgstr "追加到 .git/FETCH_HEAD 而不是覆盖它"
+
+#: builtin/fetch.c
+msgid "use atomic transaction to update references"
+msgstr "使用原子事务更新引用"
+
+#: builtin/fetch.c builtin/pull.c
+msgid "path to upload pack on remote end"
+msgstr "上传包到远程的路径"
+
+#: builtin/fetch.c
+msgid "force overwrite of local reference"
+msgstr "强制覆盖本地引用"
+
+#: builtin/fetch.c
+msgid "fetch from multiple remotes"
+msgstr "从多个远程抓取"
+
+#: builtin/fetch.c builtin/pull.c
+msgid "fetch all tags and associated objects"
+msgstr "抓取所有的标签和关联对象"
+
+#: builtin/fetch.c
+msgid "do not fetch all tags (--no-tags)"
+msgstr "不抓取任何标签（--no-tags）"
+
+#: builtin/fetch.c
+msgid "number of submodules fetched in parallel"
+msgstr "获取子模组的并发数"
+
+#: builtin/fetch.c
+msgid "modify the refspec to place all refs within refs/prefetch/"
+msgstr "修改引用规格以将所有引用放入 refs/prefetch/"
+
+#: builtin/fetch.c builtin/pull.c
+msgid "prune remote-tracking branches no longer on remote"
+msgstr "清除远程已经不存在的分支的跟踪分支"
+
+#: builtin/fetch.c
+msgid "prune local tags no longer on remote and clobber changed tags"
+msgstr "清除远程不存在的本地标签，并且替换变更标签"
+
+#  译者：可选值，不能翻译
+#: builtin/fetch.c builtin/pull.c
+msgid "on-demand"
+msgstr "on-demand"
+
+#: builtin/fetch.c
+msgid "control recursive fetching of submodules"
+msgstr "控制子模组的递归抓取"
+
+#: builtin/fetch.c
+msgid "write fetched references to the FETCH_HEAD file"
+msgstr "将获取到的引用写入 FETCH_HEAD 文件"
+
+#: builtin/fetch.c builtin/pull.c
+msgid "keep downloaded pack"
+msgstr "保持已下载的包"
+
+#: builtin/fetch.c
+msgid "allow updating of HEAD ref"
+msgstr "允许更新 HEAD 引用"
+
+#: builtin/fetch.c builtin/pull.c
+msgid "deepen history of shallow clone"
+msgstr "深化浅克隆的历史"
+
+#: builtin/fetch.c builtin/pull.c
+msgid "deepen history of shallow repository based on time"
+msgstr "基于时间来深化浅克隆的历史"
+
+#: builtin/fetch.c builtin/pull.c
+msgid "convert to a complete repository"
+msgstr "转换为一个完整的仓库"
+
+#: builtin/fetch.c
+msgid "re-fetch without negotiating common commits"
+msgstr "重新获取而不协商共同提交"
+
+#: builtin/fetch.c
+msgid "prepend this to submodule path output"
+msgstr "在子模组路径输出的前面加上此目录"
+
+#: builtin/fetch.c
+msgid ""
+"default for recursive fetching of submodules (lower priority than config "
+"files)"
+msgstr "递归获取子模组的缺省值（比配置文件优先级低）"
+
+#: builtin/fetch.c builtin/pull.c
+msgid "accept refs that update .git/shallow"
+msgstr "接受更新 .git/shallow 的引用"
+
+#: builtin/fetch.c builtin/pull.c
+msgid "refmap"
+msgstr "引用映射"
+
+#: builtin/fetch.c builtin/pull.c
+msgid "specify fetch refmap"
+msgstr "指定获取操作的引用映射"
+
+#: builtin/fetch.c builtin/pull.c
+msgid "report that we have only objects reachable from this object"
+msgstr "报告我们只拥有从该对象开始可达的对象"
+
+#: builtin/fetch.c
+msgid "do not fetch a packfile; instead, print ancestors of negotiation tips"
+msgstr "不获取包文件；而是打印协商的祖先提交"
+
+#: builtin/fetch.c
+msgid "run 'maintenance --auto' after fetching"
+msgstr "获取后执行 'maintenance --auto'"
+
+#: builtin/fetch.c builtin/pull.c
+msgid "check for forced-updates on all updated branches"
+msgstr "在所有更新分支上检查强制更新"
+
+#: builtin/fetch.c
+msgid "write the commit-graph after fetching"
+msgstr "抓取后写提交图"
+
+#: builtin/fetch.c
+msgid "accept refspecs from stdin"
+msgstr "从标准输入获取引用规格"
 
 #: builtin/fetch.c
 msgid "--negotiate-only needs one or more --negotiation-tip=*"
@@ -7560,6 +7630,18 @@ msgstr "只打印包含该提交的引用"
 msgid "print only refs which don't contain the commit"
 msgstr "只打印不包含该提交的引用"
 
+#: builtin/for-each-ref.c
+msgid "read reference patterns from stdin"
+msgstr "从标准输入读取引用的模式"
+
+#: builtin/for-each-ref.c
+msgid "also include HEAD ref and pseudorefs"
+msgstr "还包括 HEAD 引用和伪引用"
+
+#: builtin/for-each-ref.c
+msgid "unknown arguments supplied with --stdin"
+msgstr "为 --stdin 提供了未知的命令参数"
+
 #: builtin/for-each-repo.c
 msgid "git for-each-repo --config=<config> [--] <arguments>"
 msgstr "git for-each-repo --config=<配置> [--] <命令参数>"
@@ -7575,6 +7657,11 @@ msgstr "存储着仓库路径列表的配置项键名"
 #: builtin/for-each-repo.c
 msgid "missing --config=<config>"
 msgstr "缺少 --config=<配置>"
+
+#: builtin/for-each-repo.c
+#, c-format
+msgid "got bad config --config=%s"
+msgstr "发现错误的配置行 --config=%s"
 
 #: builtin/fsck.c
 msgid "unknown"
@@ -7761,13 +7848,14 @@ msgid "notice: %s points to an unborn branch (%s)"
 msgstr "注意：%s 指向一个尚未诞生的分支（%s）"
 
 #: builtin/fsck.c
-msgid "Checking cache tree"
-msgstr "正在检查缓存树"
+#, c-format
+msgid "Checking cache tree of %s"
+msgstr "正在检查缓存树 %s"
 
 #: builtin/fsck.c
 #, c-format
-msgid "%s: invalid sha1 pointer in cache-tree"
-msgstr "%s：cache-tree 中无效的 sha1 指针"
+msgid "%s: invalid sha1 pointer in cache-tree of %s"
+msgstr "%s：cache-tree %s 中存在无效的 sha1 指针"
 
 #: builtin/fsck.c
 msgid "non-tree in cache-tree"
@@ -7775,8 +7863,18 @@ msgstr "cache-tree 中非树对象"
 
 #: builtin/fsck.c
 #, c-format
-msgid "%s: invalid sha1 pointer in resolve-undo"
-msgstr "%s：resolve-undo 中无效的 sha1 指针"
+msgid "%s: invalid sha1 pointer in resolve-undo of %s"
+msgstr "%s：resolve-undo %s 中存在无效的 sha1 指针"
+
+#: builtin/fsck.c
+#, c-format
+msgid "unable to load rev-index for pack '%s'"
+msgstr "无法为包文件 %s 加载反向索引"
+
+#: builtin/fsck.c
+#, c-format
+msgid "invalid rev-index for pack '%s'"
+msgstr "包文件 '%s' 的反向索引文件无效"
 
 #: builtin/fsck.c
 msgid ""
@@ -7983,7 +8081,7 @@ msgstr "对 %s 调用 fstat 失败：%s"
 msgid "failed to parse '%s' value '%s'"
 msgstr "无法解析 '%s' 值 '%s'"
 
-#: builtin/gc.c builtin/init-db.c
+#: builtin/gc.c setup.c
 #, c-format
 msgid "cannot stat '%s'"
 msgstr "不能对 '%s' 调用 stat"
@@ -8009,6 +8107,10 @@ msgstr "清除未引用的对象"
 #: builtin/gc.c
 msgid "pack unreferenced objects separately"
 msgstr "分开打包未引用的对象"
+
+#: builtin/gc.c builtin/repack.c
+msgid "with --cruft, limit the size of new cruft packs"
+msgstr "使用 --cruft，限制新 cruft 包的总大小"
 
 #: builtin/gc.c
 msgid "be more thorough (increased runtime)"
@@ -8225,14 +8327,6 @@ msgstr "无法运行 'crontab'，您的系统可能不支持 'cron'"
 msgid "'crontab' died"
 msgstr "'crontab' 终止"
 
-#: builtin/gc.c
-msgid "failed to start systemctl"
-msgstr "无法启动 systemctl"
-
-#: builtin/gc.c
-msgid "failed to run systemctl"
-msgstr "无法运行 systemctl"
-
 #: builtin/gc.c builtin/worktree.c
 #, c-format
 msgid "failed to delete '%s'"
@@ -8242,6 +8336,14 @@ msgstr "无法删除 '%s'"
 #, c-format
 msgid "failed to flush '%s'"
 msgstr "无法刷新 '%s'"
+
+#: builtin/gc.c
+msgid "failed to start systemctl"
+msgstr "无法启动 systemctl"
+
+#: builtin/gc.c
+msgid "failed to run systemctl"
+msgstr "无法运行 systemctl"
 
 #: builtin/gc.c
 #, c-format
@@ -8272,6 +8374,10 @@ msgstr "调度器"
 #: builtin/gc.c
 msgid "scheduler to trigger git maintenance run"
 msgstr "触发 git maintenance 执行的调度器"
+
+#: builtin/gc.c
+msgid "failed to set up maintenance schedule"
+msgstr "无法设置维护计划"
 
 #: builtin/gc.c
 msgid "failed to add repo to global config"
@@ -8307,8 +8413,8 @@ msgstr "没有线程支持，忽略 %s"
 
 #: builtin/grep.c
 #, c-format
-msgid "unable to read tree (%s)"
-msgstr "无法读取树（%s）"
+msgid "unable to read tree %s"
+msgstr "无法读取树 %s"
 
 #: builtin/grep.c
 #, c-format
@@ -8369,8 +8475,8 @@ msgid "search in subdirectories (default)"
 msgstr "在子目录中寻找（默认）"
 
 #: builtin/grep.c
-msgid "descend at most <depth> levels"
-msgstr "最多以指定的深度向下寻找"
+msgid "descend at most <n> levels"
+msgstr "最多向下寻找 <n> 层"
 
 #: builtin/grep.c
 msgid "use extended POSIX regular expressions"
@@ -8833,11 +8939,6 @@ msgstr "解压缩严重的不一致"
 msgid "SHA1 COLLISION FOUND WITH %s !"
 msgstr "发现 %s 出现 SHA1 冲突！"
 
-#: builtin/index-pack.c builtin/pack-objects.c
-#, c-format
-msgid "unable to read %s"
-msgstr "不能读 %s"
-
 #: builtin/index-pack.c
 #, c-format
 msgid "cannot read existing object info %s"
@@ -8994,7 +9095,7 @@ msgstr "无法返回当前工作目录"
 msgid "bad %s"
 msgstr "错误选项 %s"
 
-#: builtin/index-pack.c builtin/init-db.c
+#: builtin/index-pack.c builtin/init-db.c setup.c
 #, c-format
 msgid "unknown hash algorithm '%s'"
 msgstr "未知的哈希算法 '%s'"
@@ -9012,103 +9113,16 @@ msgid "fsck error in pack objects"
 msgstr "在打包对象中 fsck 检查出错"
 
 #: builtin/init-db.c
-#, c-format
-msgid "cannot stat template '%s'"
-msgstr "不能对模版 '%s' 调用 stat"
-
-#: builtin/init-db.c
-#, c-format
-msgid "cannot opendir '%s'"
-msgstr "不能打开目录 '%s'"
-
-#: builtin/init-db.c
-#, c-format
-msgid "cannot readlink '%s'"
-msgstr "不能读取链接 '%s'"
-
-#: builtin/init-db.c
-#, c-format
-msgid "cannot symlink '%s' '%s'"
-msgstr "不能自 '%s' 到 '%s' 创建符号链接"
-
-#: builtin/init-db.c
-#, c-format
-msgid "cannot copy '%s' to '%s'"
-msgstr "不能拷贝 '%s' 至 '%s'"
-
-#: builtin/init-db.c
-#, c-format
-msgid "ignoring template %s"
-msgstr "忽略模版 %s"
-
-#: builtin/init-db.c
-#, c-format
-msgid "templates not found in %s"
-msgstr "没有在 %s 中找到模版"
-
-#: builtin/init-db.c
-#, c-format
-msgid "not copying templates from '%s': %s"
-msgstr "没有从 '%s' 复制模版：%s"
-
-#: builtin/init-db.c
-#, c-format
-msgid "invalid initial branch name: '%s'"
-msgstr "无效的初始分支名：'%s'"
-
-#: builtin/init-db.c
-#, c-format
-msgid "unable to handle file type %d"
-msgstr "不能处理 %d 类型的文件"
-
-#: builtin/init-db.c
-#, c-format
-msgid "unable to move %s to %s"
-msgstr "不能移动 %s 至 %s"
-
-#: builtin/init-db.c
-msgid "attempt to reinitialize repository with different hash"
-msgstr "尝试用不同的哈希算法重新初始化仓库"
-
-#: builtin/init-db.c
-#, c-format
-msgid "%s already exists"
-msgstr "%s 已经存在"
-
-#: builtin/init-db.c
-#, c-format
-msgid "re-init: ignored --initial-branch=%s"
-msgstr "re-init：已忽略 --initial-branch=%s"
-
-#: builtin/init-db.c
-#, c-format
-msgid "Reinitialized existing shared Git repository in %s%s\n"
-msgstr "重新初始化已存在的共享 Git 仓库于 %s%s\n"
-
-#: builtin/init-db.c
-#, c-format
-msgid "Reinitialized existing Git repository in %s%s\n"
-msgstr "已重新初始化已存在的 Git 仓库于 %s%s\n"
-
-#: builtin/init-db.c
-#, c-format
-msgid "Initialized empty shared Git repository in %s%s\n"
-msgstr "已初始化空的共享 Git 仓库于 %s%s\n"
-
-#: builtin/init-db.c
-#, c-format
-msgid "Initialized empty Git repository in %s%s\n"
-msgstr "已初始化空的 Git 仓库于 %s%s\n"
-
-#: builtin/init-db.c
 msgid ""
 "git init [-q | --quiet] [--bare] [--template=<template-directory>]\n"
 "         [--separate-git-dir <git-dir>] [--object-format=<format>]\n"
+"         [--ref-format=<format>]\n"
 "         [-b <branch-name> | --initial-branch=<branch-name>]\n"
 "         [--shared[=<permissions>]] [<directory>]"
 msgstr ""
 "git init [-q | --quiet] [--bare] [--template=<模板目录>]\n"
 "         [--separate-git-dir <git 目录>] [--object-format=<格式>]\n"
+"         [--ref-format=<格式>]\n"
 "         [-b <分支名> | --initial-branch=<分支名>]\n"
 "         [--shared[=<权限>]] [<目录>]"
 
@@ -9161,12 +9175,45 @@ msgstr "--separate-git-dir 不能用于纯仓库"
 #: builtin/interpret-trailers.c
 msgid ""
 "git interpret-trailers [--in-place] [--trim-empty]\n"
-"                       [(--trailer <token>[(=|:)<value>])...]\n"
+"                       [(--trailer (<key>|<key-alias>)[(=|:)<value>])...]\n"
 "                       [--parse] [<file>...]"
 msgstr ""
 "git interpret-trailers [--in-place] [--trim-empty]\n"
-"                       [(--trailer <键>[(=|:)<值>])...]\n"
+"                       [(--trailer (<键|键别名>)[(=|:)<值>])...]\n"
 "                       [--parse] [<文件>...]"
+
+#: builtin/interpret-trailers.c wrapper.c
+#, c-format
+msgid "could not stat %s"
+msgstr "不能对 %s 调用 stat"
+
+#: builtin/interpret-trailers.c
+#, c-format
+msgid "file %s is not a regular file"
+msgstr "文件 %s 不是一个普通文件"
+
+#: builtin/interpret-trailers.c
+#, c-format
+msgid "file %s is not writable by user"
+msgstr "文件 %s 用户不可写"
+
+#: builtin/interpret-trailers.c
+msgid "could not open temporary file"
+msgstr "不能打开临时文件"
+
+#: builtin/interpret-trailers.c
+#, c-format
+msgid "could not read input file '%s'"
+msgstr "不能读取输入文件 '%s'"
+
+#: builtin/interpret-trailers.c builtin/mktag.c imap-send.c
+msgid "could not read from stdin"
+msgstr "不能自标准输入读取"
+
+#: builtin/interpret-trailers.c
+#, c-format
+msgid "could not rename temporary file to %s"
+msgstr "不能重命名临时文件为 %s"
 
 #: builtin/interpret-trailers.c
 msgid "edit files in place"
@@ -9175,6 +9222,10 @@ msgstr "在原位编辑文件"
 #: builtin/interpret-trailers.c
 msgid "trim empty trailers"
 msgstr "删除空的尾注"
+
+#: builtin/interpret-trailers.c
+msgid "placement"
+msgstr "安置"
 
 #: builtin/interpret-trailers.c
 msgid "where to place the new trailer"
@@ -9193,20 +9244,20 @@ msgid "output only the trailers"
 msgstr "只输出尾注"
 
 #: builtin/interpret-trailers.c
-msgid "do not apply config rules"
-msgstr "不要应用配置规则"
+msgid "do not apply trailer.* configuration variables"
+msgstr "不应用 trailer.* 配置变量"
 
 #: builtin/interpret-trailers.c
-msgid "join whitespace-continued values"
-msgstr "连接空白折行的值"
+msgid "reformat multiline trailer values as single-line values"
+msgstr "将多行尾注值重新格式化为单行值"
 
 #: builtin/interpret-trailers.c
-msgid "set parsing options"
-msgstr "设置解析选项"
+msgid "alias for --only-trailers --only-input --unfold"
+msgstr "--only-trailers --only-input --unfold 的别名"
 
 #: builtin/interpret-trailers.c
-msgid "do not treat --- specially"
-msgstr "不要对 --- 特殊处理"
+msgid "do not treat \"---\" as the end of input"
+msgstr "不要将 \"---\" 视为输入的结束"
 
 #: builtin/interpret-trailers.c
 msgid "trailer(s) to add"
@@ -9263,7 +9314,7 @@ msgid ""
 "<file>"
 msgstr "跟踪 <文件> 中 <开始>,<结束> 范围内的行或函数 :<函数名> 的演变"
 
-#: builtin/log.c builtin/shortlog.c bundle.c
+#: builtin/log.c builtin/replay.c builtin/shortlog.c bundle.c
 #, c-format
 msgid "unrecognized argument: %s"
 msgstr "未能识别的参数：%s"
@@ -9317,6 +9368,11 @@ msgstr "只需要一个范围"
 #: builtin/log.c
 msgid "not a range"
 msgstr "不是一个范围"
+
+#: builtin/log.c
+#, c-format
+msgid "unable to read branch description file '%s'"
+msgstr "无法读取分支描述文件 '%s'"
 
 #: builtin/log.c
 msgid "cover letter needs email format"
@@ -9443,6 +9499,10 @@ msgstr "从分支描述获取附函的模式"
 #: builtin/log.c
 msgid "generate parts of a cover letter based on a branch's description"
 msgstr "基于一个分支描述生成部分附函"
+
+#: builtin/log.c
+msgid "use branch description from file"
+msgstr "使用来自文件的分支描述"
 
 #: builtin/log.c
 msgid "use [<prefix>] instead of [PATCH]"
@@ -9647,20 +9707,10 @@ msgid ""
 "Could not find a tracked remote branch, please specify <upstream> manually.\n"
 msgstr "不能找到跟踪的远程分支，请手工指定 <上游>。\n"
 
-#: builtin/ls-files.c
+#: builtin/ls-files.c builtin/ls-tree.c
 #, c-format
-msgid "bad ls-files format: element '%s' does not start with '('"
-msgstr "坏的 ls-files 格式：元素 '%s' 没有以 '(' 开头"
-
-#: builtin/ls-files.c
-#, c-format
-msgid "bad ls-files format: element '%s' does not end in ')'"
-msgstr "坏的 ls-files 格式：元素 '%s' 没有以 ')' 结尾"
-
-#: builtin/ls-files.c
-#, c-format
-msgid "bad ls-files format: %%%.*s"
-msgstr "坏的 ls-files 格式: %%%.*s"
+msgid "could not get object info about '%s'"
+msgstr "无法获得关于 '%s' 的对象信息"
 
 #: builtin/ls-files.c
 msgid "git ls-files [<options>] [<file>...]"
@@ -9754,7 +9804,7 @@ msgstr "显示相对于顶级目录的文件名"
 msgid "if any <file> is not in the index, treat this as an error"
 msgstr "如果任何 <文件> 都不在索引区，视为错误"
 
-#: builtin/ls-files.c
+#: builtin/ls-files.c builtin/merge-tree.c
 msgid "tree-ish"
 msgstr "树对象"
 
@@ -9831,26 +9881,6 @@ msgstr "除了显示指向的对象外，显示指向的引用名"
 #: builtin/ls-tree.c
 msgid "git ls-tree [<options>] <tree-ish> [<path>...]"
 msgstr "git ls-tree [<选项>] <树对象> [<路径>...]"
-
-#: builtin/ls-tree.c
-#, c-format
-msgid "could not get object info about '%s'"
-msgstr "无法获得关于 '%s' 的对象信息"
-
-#: builtin/ls-tree.c
-#, c-format
-msgid "bad ls-tree format: element '%s' does not start with '('"
-msgstr "坏的 ls-tree 格式：元素 '%s' 没有以 '(' 开头"
-
-#: builtin/ls-tree.c
-#, c-format
-msgid "bad ls-tree format: element '%s' does not end in ')'"
-msgstr "坏的 ls-tree 格式：元素 '%s' 没有以 ')' 结尾"
-
-#: builtin/ls-tree.c
-#, c-format
-msgid "bad ls-tree format: %%%.*s"
-msgstr "坏的 ls-tree 格式: %%%.*s"
 
 #: builtin/ls-tree.c
 msgid "only show trees"
@@ -9998,9 +10028,21 @@ msgstr ""
 "git merge-file [<选项>] [-L <名字1> [-L <初始名字> [-L <名字2>]]] <文件1> <初"
 "始文件> <文件2>"
 
+#: builtin/merge-file.c diff.c
+msgid ""
+"option diff-algorithm accepts \"myers\", \"minimal\", \"patience\" and "
+"\"histogram\""
+msgstr ""
+"选项 diff-algorithm 接受参数 \"myers\"、\"minimal\"、\"patience\" 和 "
+"\"histogram\""
+
 #: builtin/merge-file.c
 msgid "send results to standard output"
 msgstr "将结果发送到标准输出"
+
+#: builtin/merge-file.c
+msgid "use object IDs instead of filenames"
+msgstr "使用对象 ID 替换文件名"
 
 #: builtin/merge-file.c
 msgid "use a diff3 based merge"
@@ -10022,6 +10064,14 @@ msgstr "如果冲突，使用他们的版本"
 msgid "for conflicts, use a union version"
 msgstr "如果冲突，使用联合版本"
 
+#: builtin/merge-file.c diff.c
+msgid "<algorithm>"
+msgstr "<算法>"
+
+#: builtin/merge-file.c diff.c
+msgid "choose a diff algorithm"
+msgstr "选择一个差异算法"
+
 #: builtin/merge-file.c
 msgid "for conflicts, use this marker size"
 msgstr "如果冲突，使用指定长度的标记"
@@ -10033,6 +10083,15 @@ msgstr "不要警告冲突"
 #: builtin/merge-file.c
 msgid "set labels for file1/orig-file/file2"
 msgstr "为 文件1/初始文件/文件2 设置标签"
+
+#: builtin/merge-file.c
+#, c-format
+msgid "object '%s' does not exist"
+msgstr "对象 '%s' 不存在"
+
+#: builtin/merge-file.c
+msgid "Could not write object file"
+msgstr "不能写入对象文件"
 
 #: builtin/merge-recursive.c
 #, c-format
@@ -10064,6 +10123,11 @@ msgstr "无法解析引用 '%s'"
 #, c-format
 msgid "Merging %s with %s\n"
 msgstr "合并 %s 和 %s\n"
+
+#: builtin/merge-tree.c
+#, c-format
+msgid "could not parse as tree '%s'"
+msgstr "无法解析为树对象 '%s'"
 
 #: builtin/merge-tree.c builtin/merge.c
 msgid "not something we can merge"
@@ -10113,13 +10177,22 @@ msgstr "实施多个合并，每输入行一个"
 msgid "specify a merge-base for the merge"
 msgstr "指定用于合并的合并基线"
 
+#: builtin/merge-tree.c builtin/merge.c builtin/pull.c
+msgid "option=value"
+msgstr "option=value"
+
+#: builtin/merge-tree.c builtin/merge.c builtin/pull.c
+msgid "option for selected merge strategy"
+msgstr "所选的合并策略的选项"
+
 #: builtin/merge-tree.c
 msgid "--trivial-merge is incompatible with all other options"
 msgstr "--trivial-merge 与其他所有选项不兼容"
 
-#: builtin/merge-tree.c
-msgid "--merge-base is incompatible with --stdin"
-msgstr "--merge-base 与 --stdin 不兼容"
+#: builtin/merge-tree.c builtin/merge.c
+#, c-format
+msgid "unknown strategy option: -X%s"
+msgstr "未知的策略选项：-X%s"
 
 #: builtin/merge-tree.c builtin/notes.c
 #, c-format
@@ -10208,14 +10281,6 @@ msgstr "策略"
 msgid "merge strategy to use"
 msgstr "要使用的合并策略"
 
-#: builtin/merge.c builtin/pull.c
-msgid "option=value"
-msgstr "option=value"
-
-#: builtin/merge.c builtin/pull.c
-msgid "option for selected merge strategy"
-msgstr "所选的合并策略的选项"
-
 #: builtin/merge.c
 msgid "merge commit message (for a non-fast-forward merge)"
 msgstr "合并的提交说明（针对非快进式合并）"
@@ -10286,7 +10351,7 @@ msgstr "'%s' 没有指向一个提交"
 msgid "Bad branch.%s.mergeoptions string: %s"
 msgstr "坏的 branch.%s.mergeoptions 字符串：%s"
 
-#: builtin/merge.c builtin/stash.c merge-recursive.c
+#: builtin/merge.c merge-recursive.c
 msgid "Unable to write index."
 msgstr "不能写入索引。"
 
@@ -10295,11 +10360,6 @@ msgid "Not handling anything other than two heads merge."
 msgstr "未处理两个头合并之外的任何操作。"
 
 #: builtin/merge.c
-#, c-format
-msgid "unknown strategy option: -X%s"
-msgstr "未知的策略选项：-X%s"
-
-#: builtin/merge.c t/helper/test-fast-rebase.c
 #, c-format
 msgid "unable to write %s"
 msgstr "不能写 %s"
@@ -10331,9 +10391,9 @@ msgstr "空的提交说明会终止提交。\n"
 #: builtin/merge.c
 #, c-format
 msgid ""
-"Lines starting with '%c' will be ignored, and an empty message aborts\n"
+"Lines starting with '%s' will be ignored, and an empty message aborts\n"
 "the commit.\n"
-msgstr "以 '%c' 开始的行将被忽略，而空的提交说明将终止提交。\n"
+msgstr "以 '%s' 开始的行将被忽略，而空的提交说明将终止提交。\n"
 
 #: builtin/merge.c
 msgid "Empty commit message."
@@ -10371,7 +10431,7 @@ msgstr "对于 %s 没有来自 %s 的远程跟踪分支"
 msgid "Bad value '%s' in environment '%s'"
 msgstr "环境 '%2$s' 中存在坏的取值 '%1$s'"
 
-#: builtin/merge.c read-cache.c strbuf.c wrapper.c
+#: builtin/merge.c editor.c read-cache.c wrapper.c
 #, c-format
 msgid "could not close '%s'"
 msgstr "不能关闭 '%s'"
@@ -10526,10 +10586,6 @@ msgstr "不能读取被标记的对象 '%s'"
 msgid "object '%s' tagged as '%s', but is a '%s' type"
 msgstr "对象 '%s' 被标记为 '%s'，然而是一个 '%s' 类型"
 
-#: builtin/mktag.c imap-send.c trailer.c
-msgid "could not read from stdin"
-msgstr "不能自标准输入读取"
-
 #: builtin/mktag.c
 msgid "tag on stdin did not pass our strict fsck check"
 msgstr "标准输入上的标签未通过我们严格的 fsck 检查"
@@ -10657,8 +10713,8 @@ msgid "can not move directory into itself"
 msgstr "不能将目录移动到自身"
 
 #: builtin/mv.c
-msgid "cannot move directory over file"
-msgstr "不能将目录移动到文件"
+msgid "destination already exists"
+msgstr "目标已存在"
 
 #: builtin/mv.c
 msgid "source directory is empty"
@@ -10762,11 +10818,13 @@ msgstr "git notes [--ref <注解引用>] [list [<对象>]]"
 
 #: builtin/notes.c
 msgid ""
-"git notes [--ref <notes-ref>] add [-f] [--allow-empty] [-m <msg> | -F <file> "
-"| (-c | -C) <object>] [<object>]"
+"git notes [--ref <notes-ref>] add [-f] [--allow-empty] [--[no-]separator|--"
+"separator=<paragraph-break>] [--[no-]stripspace] [-m <msg> | -F <file> | (-c "
+"| -C) <object>] [<object>]"
 msgstr ""
-"git notes [--ref <注解引用>] add [-f] [--allow-empty] [-m <说明> | -F <文件> "
-"| (-c | -C) <对象>] [<对象>]"
+"git notes [--ref <注解引用>] add [-f] [--allow-empty] [--[no-]separator|--"
+"separator=<分段符>] [--[no-]stripspace] [-m <说明> | -F <文件> | (-c | -C) <"
+"对象>] [<对象>]"
 
 #: builtin/notes.c
 msgid "git notes [--ref <notes-ref>] copy [-f] <from-object> <to-object>"
@@ -10774,11 +10832,13 @@ msgstr "git notes [--ref <注解引用>] copy [-f] <源对象> <目标对象>"
 
 #: builtin/notes.c
 msgid ""
-"git notes [--ref <notes-ref>] append [--allow-empty] [-m <msg> | -F <file> | "
-"(-c | -C) <object>] [<object>]"
+"git notes [--ref <notes-ref>] append [--allow-empty] [--[no-]separator|--"
+"separator=<paragraph-break>] [--[no-]stripspace] [-m <msg> | -F <file> | (-c "
+"| -C) <object>] [<object>]"
 msgstr ""
-"git notes [--ref <注解引用>] append [--allow-empty] [-m <说明> | -F <文件> | "
-"(-c | -C) <对象>] [<对象>]"
+"git notes [--ref <注解引用>] append [--allow-empty] [--[no-]separator|--"
+"separator=<分段符>] [--[no-]stripspace] [-m <说明> | -F <文件> | (-c | -C) <"
+"对象>] [<对象>]"
 
 #: builtin/notes.c
 msgid "git notes [--ref <notes-ref>] edit [--allow-empty] [<object>]"
@@ -10856,11 +10916,6 @@ msgstr "git notes prune [<选项>]"
 #: builtin/notes.c
 msgid "Write/edit the notes for the following object:"
 msgstr "为下面的对象写/编辑说明："
-
-#: builtin/notes.c
-#, c-format
-msgid "unable to start 'show' for object '%s'"
-msgstr "不能为对象 '%s' 开始 'show'"
 
 #: builtin/notes.c
 msgid "could not read 'show' output"
@@ -10945,6 +11000,18 @@ msgstr "允许保存空白注释"
 #: builtin/notes.c
 msgid "replace existing notes"
 msgstr "替换已存在的注解"
+
+#: builtin/notes.c
+msgid "<paragraph-break>"
+msgstr "<分段符>"
+
+#: builtin/notes.c
+msgid "insert <paragraph-break> between paragraphs"
+msgstr "在段落之间插入<分段符>"
+
+#: builtin/notes.c
+msgid "remove unnecessary whitespace"
+msgstr "删除不必要的空白字符"
 
 #: builtin/notes.c
 #, c-format
@@ -11204,7 +11271,7 @@ msgstr "无法写入位图索引"
 msgid "wrote %<PRIu32> objects while expecting %<PRIu32>"
 msgstr "写入 %<PRIu32> 个对象而预期 %<PRIu32> 个"
 
-#: builtin/pack-objects.c
+#: builtin/pack-objects.c builtin/repack.c
 msgid "disabling bitmap writing, as some objects are not being packed"
 msgstr "禁用 bitmap 写入，因为一些对象将不会被打包"
 
@@ -11268,6 +11335,11 @@ msgstr "压缩对象中"
 #: builtin/pack-objects.c
 msgid "inconsistency with delta count"
 msgstr "不一致的差异计数"
+
+#: builtin/pack-objects.c
+#, c-format
+msgid "invalid pack.allowPackReuse value: '%s'"
+msgstr "无效的 pack.allowPackReuse 值：'%s'"
 
 #: builtin/pack-objects.c
 #, c-format
@@ -11369,6 +11441,14 @@ msgstr "不支持的索引版本 %s"
 #, c-format
 msgid "bad index version '%s'"
 msgstr "坏的索引版本 '%s'"
+
+#: builtin/pack-objects.c
+msgid "show progress meter during object writing phase"
+msgstr "在对象写入阶段显示进度表"
+
+#: builtin/pack-objects.c
+msgid "similar to --all-progress when progress meter is shown"
+msgstr "当进度表显示时类似于 --all-progress"
 
 #: builtin/pack-objects.c
 msgid "<version>[,<offset>]"
@@ -11562,10 +11642,6 @@ msgid "--thin cannot be used to build an indexable pack"
 msgstr "--thin 不能用于创建一个可索引包"
 
 #: builtin/pack-objects.c
-msgid "cannot use --filter without --stdout"
-msgstr "不能在没有 --stdout 的情况下使用 --filter"
-
-#: builtin/pack-objects.c
 msgid "cannot use --filter with --stdin-packs"
 msgstr "不能同时使用 --filter 和 --stdin-packs"
 
@@ -11582,10 +11658,6 @@ msgid "cannot use --stdin-packs with --cruft"
 msgstr "不能将 --stdin-packs 和 --cruft 同时使用"
 
 #: builtin/pack-objects.c
-msgid "cannot use --max-pack-size with --cruft"
-msgstr "不能将 --max-pack-size 和 --cruft 同时使用"
-
-#: builtin/pack-objects.c
 msgid "Enumerating objects"
 msgstr "枚举对象中"
 
@@ -11593,10 +11665,10 @@ msgstr "枚举对象中"
 #, c-format
 msgid ""
 "Total %<PRIu32> (delta %<PRIu32>), reused %<PRIu32> (delta %<PRIu32>), pack-"
-"reused %<PRIu32>"
+"reused %<PRIu32> (from %<PRIuMAX>)"
 msgstr ""
 "总共 %<PRIu32>（差异 %<PRIu32>），复用 %<PRIu32>（差异 %<PRIu32>），包复用 "
-"%<PRIu32>"
+"%<PRIu32>（来自  %<PRIuMAX> 个包）"
 
 #: builtin/pack-redundant.c
 msgid ""
@@ -11611,9 +11683,17 @@ msgstr ""
 "并通过发送邮件到 <git@vger.kernel.org> 让我们知道您仍旧\n"
 "使用它。 谢谢。\n"
 
+#: builtin/pack-redundant.c
+msgid "refusing to run without --i-still-use-this"
+msgstr "拒绝在未指定 --i-still-use-this 选项时运行"
+
 #: builtin/pack-refs.c
-msgid "git pack-refs [--all] [--no-prune]"
-msgstr "git pack-refs [--all] [--no-prune]"
+msgid ""
+"git pack-refs [--all] [--no-prune] [--auto] [--include <pattern>] [--exclude "
+"<pattern>]"
+msgstr ""
+"git pack-refs [--all] [--no-prune] [--auto] [--include <模式>] [--exclude <模"
+"式>]"
 
 #: builtin/pack-refs.c
 msgid "pack everything"
@@ -11622,6 +11702,18 @@ msgstr "打包一切"
 #: builtin/pack-refs.c
 msgid "prune loose refs (default)"
 msgstr "清除松散的引用（默认）"
+
+#: builtin/pack-refs.c
+msgid "auto-pack refs as needed"
+msgstr "按需对引用自动打包"
+
+#: builtin/pack-refs.c
+msgid "references to include"
+msgstr "需包含的引用"
+
+#: builtin/pack-refs.c
+msgid "references to exclude"
+msgstr "需排除的引用"
 
 #: builtin/patch-id.c
 msgid "git patch-id [--stable | --unstable | --verbatim]"
@@ -11698,6 +11790,14 @@ msgstr "强制覆盖本地分支"
 #: builtin/pull.c
 msgid "number of submodules pulled in parallel"
 msgstr "并发拉取的子模组的数量"
+
+#: builtin/pull.c parse-options.h
+msgid "use IPv4 addresses only"
+msgstr "只使用 IPv4 地址"
+
+#: builtin/pull.c parse-options.h
+msgid "use IPv6 addresses only"
+msgstr "只使用 IPv6 地址"
 
 #: builtin/pull.c
 msgid ""
@@ -11812,9 +11912,9 @@ msgstr "更新尚未诞生的分支，变更添加至索引。"
 msgid "pull with rebase"
 msgstr "变基式拉取"
 
-#: builtin/pull.c
-msgid "please commit or stash them."
-msgstr "请提交或贮藏它们。"
+#: builtin/pull.c builtin/rebase.c
+msgid "Please commit or stash them."
+msgstr "请提交或贮藏修改。"
 
 #: builtin/pull.c
 #, c-format
@@ -11980,36 +12080,36 @@ msgstr ""
 #: builtin/push.c
 msgid ""
 "Updates were rejected because the tip of your current branch is behind\n"
-"its remote counterpart. Integrate the remote changes (e.g.\n"
-"'git pull ...') before pushing again.\n"
+"its remote counterpart. If you want to integrate the remote changes,\n"
+"use 'git pull' before pushing again.\n"
 "See the 'Note about fast-forwards' in 'git push --help' for details."
 msgstr ""
 "更新被拒绝，因为您当前分支的最新提交落后于其对应的远程分支。\n"
-"再次推送前，先与远程变更合并（如 'git pull ...'）。详见\n"
-"'git push --help' 中的 'Note about fast-forwards' 小节。"
+"如果您希望先与远程变更合并，请在推送前执行 'git pull'。\n"
+"详见 'git push --help' 中的 'Note about fast-forwards' 小节。"
 
 #: builtin/push.c
 msgid ""
 "Updates were rejected because a pushed branch tip is behind its remote\n"
-"counterpart. Check out this branch and integrate the remote changes\n"
-"(e.g. 'git pull ...') before pushing again.\n"
+"counterpart. If you want to integrate the remote changes, use 'git pull'\n"
+"before pushing again.\n"
 "See the 'Note about fast-forwards' in 'git push --help' for details."
 msgstr ""
 "更新被拒绝，因为推送的一个分支的最新提交落后于其对应的远程分支。\n"
-"检出该分支并整合远程变更（如 'git pull ...'），然后再推送。详见\n"
-"'git push --help' 中的 'Note about fast-forwards' 小节。"
+"如果您希望先与远程变更合并，请在推送前执行 'git pull'。\n"
+"详见 'git push --help' 中的 'Note about fast-forwards' 小节。"
 
 #: builtin/push.c
 msgid ""
-"Updates were rejected because the remote contains work that you do\n"
-"not have locally. This is usually caused by another repository pushing\n"
-"to the same ref. You may want to first integrate the remote changes\n"
-"(e.g., 'git pull ...') before pushing again.\n"
+"Updates were rejected because the remote contains work that you do not\n"
+"have locally. This is usually caused by another repository pushing to\n"
+"the same ref. If you want to integrate the remote changes, use\n"
+"'git pull' before pushing again.\n"
 "See the 'Note about fast-forwards' in 'git push --help' for details."
 msgstr ""
 "更新被拒绝，因为远程仓库包含您本地尚不存在的提交。这通常是因为另外\n"
-"一个仓库已向该引用进行了推送。再次推送前，您可能需要先整合远程变更\n"
-"（如 'git pull ...'）。\n"
+"一个仓库已向该引用进行了推送。如果您希望先与远程变更合并，请在推送\n"
+"前执行 'git pull'。\n"
 "详见 'git push --help' 中的 'Note about fast-forwards' 小节。"
 
 #: builtin/push.c
@@ -12027,13 +12127,14 @@ msgstr ""
 
 #: builtin/push.c
 msgid ""
-"Updates were rejected because the tip of the remote-tracking\n"
-"branch has been updated since the last checkout. You may want\n"
-"to integrate those changes locally (e.g., 'git pull ...')\n"
-"before forcing an update.\n"
+"Updates were rejected because the tip of the remote-tracking branch has\n"
+"been updated since the last checkout. If you want to integrate the\n"
+"remote changes, use 'git pull' before pushing again.\n"
+"See the 'Note about fast-forwards' in 'git push --help' for details."
 msgstr ""
 "更新被拒绝，因为远程跟踪分支的最新提交自从上次检出之后已被更新。\n"
-"在强制更新前，您可能想将这些变更整合到本地（如 'git pull ...'）。\n"
+"如果您希望先与远程变更合并，请在推送前执行 'git pull'。\n"
+"详见 'git push --help' 中的 'Note about fast-forwards' 小节。"
 
 #: builtin/push.c
 #, c-format
@@ -12061,9 +12162,9 @@ msgstr "'%s' 的值无效"
 msgid "repository"
 msgstr "仓库"
 
-#: builtin/push.c builtin/send-pack.c
-msgid "push all refs"
-msgstr "推送所有引用"
+#: builtin/push.c
+msgid "push all branches"
+msgstr "推送所有分支"
 
 #: builtin/push.c builtin/send-pack.c
 msgid "mirror all refs"
@@ -12074,8 +12175,8 @@ msgid "delete refs"
 msgstr "删除引用"
 
 #: builtin/push.c
-msgid "push tags (can't be used with --all or --mirror)"
-msgstr "推送标签（不能使用 --all or --mirror）"
+msgid "push tags (can't be used with --all or --branches or --mirror)"
+msgstr "推送标签（不能使用 --all or --branches or --mirror）"
 
 #: builtin/push.c builtin/send-pack.c
 msgid "force updates"
@@ -12367,19 +12468,6 @@ msgid "could not remove '%s'"
 msgstr "无法删除 '%s'"
 
 #: builtin/rebase.c
-msgid ""
-"Resolve all conflicts manually, mark them as resolved with\n"
-"\"git add/rm <conflicted_files>\", then run \"git rebase --continue\".\n"
-"You can instead skip this commit: run \"git rebase --skip\".\n"
-"To abort and get back to the state before \"git rebase\", run \"git rebase --"
-"abort\"."
-msgstr ""
-"手工解决所有冲突，执行 \"git add/rm <冲突的文件>\" 标记\n"
-"冲突已解决，然后执行 \"git rebase --continue\"。您也可以执行\n"
-"\"git rebase --skip\" 命令跳过这个提交。如果想要终止执行并回到\n"
-"\"git rebase\" 执行之前的状态，执行 \"git rebase --abort\"。"
-
-#: builtin/rebase.c
 #, c-format
 msgid ""
 "\n"
@@ -12399,6 +12487,11 @@ msgstr ""
 
 #: builtin/rebase.c
 #, c-format
+msgid "Unknown rebase-merges mode: %s"
+msgstr "未知的变基合并模式：%s"
+
+#: builtin/rebase.c
+#, c-format
 msgid "could not switch to %s"
 msgstr "无法切换到 %s"
 
@@ -12407,11 +12500,25 @@ msgid "apply options and merge options cannot be used together"
 msgstr "应用选项和合并选项不能同时使用"
 
 #: builtin/rebase.c
+msgid "--empty=ask is deprecated; use '--empty=stop' instead."
+msgstr "--empty=ask 已弃用；请使用 '--empty=stop'。"
+
+#: builtin/rebase.c
 #, c-format
 msgid ""
 "unrecognized empty type '%s'; valid values are \"drop\", \"keep\", and "
-"\"ask\"."
-msgstr "无法识别的空类型 '%s'；有效值有 \"drop\"、\"keep\" 和 \"ask\"。"
+"\"stop\"."
+msgstr "无法识别的空类型 '%s'；有效值有 \"drop\"、\"keep\" 和 \"stop\"。"
+
+#: builtin/rebase.c
+msgid ""
+"--rebase-merges with an empty string argument is deprecated and will stop "
+"working in a future version of Git. Use --rebase-merges without an argument "
+"instead, which does the same thing."
+msgstr ""
+"为 --rebase-merges 指定空值参数的方式已经被废弃并且在 Git 未来\n"
+"的版本中将不再支持。 支持使用无参数 --rebase-merges 的方式进行替\n"
+"代，它们具有相同的作用。"
 
 #: builtin/rebase.c
 #, c-format
@@ -12543,7 +12650,7 @@ msgstr "让用户编辑要变基的提交列表"
 msgid "(REMOVED) was: try to recreate merges instead of ignoring them"
 msgstr "（已删除）曾是：尝试重建合并提交而非忽略它们"
 
-#: builtin/rebase.c
+#: builtin/rebase.c builtin/revert.c
 msgid "how to handle commits that become empty"
 msgstr "如何处理成为空提交的提交"
 
@@ -12624,14 +12731,14 @@ msgstr ""
 "取而代之请使用 'merges'"
 
 #: builtin/rebase.c
-msgid "No rebase in progress?"
-msgstr "没有正在进行的变基？"
+msgid "no rebase in progress"
+msgstr "没有正在进行的变基"
 
 #: builtin/rebase.c
 msgid "The --edit-todo action can only be used during interactive rebase."
 msgstr "动作 --edit-todo 只能用在交互式变基过程中。"
 
-#: builtin/rebase.c t/helper/test-fast-rebase.c
+#: builtin/rebase.c
 msgid "Cannot read HEAD"
 msgstr "不能读取 HEAD"
 
@@ -12676,19 +12783,10 @@ msgid "switch `C' expects a numerical value"
 msgstr "开关 `C' 期望一个数字值"
 
 #: builtin/rebase.c
-#, c-format
-msgid "Unknown mode: %s"
-msgstr "未知模式：%s"
-
-#: builtin/rebase.c
-msgid "--strategy requires --merge or --interactive"
-msgstr "--strategy 需要 --merge 或 --interactive"
-
-#: builtin/rebase.c
 msgid ""
-"apply options are incompatible with rebase.autosquash.  Consider adding --no-"
-"autosquash"
-msgstr "应用的选项与 rebase.autosquash 不兼容。考虑加上 --no-autosquash"
+"apply options are incompatible with rebase.rebaseMerges.  Consider adding --"
+"no-rebase-merges"
+msgstr "应用的选项与 rebase.rebaseMerges 不兼容。考虑加上 --no-rebase-merges"
 
 #: builtin/rebase.c
 msgid ""
@@ -12742,10 +12840,6 @@ msgstr "'%s'：只需要一个合并基线"
 #, c-format
 msgid "Does not point to a valid commit '%s'"
 msgstr "没有指向一个有效的提交 '%s'"
-
-#: builtin/rebase.c
-msgid "Please commit or stash them."
-msgstr "请提交或贮藏修改。"
 
 #: builtin/rebase.c
 msgid "HEAD is up to date."
@@ -12855,6 +12949,10 @@ msgid "git reflog [show] [<log-options>] [<ref>]"
 msgstr "git reflog [show] [<log 选项>] [<引用>]"
 
 #: builtin/reflog.c
+msgid "git reflog list"
+msgstr "git reflog list"
+
+#: builtin/reflog.c
 msgid ""
 "git reflog expire [--expire=<time>] [--expire-unreachable=<time>]\n"
 "                  [--rewrite] [--updateref] [--stale-fix]\n"
@@ -12882,6 +12980,11 @@ msgstr "git reflog exists <引用>"
 #, c-format
 msgid "invalid timestamp '%s' given to '--%s'"
 msgstr "给 '--%2$s' 的时间戳 '%1$s' 无效"
+
+#: builtin/reflog.c sequencer.c
+#, c-format
+msgid "%s does not accept arguments: '%s'"
+msgstr "%s 不接受参数：'%s'"
 
 #: builtin/reflog.c
 msgid "do not actually prune any entries"
@@ -13042,20 +13145,18 @@ msgstr ""
 
 #: builtin/remote.c
 #, c-format
-msgid "unknown mirror argument: %s"
-msgstr "未知的镜像参数：%s"
+msgid "unknown --mirror argument: %s"
+msgstr "未知的 --mirror 参数：%s"
 
 #: builtin/remote.c
 msgid "fetch the remote branches"
 msgstr "抓取远程的分支"
 
 #: builtin/remote.c
-msgid "import all tags and associated objects when fetching"
-msgstr "抓取时导入所有的标签和关联对象"
-
-#: builtin/remote.c
-msgid "or do not fetch any tag at all (--no-tags)"
-msgstr "或不抓取任何标签（--no-tags）"
+msgid ""
+"import all tags and associated objects when fetching\n"
+"or do not fetch any tag at all (--no-tags)"
+msgstr "抓取时导入所有的标签和关联对象，或不抓取任何标签（--no-tags）"
 
 #: builtin/remote.c
 msgid "branch(es) to track"
@@ -13173,8 +13274,8 @@ msgid ""
 msgid_plural ""
 "Note: Some branches outside the refs/remotes/ hierarchy were not removed;\n"
 "to delete them, use:"
-msgstr[0] "注意：ref/remotes 层级之外的一个分支未被移除。要删除它，使用："
-msgstr[1] "注意：ref/remotes 层级之外的一些分支未被移除。要删除它们，使用："
+msgstr[0] "注意：refs/remotes/ 层级之外的一个分支未被移除。要删除它，使用："
+msgstr[1] "注意：refs/remotes/ 层级之外的一些分支未被移除。要删除它们，使用："
 
 #: builtin/remote.c
 #, c-format
@@ -13496,6 +13597,10 @@ msgid "could not start pack-objects to repack promisor objects"
 msgstr "无法开始 pack-objects 来重新打包 promisor 对象"
 
 #: builtin/repack.c
+msgid "failed to feed promisor objects to pack-objects"
+msgstr "无法将承诺者对象提供给 pack-objects"
+
+#: builtin/repack.c
 msgid "repack: Expecting full hex object ID lines only from pack-objects."
 msgstr "repack：期望来自 pack-objects 的完整十六进制对象 ID。"
 
@@ -13533,6 +13638,11 @@ msgid "could not remove stale bitmap: %s"
 msgstr "无法删除过期的位图： %s"
 
 #: builtin/repack.c
+#, c-format
+msgid "pack prefix %s does not begin with objdir %s"
+msgstr "包前缀 %s 没有以对象目录 %s 开始"
+
+#: builtin/repack.c
 msgid "pack everything in a single pack"
 msgstr "所有内容打包到一个包文件中"
 
@@ -13549,8 +13659,8 @@ msgid "approxidate"
 msgstr "近似日期"
 
 #: builtin/repack.c
-msgid "with -C, expire objects older than this"
-msgstr "使用 -C，使早于给定时间的对象过期"
+msgid "with --cruft, expire objects older than this"
+msgstr "使用 --cruft，使早于给定时间的对象过期"
 
 #: builtin/repack.c
 msgid "remove redundant packs, and run git-prune-packed"
@@ -13633,17 +13743,21 @@ msgid "pack prefix to store a pack containing pruned objects"
 msgstr "储存被清除的对象的包的前缀"
 
 #: builtin/repack.c
+msgid "pack prefix to store a pack containing filtered out objects"
+msgstr "储存被过滤的对象的包的前缀"
+
+#: builtin/repack.c
 msgid "cannot delete packs in a precious-objects repo"
 msgstr "不能删除珍品仓库中的打包文件"
 
 #: builtin/repack.c
-msgid "Nothing new to pack."
-msgstr "没有新的要打包。"
+#, c-format
+msgid "option '%s' can only be used along with '%s'"
+msgstr "选项 '%s' 只能和 '%s' 搭配使用"
 
 #: builtin/repack.c
-#, c-format
-msgid "pack prefix %s does not begin with objdir %s"
-msgstr "包前缀 %s 没有以对象目录 .%s 开始"
+msgid "Nothing new to pack."
+msgstr "没有新的要打包。"
 
 #: builtin/repack.c
 #, c-format
@@ -13895,6 +14009,87 @@ msgstr "--convert-graft-file 不带参数"
 #: builtin/replace.c
 msgid "only one pattern can be given with -l"
 msgstr "只能为 -l 提供一个模式"
+
+#: builtin/replay.c
+msgid "need some commits to replay"
+msgstr "需要一些提交来重放"
+
+#: builtin/replay.c
+msgid "--onto and --advance are incompatible"
+msgstr "--onto 和 --advance 不兼容"
+
+#: builtin/replay.c
+msgid "all positive revisions given must be references"
+msgstr "提供的所有正向版本必须为引用"
+
+#: builtin/replay.c
+msgid "argument to --advance must be a reference"
+msgstr "--advance 的参数必须是引用"
+
+#: builtin/replay.c
+msgid ""
+"cannot advance target with multiple sources because ordering would be ill-"
+"defined"
+msgstr "不能使用多个源推进目标，因为无法明确如何排序"
+
+#: builtin/replay.c
+msgid ""
+"cannot implicitly determine whether this is an --advance or --onto operation"
+msgstr "不能隐式地确定这是 --advance 还是 --onto 的操作"
+
+#: builtin/replay.c
+msgid ""
+"cannot advance target with multiple source branches because ordering would "
+"be ill-defined"
+msgstr "不能使用多个源分支推进目标，因为无法明确如何排序"
+
+#: builtin/replay.c
+msgid "cannot implicitly determine correct base for --onto"
+msgstr "不能隐式地确定 --onto 正确的基线"
+
+#: builtin/replay.c
+msgid ""
+"(EXPERIMENTAL!) git replay ([--contained] --onto <newbase> | --advance "
+"<branch>) <revision-range>..."
+msgstr ""
+"（试验中！）git replay ([--contained] --onto <新基线> | --advance <分支>) <版"
+"本范围>..."
+
+#: builtin/replay.c
+msgid "make replay advance given branch"
+msgstr "重放时演进给定的分支"
+
+#: builtin/replay.c
+msgid "replay onto given commit"
+msgstr "重放到给定提交"
+
+#: builtin/replay.c
+msgid "advance all branches contained in revision-range"
+msgstr "演进版本范围中包含的所有分支"
+
+#: builtin/replay.c
+msgid "option --onto or --advance is mandatory"
+msgstr "选项 --onto 或 --advance 必须指定其一"
+
+#: builtin/replay.c
+#, c-format
+msgid ""
+"some rev walking options will be overridden as '%s' bit in 'struct rev_info' "
+"will be forced"
+msgstr ""
+"一些版本遍历选项将被覆盖，如 'struct rev_info' 中的 '%s' 位将被强制设定"
+
+#: builtin/replay.c
+msgid "error preparing revisions"
+msgstr "准备版本时错误"
+
+#: builtin/replay.c
+msgid "replaying down to root commit is not supported yet!"
+msgstr "目前还不支持重放到根提交！"
+
+#: builtin/replay.c
+msgid "replaying merge commits is not supported yet!"
+msgstr "目前还不支持重放到合并提交！"
 
 #: builtin/rerere.c
 msgid ""
@@ -14151,25 +14346,26 @@ msgid "--prefix requires an argument"
 msgstr "--prefix 需要一个参数"
 
 #: builtin/rev-parse.c
+msgid "no object format specified"
+msgstr "未指定对象格式"
+
+#: builtin/rev-parse.c
+#, c-format
+msgid "unsupported object format: %s"
+msgstr "不支持的对象格式：'%s'"
+
+#: builtin/rev-parse.c
 #, c-format
 msgid "unknown mode for --abbrev-ref: %s"
 msgstr "未知的 --abbrev-ref 模式：%s"
 
-#: builtin/rev-parse.c revision.c
-msgid "--exclude-hidden cannot be used together with --branches"
-msgstr "--exclude-hidden 不能与 --branches 一起使用"
-
-#: builtin/rev-parse.c revision.c
-msgid "--exclude-hidden cannot be used together with --tags"
-msgstr "--exclude-hidden 不能与 --tags 一起使用"
-
-#: builtin/rev-parse.c revision.c
-msgid "--exclude-hidden cannot be used together with --remotes"
-msgstr "--exclude-hidden 不能与 --remotes 一起使用"
-
 #: builtin/rev-parse.c setup.c
 msgid "this operation must be run in a work tree"
 msgstr "该操作必须在一个工作区中运行"
+
+#: builtin/rev-parse.c
+msgid "Could not read the index"
+msgstr "不能读取索引"
 
 #: builtin/rev-parse.c
 #, c-format
@@ -14262,8 +14458,8 @@ msgid "allow commits with empty messages"
 msgstr "允许提交说明为空"
 
 #: builtin/revert.c
-msgid "keep redundant, empty commits"
-msgstr "保持多余的、空的提交"
+msgid "deprecated: use --empty=keep instead"
+msgstr "已弃用：取而代之使用 --empty=keep"
 
 #: builtin/revert.c
 msgid "use the 'reference' format to refer to commits"
@@ -14380,6 +14576,10 @@ msgstr ""
 #: builtin/send-pack.c
 msgid "remote name"
 msgstr "远程名称"
+
+#: builtin/send-pack.c
+msgid "push all refs"
+msgstr "推送所有引用"
 
 #: builtin/send-pack.c
 msgid "use stateless RPC protocol"
@@ -14592,17 +14792,39 @@ msgstr "未知的哈希算法"
 
 #: builtin/show-ref.c
 msgid ""
-"git show-ref [-q | --quiet] [--verify] [--head] [-d | --dereference]\n"
+"git show-ref [--head] [-d | --dereference]\n"
 "             [-s | --hash[=<n>]] [--abbrev[=<n>]] [--tags]\n"
 "             [--heads] [--] [<pattern>...]"
 msgstr ""
-"git show-ref [-q | --quiet] [--verify] [--head] [-d | --dereference]\n"
+"git show-ref [--head] [-d | --dereference]\n"
 "             [-s | --hash[=<n>]] [--abbrev[=<n>]] [--tags]\n"
 "             [--heads] [--] [<模式>...]"
 
 #: builtin/show-ref.c
+msgid ""
+"git show-ref --verify [-q | --quiet] [-d | --dereference]\n"
+"             [-s | --hash[=<n>]] [--abbrev[=<n>]]\n"
+"             [--] [<ref>...]"
+msgstr ""
+"git show-ref --verify [-q | --quiet] [-d | --dereference]\n"
+"             [-s | --hash[=<n>]] [--abbrev[=<n>]]\n"
+"             [--] [<引用>...]"
+
+#: builtin/show-ref.c
 msgid "git show-ref --exclude-existing[=<pattern>]"
 msgstr "git show-ref --exclude-existing[=<模式>]"
+
+#: builtin/show-ref.c
+msgid "git show-ref --exists <ref>"
+msgstr "git show-ref --exists <引用>"
+
+#: builtin/show-ref.c
+msgid "reference does not exist"
+msgstr "引用不存在"
+
+#: builtin/show-ref.c
+msgid "failed to look up reference"
+msgstr "无法找到引用"
 
 #: builtin/show-ref.c
 msgid "only show tags (can be combined with heads)"
@@ -14611,6 +14833,10 @@ msgstr "只显示标签（可以和头共用）"
 #: builtin/show-ref.c
 msgid "only show heads (can be combined with tags)"
 msgstr "只显示头（可以和标签共用）"
+
+#: builtin/show-ref.c
+msgid "check for reference existence without resolving"
+msgstr "检查引用是否存在但不解析"
 
 #: builtin/show-ref.c
 msgid "stricter reference checking, requires exact ref path"
@@ -14638,9 +14864,11 @@ msgstr "显示从标准输入中读入的不在本地仓库中的引用"
 
 #: builtin/sparse-checkout.c
 msgid ""
-"git sparse-checkout (init | list | set | add | reapply | disable) [<options>]"
+"git sparse-checkout (init | list | set | add | reapply | disable | check-"
+"rules) [<options>]"
 msgstr ""
-"git sparse-checkout (init | list | set | add | reapply | disable) [<选项>]"
+"git sparse-checkout (init | list | set | add | reapply | disable | check\n"
+"-rules) [<选项>]"
 
 #: builtin/sparse-checkout.c
 msgid "this worktree is not sparse"
@@ -14682,7 +14910,7 @@ msgstr "初始化稀疏检出为锥形模式"
 msgid "toggle the use of a sparse index"
 msgstr "切换稀疏索引的使用"
 
-#: builtin/sparse-checkout.c commit-graph.c midx.c sequencer.c
+#: builtin/sparse-checkout.c commit-graph.c midx-write.c sequencer.c
 #, c-format
 msgid "unable to create leading directories of %s"
 msgstr "不能为 %s 创建先导目录"
@@ -14779,6 +15007,26 @@ msgstr "必须在稀疏检出中重应用稀疏模式"
 #: builtin/sparse-checkout.c
 msgid "error while refreshing working directory"
 msgstr "刷新工作目录时出错"
+
+#: builtin/sparse-checkout.c
+msgid ""
+"git sparse-checkout check-rules [-z] [--skip-checks][--[no-]cone] [--rules-"
+"file <file>]"
+msgstr ""
+"git sparse-checkout check-rules [-z] [--skip-checks][--[no-]cone] [--rules-"
+"file <文件>]"
+
+#: builtin/sparse-checkout.c
+msgid "terminate input and output files by a NUL character"
+msgstr "输入和输出的文件使用 NUL 字符终结"
+
+#: builtin/sparse-checkout.c
+msgid "when used with --rules-file interpret patterns as cone mode patterns"
+msgstr "通过 --rules-file 选项传递的模型将被作为锥形（稀疏检出模型）进行解析"
+
+#: builtin/sparse-checkout.c
+msgid "use patterns in <file> instead of the current ones."
+msgstr "从 <文件> 参数中读取模式，而不是从标准输入"
 
 #: builtin/stash.c
 msgid "git stash list [<log-options>]"
@@ -15415,6 +15663,11 @@ msgstr "略过子模组 '%s'"
 
 #: builtin/submodule--helper.c
 #, c-format
+msgid "cannot clone submodule '%s' without a URL"
+msgstr "无法在不提供 URL 时克隆子模组 '%s'"
+
+#: builtin/submodule--helper.c
+#, c-format
 msgid "Failed to clone '%s'. Retry scheduled"
 msgstr "克隆 '%s' 失败。按计划重试"
 
@@ -15570,6 +15823,10 @@ msgstr ""
 "N|--no-fetch] [-f|--force] [--checkout|--merge|--rebase] [--[no-]recommend-"
 "shallow] [--reference <仓库>] [--recursive] [--[no-]single-branch] [--] [<路"
 "径>...]"
+
+#: builtin/submodule--helper.c submodule.c
+msgid "Failed to resolve HEAD as a valid ref."
+msgstr "无法将 HEAD 解析为有效引用。"
 
 #: builtin/submodule--helper.c
 msgid "git submodule absorbgitdirs [<options>] [<path>...]"
@@ -15817,12 +16074,12 @@ msgid ""
 "\n"
 "Write a message for tag:\n"
 "  %s\n"
-"Lines starting with '%c' will be ignored.\n"
+"Lines starting with '%s' will be ignored.\n"
 msgstr ""
 "\n"
 "输入一个标签说明：\n"
 "  %s\n"
-"以 '%c' 开头的行将被忽略。\n"
+"以 '%s' 开头的行将被忽略。\n"
 
 #: builtin/tag.c
 #, c-format
@@ -15830,13 +16087,13 @@ msgid ""
 "\n"
 "Write a message for tag:\n"
 "  %s\n"
-"Lines starting with '%c' will be kept; you may remove them yourself if you "
+"Lines starting with '%s' will be kept; you may remove them yourself if you "
 "want to.\n"
 msgstr ""
 "\n"
 "输入一个标签说明：\n"
 "  %s\n"
-"以 '%c' 开头的行将被保留，如果您愿意也可以删除它们。\n"
+"以 '%s' 开头的行将被保留，如果您愿意也可以删除它们。\n"
 
 #: builtin/tag.c
 msgid "unable to sign the tag"
@@ -15943,6 +16200,10 @@ msgstr "只打印尚未合并的标签"
 #: builtin/tag.c
 msgid "print only tags of the object"
 msgstr "只打印指向该对象的标签"
+
+#: builtin/tag.c
+msgid "could not start 'git column'"
+msgstr "无法启动 'git column'"
 
 #: builtin/tag.c
 #, c-format
@@ -16147,6 +16408,10 @@ msgid "write index in this format"
 msgstr "以这种格式写入索引区"
 
 #: builtin/update-index.c
+msgid "report on-disk index format version"
+msgstr "报告磁盘索引格式的版本"
+
+#: builtin/update-index.c
 msgid "enable or disable split index"
 msgstr "启用或禁用索引拆分"
 
@@ -16177,6 +16442,16 @@ msgstr "标记文件为 fsmonitor 有效"
 #: builtin/update-index.c
 msgid "clear fsmonitor valid bit"
 msgstr "清除 fsmonitor 有效位"
+
+#: builtin/update-index.c
+#, c-format
+msgid "%d\n"
+msgstr "%d\n"
+
+#: builtin/update-index.c
+#, c-format
+msgid "index-version: was %d, set to %d"
+msgstr "索引版本：从 %d 设置为 %d"
 
 #: builtin/update-index.c
 msgid ""
@@ -16235,12 +16510,12 @@ msgid "fsmonitor disabled"
 msgstr "fsmonitor 被禁用"
 
 #: builtin/update-ref.c
-msgid "git update-ref [<options>] -d <refname> [<old-val>]"
-msgstr "git update-ref [<选项>] -d <引用名> [<旧值>]"
+msgid "git update-ref [<options>] -d <refname> [<old-oid>]"
+msgstr "git update-ref [<选项>] -d <引用名> [<旧对象>]"
 
 #: builtin/update-ref.c
-msgid "git update-ref [<options>]    <refname> <new-val> [<old-val>]"
-msgstr "git update-ref [<选项>]    <引用名> <新值> [<旧值>]"
+msgid "git update-ref [<options>]    <refname> <new-oid> [<old-oid>]"
+msgstr "git update-ref [<选项>]    <引用名> <新对象> [<旧对象>]"
 
 #: builtin/update-ref.c
 msgid "git update-ref [<options>] --stdin [-z]"
@@ -16325,10 +16600,10 @@ msgstr "打印标签内容"
 #: builtin/worktree.c
 msgid ""
 "git worktree add [-f] [--detach] [--checkout] [--lock [--reason <string>]]\n"
-"                 [-b <new-branch>] <path> [<commit-ish>]"
+"                 [--orphan] [(-b | -B) <new-branch>] <path> [<commit-ish>]"
 msgstr ""
 "git worktree add [-f] [--detach] [--checkout] [--lock [--reason <字符串>]]\n"
-"                 [-b <新分支>] <路径> [<提交号>]"
+"                 [--orphan] [(-b | -B) <新分支>] <路径> [<提交号>]"
 
 #: builtin/worktree.c
 msgid "git worktree list [-v | --porcelain [-z]]"
@@ -16357,6 +16632,40 @@ msgstr "git worktree repair [<路径>...]"
 #: builtin/worktree.c
 msgid "git worktree unlock <worktree>"
 msgstr "git worktree unlock <工作区>"
+
+#: builtin/worktree.c
+msgid "No possible source branch, inferring '--orphan'"
+msgstr "没有可用的源分支，将基于 '--orphan' 选项进行推断"
+
+#: builtin/worktree.c
+#, c-format
+msgid ""
+"If you meant to create a worktree containing a new unborn branch\n"
+"(branch with no commits) for this repository, you can do so\n"
+"using the --orphan flag:\n"
+"\n"
+"    git worktree add --orphan -b %s %s\n"
+msgstr ""
+"如果你打算为此仓库创建一个包含新的未诞生的\n"
+"分支（没有提交的分支）的工作区，你可以使用\n"
+"选项 --orphan 来执行此操作：\n"
+"\n"
+"    git worktree add --orphan -b %s %s\n"
+
+#: builtin/worktree.c
+#, c-format
+msgid ""
+"If you meant to create a worktree containing a new unborn branch\n"
+"(branch with no commits) for this repository, you can do so\n"
+"using the --orphan flag:\n"
+"\n"
+"    git worktree add --orphan %s\n"
+msgstr ""
+"如果你打算为此仓库创建一个包含新的未诞生的\n"
+"分支（没有提交的分支）的工作区，你可以使用\n"
+"选项 --orphan 来执行此操作：\n"
+"\n"
+"    git worktree add --orphan %s\n"
 
 #: builtin/worktree.c
 #, c-format
@@ -16425,6 +16734,11 @@ msgstr "初始化"
 
 #: builtin/worktree.c
 #, c-format
+msgid "could not find created worktree '%s'"
+msgstr "无法找到已创建的工作树 '%s'"
+
+#: builtin/worktree.c
+#, c-format
 msgid "Preparing worktree (new branch '%s')"
 msgstr "准备工作区（新分支 '%s'）"
 
@@ -16440,8 +16754,32 @@ msgstr "准备工作区（检出 '%s'）"
 
 #: builtin/worktree.c
 #, c-format
+msgid "unreachable: invalid reference: %s"
+msgstr "不可达：无效引用：%s"
+
+#: builtin/worktree.c
+#, c-format
 msgid "Preparing worktree (detached HEAD %s)"
 msgstr "准备工作区（分离头指针 %s）"
+
+#: builtin/worktree.c
+#, c-format
+msgid ""
+"HEAD points to an invalid (or orphaned) reference.\n"
+"HEAD path: '%s'\n"
+"HEAD contents: '%s'"
+msgstr ""
+"HEAD 指向了一个无用的（或孤立的）引用。\n"
+"HEAD 路径： '%s'\n"
+"HEAD 内容： '%s'"
+
+#: builtin/worktree.c
+msgid ""
+"No local or remote refs exist despite at least one remote\n"
+"present, stopping; use 'add -f' to override or fetch a remote first"
+msgstr ""
+"尽管已配置远程仓库，但不存在任何本地的或远程的引用，操作终止。\n"
+"请先使用 'add -f' 来覆盖或拉取一个远程仓库"
 
 #: builtin/worktree.c
 msgid "checkout <branch> even if already checked out in other worktree"
@@ -16454,6 +16792,10 @@ msgstr "创建一个新分支"
 #: builtin/worktree.c
 msgid "create or reset a branch"
 msgstr "创建或重置一个分支"
+
+#: builtin/worktree.c
+msgid "create unborn branch"
+msgstr "创建一个尚未诞生的分支"
 
 #: builtin/worktree.c
 msgid "populate the new working tree"
@@ -16479,6 +16821,11 @@ msgstr "尝试为新分支名匹配一个远程跟踪分支"
 #, c-format
 msgid "options '%s', '%s', and '%s' cannot be used together"
 msgstr "选项 '%s'、'%s' 和 '%s' 不能同时使用"
+
+#: builtin/worktree.c
+#, c-format
+msgid "option '%s' and commit-ish cannot be used together"
+msgstr "选项 '%s' 和提交号不能同时使用"
 
 #: builtin/worktree.c
 msgid "added with --lock"
@@ -16761,6 +17108,16 @@ msgstr[0] "这个归档包需要这个引用："
 msgstr[1] "这个归档包需要 %<PRIuMAX> 个引用："
 
 #: bundle.c
+#, c-format
+msgid "The bundle uses this hash algorithm: %s"
+msgstr "该归档包使用的哈希算法：%s"
+
+#: bundle.c
+#, c-format
+msgid "The bundle uses this filter: %s"
+msgstr "归档包使用了过滤器：%s"
+
+#: bundle.c
 msgid "unable to dup bundle descriptor"
 msgstr "无法复制归档包描述符"
 
@@ -16803,6 +17160,11 @@ msgstr "index-pack 终止"
 #: chunk-format.c
 msgid "terminating chunk id appears earlier than expected"
 msgstr "终止块 ID 比预期更早出现"
+
+#: chunk-format.c
+#, c-format
+msgid "chunk id %<PRIx32> not %d-byte aligned"
+msgstr "块 id %<PRIx32> 未 %d 字节对齐"
 
 #: chunk-format.c
 #, c-format
@@ -16873,8 +17235,8 @@ msgid "Move objects and refs by archive"
 msgstr "通过归档移动对象和引用"
 
 #: command-list.h
-msgid "Provide content or type and size information for repository objects"
-msgstr "提供仓库对象的内容、类型或大小"
+msgid "Provide contents or details of repository objects"
+msgstr "提供仓库对象的内容或详情"
 
 #: command-list.h
 msgid "Display gitattributes information"
@@ -17057,8 +17419,8 @@ msgid "A portable graphical interface to Git"
 msgstr "一个便携的 Git 图形客户端"
 
 #: command-list.h
-msgid "Compute object ID and optionally creates a blob from a file"
-msgstr "从一个文件计算对象 ID，并可以创建 blob 数据对象"
+msgid "Compute object ID and optionally create an object from a file"
+msgstr "从一个文件计算对象 ID，并支持可选地创建一个对象"
 
 #: command-list.h
 msgid "Display help information about Git"
@@ -17254,6 +17616,10 @@ msgid "Create, list, delete refs to replace objects"
 msgstr "创建、列出、删除对象替换引用"
 
 #: command-list.h
+msgid "EXPERIMENTAL: Replay commits on a new base, works with bare repos too"
+msgstr "试验中：基于一个新基线重放提交，同样适用于纯仓库"
+
+#: command-list.h
 msgid "Generates a summary of pending changes"
 msgstr "生成待定更改的摘要"
 
@@ -17415,7 +17781,7 @@ msgid "Display version information about Git"
 msgstr "显示关于 Git 的版本信息"
 
 #: command-list.h
-msgid "Show logs with difference each commit introduces"
+msgid "Show logs with differences each commit introduces"
 msgstr "显示每一个提交引入的差异日志"
 
 #: command-list.h
@@ -17568,48 +17934,104 @@ msgstr "一个管理大型 Git 仓库的工具"
 
 #: commit-graph.c
 msgid "commit-graph file is too small"
-msgstr "提交图形文件太小"
+msgstr "提交图文件太小"
+
+#: commit-graph.c
+msgid "commit-graph oid fanout chunk is wrong size"
+msgstr "提交图中对象 ID 的扇出块大小错误"
+
+#: commit-graph.c
+msgid "commit-graph fanout values out of order"
+msgstr "提交图的扇出值失序"
+
+#: commit-graph.c
+msgid "commit-graph OID lookup chunk is the wrong size"
+msgstr "提交图的对象 ID 查询块大小错误"
+
+#: commit-graph.c
+msgid "commit-graph commit data chunk is wrong size"
+msgstr "提交图的提交数据块大小错误"
+
+#: commit-graph.c
+msgid "commit-graph generations chunk is wrong size"
+msgstr "提交图的世代块大小错误"
+
+#: commit-graph.c
+msgid "commit-graph changed-path index chunk is too small"
+msgstr "提交图的变更路径的索引块太小"
+
+#: commit-graph.c
+#, c-format
+msgid ""
+"ignoring too-small changed-path chunk (%<PRIuMAX> < %<PRIuMAX>) in commit-"
+"graph file"
+msgstr "忽略提交图文件中过小的更改路径块（%<PRIuMAX> < %<PRIuMAX>）"
 
 #: commit-graph.c
 #, c-format
 msgid "commit-graph signature %X does not match signature %X"
-msgstr "提交图形签名 %X 和签名 %X 不匹配"
+msgstr "提交图签名 %X 和签名 %X 不匹配"
 
 #: commit-graph.c
 #, c-format
 msgid "commit-graph version %X does not match version %X"
-msgstr "提交图形版本 %X 和版本 %X 不匹配"
+msgstr "提交图版本 %X 和版本 %X 不匹配"
 
 #: commit-graph.c
 #, c-format
 msgid "commit-graph hash version %X does not match version %X"
-msgstr "提交图形哈希版本 %X 和版本 %X 不匹配"
+msgstr "提交图哈希版本 %X 和版本 %X 不匹配"
 
 #: commit-graph.c
 #, c-format
 msgid "commit-graph file is too small to hold %u chunks"
-msgstr "提交图形文件太小，容不下 %u 个块"
+msgstr "提交图文件太小，容不下 %u 个块"
+
+#: commit-graph.c
+msgid "commit-graph required OID fanout chunk missing or corrupted"
+msgstr "提交图所需的对象 ID 扇出块缺失或损坏"
+
+#: commit-graph.c
+msgid "commit-graph required OID lookup chunk missing or corrupted"
+msgstr "提交图所需的对象 ID 查询块缺失或损坏"
+
+#: commit-graph.c
+msgid "commit-graph required commit data chunk missing or corrupted"
+msgstr "提交图所需的提交数据块缺失或损坏"
 
 #: commit-graph.c
 msgid "commit-graph has no base graphs chunk"
-msgstr "提交图形没有基础图形块"
+msgstr "提交图没有基础图形块"
+
+#: commit-graph.c
+msgid "commit-graph base graphs chunk is too small"
+msgstr "提交图的基础图形块过小"
 
 #: commit-graph.c
 msgid "commit-graph chain does not match"
-msgstr "提交图形链不匹配"
+msgstr "提交图链不匹配"
+
+#: commit-graph.c
+#, c-format
+msgid "commit count in base graph too high: %<PRIuMAX>"
+msgstr "基础图形中的提交数量过高：%<PRIuMAX>"
+
+#: commit-graph.c
+msgid "commit-graph chain file too small"
+msgstr "提交图链文件太小"
 
 #: commit-graph.c
 #, c-format
 msgid "invalid commit-graph chain: line '%s' not a hash"
-msgstr "无效的提交图形链：行 '%s' 不是一个哈希值"
+msgstr "无效的提交图链：行 '%s' 不是一个哈希值"
 
 #: commit-graph.c
 msgid "unable to find all commit-graph files"
-msgstr "无法找到所有提交图形文件"
+msgstr "无法找到所有提交图文件"
 
 #: commit-graph.c
 msgid "invalid commit position. commit-graph is likely corrupt"
-msgstr "无效的提交位置。提交图形可能已损坏"
+msgstr "无效的提交位置。提交图可能已损坏"
 
 #: commit-graph.c
 #, c-format
@@ -17619,6 +18041,14 @@ msgstr "无法找到提交 %s"
 #: commit-graph.c
 msgid "commit-graph requires overflow generation data but has none"
 msgstr "提交图需要溢出世代数据，但是没有"
+
+#: commit-graph.c
+msgid "commit-graph overflow generation data is too small"
+msgstr "提交图溢出世代数据过小"
+
+#: commit-graph.c
+msgid "commit-graph extra-edges pointer out of bounds"
+msgstr "提交图额外边的指针越界"
 
 #: commit-graph.c
 msgid "Loading known commits in commit graph"
@@ -17695,15 +18125,26 @@ msgstr[1] "正在用 %d 步写出提交图"
 
 #: commit-graph.c
 msgid "unable to open commit-graph chain file"
-msgstr "无法打开提交图形链文件"
+msgstr "无法打开提交图链文件"
 
 #: commit-graph.c
 msgid "failed to rename base commit-graph file"
-msgstr "无法重命名基础提交图形文件"
+msgstr "无法重命名基础提交图文件"
 
 #: commit-graph.c
 msgid "failed to rename temporary commit-graph file"
-msgstr "无法重命名临时提交图形文件"
+msgstr "无法重命名临时提交图文件"
+
+#: commit-graph.c
+#, c-format
+msgid "cannot merge graphs with %<PRIuMAX>, %<PRIuMAX> commits"
+msgstr ""
+"无法合并提交图，总共已累加提交数：%<PRIuMAX>，当前待累加提交数：%<PRIuMAX>"
+
+#: commit-graph.c
+#, c-format
+msgid "cannot merge graph %s, too many commits: %<PRIuMAX>"
+msgstr "无法合并提交图 %s, 提交过多：%<PRIuMAX>"
 
 #: commit-graph.c
 msgid "Scanning merged commits"
@@ -17711,7 +18152,7 @@ msgstr "正在扫描合并提交"
 
 #: commit-graph.c
 msgid "Merging commit-graph"
-msgstr "正在合并提交图形"
+msgstr "正在合并提交图"
 
 #: commit-graph.c
 msgid "attempting to write a commit-graph, but 'core.commitGraph' is disabled"
@@ -17728,68 +18169,68 @@ msgstr "提交图文件的校验码错误，可能已经损坏"
 #: commit-graph.c
 #, c-format
 msgid "commit-graph has incorrect OID order: %s then %s"
-msgstr "提交图形的对象 ID 顺序不正确：%s 然后 %s"
+msgstr "提交图的对象 ID 顺序不正确：%s 然后 %s"
 
 #: commit-graph.c
 #, c-format
 msgid "commit-graph has incorrect fanout value: fanout[%d] = %u != %u"
-msgstr "提交图形有不正确的扇出值：fanout[%d] = %u != %u"
+msgstr "提交图有不正确的扇出值：fanout[%d] = %u != %u"
 
 #: commit-graph.c
 #, c-format
 msgid "failed to parse commit %s from commit-graph"
-msgstr "无法从提交图形中解析提交 %s"
+msgstr "无法从提交图中解析提交 %s"
+
+#: commit-graph.c
+#, c-format
+msgid "failed to parse commit %s from object database for commit-graph"
+msgstr "无法从提交图的对象库中解析提交 %s"
+
+#: commit-graph.c
+#, c-format
+msgid "root tree OID for commit %s in commit-graph is %s != %s"
+msgstr "提交图中的提交 %s 的根树对象 ID 是 %s != %s"
+
+#: commit-graph.c
+#, c-format
+msgid "commit-graph parent list for commit %s is too long"
+msgstr "提交 %s 的提交图父提交列表太长了"
+
+#: commit-graph.c
+#, c-format
+msgid "commit-graph parent for %s is %s != %s"
+msgstr "%s 的提交图父提交是 %s != %s"
+
+#: commit-graph.c
+#, c-format
+msgid "commit-graph parent list for commit %s terminates early"
+msgstr "提交 %s 的提交图父提交列表过早终止"
+
+#: commit-graph.c
+#, c-format
+msgid "commit-graph generation for commit %s is %<PRIuMAX> < %<PRIuMAX>"
+msgstr "提交图中的提交 %s 的世代号是 %<PRIuMAX> < %<PRIuMAX>"
+
+#: commit-graph.c
+#, c-format
+msgid "commit date for commit %s in commit-graph is %<PRIuMAX> != %<PRIuMAX>"
+msgstr "提交图中提交 %s 的提交日期是 %<PRIuMAX> != %<PRIuMAX>"
+
+#: commit-graph.c
+#, c-format
+msgid ""
+"commit-graph has both zero and non-zero generations (e.g., commits '%s' and "
+"'%s')"
+msgstr "提交图具有零和非零的世代（例如：提交 '%s' 和 '%s'）"
 
 #: commit-graph.c
 msgid "Verifying commits in commit graph"
 msgstr "正在校验提交图中的提交"
 
-#: commit-graph.c
+#: commit-reach.c sequencer.c
 #, c-format
-msgid "failed to parse commit %s from object database for commit-graph"
-msgstr "无法从提交图形的对象库中解析提交 %s"
-
-#: commit-graph.c
-#, c-format
-msgid "root tree OID for commit %s in commit-graph is %s != %s"
-msgstr "提交图形中的提交 %s 的根树对象 ID 是 %s != %s"
-
-#: commit-graph.c
-#, c-format
-msgid "commit-graph parent list for commit %s is too long"
-msgstr "提交 %s 的提交图形父提交列表太长了"
-
-#: commit-graph.c
-#, c-format
-msgid "commit-graph parent for %s is %s != %s"
-msgstr "%s 的提交图形父提交是 %s != %s"
-
-#: commit-graph.c
-#, c-format
-msgid "commit-graph parent list for commit %s terminates early"
-msgstr "提交 %s 的提交图形父提交列表过早终止"
-
-#: commit-graph.c
-#, c-format
-msgid ""
-"commit-graph has generation number zero for commit %s, but non-zero elsewhere"
-msgstr "提交图形中提交 %s 的世代号是零，但其它地方非零"
-
-#: commit-graph.c
-#, c-format
-msgid ""
-"commit-graph has non-zero generation number for commit %s, but zero elsewhere"
-msgstr "提交图形中提交 %s 的世代号非零，但其它地方是零"
-
-#: commit-graph.c
-#, c-format
-msgid "commit-graph generation for commit %s is %<PRIuMAX> < %<PRIuMAX>"
-msgstr "提交图形中的提交 %s 的世代号是 %<PRIuMAX> < %<PRIuMAX>"
-
-#: commit-graph.c
-#, c-format
-msgid "commit date for commit %s in commit-graph is %<PRIuMAX> != %<PRIuMAX>"
-msgstr "提交图形中提交 %s 的提交日期是 %<PRIuMAX> != %<PRIuMAX>"
+msgid "could not parse commit %s"
+msgstr "不能解析提交 %s"
 
 #: commit.c
 #, c-format
@@ -17815,6 +18256,11 @@ msgstr ""
 "\n"
 "设置 \"git config advice.graftFileDeprecated false\"\n"
 "可关闭本消息"
+
+#: commit.c
+#, c-format
+msgid "commit %s exists in commit-graph but not in the object database"
+msgstr "提交 %s 存在于提交图中，但不存在于对象数据库中"
 
 #: commit.c
 #, c-format
@@ -18313,8 +18759,14 @@ msgid "bad zlib compression level %d"
 msgstr "错误的 zlib 压缩级别 %d"
 
 #: config.c
-msgid "core.commentChar should only be one character"
-msgstr "core.commentChar 应该是一个字符"
+#, c-format
+msgid "%s cannot contain newline"
+msgstr "%s 不能包含换行符"
+
+#: config.c
+#, c-format
+msgid "%s must have at least one character"
+msgstr "%s 必须至少有一个字符"
 
 #: config.c
 #, c-format
@@ -18358,11 +18810,6 @@ msgstr "引用 '%s' 没有指向一个数据对象"
 #, c-format
 msgid "unable to resolve config blob '%s'"
 msgstr "不能解析配置对象 '%s'"
-
-#: config.c
-#, c-format
-msgid "failed to parse %s"
-msgstr "无法解析 %s"
 
 #: config.c
 msgid "unable to parse command-line config"
@@ -18409,6 +18856,11 @@ msgstr "无法写入新的配置文件 %s"
 
 #: config.c
 #, c-format
+msgid "no multi-line comment allowed: '%s'"
+msgstr "不允许多行注释：'%s'"
+
+#: config.c
+#, c-format
 msgid "could not lock config file %s"
 msgstr "不能锁定配置文件 %s"
 
@@ -18451,6 +18903,11 @@ msgstr "不能设置 '%s' 为 '%s'"
 #, c-format
 msgid "invalid section name: %s"
 msgstr "无效的小节名称：%s"
+
+#: config.c
+#, c-format
+msgid "refusing to work with overly long line in '%s' on line %<PRIuMAX>"
+msgstr "拒绝支持内容过长的行，位于文件 '%s' 中的第 %<PRIuMAX> 行"
 
 #: config.c
 #, c-format
@@ -18927,10 +19384,6 @@ msgid "--merge-base does not work with ranges"
 msgstr "--merge-base 不适用于范围"
 
 #: diff-lib.c
-msgid "--merge-base only works with commits"
-msgstr "--merge-base 仅适用于提交"
-
-#: diff-lib.c
 msgid "unable to get HEAD"
 msgstr "不能解析 HEAD"
 
@@ -18941,6 +19394,14 @@ msgstr "未找到合并基线"
 #: diff-lib.c
 msgid "multiple merge bases found"
 msgstr "找到了多条合并基线"
+
+#: diff-no-index.c
+msgid "cannot compare stdin to a directory"
+msgstr "无法将标准输入和目录进行比较"
+
+#: diff-no-index.c
+msgid "cannot compare a named pipe to a directory"
+msgstr "无法将命名管道和目录进行比较"
 
 #: diff-no-index.c
 msgid "git diff --no-index [<options>] <path> <path>"
@@ -18992,6 +19453,11 @@ msgstr "color-moved-ws：allow-indentation-change 不能与其它空白字符模
 msgid "Unknown value for 'diff.submodule' config variable: '%s'"
 msgstr "配置变量 'diff.submodule' 未知的取值：'%s'"
 
+#: diff.c transport.c
+#, c-format
+msgid "unknown value for config '%s': %s"
+msgstr "配置 '%s' 未知的取值：%s"
+
 #: diff.c
 #, c-format
 msgid ""
@@ -19005,6 +19471,15 @@ msgstr ""
 #, c-format
 msgid "external diff died, stopping at %s"
 msgstr "外部 diff 退出，停止在 %s"
+
+#: diff.c
+msgid "--follow requires exactly one pathspec"
+msgstr "--follow 明确要求只跟一个路径规格"
+
+#: diff.c
+#, c-format
+msgid "pathspec magic not supported by --follow: %s"
+msgstr "指定 --follow: %s 的同时，不支持在路径规格中使用神奇前缀"
 
 #: diff.c parse-options.c
 #, c-format
@@ -19021,10 +19496,6 @@ msgstr "选项 '%1$s'、'%2$s' 不能同时使用，与 '%4$s' 一起使用 '%3$
 msgid ""
 "options '%s' and '%s' cannot be used together, use '%s' with '%s' and '%s'"
 msgstr "选项 '%1$s'、'%2$s' 不能同时使用，与 '%4$s' 和 '%5$s' 一起使用 '%3$s'"
-
-#: diff.c
-msgid "--follow requires exactly one pathspec"
-msgstr "--follow 明确要求只跟一个路径规格"
 
 #: diff.c
 #, c-format
@@ -19079,13 +19550,6 @@ msgstr "坏的 --color-moved 参数：%s"
 #, c-format
 msgid "invalid mode '%s' in --color-moved-ws"
 msgstr "--color-moved-ws 中的无效模式 '%s' "
-
-#: diff.c
-msgid ""
-"option diff-algorithm accepts \"myers\", \"minimal\", \"patience\" and "
-"\"histogram\""
-msgstr ""
-"diff-algorithm 选项有 \"myers\"、\"minimal\"、\"patience\" 和 \"histogram\""
 
 #: diff.c
 #, c-format
@@ -19144,8 +19608,8 @@ msgid "output only the last line of --stat"
 msgstr "只输出 --stat 的最后一行"
 
 #: diff.c
-msgid "<param1,param2>..."
-msgstr "<参数1,参数2>..."
+msgid "<param1>,<param2>..."
+msgstr "<参数1>,<参数2>..."
 
 #: diff.c
 msgid ""
@@ -19157,8 +19621,8 @@ msgid "synonym for --dirstat=cumulative"
 msgstr "和 --dirstat=cumulative 同义"
 
 #: diff.c
-msgid "synonym for --dirstat=files,param1,param2..."
-msgstr "是 --dirstat=files,param1,param2... 的同义词"
+msgid "synonym for --dirstat=files,<param1>,<param2>..."
+msgstr "是 --dirstat=files,<参数1>,<参数2>... 的同义词"
 
 #: diff.c
 msgid "warn if changes introduce conflict markers or whitespace errors"
@@ -19261,6 +19725,10 @@ msgstr "输出的每一行附加前缀"
 #: diff.c
 msgid "do not show any source or destination prefix"
 msgstr "不显示任何源和目标前缀"
+
+#: diff.c
+msgid "use default prefixes a/ and b/"
+msgstr "使用 a/ 和 b/ 作为默认前缀"
 
 #: diff.c
 msgid "show context between diff hunks up to the specified number of lines"
@@ -19375,14 +19843,6 @@ msgstr "使用 \"patience diff\" 算法生成差异"
 #: diff.c
 msgid "generate diff using the \"histogram diff\" algorithm"
 msgstr "使用 \"histogram diff\" 算法生成差异"
-
-#: diff.c
-msgid "<algorithm>"
-msgstr "<算法>"
-
-#: diff.c
-msgid "choose a diff algorithm"
-msgstr "选择一个差异算法"
 
 #: diff.c
 msgid "<text>"
@@ -19630,6 +20090,16 @@ msgstr "不能从 '%s' 迁移 git 目录到 '%s'"
 #, c-format
 msgid "hint: Waiting for your editor to close the file...%c"
 msgstr "提示：等待您的编辑器关闭文件...%c"
+
+#: editor.c sequencer.c wrapper.c
+#, c-format
+msgid "could not write to '%s'"
+msgstr "不能写入 '%s'"
+
+#: editor.c
+#, c-format
+msgid "could not edit '%s'"
+msgstr "不能编辑 '%s'"
 
 #: entry.c
 msgid "Filtering content"
@@ -19996,6 +20466,11 @@ msgstr "应为 -c 提供一个配置字符串\n"
 #, c-format
 msgid "no config key given for --config-env\n"
 msgstr "没有为 --config-env 提供配置名称\n"
+
+#: git.c
+#, c-format
+msgid "no attribute source given for --attr-source\n"
+msgstr "没有为 --attr-source 提供属性来源\n"
 
 #: git.c
 #, c-format
@@ -20562,6 +21037,16 @@ msgstr ""
 msgid "Unable to create '%s.lock': %s"
 msgstr "不能创建 '%s.lock'：%s"
 
+#: loose.c
+#, c-format
+msgid "could not write loose object index %s"
+msgstr "不能写入松散对象索引 %s"
+
+#: loose.c
+#, c-format
+msgid "failed to write loose object index %s\n"
+msgstr "无法写入松散对象索引 %s\n"
+
 #: ls-refs.c
 #, c-format
 msgid "unexpected line: '%s'"
@@ -20574,6 +21059,11 @@ msgstr "在 ls-refs 参数后应该有一个 flush 包"
 #: mailinfo.c
 msgid "quoted CRLF detected"
 msgstr "检测到被引用的 CRLF"
+
+#: mem-pool.c strbuf.c wrapper.c
+#, c-format
+msgid "unable to format message: %s"
+msgstr "无法格式化消息：%s"
 
 #: merge-ort.c merge-recursive.c
 #, c-format
@@ -20589,6 +21079,11 @@ msgstr "无法合并子模组 %s （没有合并基线）"
 #, c-format
 msgid "Failed to merge submodule %s (commits not present)"
 msgstr "无法合并子模组 %s（提交不存在）"
+
+#: merge-ort.c merge-recursive.c
+#, c-format
+msgid "Failed to merge submodule %s (repository corrupt)"
+msgstr "无法合并子模组 %s（仓库损坏）"
 
 #: merge-ort.c merge-recursive.c
 #, c-format
@@ -20621,12 +21116,12 @@ msgstr ""
 "%s"
 
 #: merge-ort.c merge-recursive.c
-msgid "Failed to execute internal merge"
+msgid "failed to execute internal merge"
 msgstr "无法执行内部合并"
 
 #: merge-ort.c merge-recursive.c
 #, c-format
-msgid "Unable to add %s to database"
+msgid "unable to add %s to database"
 msgstr "不能添加 %s 至对象库"
 
 #: merge-ort.c merge-recursive.c
@@ -21120,9 +21615,121 @@ msgstr "不能解析对象 '%s'"
 msgid "failed to read the cache"
 msgstr "无法读取缓存"
 
+#: midx-write.c
+#, c-format
+msgid "failed to add packfile '%s'"
+msgstr "无法添加包文件 '%s'"
+
+#: midx-write.c
+#, c-format
+msgid "failed to open pack-index '%s'"
+msgstr "无法打开包索引 '%s'"
+
+#: midx-write.c
+#, c-format
+msgid "failed to locate object %d in packfile"
+msgstr "无法在包文件中定位对象 %d"
+
+#: midx-write.c
+msgid "cannot store reverse index file"
+msgstr "无法存储反向索引文件"
+
+#: midx-write.c
+#, c-format
+msgid "could not parse line: %s"
+msgstr "不能解析行：%s"
+
+#: midx-write.c
+#, c-format
+msgid "malformed line: %s"
+msgstr "格式错误的行：%s"
+
+#: midx-write.c
+msgid "ignoring existing multi-pack-index; checksum mismatch"
+msgstr "忽略已存在的多包索引，校验码不匹配"
+
+#: midx-write.c
+msgid "could not load pack"
+msgstr "不能载入包"
+
+#: midx-write.c
+#, c-format
+msgid "could not open index for %s"
+msgstr "不能打开 %s 的索引"
+
+#: midx-write.c
+msgid "Adding packfiles to multi-pack-index"
+msgstr "添加包文件到多包索引"
+
+#: midx-write.c
+#, c-format
+msgid "unknown preferred pack: '%s'"
+msgstr "未知的首选包：'%s'"
+
+#: midx-write.c
+#, c-format
+msgid "cannot select preferred pack %s with no objects"
+msgstr "不能选择没有对象的首选包 %s"
+
+#: midx-write.c
+#, c-format
+msgid "did not see pack-file %s to drop"
+msgstr "没有看到要丢弃的包文件 %s"
+
+#: midx-write.c
+#, c-format
+msgid "preferred pack '%s' is expired"
+msgstr "首选包 '%s' 已过期"
+
+#: midx-write.c
+msgid "no pack files to index."
+msgstr "没有要索引的包文件。"
+
+#: midx-write.c
+msgid "refusing to write multi-pack .bitmap without any objects"
+msgstr "拒绝写入没有任何对象的多包位图"
+
+#: midx-write.c
+msgid "could not write multi-pack bitmap"
+msgstr "无法写入多包位图"
+
+#: midx-write.c
+msgid "could not write multi-pack-index"
+msgstr "无法写入多包索引"
+
+#: midx-write.c
+msgid "Counting referenced objects"
+msgstr "正在对引用对象计数"
+
+#: midx-write.c
+msgid "Finding and deleting unreferenced packfiles"
+msgstr "正在查找和删除未引用的包文件"
+
+#: midx-write.c
+msgid "could not start pack-objects"
+msgstr "不能开始 pack-objects"
+
+#: midx-write.c
+msgid "could not finish pack-objects"
+msgstr "不能结束 pack-objects"
+
 #: midx.c
 msgid "multi-pack-index OID fanout is of the wrong size"
-msgstr "多包索引的对象ID扇出表大小错误"
+msgstr "多包索引的对象 ID 扇出表大小错误"
+
+#: midx.c
+#, c-format
+msgid ""
+"oid fanout out of order: fanout[%d] = %<PRIx32> > %<PRIx32> = fanout[%d]"
+msgstr "对象 ID 扇出失序：fanout[%d] = %<PRIx32> > %<PRIx32> = fanout[%d]"
+
+#: midx.c
+msgid "multi-pack-index OID lookup chunk is the wrong size"
+msgstr "多包索引的对象 ID 查询块大小错误"
+
+#: midx.c
+msgid "multi-pack-index object offset chunk is the wrong size"
+msgstr "多包索引的对象 ID 偏移块大小错误"
 
 #: midx.c
 #, c-format
@@ -21145,20 +21752,24 @@ msgid "multi-pack-index hash version %u does not match version %u"
 msgstr "多包索引哈希版本 %u 和版本 %u 不匹配"
 
 #: midx.c
-msgid "multi-pack-index missing required pack-name chunk"
-msgstr "多包索引缺少必需的包名块"
+msgid "multi-pack-index required pack-name chunk missing or corrupted"
+msgstr "多包索引必需的包名块缺失或损坏"
 
 #: midx.c
-msgid "multi-pack-index missing required OID fanout chunk"
-msgstr "多包索引缺少必需的对象 ID 扇出块"
+msgid "multi-pack-index required OID fanout chunk missing or corrupted"
+msgstr "多包索引必需的对象 ID 扇出块缺失或损坏"
 
 #: midx.c
-msgid "multi-pack-index missing required OID lookup chunk"
-msgstr "多包索引缺少必需的对象 ID 查询块"
+msgid "multi-pack-index required OID lookup chunk missing or corrupted"
+msgstr "多包索引必需的对象 ID 查询块缺失或损坏"
 
 #: midx.c
-msgid "multi-pack-index missing required object offsets chunk"
-msgstr "多包索引缺少必需的对象偏移块"
+msgid "multi-pack-index required object offsets chunk missing or corrupted"
+msgstr "多包索引必需的对象偏移块缺少或损坏"
+
+#: midx.c
+msgid "multi-pack-index pack-name chunk is too short"
+msgstr "多包索引包名块过短"
 
 #: midx.c
 #, c-format
@@ -21171,90 +21782,21 @@ msgid "bad pack-int-id: %u (%u total packs)"
 msgstr "错的 pack-int-id：%u（共有 %u 个包）"
 
 #: midx.c
+msgid "MIDX does not contain the BTMP chunk"
+msgstr "多包索引中未包含 BTMP 块"
+
+#: midx.c
+#, c-format
+msgid "could not load bitmapped pack %<PRIu32>"
+msgstr "不能打开已被位图索引的包 %<PRIu32>"
+
+#: midx.c
 msgid "multi-pack-index stores a 64-bit offset, but off_t is too small"
 msgstr "多包索引存储一个64位偏移，但是 off_t 太小"
 
 #: midx.c
-#, c-format
-msgid "failed to add packfile '%s'"
-msgstr "无法添加包文件 '%s'"
-
-#: midx.c
-#, c-format
-msgid "failed to open pack-index '%s'"
-msgstr "无法打开包索引 '%s'"
-
-#: midx.c
-#, c-format
-msgid "failed to locate object %d in packfile"
-msgstr "无法在包文件中定位对象 %d"
-
-#: midx.c
-msgid "cannot store reverse index file"
-msgstr "无法存储反向索引文件"
-
-#: midx.c
-#, c-format
-msgid "could not parse line: %s"
-msgstr "不能解析行：%s"
-
-#: midx.c
-#, c-format
-msgid "malformed line: %s"
-msgstr "格式错误的行：%s"
-
-#: midx.c
-msgid "ignoring existing multi-pack-index; checksum mismatch"
-msgstr "忽略已存在的多包索引，校验码不匹配"
-
-#: midx.c
-msgid "could not load pack"
-msgstr "不能载入包"
-
-#: midx.c
-#, c-format
-msgid "could not open index for %s"
-msgstr "不能打开 %s 的索引"
-
-#: midx.c
-msgid "Adding packfiles to multi-pack-index"
-msgstr "添加包文件到多包索引"
-
-#: midx.c
-#, c-format
-msgid "unknown preferred pack: '%s'"
-msgstr "未知的首选包：'%s'"
-
-#: midx.c
-#, c-format
-msgid "cannot select preferred pack %s with no objects"
-msgstr "不能选择没有对象的首选包 %s"
-
-#: midx.c
-#, c-format
-msgid "did not see pack-file %s to drop"
-msgstr "没有看到要丢弃的包文件 %s"
-
-#: midx.c
-#, c-format
-msgid "preferred pack '%s' is expired"
-msgstr "首选包 '%s' 已过期"
-
-#: midx.c
-msgid "no pack files to index."
-msgstr "没有要索引的包文件。"
-
-#: midx.c
-msgid "refusing to write multi-pack .bitmap without any objects"
-msgstr "拒绝写入没有任何对象的多包位图 .bitmap"
-
-#: midx.c
-msgid "could not write multi-pack bitmap"
-msgstr "无法写入多包位图"
-
-#: midx.c
-msgid "could not write multi-pack-index"
-msgstr "无法写入多包索引"
+msgid "multi-pack-index large offset out of bounds"
+msgstr "多包索引大偏移区越界"
 
 #: midx.c
 #, c-format
@@ -21272,12 +21814,6 @@ msgstr "不正确的校验码"
 #: midx.c
 msgid "Looking for referenced packfiles"
 msgstr "正在查找引用的包文件"
-
-#: midx.c
-#, c-format
-msgid ""
-"oid fanout out of order: fanout[%d] = %<PRIx32> > %<PRIx32> = fanout[%d]"
-msgstr "对象 ID 扇出无序：fanout[%d] = %<PRIx32> > %<PRIx32> = fanout[%d]"
 
 #: midx.c
 msgid "the midx contains no oid"
@@ -21314,22 +21850,6 @@ msgstr "无法为包文件 %s 加载包索引"
 #, c-format
 msgid "incorrect object offset for oid[%d] = %s: %<PRIx64> != %<PRIx64>"
 msgstr "oid[%d] = %s 错误的对象偏移：%<PRIx64> != %<PRIx64>"
-
-#: midx.c
-msgid "Counting referenced objects"
-msgstr "正在对引用对象计数"
-
-#: midx.c
-msgid "Finding and deleting unreferenced packfiles"
-msgstr "正在查找和删除未引用的包文件"
-
-#: midx.c
-msgid "could not start pack-objects"
-msgstr "不能开始 pack-objects"
-
-#: midx.c
-msgid "could not finish pack-objects"
-msgstr "不能结束 pack-objects"
 
 #: name-hash.c
 #, c-format
@@ -21384,6 +21904,30 @@ msgstr "拒绝向 %s（在 refs/notes/ 之外）写入注解"
 #, c-format
 msgid "Bad %s value: '%s'"
 msgstr "坏的 %s 值：'%s'"
+
+#: object-file-convert.c
+msgid "failed to decode tree entry"
+msgstr "无法解码树对象"
+
+#: object-file-convert.c
+#, c-format
+msgid "failed to map tree entry for %s"
+msgstr "无法为 %s 映射树对象"
+
+#: object-file-convert.c
+#, c-format
+msgid "bad %s in commit"
+msgstr "提交中有错误的 %s"
+
+#: object-file-convert.c
+#, c-format
+msgid "unable to map %s %s in commit object"
+msgstr "无法将 %s %s 映射到提交对象中"
+
+#: object-file-convert.c
+#, c-format
+msgid "Failed to convert object from %s to %s"
+msgstr "无法将对象从 %s 转换为 %s"
 
 #: object-file.c
 #, c-format
@@ -21513,6 +22057,11 @@ msgstr "打包对象 %s（保存在 %s）已损坏"
 
 #: object-file.c
 #, c-format
+msgid "missing mapping of %s to %s"
+msgstr "缺少 %s 到 %s 的映射"
+
+#: object-file.c
+#, c-format
 msgid "unable to write file %s"
 msgstr "无法写文件 %s"
 
@@ -21577,6 +22126,11 @@ msgstr "无法创建目录 %s"
 #, c-format
 msgid "cannot read object for %s"
 msgstr "不能读取对象 %s"
+
+#: object-file.c
+#, c-format
+msgid "cannot map object %s to %s"
+msgstr "无法将对象 %s 映射到 %s"
 
 #: object-file.c
 #, c-format
@@ -21908,6 +22462,10 @@ msgstr "多包位图缺少必需的反向索引"
 msgid "could not open pack %s"
 msgstr "不能打开包 %s"
 
+#: pack-bitmap.c t/helper/test-read-midx.c
+msgid "could not determine MIDX preferred pack"
+msgstr "不能确定多包索引的首选包"
+
 #: pack-bitmap.c
 #, c-format
 msgid "preferred pack (%s) is invalid"
@@ -21930,6 +22488,15 @@ msgstr "损坏的位图查询表：提交索引 %u 超出范围"
 #, c-format
 msgid "corrupt ewah bitmap: truncated header for bitmap of commit \"%s\""
 msgstr "损坏的 EWAH 位图：提交 \"%s\" 位图的文件头被截断"
+
+#: pack-bitmap.c
+#, c-format
+msgid "unable to load pack: '%s', disabling pack-reuse"
+msgstr "无法打开包：'%s'，禁用包重用"
+
+#: pack-bitmap.c
+msgid "unable to compute preferred pack, disabling pack-reuse"
+msgstr "无法计算首选包，禁用包重用"
 
 #: pack-bitmap.c
 #, c-format
@@ -21977,6 +22544,11 @@ msgstr "无法在包 '%2$s' 偏移 %3$<PRIuMAX> 中找到 '%1$s'"
 #, c-format
 msgid "unable to get disk usage of '%s'"
 msgstr "无法得到 '%s' 的磁盘使用量"
+
+#: pack-bitmap.c
+#, c-format
+msgid "bitmap file '%s' has invalid checksum"
+msgstr "位图文件 '%s' 有无效的校验码"
 
 #: pack-mtimes.c
 #, c-format
@@ -22027,6 +22599,23 @@ msgstr "反向索引文件 %s 不支持的版本 %<PRIu32>"
 #, c-format
 msgid "reverse-index file %s has unsupported hash id %<PRIu32>"
 msgstr "反向索引文件 %s 有不支持的哈希 ID %<PRIu32>"
+
+#: pack-revindex.c
+msgid "invalid checksum"
+msgstr "无效的校验码 %s"
+
+#: pack-revindex.c
+#, c-format
+msgid "invalid rev-index position at %<PRIu64>: %<PRIu32> != %<PRIu32>"
+msgstr "位于 %<PRIu64> 的无效的反向索引：%<PRIu32> != %<PRIu32>"
+
+#: pack-revindex.c
+msgid "multi-pack-index reverse-index chunk is the wrong size"
+msgstr "多包索引的反向索引块大小错误"
+
+#: pack-revindex.c
+msgid "could not determine preferred pack"
+msgstr "无法确定首选包"
 
 #: pack-write.c
 msgid "cannot both write and verify reverse index"
@@ -22090,16 +22679,6 @@ msgstr "选项 `%s' 期望 \"%s\" 或 \"%s\""
 #, c-format
 msgid "%s requires a value"
 msgstr "%s 需要一个值"
-
-#: parse-options.c
-#, c-format
-msgid "%s is incompatible with %s"
-msgstr "%s 与 %s 不兼容"
-
-#: parse-options.c
-#, c-format
-msgid "%s : incompatible with something else"
-msgstr "%s：和其它的不兼容"
 
 #: parse-options.c
 #, c-format
@@ -22201,6 +22780,11 @@ msgstr "    %s"
 msgid "-NUM"
 msgstr "-数字"
 
+#: parse-options.c
+#, c-format
+msgid "opposite of --no-%s"
+msgstr "与 --no-%s 相反"
+
 #: parse-options.h
 msgid "expiry-date"
 msgstr "到期时间"
@@ -22237,6 +22821,16 @@ msgstr "从文件读取路径表达式"
 msgid ""
 "with --pathspec-from-file, pathspec elements are separated with NUL character"
 msgstr "使用 --pathspec-from-file，路径表达式用空字符分隔"
+
+#: parse.c
+#, c-format
+msgid "bad boolean environment value '%s' for '%s'"
+msgstr "对于 '%2$s' 的错误的布尔环境取值 '%1$s'"
+
+#: parse.c
+#, c-format
+msgid "failed to parse %s"
+msgstr "无法解析 %s"
 
 #: path.c
 #, c-format
@@ -22293,6 +22887,11 @@ msgstr "路径规格 '%2$s' 中包含未实现的神奇前缀 '%1$c'"
 #, c-format
 msgid "%s: 'literal' and 'glob' are incompatible"
 msgstr "%s：'literal' 和 'glob' 不兼容"
+
+#: pathspec.c
+#, c-format
+msgid "'%s' is outside the directory tree"
+msgstr "'%s' 位于目录树之外"
 
 #: pathspec.c
 #, c-format
@@ -22452,6 +23051,15 @@ msgstr "无法生成 diff"
 msgid "could not parse log for '%s'"
 msgstr "不能解析 '%s' 的日志"
 
+#: reachable.c
+#, c-format
+msgid "invalid extra cruft tip: '%s'"
+msgstr "无效的额外废弃提交版本：'%s'"
+
+#: reachable.c
+msgid "unable to enumerate additional recent objects"
+msgstr "无法枚举额外的近期对象"
+
 #: read-cache.c
 #, c-format
 msgid "will not add file alias '%s' ('%s' already exists in index)"
@@ -22475,11 +23083,6 @@ msgstr "无法索引文件 '%s'"
 #, c-format
 msgid "unable to add '%s' to index"
 msgstr "无法在索引中添加 '%s'"
-
-#: read-cache.c
-#, c-format
-msgid "unable to stat '%s'"
-msgstr "无法对 %s 执行 stat"
 
 #: read-cache.c
 #, c-format
@@ -22616,11 +23219,6 @@ msgstr "无法转换为稀疏索引"
 
 #: read-cache.c
 #, c-format
-msgid "could not stat '%s'"
-msgstr "不能对 '%s' 调用 stat"
-
-#: read-cache.c
-#, c-format
 msgid "unable to open git dir: %s"
 msgstr "不能打开 git 目录：%s"
 
@@ -22638,6 +23236,16 @@ msgstr "不能修复 '%s' 的权限位"
 #, c-format
 msgid "%s: cannot drop to stage #0"
 msgstr "%s：不能落到暂存区 #0"
+
+#: read-cache.c
+#, c-format
+msgid "unexpected diff status %c"
+msgstr "意外的差异状态 %c"
+
+#: read-cache.c
+#, c-format
+msgid "remove '%s'\n"
+msgstr "删除 '%s'\n"
 
 #: rebase-interactive.c
 msgid ""
@@ -22854,6 +23462,26 @@ msgstr "期望一个正数 contents:lines=%s"
 
 #: ref-filter.c
 #, c-format
+msgid "argument expected for %s"
+msgstr "预期参数 %s"
+
+#: ref-filter.c
+#, c-format
+msgid "positive value expected %s=%s"
+msgstr "预期正数参数值 %s=%s"
+
+#: ref-filter.c
+#, c-format
+msgid "cannot fully parse %s=%s"
+msgstr "不能完整解析 %s=%s"
+
+#: ref-filter.c
+#, c-format
+msgid "value expected %s="
+msgstr "预期值 %s="
+
+#: ref-filter.c
+#, c-format
 msgid "positive value expected '%s' in %%(%s)"
 msgstr "期望 %%(%2$s) 中的 '%1$s' 是一个正数"
 
@@ -22881,6 +23509,11 @@ msgstr "未能识别的 %%(%s) 参数：%s"
 #, c-format
 msgid "positive width expected with the %%(align) atom"
 msgstr "元素 %%(align) 需要一个正数的宽度"
+
+#: ref-filter.c
+#, c-format
+msgid "expected format: %%(ahead-behind:<committish>)"
+msgstr "期望的格式：%%(ahead-behind:<提交号>)"
 
 #: ref-filter.c
 #, c-format
@@ -22937,6 +23570,10 @@ msgstr "这个命令拒绝元素 %%(%.*s)"
 #, c-format
 msgid "--format=%.*s cannot be used with --python, --shell, --tcl"
 msgstr "--format=%.*s 不能和 --python、--shell、--tcl 同时使用"
+
+#: ref-filter.c
+msgid "failed to run 'describe'"
+msgstr "无法运行 'describe'"
 
 #: ref-filter.c
 #, c-format
@@ -23014,6 +23651,10 @@ msgstr "key"
 #: ref-filter.h
 msgid "field name to sort on"
 msgstr "排序的字段名"
+
+#: ref-filter.h
+msgid "exclude refs which match pattern"
+msgstr "排除与 <模式> 相匹配的引用"
 
 #: reflog.c
 #, c-format
@@ -23117,20 +23758,93 @@ msgstr "'%s' 已存在，无法创建 '%s'"
 msgid "cannot process '%s' and '%s' at the same time"
 msgstr "无法同时处理 '%s' 和 '%s'"
 
-#: refs/files-backend.c
-#, c-format
-msgid "could not remove reference %s"
-msgstr "无法删除引用 %s"
-
-#: refs/files-backend.c refs/packed-backend.c
+#: refs.c
 #, c-format
 msgid "could not delete reference %s: %s"
 msgstr "无法删除引用 %s：%s"
 
-#: refs/files-backend.c refs/packed-backend.c
+#: refs.c
 #, c-format
 msgid "could not delete references: %s"
 msgstr "无法删除引用：%s"
+
+#: refs/reftable-backend.c
+#, c-format
+msgid "refname is dangerous: %s"
+msgstr "危险的引用名称：%s"
+
+#: refs/reftable-backend.c
+#, c-format
+msgid "trying to write ref '%s' with nonexistent object %s"
+msgstr "试图用不存在的对象 %2$s 写入引用 '%1$s'"
+
+#: refs/reftable-backend.c
+#, c-format
+msgid "trying to write non-commit object %s to branch '%s'"
+msgstr "尝试将非提交对象 %s 写入分支 '%s'"
+
+#: refs/reftable-backend.c
+#, c-format
+msgid ""
+"multiple updates for 'HEAD' (including one via its referent '%s') are not "
+"allowed"
+msgstr "不允许对 'HEAD' 进行多次更新（包括通过其引用 '%s' 进行的更新）"
+
+#: refs/reftable-backend.c
+#, c-format
+msgid "cannot lock ref '%s': unable to resolve reference '%s'"
+msgstr "无法锁定引用 '%s'：无法解析引用 '%s'"
+
+#: refs/reftable-backend.c
+#, c-format
+msgid "cannot lock ref '%s': error reading reference"
+msgstr "无法锁定引用 '%s'：读取引用时出错"
+
+#: refs/reftable-backend.c
+#, c-format
+msgid ""
+"multiple updates for '%s' (including one via symref '%s') are not allowed"
+msgstr "不允许对 '%s' 进行多次更新（包括通过符号引用 '%s' 更新）"
+
+#: refs/reftable-backend.c
+#, c-format
+msgid "cannot lock ref '%s': reference already exists"
+msgstr "无法锁定引用 '%s'：引用已存在"
+
+#: refs/reftable-backend.c
+#, c-format
+msgid "cannot lock ref '%s': reference is missing but expected %s"
+msgstr "无法锁定 '%s' 引用：引用丢失，但预期为 %s"
+
+#: refs/reftable-backend.c
+#, c-format
+msgid "cannot lock ref '%s': is at %s but expected %s"
+msgstr "无法锁定 '%s' 引用：位于 %s，但预期为 %s"
+
+#: refs/reftable-backend.c
+#, c-format
+msgid "reftable: transaction prepare: %s"
+msgstr "reftable: 事务准备：%s"
+
+#: refs/reftable-backend.c
+#, c-format
+msgid "reftable: transaction failure: %s"
+msgstr "reftable: 事务失败：%s"
+
+#: refs/reftable-backend.c
+#, c-format
+msgid "unable to compact stack: %s"
+msgstr "无法压缩栈：%s"
+
+#: refs/reftable-backend.c
+#, c-format
+msgid "refname %s not found"
+msgstr "引用名称 %s 未找到"
+
+#: refs/reftable-backend.c
+#, c-format
+msgid "refname %s is a symbolic ref, copying it is not supported"
+msgstr "引用名 %s 是一个符号引用，不支持复制"
 
 #: refspec.c
 #, c-format
@@ -23141,6 +23855,11 @@ msgstr "无效的引用规格：'%s'"
 #, c-format
 msgid "invalid quoting in push-option value: '%s'"
 msgstr "在 push-option 取值中无效的引号：'%s'"
+
+#: remote-curl.c
+#, c-format
+msgid "unknown value for object-format: %s"
+msgstr "对象格式的未知取值：%s"
 
 #: remote-curl.c
 #, c-format
@@ -23544,8 +24263,9 @@ msgstr[1] ""
 
 #  译者：注意保持前导空格
 #: remote.c
-msgid "  (use \"git pull\" to merge the remote branch into yours)\n"
-msgstr "  （使用 \"git pull\" 来合并远程分支）\n"
+msgid ""
+"  (use \"git pull\" if you want to integrate the remote branch with yours)\n"
+msgstr "  （如果您想将远程分支与您的更改合并，请使用 \"git pull\"）\n"
 
 #: remote.c
 #, c-format
@@ -23637,11 +24357,6 @@ msgstr "没有为 '%s' 记忆的解决方案"
 
 #: rerere.c
 #, c-format
-msgid "cannot unlink '%s'"
-msgstr "不能删除 '%s'"
-
-#: rerere.c
-#, c-format
 msgid "Updated preimage for '%s'"
 msgstr "已为 '%s' 更新 preimage"
 
@@ -23683,12 +24398,30 @@ msgstr "resolve-undo 记录 `%s`，现缺失"
 
 #: revision.c
 #, c-format
-msgid "could not get commit for ancestry-path argument %s"
-msgstr "无法获得 ancestry-path 参数 %s 的提交"
+msgid "%s exists but is a symbolic ref"
+msgstr "%s 存在但是一个符号引用"
+
+#: revision.c
+msgid ""
+"--merge requires one of the pseudorefs MERGE_HEAD, CHERRY_PICK_HEAD, "
+"REVERT_HEAD or REBASE_HEAD"
+msgstr ""
+"--merge 选项需要指定 MERGE_HEAD、CHERRY_PICK_HEAD、REVERT_HEAD 或 "
+"REBASE_HEAD 中的一个伪引用"
+
+#: revision.c
+#, c-format
+msgid "could not get commit for --ancestry-path argument %s"
+msgstr "无法获得 --ancestry-path 参数 %s 的提交"
 
 #: revision.c
 msgid "--unpacked=<packfile> no longer supported"
 msgstr "不再支持 --unpacked=<packfile>"
+
+#: revision.c
+#, c-format
+msgid "invalid option '%s' in --stdin mode"
+msgstr "在 --stdin 模式下的无效选项：'%s'"
 
 #: revision.c
 msgid "your current branch appears to be broken"
@@ -23801,8 +24534,16 @@ msgid "only download metadata for the branch that will be checked out"
 msgstr "只下载要检出的分支的元信息"
 
 #: scalar.c
-msgid "scalar clone [<options>] [--] <repo> [<dir>]"
-msgstr "scalar clone [<选项>] [--] <仓库> [<目录>]"
+msgid "create repository within 'src' directory"
+msgstr "在 'src' 目录中创建仓库"
+
+#: scalar.c
+msgid ""
+"scalar clone [--single-branch] [--branch <main-branch>] [--full-clone]\n"
+"\t[--[no-]src] <url> [<enlistment>]"
+msgstr ""
+"scalar clone [--single-branch] [--branch <main-branch>] [--full-clone]\n"
+"\t[--[no-]src] <url> [<登记>]"
 
 #: scalar.c
 #, c-format
@@ -23868,13 +24609,32 @@ msgstr "无法删除过期的 scalar.repo '%s'"
 
 #: scalar.c
 #, c-format
-msgid "removing stale scalar.repo '%s'"
-msgstr "正在删除过期的 scalar.repo '%s'"
+msgid "removed stale scalar.repo '%s'"
+msgstr "已删除过期的 scalar.repo '%s'"
 
 #: scalar.c
 #, c-format
-msgid "git repository gone in '%s'"
-msgstr "在 '%s' 的 git 仓库已消失"
+msgid "repository at '%s' has different owner"
+msgstr "位于 '%s' 处的仓库有不同的所有者"
+
+#: scalar.c
+#, c-format
+msgid "repository at '%s' has a format issue"
+msgstr "位于 '%s' 处的仓库存在格式问题"
+
+#: scalar.c
+#, c-format
+msgid "repository not found in '%s'"
+msgstr "在 '%s' 中找不到仓库"
+
+#: scalar.c
+#, c-format
+msgid ""
+"to unregister this repository from Scalar, run\n"
+"\tgit config --global --unset --fixed-value scalar.repo \"%s\""
+msgstr ""
+"若希望从 Scalar 注销该仓库，执行\n"
+"\tgit config --global --unset --fixed-value scalar.repo \"%s\""
 
 #: scalar.c
 msgid ""
@@ -24013,6 +24773,19 @@ msgstr "未知动作：%d"
 
 #: sequencer.c
 msgid ""
+"Resolve all conflicts manually, mark them as resolved with\n"
+"\"git add/rm <conflicted_files>\", then run \"git rebase --continue\".\n"
+"You can instead skip this commit: run \"git rebase --skip\".\n"
+"To abort and get back to the state before \"git rebase\", run \"git rebase --"
+"abort\"."
+msgstr ""
+"手工解决所有冲突，执行 \"git add/rm <冲突的文件>\" 标记\n"
+"冲突已解决，然后执行 \"git rebase --continue\"。您也可以执行\n"
+"\"git rebase --skip\" 命令跳过这个提交。如果想要终止执行并回到\n"
+"\"git rebase\" 执行之前的状态，执行 \"git rebase --abort\"。"
+
+#: sequencer.c
+msgid ""
 "after resolving the conflicts, mark the corrected paths\n"
 "with 'git add <paths>' or 'git rm <paths>'"
 msgstr ""
@@ -24051,11 +24824,6 @@ msgstr ""
 #, c-format
 msgid "could not lock '%s'"
 msgstr "不能锁定 '%s'"
-
-#: sequencer.c strbuf.c wrapper.c
-#, c-format
-msgid "could not write to '%s'"
-msgstr "不能写入 '%s'"
 
 #: sequencer.c
 #, c-format
@@ -24259,15 +25027,10 @@ msgstr "无效的作者身份 '%s'"
 msgid "corrupt author: missing date information"
 msgstr "损坏的作者：缺失日期信息"
 
-#: sequencer.c t/helper/test-fast-rebase.c
+#: sequencer.c
 #, c-format
 msgid "could not update %s"
 msgstr "不能更新 %s"
-
-#: sequencer.c
-#, c-format
-msgid "could not parse commit %s"
-msgstr "不能解析提交 %s"
 
 #: sequencer.c
 #, c-format
@@ -24356,11 +25119,6 @@ msgstr "%s：不能解析父提交 %s"
 
 #: sequencer.c
 #, c-format
-msgid "could not rename '%s' to '%s'"
-msgstr "不能将 '%s' 重命名为 '%s'"
-
-#: sequencer.c
-#, c-format
 msgid "could not revert %s... %s"
 msgstr "不能还原 %s... %s"
 
@@ -24403,11 +25161,6 @@ msgstr "update-ref 需要一个完整的引用名，例如：refs/heads/%s"
 #, c-format
 msgid "invalid command '%.*s'"
 msgstr "无效命令 '%.*s'"
-
-#: sequencer.c
-#, c-format
-msgid "%s does not accept arguments: '%s'"
-msgstr "%s 不接受参数：'%s'"
 
 #: sequencer.c
 #, c-format
@@ -24493,10 +25246,6 @@ msgstr "尝试 \"git cherry-pick (--continue | %s--abort | --quit)\""
 #, c-format
 msgid "could not create sequencer directory '%s'"
 msgstr "不能创建序列目录 '%s'"
-
-#: sequencer.c
-msgid "could not lock HEAD"
-msgstr "不能锁定 HEAD"
 
 #: sequencer.c
 msgid "no cherry-pick or revert in progress"
@@ -24612,21 +25361,21 @@ msgstr ""
 "\n"
 
 #: sequencer.c
-msgid "and made changes to the index and/or the working tree\n"
-msgstr "并且修改索引和/或工作区\n"
+msgid "and made changes to the index and/or the working tree.\n"
+msgstr "并且修改索引和/或工作区。\n"
 
 #: sequencer.c
 #, c-format
 msgid ""
 "execution succeeded: %s\n"
-"but left changes to the index and/or the working tree\n"
+"but left changes to the index and/or the working tree.\n"
 "Commit or stash your changes, and then run\n"
 "\n"
 "  git rebase --continue\n"
 "\n"
 msgstr ""
 "执行成功：%s\n"
-"但是在索引和/或工作区中存在变更\n"
+"但是在索引和/或工作区中存在变更。\n"
 "提交或贮藏修改，然后运行\n"
 "\n"
 "  git rebase --continue\n"
@@ -24759,6 +25508,10 @@ msgid "Autostash exists; creating a new stash entry."
 msgstr "自动贮藏已经存在；正在创建一个新的贮藏条目。"
 
 #: sequencer.c
+msgid "autostash reference is a symref"
+msgstr "自动贮藏的引用是一个符号引用"
+
+#: sequencer.c
 msgid "could not detach HEAD"
 msgstr "不能分离头指针"
 
@@ -24794,13 +25547,13 @@ msgstr ""
 
 #: sequencer.c
 #, c-format
-msgid "Rebasing (%d/%d)%s"
-msgstr "正在变基（%d/%d）%s"
+msgid "Stopped at %s...  %.*s\n"
+msgstr "停止在 %s... %.*s\n"
 
 #: sequencer.c
 #, c-format
-msgid "Stopped at %s...  %.*s\n"
-msgstr "停止在 %s... %.*s\n"
+msgid "Rebasing (%d/%d)%s"
+msgstr "正在变基（%d/%d）%s"
 
 #: sequencer.c
 #, c-format
@@ -24960,6 +25713,11 @@ msgstr "无法使用无效配置来创建工作区"
 
 #: setup.c
 #, c-format
+msgid "'%s' already specified as '%s'"
+msgstr "'%s' 已指定为 '%s'"
+
+#: setup.c
+#, c-format
 msgid "Expected git repo version <= %d, found %d"
 msgstr "期望 git 仓库版本 <= %d，却得到 %d"
 
@@ -25087,6 +25845,100 @@ msgstr "fork 失败"
 msgid "setsid failed"
 msgstr "setsid 失败"
 
+#: setup.c
+#, c-format
+msgid "cannot stat template '%s'"
+msgstr "不能对模版 '%s' 调用 stat"
+
+#: setup.c
+#, c-format
+msgid "cannot opendir '%s'"
+msgstr "不能打开目录 '%s'"
+
+#: setup.c
+#, c-format
+msgid "cannot readlink '%s'"
+msgstr "不能读取链接 '%s'"
+
+#: setup.c
+#, c-format
+msgid "cannot symlink '%s' '%s'"
+msgstr "不能自 '%s' 到 '%s' 创建符号链接"
+
+#: setup.c
+#, c-format
+msgid "cannot copy '%s' to '%s'"
+msgstr "不能拷贝 '%s' 至 '%s'"
+
+#: setup.c
+#, c-format
+msgid "ignoring template %s"
+msgstr "忽略模版 %s"
+
+#: setup.c
+#, c-format
+msgid "templates not found in %s"
+msgstr "没有在 %s 中找到模版"
+
+#: setup.c
+#, c-format
+msgid "not copying templates from '%s': %s"
+msgstr "没有从 '%s' 复制模版：%s"
+
+#: setup.c
+#, c-format
+msgid "invalid initial branch name: '%s'"
+msgstr "无效的初始分支名：'%s'"
+
+#: setup.c
+#, c-format
+msgid "re-init: ignored --initial-branch=%s"
+msgstr "re-init：已忽略 --initial-branch=%s"
+
+#: setup.c
+#, c-format
+msgid "unable to handle file type %d"
+msgstr "不能处理 %d 类型的文件"
+
+#: setup.c
+#, c-format
+msgid "unable to move %s to %s"
+msgstr "不能移动 %s 至 %s"
+
+#: setup.c
+msgid "attempt to reinitialize repository with different hash"
+msgstr "尝试用不同的哈希算法重新初始化仓库"
+
+#: setup.c
+msgid ""
+"attempt to reinitialize repository with different reference storage format"
+msgstr "尝试使用不同的引用存储格式重新初始化仓库"
+
+#: setup.c
+#, c-format
+msgid "%s already exists"
+msgstr "%s 已经存在"
+
+#: setup.c
+#, c-format
+msgid "Reinitialized existing shared Git repository in %s%s\n"
+msgstr "重新初始化已存在的共享 Git 仓库于 %s%s\n"
+
+#: setup.c
+#, c-format
+msgid "Reinitialized existing Git repository in %s%s\n"
+msgstr "已重新初始化已存在的 Git 仓库于 %s%s\n"
+
+#: setup.c
+#, c-format
+msgid "Initialized empty shared Git repository in %s%s\n"
+msgstr "已初始化空的共享 Git 仓库于 %s%s\n"
+
+#: setup.c
+#, c-format
+msgid "Initialized empty Git repository in %s%s\n"
+msgstr "已初始化空的 Git 仓库于 %s%s\n"
+
 #: sparse-index.c
 #, c-format
 msgid "index entry is a directory, but not sparse (%08x)"
@@ -25095,6 +25947,24 @@ msgstr "索引条目是一个目录，但不是稀疏的 (%08x)"
 #: split-index.c
 msgid "cannot use split index with a sparse index"
 msgstr "拆分索引无法与稀疏索引一起使用"
+
+#. TRANSLATORS: The first %s is a command like "ls-tree".
+#: strbuf.c
+#, c-format
+msgid "bad %s format: element '%s' does not start with '('"
+msgstr "坏的 %s 格式：元素 '%s' 没有以 '(' 开头"
+
+#. TRANSLATORS: The first %s is a command like "ls-tree".
+#: strbuf.c
+#, c-format
+msgid "bad %s format: element '%s' does not end in ')'"
+msgstr "坏的 %s 格式：元素 '%s' 没有以 ')' 结尾"
+
+#. TRANSLATORS: %s is a command like "ls-tree".
+#: strbuf.c
+#, c-format
+msgid "bad %s format: %%%.*s"
+msgstr "坏的 %s 格式: %%%.*s"
 
 #. TRANSLATORS: IEC 80000-13:2008 gibibyte
 #: strbuf.c
@@ -25147,11 +26017,6 @@ msgid "%u byte/s"
 msgid_plural "%u bytes/s"
 msgstr[0] "%u 字节/秒"
 msgstr[1] "%u 字节/秒"
-
-#: strbuf.c
-#, c-format
-msgid "could not edit '%s'"
-msgstr "不能编辑 '%s'"
 
 #: submodule-config.c
 #, c-format
@@ -25388,14 +26253,6 @@ msgstr "在每次迭代前清除缓存树"
 msgid "number of entries in the cache tree to invalidate (default 0)"
 msgstr "缓存树中无效化的条目数量（默认 0）"
 
-#: t/helper/test-fast-rebase.c
-msgid "unhandled options"
-msgstr "未处理的选项"
-
-#: t/helper/test-fast-rebase.c
-msgid "error preparing revisions"
-msgstr "准备版本时错误"
-
 #: t/helper/test-reach.c
 #, c-format
 msgid "commit %s is not marked reachable"
@@ -25500,35 +26357,6 @@ msgstr "键 '%2$s' 的未知取值 '%1$s'"
 msgid "empty trailer token in trailer '%.*s'"
 msgstr "尾注 '%.*s' 的键为空"
 
-#: trailer.c
-#, c-format
-msgid "could not read input file '%s'"
-msgstr "不能读取输入文件 '%s'"
-
-#: trailer.c wrapper.c
-#, c-format
-msgid "could not stat %s"
-msgstr "不能对 %s 调用 stat"
-
-#: trailer.c
-#, c-format
-msgid "file %s is not a regular file"
-msgstr "文件 %s 不是一个正规文件"
-
-#: trailer.c
-#, c-format
-msgid "file %s is not writable by user"
-msgstr "文件 %s 用户不可写"
-
-#: trailer.c
-msgid "could not open temporary file"
-msgstr "不能打开临时文件"
-
-#: trailer.c
-#, c-format
-msgid "could not rename temporary file to %s"
-msgstr "不能重命名临时文件为 %s"
-
 #: transport-helper.c
 msgid "full write to remote helper failed"
 msgstr "完整写入远程助手失败"
@@ -25589,10 +26417,6 @@ msgstr "协议不支持设置远程服务路径"
 msgid "invalid remote service path"
 msgstr "无效的远程服务路径"
 
-#: transport-helper.c transport.c
-msgid "operation not supported by protocol"
-msgstr "协议不支持该操作"
-
 #: transport-helper.c
 #, c-format
 msgid "can't connect to subservice %s"
@@ -25652,8 +26476,8 @@ msgstr "remote-heper 不支持推送，需要引用规格"
 
 #: transport-helper.c
 #, c-format
-msgid "helper %s does not support 'force'"
-msgstr "助手 %s 不支持 'force'"
+msgid "helper %s does not support '--force'"
+msgstr "助手 %s 不支持 '--force'"
 
 #: transport-helper.c
 msgid "couldn't run fast-export"
@@ -25758,11 +26582,6 @@ msgstr "协议 v2 的支持尚未实现"
 
 #: transport.c
 #, c-format
-msgid "unknown value for config '%s': %s"
-msgstr "配置 '%s' 的取值未知：%s"
-
-#: transport.c
-#, c-format
 msgid "transport '%s' not allowed"
 msgstr "传输 '%s' 不允许"
 
@@ -25819,6 +26638,10 @@ msgstr "协议不支持 bundle-uri 操作"
 #: transport.c
 msgid "could not retrieve server-advertised bundle-uri list"
 msgstr "无法获取服务器公布的 bundle-uri 列表"
+
+#: transport.c
+msgid "operation not supported by protocol"
+msgstr "协议不支持该操作"
 
 #: tree-walk.c
 msgid "too-short tree object"
@@ -26129,6 +26952,11 @@ msgid "invalid '..' path segment"
 msgstr "无效的 '..' 路径片段"
 
 #: usage.c
+#, c-format
+msgid "error: unable to format message: %s\n"
+msgstr "错误：无法格式化消息：%s\n"
+
+#: usage.c
 msgid "usage: "
 msgstr "用法："
 
@@ -26271,6 +27099,10 @@ msgstr "不能访问 '%s'"
 #: wrapper.c
 msgid "unable to get current working directory"
 msgstr "不能获取当前工作目录"
+
+#: wrapper.c
+msgid "unable to get random bytes"
+msgstr "无法获取随机字节"
 
 #: wt-status.c
 msgid "Unmerged paths:"
@@ -26844,6 +27676,11 @@ msgstr "另外，您的索引中包含未提交的变更。"
 msgid "cannot %s: Your index contains uncommitted changes."
 msgstr "不能%s：您的索引中包含未提交的变更。"
 
+#: xdiff-interface.c
+#, c-format
+msgid "unknown style '%s' given for '%s'"
+msgstr "'%2$s' 的未知风格取值 '%1$s'"
+
 #: git-merge-octopus.sh git-merge-resolve.sh
 msgid ""
 "Error: Your local changes to the following files would be overwritten by "
@@ -27060,13 +27897,13 @@ msgstr ""
 
 #: git-send-email.perl
 #, perl-format
-msgid "Failed to open %s: %s"
-msgstr "无法打开 %s: %s"
+msgid "Failed to open %s.final: %s"
+msgstr "无法打开 %s.final: %s"
 
 #: git-send-email.perl
 #, perl-format
-msgid "Failed to open %s.final: %s"
-msgstr "无法打开 %s.final: %s"
+msgid "Failed to open %s: %s"
+msgstr "无法打开 %s: %s"
 
 #: git-send-email.perl
 msgid "Summary email is empty, skipping it\n"
@@ -27244,13 +28081,18 @@ msgstr "(%s) 不能执行 '%s'"
 
 #: git-send-email.perl
 #, perl-format
-msgid "(%s) Adding %s: %s from: '%s'\n"
-msgstr "(%s) 添加 %s: %s 自：'%s'\n"
+msgid "(%s) Malformed output from '%s'"
+msgstr "(%s) 非法的输出信息，来自于: '%s'"
 
 #: git-send-email.perl
 #, perl-format
 msgid "(%s) failed to close pipe to '%s'"
 msgstr "(%s) 无法关闭管道至 '%s'"
+
+#: git-send-email.perl
+#, perl-format
+msgid "(%s) Adding %s: %s from: '%s'\n"
+msgstr "(%s) 添加 %s: %s 自：'%s'\n"
 
 #: git-send-email.perl
 msgid "cannot send message as 7bit"

@@ -1,15 +1,19 @@
-#include "cache.h"
+#include "git-compat-util.h"
 #include "config.h"
+#include "editor.h"
+#include "pager.h"
 #include "run-command.h"
 #include "sigchain.h"
 #include "alias.h"
+
+int pager_use_color = 1;
 
 #ifndef DEFAULT_PAGER
 #define DEFAULT_PAGER "less"
 #endif
 
 static struct child_process pager_process;
-static const char *pager_program;
+static char *pager_program;
 
 /* Is the value coming back from term_columns() just a guess? */
 static int term_columns_guessed;
@@ -39,6 +43,7 @@ static void wait_for_pager_signal(int signo)
 }
 
 static int core_pager_config(const char *var, const char *value,
+			     const struct config_context *ctx UNUSED,
 			     void *data UNUSED)
 {
 	if (!strcmp(var, "core.pager"))
@@ -132,7 +137,7 @@ void setup_pager(void)
 	pager_process.in = -1;
 	strvec_push(&pager_process.env, "GIT_PAGER_IN_USE");
 	if (start_command(&pager_process))
-		return;
+		die("unable to execute pager '%s'", pager);
 
 	/* original process continues, but writes to the pipe */
 	dup2(pager_process.in, 1);
@@ -224,7 +229,9 @@ struct pager_command_config_data {
 	char *value;
 };
 
-static int pager_command_config(const char *var, const char *value, void *vdata)
+static int pager_command_config(const char *var, const char *value,
+				const struct config_context *ctx UNUSED,
+				void *vdata)
 {
 	struct pager_command_config_data *data = vdata;
 	const char *cmd;

@@ -1,15 +1,15 @@
 #include "builtin.h"
-#include "cache.h"
 #include "gettext.h"
 #include "hex.h"
 #include "transport.h"
+#include "pkt-line.h"
 #include "ref-filter.h"
 #include "remote.h"
-#include "refs.h"
 #include "parse-options.h"
+#include "wildmatch.h"
 
 static const char * const ls_remote_usage[] = {
-	N_("git ls-remote [--heads] [--tags] [--refs] [--upload-pack=<exec>]\n"
+	N_("git ls-remote [--branches] [--tags] [--refs] [--upload-pack=<exec>]\n"
 	   "              [-q | --quiet] [--exit-code] [--get-url] [--sort=<key>]\n"
 	   "              [--symref] [<repository> [<patterns>...]]"),
 	NULL
@@ -57,6 +57,7 @@ int cmd_ls_remote(int argc, const char **argv, const char *prefix)
 	struct transport *transport;
 	const struct ref *ref;
 	struct ref_array ref_array;
+	struct ref_sorting *sorting;
 	struct string_list sorting_options = STRING_LIST_INIT_DUP;
 
 	struct option options[] = {
@@ -67,7 +68,10 @@ int cmd_ls_remote(int argc, const char **argv, const char *prefix)
 			   N_("path of git-upload-pack on the remote host"),
 			   PARSE_OPT_HIDDEN },
 		OPT_BIT('t', "tags", &flags, N_("limit to tags"), REF_TAGS),
-		OPT_BIT('h', "heads", &flags, N_("limit to heads"), REF_HEADS),
+		OPT_BIT('b', "branches", &flags, N_("limit to branches"), REF_BRANCHES),
+		OPT_BIT_F('h', "heads", &flags,
+			  N_("deprecated synonym for --branches"), REF_BRANCHES,
+			  PARSE_OPT_HIDDEN),
 		OPT_BIT(0, "refs", &flags, N_("do not show peeled tags"), REF_NORMAL),
 		OPT_BOOL(0, "get-url", &get_url,
 			 N_("take url.<base>.insteadOf into account")),
@@ -99,7 +103,7 @@ int cmd_ls_remote(int argc, const char **argv, const char *prefix)
 
 	if (flags & REF_TAGS)
 		strvec_push(&transport_options.ref_prefixes, "refs/tags/");
-	if (flags & REF_HEADS)
+	if (flags & REF_BRANCHES)
 		strvec_push(&transport_options.ref_prefixes, "refs/heads/");
 
 	remote = remote_get(dest);
@@ -108,11 +112,9 @@ int cmd_ls_remote(int argc, const char **argv, const char *prefix)
 			die("bad repository '%s'", dest);
 		die("No remote configured to list refs from.");
 	}
-	if (!remote->url_nr)
-		die("remote %s has no configured URL", dest);
 
 	if (get_url) {
-		printf("%s\n", *remote->url);
+		printf("%s\n", remote->url.v[0]);
 		return 0;
 	}
 
@@ -129,7 +131,7 @@ int cmd_ls_remote(int argc, const char **argv, const char *prefix)
 	}
 
 	if (!dest && !quiet)
-		fprintf(stderr, "From %s\n", *remote->url);
+		fprintf(stderr, "From %s\n", remote->url.v[0]);
 	for ( ; ref; ref = ref->next) {
 		struct ref_array_item *item;
 		if (!check_ref_type(ref, flags))
@@ -140,13 +142,8 @@ int cmd_ls_remote(int argc, const char **argv, const char *prefix)
 		item->symref = xstrdup_or_null(ref->symref);
 	}
 
-	if (sorting_options.nr) {
-		struct ref_sorting *sorting;
-
-		sorting = ref_sorting_options(&sorting_options);
-		ref_array_sort(sorting, &ref_array);
-		ref_sorting_release(sorting);
-	}
+	sorting = ref_sorting_options(&sorting_options);
+	ref_array_sort(sorting, &ref_array);
 
 	for (i = 0; i < ref_array.nr; i++) {
 		const struct ref_array_item *ref = ref_array.items[i];
@@ -156,6 +153,7 @@ int cmd_ls_remote(int argc, const char **argv, const char *prefix)
 		status = 0; /* we found something */
 	}
 
+	ref_sorting_release(sorting);
 	ref_array_clear(&ref_array);
 	if (transport_disconnect(transport))
 		status = 1;

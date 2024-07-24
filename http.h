@@ -1,14 +1,15 @@
 #ifndef HTTP_H
 #define HTTP_H
 
-#include "cache.h"
+struct packed_git;
+
+#include "git-zlib.h"
 
 #include <curl/curl.h>
 #include <curl/easy.h>
 
 #include "strbuf.h"
 #include "remote.h"
-#include "url.h"
 
 #define DEFAULT_MAX_REQUESTS 5
 
@@ -174,6 +175,9 @@ int http_get_file(const char *url, const char *filename,
 
 int http_fetch_ref(const char *base, struct ref *ref);
 
+struct curl_slist *http_append_auth_header(const struct credential *c,
+					   struct curl_slist *headers);
+
 /* Helpers for fetching packs */
 int http_get_info_packs(const char *base_url,
 			struct packed_git **packs_head);
@@ -195,6 +199,7 @@ struct http_pack_request {
 	FILE *packfile;
 	struct strbuf tmpfile;
 	struct active_request_slot *slot;
+	struct curl_slist *headers;
 };
 
 struct http_pack_request *new_http_pack_request(
@@ -228,6 +233,7 @@ struct http_object_request {
 	int zret;
 	int rename;
 	struct active_request_slot *slot;
+	struct curl_slist *headers;
 };
 
 struct http_object_request *new_http_object_request(

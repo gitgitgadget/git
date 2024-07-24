@@ -16,16 +16,18 @@ https://developers.google.com/open-source/licenses/bsd
 #include "reader.h"
 #include "reftable-error.h"
 
-int iterator_is_null(struct reftable_iterator *it)
-{
-	return !it->ops;
-}
-
 static void filtering_ref_iterator_close(void *iter_arg)
 {
 	struct filtering_ref_iterator *fri = iter_arg;
 	strbuf_release(&fri->oid);
 	reftable_iterator_destroy(&fri->it);
+}
+
+static int filtering_ref_iterator_seek(void *iter_arg,
+				       struct reftable_record *want)
+{
+	struct filtering_ref_iterator *fri = iter_arg;
+	return iterator_seek(&fri->it, want);
 }
 
 static int filtering_ref_iterator_next(void *iter_arg,
@@ -43,11 +45,11 @@ static int filtering_ref_iterator_next(void *iter_arg,
 		if (fri->double_check) {
 			struct reftable_iterator it = { NULL };
 
-			err = reftable_table_seek_ref(&fri->tab, &it,
-						      ref->refname);
-			if (err == 0) {
+			reftable_table_init_ref_iter(&fri->tab, &it);
+
+			err = reftable_iterator_seek_ref(&it, ref->refname);
+			if (err == 0)
 				err = reftable_iterator_next_ref(&it, ref);
-			}
 
 			reftable_iterator_destroy(&it);
 
@@ -78,6 +80,7 @@ static int filtering_ref_iterator_next(void *iter_arg,
 }
 
 static struct reftable_iterator_vtable filtering_ref_iterator_vtable = {
+	.seek = &filtering_ref_iterator_seek,
 	.next = &filtering_ref_iterator_next,
 	.close = &filtering_ref_iterator_close,
 };
@@ -120,8 +123,14 @@ static int indexed_table_ref_iter_next_block(struct indexed_table_ref_iter *it)
 		/* indexed block does not exist. */
 		return REFTABLE_FORMAT_ERROR;
 	}
-	block_reader_start(&it->block_reader, &it->cur);
+	block_iter_seek_start(&it->cur, &it->block_reader);
 	return 0;
+}
+
+static int indexed_table_ref_iter_seek(void *p, struct reftable_record *want)
+{
+	BUG("seeking indexed table is not supported");
+	return -1;
 }
 
 static int indexed_table_ref_iter_next(void *p, struct reftable_record *rec)
@@ -160,8 +169,7 @@ int new_indexed_table_ref_iter(struct indexed_table_ref_iter **dest,
 			       int oid_len, uint64_t *offsets, int offset_len)
 {
 	struct indexed_table_ref_iter empty = INDEXED_TABLE_REF_ITER_INIT;
-	struct indexed_table_ref_iter *itr =
-		reftable_calloc(sizeof(struct indexed_table_ref_iter));
+	struct indexed_table_ref_iter *itr = reftable_calloc(1, sizeof(*itr));
 	int err = 0;
 
 	*itr = empty;
@@ -181,6 +189,7 @@ int new_indexed_table_ref_iter(struct indexed_table_ref_iter **dest,
 }
 
 static struct reftable_iterator_vtable indexed_table_ref_iter_vtable = {
+	.seek = &indexed_table_ref_iter_seek,
 	.next = &indexed_table_ref_iter_next,
 	.close = &indexed_table_ref_iter_close,
 };

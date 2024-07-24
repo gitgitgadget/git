@@ -1,5 +1,8 @@
+#define USE_THE_REPOSITORY_VARIABLE
+
 #include "test-tool.h"
-#include "cache.h"
+#include "read-cache-ll.h"
+#include "repository.h"
 #include "setup.h"
 
 int cmd__dump_fsmonitor(int ac UNUSED, const char **av UNUSED)

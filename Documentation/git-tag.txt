@@ -10,6 +10,7 @@ SYNOPSIS
 --------
 [verse]
 'git tag' [-a | -s | -u <key-id>] [-f] [-m <msg> | -F <file>] [-e]
+	[(--trailer <token>[(=|:)<value>])...]
 	<tagname> [<commit> | <object>]
 'git tag' -d <tagname>...
 'git tag' [-n[<num>]] -l [--contains <commit>] [--no-contains <commit>]
@@ -31,8 +32,8 @@ creates a 'tag' object, and requires a tag message.  Unless
 `-m <msg>` or `-F <file>` is given, an editor is started for the user to type
 in the tag message.
 
-If `-m <msg>` or `-F <file>` is given and `-a`, `-s`, and `-u <key-id>`
-are absent, `-a` is implied.
+If `-m <msg>` or `-F <file>` or `--trailer <token>[=<value>]` is given
+and `-a`, `-s`, and `-u <key-id>` are absent, `-a` is implied.
 
 Otherwise, a tag reference that points directly at the given object
 (i.e., a lightweight tag) is created.
@@ -131,6 +132,10 @@ options for details.
 --ignore-case::
 	Sorting and filtering tags are case insensitive.
 
+--omit-empty::
+	Do not print a newline after formatted refs where the format expands
+	to the empty string.
+
 --column[=<options>]::
 --no-column::
 	Display tag listing in columns. See configuration variable
@@ -173,6 +178,17 @@ This option is only applicable when listing tags without annotation lines.
 	read the message from the standard input.
 	Implies `-a` if none of `-a`, `-s`, or `-u <key-id>`
 	is given.
+
+--trailer <token>[(=|:)<value>]::
+	Specify a (<token>, <value>) pair that should be applied as a
+	trailer. (e.g. `git tag --trailer "Custom-Key: value"`
+	will add a "Custom-Key" trailer to the tag message.)
+	The `trailer.*` configuration variables
+	(linkgit:git-interpret-trailers[1]) can be used to define if
+	a duplicated trailer is omitted, where in the run of trailers
+	each trailer would appear, and other details.
+	The trailers can be extracted in `git tag --list`, using
+	`--format="%(trailers)"` placeholder.
 
 -e::
 --edit::
@@ -220,7 +236,7 @@ it in the repository configuration as follows:
 
 -------------------------------------
 [user]
-    signingKey = <gpg-key_id>
+    signingKey = <gpg-key-id>
 -------------------------------------
 
 `pager.tag` is only respected when listing tags, i.e., when `-l` is
@@ -376,6 +392,16 @@ $ GIT_COMMITTER_DATE="2006-10-02 10:31" git tag -s v1.0.1
 ------------
 
 include::date-formats.txt[]
+
+FILES
+-----
+
+`$GIT_DIR/TAG_EDITMSG`::
+	This file contains the message of an in-progress annotated
+	tag. If `git tag` exits due to an error before creating an
+	annotated tag then the tag message that has been provided by the
+	user in an editor session will be available in this file, but
+	may be overwritten by the next invocation of `git tag`.
 
 NOTES
 -----

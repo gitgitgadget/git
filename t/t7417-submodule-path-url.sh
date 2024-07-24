@@ -4,6 +4,7 @@ test_description='check handling of .gitmodule path with dash'
 GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME=main
 export GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME
 
+TEST_PASSES_SANITIZE_LEAK=true
 . ./test-lib.sh
 
 test_expect_success 'setup' '
@@ -21,7 +22,7 @@ test_expect_success 'create submodule with dash in path' '
 test_expect_success 'clone rejects unprotected dash' '
 	test_when_finished "rm -rf dst" &&
 	git clone --recurse-submodules . dst 2>err &&
-	test_i18ngrep ignoring err
+	test_grep ignoring err
 '
 
 test_expect_success 'fsck rejects unprotected dash' '
@@ -46,7 +47,7 @@ test_expect_success MINGW 'submodule paths disallows trailing spaces' '
 	git -C super update-ref refs/heads/main $commit &&
 
 	test_must_fail git clone --recurse-submodules super dst 2>err &&
-	test_i18ngrep "sub " err
+	test_grep "sub " err
 '
 
 test_done

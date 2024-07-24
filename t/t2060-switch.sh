@@ -5,6 +5,7 @@ test_description='switch basic functionality'
 GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME=main
 export GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME
 
+TEST_PASSES_SANITIZE_LEAK=true
 . ./test-lib.sh
 
 test_expect_success 'setup' '
@@ -170,8 +171,10 @@ test_expect_success 'switch back when temporarily detached and checked out elsew
 	# we test in both worktrees to ensure that works
 	# as expected with "first" and "next" worktrees
 	test_must_fail git -C wt1 switch shared &&
+	test_must_fail git -C wt1 switch -C shared &&
 	git -C wt1 switch --ignore-other-worktrees shared &&
 	test_must_fail git -C wt2 switch shared &&
+	test_must_fail git -C wt2 switch -C shared &&
 	git -C wt2 switch --ignore-other-worktrees shared
 '
 

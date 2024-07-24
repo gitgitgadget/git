@@ -1,15 +1,18 @@
-#include "cache.h"
+#define USE_THE_REPOSITORY_VARIABLE
+
+#include "git-compat-util.h"
 #include "tmp-objdir.h"
 #include "abspath.h"
 #include "chdir-notify.h"
 #include "dir.h"
 #include "environment.h"
-#include "sigchain.h"
+#include "object-file.h"
+#include "path.h"
 #include "string-list.h"
 #include "strbuf.h"
 #include "strvec.h"
 #include "quote.h"
-#include "object-store.h"
+#include "object-store-ll.h"
 
 struct tmp_objdir {
 	struct strbuf path;

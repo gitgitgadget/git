@@ -1,10 +1,11 @@
-#define USE_THE_INDEX_VARIABLE
 #include "builtin.h"
 #include "abspath.h"
 #include "config.h"
 #include "environment.h"
 #include "gettext.h"
+#include "hash.h"
 #include "hex.h"
+#include "object-name.h"
 #include "parse-options.h"
 #include "refs.h"
 #include "lockfile.h"
@@ -16,12 +17,14 @@
 #include "run-command.h"
 #include "dir.h"
 #include "entry.h"
+#include "preload-index.h"
+#include "read-cache.h"
 #include "rerere.h"
 #include "revision.h"
 #include "setup.h"
+#include "sparse-index.h"
 #include "log-tree.h"
 #include "diffcore.h"
-#include "exec-cmd.h"
 #include "reflog.h"
 #include "add-interactive.h"
 
@@ -192,7 +195,7 @@ static int get_stash_info(struct stash_info *info, int argc, const char **argv)
 		commit = argv[0];
 
 	if (!commit) {
-		if (!ref_exists(ref_stash)) {
+		if (!refs_ref_exists(get_main_ref_store(the_repository), ref_stash)) {
 			fprintf_ln(stderr, _("No stash entries found."));
 			return -1;
 		}
@@ -240,7 +243,8 @@ static int do_clear_stash(void)
 	if (repo_get_oid(the_repository, ref_stash, &obj))
 		return 0;
 
-	return delete_ref(NULL, ref_stash, &obj, 0);
+	return refs_delete_ref(get_main_ref_store(the_repository), NULL,
+			       ref_stash, &obj, 0);
 }
 
 static int clear_stash(int argc, const char **argv, const char *prefix)
@@ -269,7 +273,7 @@ static int reset_tree(struct object_id *i_tree, int update, int reset)
 	struct lock_file lock_file = LOCK_INIT;
 
 	repo_read_index_preload(the_repository, NULL, 0);
-	if (refresh_index(&the_index, REFRESH_QUIET, NULL, NULL, NULL))
+	if (refresh_index(the_repository->index, REFRESH_QUIET, NULL, NULL, NULL))
 		return -1;
 
 	repo_hold_locked_index(the_repository, &lock_file, LOCK_DIE_ON_ERROR);
@@ -280,11 +284,11 @@ static int reset_tree(struct object_id *i_tree, int update, int reset)
 	if (parse_tree(tree))
 		return -1;
 
-	init_tree_desc(t, tree->buffer, tree->size);
+	init_tree_desc(t, &tree->object.oid, tree->buffer, tree->size);
 
 	opts.head_idx = 1;
-	opts.src_index = &the_index;
-	opts.dst_index = &the_index;
+	opts.src_index = the_repository->index;
+	opts.dst_index = the_repository->index;
 	opts.merge = 1;
 	opts.reset = reset ? UNPACK_RESET_PROTECT_UNTRACKED : 0;
 	opts.update = update;
@@ -295,7 +299,7 @@ static int reset_tree(struct object_id *i_tree, int update, int reset)
 	if (unpack_trees(nr_trees, t, &opts))
 		return -1;
 
-	if (write_locked_index(&the_index, &lock_file, COMMIT_LOCK))
+	if (write_locked_index(the_repository->index, &lock_file, COMMIT_LOCK))
 		return error(_("unable to write new index file"));
 
 	return 0;
@@ -357,7 +361,7 @@ static int is_path_a_directory(const char *path)
 }
 
 static void add_diff_to_buf(struct diff_queue_struct *q,
-			    struct diff_options *options,
+			    struct diff_options *options UNUSED,
 			    void *data)
 {
 	int i;
@@ -426,7 +430,7 @@ static void unstage_changes_unless_new(struct object_id *orig_tree)
 	state.force = 1;
 	state.quiet = 1;
 	state.refresh_cache = 1;
-	state.istate = &the_index;
+	state.istate = the_repository->index;
 
 	/*
 	 * Step 1: get a difference between orig_tree (which corresponding
@@ -450,7 +454,7 @@ static void unstage_changes_unless_new(struct object_id *orig_tree)
 
 		/* Look up the path's position in the current index. */
 		p = diff_queued_diff.queue[i];
-		pos = index_name_pos(&the_index, p->two->path,
+		pos = index_name_pos(the_repository->index, p->two->path,
 				     strlen(p->two->path));
 
 		/*
@@ -461,10 +465,10 @@ static void unstage_changes_unless_new(struct object_id *orig_tree)
 		 * path, but left it out of the working tree, then clear the
 		 * SKIP_WORKTREE bit and write it to the working tree.
 		 */
-		if (pos >= 0 && ce_skip_worktree(the_index.cache[pos])) {
+		if (pos >= 0 && ce_skip_worktree(the_repository->index->cache[pos])) {
 			struct stat st;
 
-			ce = the_index.cache[pos];
+			ce = the_repository->index->cache[pos];
 			if (!lstat(ce->name, &st)) {
 				/* Conflicting path present; relocate it */
 				struct strbuf new_path = STRBUF_INIT;
@@ -500,12 +504,12 @@ static void unstage_changes_unless_new(struct object_id *orig_tree)
 			if (pos < 0)
 				option = ADD_CACHE_OK_TO_ADD;
 
-			ce = make_cache_entry(&the_index,
+			ce = make_cache_entry(the_repository->index,
 					      p->one->mode,
 					      &p->one->oid,
 					      p->one->path,
 					      0, 0);
-			add_index_entry(&the_index, ce, option);
+			add_index_entry(the_repository->index, ce, option);
 		}
 	}
 	diff_flush(&diff_opts);
@@ -514,9 +518,9 @@ static void unstage_changes_unless_new(struct object_id *orig_tree)
 	 * Step 4: write the new index to disk
 	 */
 	repo_hold_locked_index(the_repository, &lock, LOCK_DIE_ON_ERROR);
-	if (write_locked_index(&the_index, &lock,
+	if (write_locked_index(the_repository->index, &lock,
 			       COMMIT_LOCK | SKIP_IF_UNCHANGED))
-		die(_("Unable to write index."));
+		die(_("could not write index"));
 }
 
 static int do_apply_stash(const char *prefix, struct stash_info *info,
@@ -533,9 +537,9 @@ static int do_apply_stash(const char *prefix, struct stash_info *info,
 	repo_read_index_preload(the_repository, NULL, 0);
 	if (repo_refresh_and_write_index(the_repository, REFRESH_QUIET, 0, 0,
 					 NULL, NULL, NULL))
-		return -1;
+		return error(_("could not write index"));
 
-	if (write_index_as_tree(&c_tree, &the_index, get_index_file(), 0,
+	if (write_index_as_tree(&c_tree, the_repository->index, get_index_file(), 0,
 				NULL))
 		return error(_("cannot apply a stash in the middle of a merge"));
 
@@ -558,14 +562,14 @@ static int do_apply_stash(const char *prefix, struct stash_info *info,
 				return error(_("conflicts in index. "
 					       "Try without --index."));
 
-			discard_index(&the_index);
+			discard_index(the_repository->index);
 			repo_read_index(the_repository);
-			if (write_index_as_tree(&index_tree, &the_index,
+			if (write_index_as_tree(&index_tree, the_repository->index,
 						get_index_file(), 0, NULL))
 				return error(_("could not save index tree"));
 
 			reset_head();
-			discard_index(&the_index);
+			discard_index(the_repository->index);
 			repo_read_index(the_repository);
 		}
 	}
@@ -683,7 +687,8 @@ static int reject_reflog_ent(struct object_id *ooid UNUSED,
 
 static int reflog_is_empty(const char *refname)
 {
-	return !for_each_reflog_ent(refname, reject_reflog_ent, NULL);
+	return !refs_for_each_reflog_ent(get_main_ref_store(the_repository),
+					 refname, reject_reflog_ent, NULL);
 }
 
 static int do_drop_stash(struct stash_info *info, int quiet)
@@ -820,7 +825,7 @@ static int list_stash(int argc, const char **argv, const char *prefix)
 			     git_stash_list_usage,
 			     PARSE_OPT_KEEP_UNKNOWN_OPT);
 
-	if (!ref_exists(ref_stash))
+	if (!refs_ref_exists(get_main_ref_store(the_repository), ref_stash))
 		return 0;
 
 	cp.git_cmd = 1;
@@ -836,7 +841,8 @@ static int show_stat = 1;
 static int show_patch;
 static int show_include_untracked;
 
-static int git_stash_config(const char *var, const char *value, void *cb)
+static int git_stash_config(const char *var, const char *value,
+			    const struct config_context *ctx, void *cb)
 {
 	if (!strcmp(var, "stash.showstat")) {
 		show_stat = git_config_bool(var, value);
@@ -850,7 +856,7 @@ static int git_stash_config(const char *var, const char *value, void *cb)
 		show_include_untracked = git_config_bool(var, value);
 		return 0;
 	}
-	return git_diff_basic_config(var, value, cb);
+	return git_diff_basic_config(var, value, ctx, cb);
 }
 
 static void diff_include_untracked(const struct stash_info *info, struct diff_options *diff_opt)
@@ -865,12 +871,13 @@ static void diff_include_untracked(const struct stash_info *info, struct diff_op
 		tree[i] = parse_tree_indirect(oid[i]);
 		if (parse_tree(tree[i]) < 0)
 			die(_("failed to parse tree"));
-		init_tree_desc(&tree_desc[i], tree[i]->buffer, tree[i]->size);
+		init_tree_desc(&tree_desc[i], &tree[i]->object.oid,
+			       tree[i]->buffer, tree[i]->size);
 	}
 
 	unpack_tree_opt.head_idx = -1;
-	unpack_tree_opt.src_index = &the_index;
-	unpack_tree_opt.dst_index = &the_index;
+	unpack_tree_opt.src_index = the_repository->index;
+	unpack_tree_opt.dst_index = the_repository->index;
 	unpack_tree_opt.merge = 1;
 	unpack_tree_opt.fn = stash_worktree_untracked_merge;
 
@@ -967,8 +974,10 @@ static int show_stash(int argc, const char **argv, const char *prefix)
 	}
 	log_tree_diff_flush(&rev);
 
-	ret = diff_result_code(&rev.diffopt, 0);
+	ret = diff_result_code(&rev.diffopt);
+
 cleanup:
+	strvec_clear(&revision_args);
 	strvec_clear(&stash_args);
 	free_stash_info(&info);
 	release_revisions(&rev);
@@ -983,13 +992,19 @@ usage:
 static int do_store_stash(const struct object_id *w_commit, const char *stash_msg,
 			  int quiet)
 {
+	struct stash_info info;
+	char revision[GIT_MAX_HEXSZ];
+
+	oid_to_hex_r(revision, w_commit);
+	assert_stash_like(&info, revision);
+
 	if (!stash_msg)
 		stash_msg = "Created via \"git stash store\".";
 
-	if (update_ref(stash_msg, ref_stash, w_commit, NULL,
-		       REF_FORCE_CREATE_REFLOG,
-		       quiet ? UPDATE_REFS_QUIET_ON_ERR :
-		       UPDATE_REFS_MSG_ON_ERR)) {
+	if (refs_update_ref(get_main_ref_store(the_repository), stash_msg, ref_stash, w_commit, NULL,
+			    REF_FORCE_CREATE_REFLOG,
+			    quiet ? UPDATE_REFS_QUIET_ON_ERR :
+			    UPDATE_REFS_MSG_ON_ERR)) {
 		if (!quiet) {
 			fprintf_ln(stderr, _("Cannot update %s with %s"),
 				   ref_stash, oid_to_hex(w_commit));
@@ -1005,13 +1020,14 @@ static int store_stash(int argc, const char **argv, const char *prefix)
 	int quiet = 0;
 	const char *stash_msg = NULL;
 	struct object_id obj;
-	struct object_context dummy;
+	struct object_context dummy = {0};
 	struct option options[] = {
 		OPT__QUIET(&quiet, N_("be quiet")),
 		OPT_STRING('m', "message", &stash_msg, "message",
 			   N_("stash message")),
 		OPT_END()
 	};
+	int ret;
 
 	argc = parse_options(argc, argv, prefix, options,
 			     git_stash_store_usage,
@@ -1030,10 +1046,15 @@ static int store_stash(int argc, const char **argv, const char *prefix)
 		if (!quiet)
 			fprintf_ln(stderr, _("Cannot update %s with %s"),
 					     ref_stash, argv[0]);
-		return -1;
+		ret = -1;
+		goto out;
 	}
 
-	return do_store_stash(&obj, stash_msg, quiet);
+	ret = do_store_stash(&obj, stash_msg, quiet);
+
+out:
+	object_context_release(&dummy);
+	return ret;
 }
 
 static void add_pathspecs(struct strvec *args,
@@ -1083,7 +1104,6 @@ static int get_untracked_files(const struct pathspec *ps, int include_untracked,
  */
 static int check_changes_tracked_files(const struct pathspec *ps)
 {
-	int result;
 	struct rev_info rev;
 	struct object_id dummy;
 	int ret = 0;
@@ -1105,14 +1125,14 @@ static int check_changes_tracked_files(const struct pathspec *ps)
 	add_head_to_pending(&rev);
 	diff_setup_done(&rev.diffopt);
 
-	result = run_diff_index(&rev, 1);
-	if (diff_result_code(&rev.diffopt, result)) {
+	run_diff_index(&rev, DIFF_INDEX_CACHED);
+	if (diff_result_code(&rev.diffopt)) {
 		ret = 1;
 		goto done;
 	}
 
-	result = run_diff_files(&rev, 0);
-	if (diff_result_code(&rev.diffopt, result)) {
+	run_diff_files(&rev, 0);
+	if (diff_result_code(&rev.diffopt)) {
 		ret = 1;
 		goto done;
 	}
@@ -1194,8 +1214,8 @@ static int stash_staged(struct stash_info *info, struct strbuf *out_patch,
 	}
 
 	cp_diff_tree.git_cmd = 1;
-	strvec_pushl(&cp_diff_tree.args, "diff-tree", "-p", "-U1", "HEAD",
-		     oid_to_hex(&info->w_tree), "--", NULL);
+	strvec_pushl(&cp_diff_tree.args, "diff-tree", "-p", "--binary",
+		     "-U1", "HEAD", oid_to_hex(&info->w_tree), "--", NULL);
 	if (pipe_command(&cp_diff_tree, NULL, 0, out_patch, 0, NULL, 0)) {
 		ret = -1;
 		goto done;
@@ -1303,10 +1323,7 @@ static int stash_working_tree(struct stash_info *info, const struct pathspec *ps
 
 	add_pending_object(&rev, parse_object(the_repository, &info->b_commit),
 			   "");
-	if (run_diff_index(&rev, 0)) {
-		ret = -1;
-		goto done;
-	}
+	run_diff_index(&rev, 0);
 
 	cp_upd_index.git_cmd = 1;
 	strvec_pushl(&cp_upd_index.args, "update-index",
@@ -1357,7 +1374,7 @@ static int do_create_stash(const struct pathspec *ps, struct strbuf *stash_msg_b
 	repo_read_index_preload(the_repository, NULL, 0);
 	if (repo_refresh_and_write_index(the_repository, REFRESH_QUIET, 0, 0,
 					 NULL, NULL, NULL) < 0) {
-		ret = -1;
+		ret = error(_("could not write index"));
 		goto done;
 	}
 
@@ -1376,7 +1393,8 @@ static int do_create_stash(const struct pathspec *ps, struct strbuf *stash_msg_b
 		goto done;
 	}
 
-	branch_ref = resolve_ref_unsafe("HEAD", 0, NULL, &flags);
+	branch_ref = refs_resolve_ref_unsafe(get_main_ref_store(the_repository),
+					     "HEAD", 0, NULL, &flags);
 	if (flags & REF_ISSYMREF)
 		skip_prefix(branch_ref, "refs/heads/", &branch_name);
 	head_short_sha1 = repo_find_unique_abbrev(the_repository,
@@ -1387,7 +1405,7 @@ static int do_create_stash(const struct pathspec *ps, struct strbuf *stash_msg_b
 
 	strbuf_addf(&commit_tree_label, "index on %s\n", msg.buf);
 	commit_list_insert(head_commit, &parents);
-	if (write_index_as_tree(&info->i_tree, &the_index, get_index_file(), 0,
+	if (write_index_as_tree(&info->i_tree, the_repository->index, get_index_file(), 0,
 				NULL) ||
 	    commit_tree(commit_tree_label.buf, commit_tree_label.len,
 			&info->i_tree, parents, &info->i_commit, NULL, NULL)) {
@@ -1397,6 +1415,9 @@ static int do_create_stash(const struct pathspec *ps, struct strbuf *stash_msg_b
 		ret = -1;
 		goto done;
 	}
+
+	free_commit_list(parents);
+	parents = NULL;
 
 	if (include_untracked) {
 		if (save_untracked_files(info, &msg, untracked_files)) {
@@ -1443,11 +1464,6 @@ static int do_create_stash(const struct pathspec *ps, struct strbuf *stash_msg_b
 	else
 		strbuf_insertf(stash_msg_buf, 0, "On %s: ", branch_name);
 
-	/*
-	 * `parents` will be empty after calling `commit_tree()`, so there is
-	 * no need to call `free_commit_list()`
-	 */
-	parents = NULL;
 	if (untracked_commit_option)
 		commit_list_insert(lookup_commit(the_repository,
 						 &info->u_commit),
@@ -1469,6 +1485,7 @@ done:
 	strbuf_release(&commit_tree_label);
 	strbuf_release(&msg);
 	strbuf_release(&untracked_files);
+	free_commit_list(parents);
 	return ret;
 }
 
@@ -1532,9 +1549,9 @@ static int do_push_stash(const struct pathspec *ps, const char *stash_msg, int q
 		char *ps_matched = xcalloc(ps->nr, 1);
 
 		/* TODO: audit for interaction with sparse-index. */
-		ensure_full_index(&the_index);
-		for (i = 0; i < the_index.cache_nr; i++)
-			ce_path_match(&the_index, the_index.cache[i], ps,
+		ensure_full_index(the_repository->index);
+		for (i = 0; i < the_repository->index->cache_nr; i++)
+			ce_path_match(the_repository->index, the_repository->index->cache[i], ps,
 				      ps_matched);
 
 		if (report_path_error(ps_matched, ps)) {
@@ -1548,7 +1565,7 @@ static int do_push_stash(const struct pathspec *ps, const char *stash_msg, int q
 
 	if (repo_refresh_and_write_index(the_repository, REFRESH_QUIET, 0, 0,
 					 NULL, NULL, NULL)) {
-		ret = -1;
+		ret = error(_("could not write index"));
 		goto done;
 	}
 
@@ -1558,7 +1575,7 @@ static int do_push_stash(const struct pathspec *ps, const char *stash_msg, int q
 		goto done;
 	}
 
-	if (!reflog_exists(ref_stash) && do_clear_stash()) {
+	if (!refs_reflog_exists(get_main_ref_store(the_repository), ref_stash) && do_clear_stash()) {
 		ret = -1;
 		if (!quiet)
 			fprintf_ln(stderr, _("Cannot initialize stash"));
@@ -1604,7 +1621,7 @@ static int do_push_stash(const struct pathspec *ps, const char *stash_msg, int q
 				goto done;
 			}
 		}
-		discard_index(&the_index);
+		discard_index(the_repository->index);
 		if (ps->nr) {
 			struct child_process cp_add = CHILD_PROCESS_INIT;
 			struct child_process cp_diff = CHILD_PROCESS_INIT;

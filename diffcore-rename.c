@@ -2,11 +2,13 @@
  *
  * Copyright (C) 2005 Junio C Hamano
  */
+
+#define USE_THE_REPOSITORY_VARIABLE
+
 #include "git-compat-util.h"
-#include "alloc.h"
 #include "diff.h"
 #include "diffcore.h"
-#include "object-store.h"
+#include "object-store-ll.h"
 #include "hashmap.h"
 #include "mem-pool.h"
 #include "oid-array.h"
@@ -407,7 +409,7 @@ static const char *get_highest_rename_path(struct strintmap *counts)
 	return highest_destination_dir;
 }
 
-static char *UNKNOWN_DIR = "/";  /* placeholder -- short, illegal directory */
+static const char *UNKNOWN_DIR = "/";  /* placeholder -- short, illegal directory */
 
 static int dir_rename_already_determinable(struct strintmap *counts)
 {
@@ -430,8 +432,8 @@ static int dir_rename_already_determinable(struct strintmap *counts)
 }
 
 static void increment_count(struct dir_rename_info *info,
-			    char *old_dir,
-			    char *new_dir)
+			    const char *old_dir,
+			    const char *new_dir)
 {
 	struct strintmap *counts;
 	struct strmap_entry *e;
@@ -1423,7 +1425,7 @@ void diffcore_rename_extended(struct diff_options *options,
 				 strcmp(options->single_follow, p->two->path))
 				continue; /* not interested */
 			else if (!options->flags.rename_empty &&
-				 is_empty_blob_oid(&p->two->oid))
+				 is_empty_blob_oid(&p->two->oid, the_repository->hash_algo))
 				continue;
 			else if (add_rename_dst(p) < 0) {
 				warning("skipping rename detection, detected"
@@ -1433,7 +1435,7 @@ void diffcore_rename_extended(struct diff_options *options,
 			}
 		}
 		else if (!options->flags.rename_empty &&
-			 is_empty_blob_oid(&p->one->oid))
+			 is_empty_blob_oid(&p->one->oid, the_repository->hash_algo))
 			continue;
 		else if (!DIFF_PAIR_UNMERGED(p) && !DIFF_FILE_VALID(p->two)) {
 			/*

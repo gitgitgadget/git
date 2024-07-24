@@ -16,10 +16,6 @@ https://developers.google.com/open-source/licenses/bsd
 #include "reftable-iterator.h"
 #include "reftable-generic.h"
 
-/* Returns true for a zeroed out iterator, such as the one returned from
- * iterator_destroy. */
-int iterator_is_null(struct reftable_iterator *it);
-
 /* iterator that produces only ref records that point to `oid` */
 struct filtering_ref_iterator {
 	int double_check;
@@ -53,10 +49,10 @@ struct indexed_table_ref_iter {
 	int is_finished;
 };
 
-#define INDEXED_TABLE_REF_ITER_INIT                                     \
-	{                                                               \
-		.cur = { .last_key = STRBUF_INIT }, .oid = STRBUF_INIT, \
-	}
+#define INDEXED_TABLE_REF_ITER_INIT { \
+	.cur = BLOCK_ITER_INIT, \
+	.oid = STRBUF_INIT, \
+}
 
 void iterator_from_indexed_table_ref_iter(struct reftable_iterator *it,
 					  struct indexed_table_ref_iter *itr);

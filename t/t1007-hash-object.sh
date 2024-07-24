@@ -124,8 +124,8 @@ test_expect_success 'check that appropriate filter is invoke when --path is used
 	path0_sha=$(git hash-object --path=file0 file1) &&
 	test "$file0_sha" = "$path0_sha" &&
 	test "$file1_sha" = "$path1_sha" &&
-	path1_sha=$(cat file0 | git hash-object --path=file1 --stdin) &&
-	path0_sha=$(cat file1 | git hash-object --path=file0 --stdin) &&
+	path1_sha=$(git hash-object --path=file1 --stdin <file0) &&
+	path0_sha=$(git hash-object --path=file0 --stdin <file1) &&
 	test "$file0_sha" = "$path0_sha" &&
 	test "$file1_sha" = "$path1_sha"
 '
@@ -154,7 +154,7 @@ test_expect_success '--path works in a subdirectory' '
 test_expect_success 'check that --no-filters option works' '
 	nofilters_file1=$(git hash-object --no-filters file1) &&
 	test "$file0_sha" = "$nofilters_file1" &&
-	nofilters_file1=$(cat file1 | git hash-object --stdin) &&
+	nofilters_file1=$(git hash-object --stdin <file1) &&
 	test "$file0_sha" = "$nofilters_file1"
 '
 
@@ -258,6 +258,12 @@ test_expect_success '--literally with extra-long type' '
 	t=12345678901234567890123456789012345678901234567890 &&
 	t="$t$t$t$t$t$t$t$t$t$t$t$t$t$t$t$t$t$t$t$t$t$t$t$t$t$t$t$t$t$t" &&
 	echo example | git hash-object -t $t --literally --stdin
+'
+
+test_expect_success '--stdin outside of repository (uses SHA-1)' '
+	nongit git hash-object --stdin <hello >actual &&
+	echo "$(test_oid --hash=sha1 hello)" >expect &&
+	test_cmp expect actual
 '
 
 test_done

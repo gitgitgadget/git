@@ -1,8 +1,11 @@
+#define USE_THE_REPOSITORY_VARIABLE
+
 #include "test-tool.h"
 #include "strvec.h"
 #include "run-command.h"
 #include "exec-cmd.h"
 #include "config.h"
+#include "repository.h"
 #include "trace2.h"
 
 typedef int(fn_unit_test)(int argc, const char **argv);
@@ -44,7 +47,7 @@ static int get_i(int *p_value, const char *data)
  * [] "def_param" events for all of the "interesting" pre-defined
  * config settings.
  */
-static int ut_001return(int argc, const char **argv)
+static int ut_001return(int argc UNUSED, const char **argv)
 {
 	int rc;
 
@@ -64,7 +67,7 @@ static int ut_001return(int argc, const char **argv)
  * [] "def_param" events for all of the "interesting" pre-defined
  * config settings.
  */
-static int ut_002exit(int argc, const char **argv)
+static int ut_002exit(int argc UNUSED, const char **argv)
 {
 	int rc;
 
@@ -200,7 +203,7 @@ static int ut_006data(int argc, const char **argv)
 	return 0;
 }
 
-static int ut_007BUG(int argc, const char **argv)
+static int ut_007BUG(int argc UNUSED, const char **argv UNUSED)
 {
 	/*
 	 * Exercise BUG() to ensure that the message is printed to trace2.
@@ -411,6 +414,56 @@ static int ut_201counter(int argc, const char **argv)
 	return 0;
 }
 
+static int ut_300redact_start(int argc, const char **argv)
+{
+	if (!argc)
+		die("expect <argv...>");
+
+	trace2_cmd_start(argv);
+
+	return 0;
+}
+
+static int ut_301redact_child_start(int argc, const char **argv)
+{
+	struct child_process cmd = CHILD_PROCESS_INIT;
+	int k;
+
+	if (!argc)
+		die("expect <argv...>");
+
+	for (k = 0; argv[k]; k++)
+		strvec_push(&cmd.args, argv[k]);
+
+	trace2_child_start(&cmd);
+
+	strvec_clear(&cmd.args);
+
+	return 0;
+}
+
+static int ut_302redact_exec(int argc, const char **argv)
+{
+	if (!argc)
+		die("expect <exe> <argv...>");
+
+	trace2_exec(argv[0], &argv[1]);
+
+	return 0;
+}
+
+static int ut_303redact_def_param(int argc, const char **argv)
+{
+	struct key_value_info kvi = KVI_INIT;
+
+	if (argc < 2)
+		die("expect <key> <value>");
+
+	trace2_def_param(argv[0], argv[1], &kvi);
+
+	return 0;
+}
+
 /*
  * Usage:
  *     test-tool trace2 <ut_name_1> <ut_usage_1>
@@ -437,6 +490,11 @@ static struct unit_test ut_table[] = {
 
 	{ ut_200counter,  "200counter", "<v1> [<v2> [<v3> [...]]]" },
 	{ ut_201counter,  "201counter", "<v1> <v2> <threads>" },
+
+	{ ut_300redact_start,       "300redact_start",       "<argv...>" },
+	{ ut_301redact_child_start, "301redact_child_start", "<argv...>" },
+	{ ut_302redact_exec,        "302redact_exec",        "<exe> <argv...>" },
+	{ ut_303redact_def_param,   "303redact_def_param",   "<key> <value>" },
 };
 /* clang-format on */
 

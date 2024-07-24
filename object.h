@@ -4,6 +4,7 @@
 #include "hash.h"
 
 struct buffer_slab;
+struct repository;
 
 struct parsed_object_pool {
 	struct object **obj_hash;
@@ -57,9 +58,11 @@ struct object_array {
 
 #define OBJECT_ARRAY_INIT { 0 }
 
+void object_array_init(struct object_array *array);
+
 /*
  * object flag allocation:
- * revision.h:               0---------10         15             23------27
+ * revision.h:               0---------10         15               23------27
  * fetch-pack.c:             01    67
  * negotiator/default.c:       2--5
  * walker.c:                 0-2
@@ -72,12 +75,14 @@ struct object_array {
  * commit-reach.c:                                  16-----19
  * sha1-name.c:                                              20
  * list-objects-filter.c:                                      21
+ * bloom.c:                                                    2122
  * builtin/fsck.c:           0--3
  * builtin/gc.c:             0
  * builtin/index-pack.c:                                     2021
  * reflog.c:                           10--12
  * builtin/show-branch.c:    0-------------------------------------------26
  * builtin/unpack-objects.c:                                 2021
+ * pack-bitmap.h:                                              2122
  */
 #define FLAG_BITS  28
 
@@ -100,6 +105,50 @@ enum object_type {
 	OBJ_ANY,
 	OBJ_MAX
 };
+
+/* unknown mode (impossible combination S_IFIFO|S_IFCHR) */
+#define S_IFINVALID     0030000
+
+/*
+ * A "directory link" is a link to another git directory.
+ *
+ * The value 0160000 is not normally a valid mode, and
+ * also just happens to be S_IFDIR + S_IFLNK
+ */
+#define S_IFGITLINK	0160000
+#define S_ISGITLINK(m)	(((m) & S_IFMT) == S_IFGITLINK)
+
+#define S_ISSPARSEDIR(m) ((m) == S_IFDIR)
+
+static inline enum object_type object_type(unsigned int mode)
+{
+	return S_ISDIR(mode) ? OBJ_TREE :
+		S_ISGITLINK(mode) ? OBJ_COMMIT :
+		OBJ_BLOB;
+}
+
+#define ce_permissions(mode) (((mode) & 0100) ? 0755 : 0644)
+static inline unsigned int create_ce_mode(unsigned int mode)
+{
+	if (S_ISLNK(mode))
+		return S_IFLNK;
+	if (S_ISSPARSEDIR(mode))
+		return S_IFDIR;
+	if (S_ISDIR(mode) || S_ISGITLINK(mode))
+		return S_IFGITLINK;
+	return S_IFREG | ce_permissions(mode);
+}
+
+static inline unsigned int canon_mode(unsigned int mode)
+{
+	if (S_ISREG(mode))
+		return S_IFREG | ce_permissions(mode);
+	if (S_ISLNK(mode))
+		return S_IFLNK;
+	if (S_ISDIR(mode))
+		return S_IFDIR;
+	return S_IFGITLINK;
+}
 
 /*
  * The object type is stored in 3 bits.
@@ -143,6 +192,24 @@ void *create_object(struct repository *r, const struct object_id *oid, void *obj
 
 void *object_as_type(struct object *obj, enum object_type type, int quiet);
 
+
+static inline const char *parse_mode(const char *str, uint16_t *modep)
+{
+	unsigned char c;
+	unsigned int mode = 0;
+
+	if (*str == ' ')
+		return NULL;
+
+	while ((c = *str++) != ' ') {
+		if (c < '0' || c > '7')
+			return NULL;
+		mode = (mode << 3) + (c - '0');
+	}
+	*modep = mode;
+	return str;
+}
+
 /*
  * Returns the object, having parsed it to find out what it is.
  *
@@ -150,6 +217,7 @@ void *object_as_type(struct object *obj, enum object_type type, int quiet);
  */
 enum parse_object_flags {
 	PARSE_OBJECT_SKIP_HASH_CHECK = 1 << 0,
+	PARSE_OBJECT_DISCARD_TREE = 1 << 1,
 };
 struct object *parse_object(struct repository *r, const struct object_id *oid);
 struct object *parse_object_with_flags(struct repository *r,
@@ -189,6 +257,41 @@ struct object *lookup_unknown_object(struct repository *r, const struct object_i
  */
 struct object *lookup_object_by_type(struct repository *r, const struct object_id *oid,
 				     enum object_type type);
+
+enum peel_status {
+	/* object was peeled successfully: */
+	PEEL_PEELED = 0,
+
+	/*
+	 * object cannot be peeled because the named object (or an
+	 * object referred to by a tag in the peel chain), does not
+	 * exist.
+	 */
+	PEEL_INVALID = -1,
+
+	/* object cannot be peeled because it is not a tag: */
+	PEEL_NON_TAG = -2,
+
+	/* ref_entry contains no peeled value because it is a symref: */
+	PEEL_IS_SYMREF = -3,
+
+	/*
+	 * ref_entry cannot be peeled because it is broken (i.e., the
+	 * symbolic reference cannot even be resolved to an object
+	 * name):
+	 */
+	PEEL_BROKEN = -4
+};
+
+/*
+ * Peel the named object; i.e., if the object is a tag, resolve the
+ * tag recursively until a non-tag is found.  If successful, store the
+ * result to oid and return PEEL_PEELED.  If the object is not a tag
+ * or is not valid, return PEEL_NON_TAG or PEEL_INVALID, respectively,
+ * and leave oid unchanged.
+ */
+enum peel_status peel_object(struct repository *r,
+			     const struct object_id *name, struct object_id *oid);
 
 struct object_list *object_list_insert(struct object *item,
 				       struct object_list **list_p);

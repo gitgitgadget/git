@@ -8,6 +8,7 @@ test_description='Test git-bundle'
 GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME=main
 export GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME
 
+TEST_PASSES_SANITIZE_LEAK=true
 . ./test-lib.sh
 . "$TEST_DIRECTORY"/lib-bundle.sh
 . "$TEST_DIRECTORY"/lib-terminal.sh
@@ -617,6 +618,12 @@ test_expect_success TTY 'create --quiet disables all bundle progress' '
 	test_terminal env GIT_PROGRESS_DELAY=0 \
 		git bundle create --quiet out.bundle --all 2>err &&
 	test_must_be_empty err
+'
+
+test_expect_success 'bundle progress with --no-quiet' '
+	GIT_PROGRESS_DELAY=0 \
+		git bundle create --no-quiet out.bundle --all 2>err &&
+	grep "%" err
 '
 
 test_expect_success 'read bundle over stdin' '

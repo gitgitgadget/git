@@ -8,6 +8,7 @@ test_description='Test of the various options to git rm.'
 GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME=main
 export GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME
 
+TEST_PASSES_SANITIZE_LEAK=true
 . ./test-lib.sh
 
 # Setup some files to be removed, some with funny characters
@@ -276,7 +277,7 @@ test_expect_success 'Resolving by removal is not a warning-worthy event' '
 	blob=$(echo blob | git hash-object -w --stdin) &&
 	printf "100644 $blob %d\tblob\n" 1 2 3 | git update-index --index-info &&
 	git rm blob >msg 2>&1 &&
-	test_i18ngrep ! "needs merge" msg &&
+	test_grep ! "needs merge" msg &&
 	test_must_fail git ls-files -s --error-unmatch blob
 '
 
@@ -631,7 +632,7 @@ test_expect_success 'rm of a populated submodule with a .git directory migrates 
 	test_path_is_missing submod/.git &&
 	git status -s -uno --ignore-submodules=none >actual &&
 	test_file_not_empty actual &&
-	test_i18ngrep Migrating output.err
+	test_grep Migrating output.err
 '
 
 cat >expect.deepmodified <<EOF
@@ -722,7 +723,7 @@ test_expect_success "rm absorbs submodule's nested .git directory" '
 	test_path_is_missing submod/subsubmod/.git &&
 	git status -s -uno --ignore-submodules=none >actual &&
 	test_file_not_empty actual &&
-	test_i18ngrep Migrating output.err
+	test_grep Migrating output.err
 '
 
 test_expect_success 'checking out a commit after submodule removal needs manual updates' '
@@ -731,7 +732,7 @@ test_expect_success 'checking out a commit after submodule removal needs manual 
 	git submodule update &&
 	git checkout -q HEAD^ &&
 	git checkout -q main 2>actual &&
-	test_i18ngrep "^warning: unable to rmdir '\''submod'\'':" actual &&
+	test_grep "^warning: unable to rmdir '\''submod'\'':" actual &&
 	git status -s submod >actual &&
 	echo "?? submod/" >expected &&
 	test_cmp expected actual &&

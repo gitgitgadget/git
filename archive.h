@@ -1,8 +1,8 @@
 #ifndef ARCHIVE_H
 #define ARCHIVE_H
 
-#include "cache.h"
 #include "pathspec.h"
+#include "string-list.h"
 
 struct repository;
 struct pretty_print_context;

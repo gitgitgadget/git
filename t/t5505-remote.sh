@@ -1075,7 +1075,7 @@ test_expect_success 'remote prune to cause a dangling symref' '
 		cd eight &&
 		git remote prune origin
 	) >err 2>&1 &&
-	test_i18ngrep "has become dangling" err &&
+	test_grep "has become dangling" err &&
 
 	: And the dangling symref will not cause other annoying errors &&
 	(
@@ -1087,7 +1087,7 @@ test_expect_success 'remote prune to cause a dangling symref' '
 		cd eight &&
 		test_must_fail git branch nomore origin
 	) 2>err &&
-	test_i18ngrep "dangling symref" err
+	test_grep "dangling symref" err
 '
 
 test_expect_success 'show empty remote' '
@@ -1419,7 +1419,7 @@ test_expect_success 'extra args: setup' '
 test_extra_arg () {
 	test_expect_success "extra args: $*" "
 		test_must_fail git remote $* bogus_extra_arg 2>actual &&
-		test_i18ngrep '^usage:' actual
+		test_grep '^usage:' actual
 	"
 }
 
@@ -1453,12 +1453,12 @@ test_expect_success 'unqualified <dst> refspec DWIM and advice' '
 				oid=$(git rev-parse some-tag^{$type})
 			fi &&
 			test_must_fail git push origin $oid:dst 2>err &&
-			test_i18ngrep "error: The destination you" err &&
-			test_i18ngrep "hint: Did you mean" err &&
+			test_grep "error: The destination you" err &&
+			test_grep "hint: Did you mean" err &&
 			test_must_fail git -c advice.pushUnqualifiedRefName=false \
 				push origin $oid:dst 2>err &&
-			test_i18ngrep "error: The destination you" err &&
-			test_i18ngrep ! "hint: Did you mean" err ||
+			test_grep "error: The destination you" err &&
+			test_grep ! "hint: Did you mean" err ||
 			exit 1
 		done
 	)
@@ -1479,17 +1479,53 @@ test_expect_success 'refs/remotes/* <src> refspec and unqualified <dst> DWIM and
 		git fetch --no-tags two &&
 
 		test_must_fail git push origin refs/remotes/two/another:dst 2>err &&
-		test_i18ngrep "error: The destination you" err &&
+		test_grep "error: The destination you" err &&
 
 		test_must_fail git push origin refs/remotes/tags-from-two/my-tag:dst-tag 2>err &&
-		test_i18ngrep "error: The destination you" err &&
+		test_grep "error: The destination you" err &&
 
 		test_must_fail git push origin refs/remotes/trees-from-two/my-head-tree:dst-tree 2>err &&
-		test_i18ngrep "error: The destination you" err &&
+		test_grep "error: The destination you" err &&
 
 		test_must_fail git push origin refs/remotes/blobs-from-two/my-file-blob:dst-blob 2>err &&
-		test_i18ngrep "error: The destination you" err
+		test_grep "error: The destination you" err
 	)
+'
+
+test_expect_success 'empty config clears remote.*.url list' '
+	test_when_finished "git config --remove-section remote.multi" &&
+	git config --add remote.multi.url wrong-one &&
+	git config --add remote.multi.url wrong-two &&
+	git -c remote.multi.url= \
+	    -c remote.multi.url=right-one \
+	    -c remote.multi.url=right-two \
+	    remote show -n multi >actual.raw &&
+	grep URL actual.raw >actual &&
+	cat >expect <<-\EOF &&
+	  Fetch URL: right-one
+	  Push  URL: right-one
+	  Push  URL: right-two
+	EOF
+	test_cmp expect actual
+'
+
+test_expect_success 'empty config clears remote.*.pushurl list' '
+	test_when_finished "git config --remove-section remote.multi" &&
+	git config --add remote.multi.url right &&
+	git config --add remote.multi.url will-be-ignored &&
+	git config --add remote.multi.pushurl wrong-push-one &&
+	git config --add remote.multi.pushurl wrong-push-two &&
+	git -c remote.multi.pushurl= \
+	    -c remote.multi.pushurl=right-push-one \
+	    -c remote.multi.pushurl=right-push-two \
+	    remote show -n multi >actual.raw &&
+	grep URL actual.raw >actual &&
+	cat >expect <<-\EOF &&
+	  Fetch URL: right
+	  Push  URL: right-push-one
+	  Push  URL: right-push-two
+	EOF
+	test_cmp expect actual
 '
 
 test_done

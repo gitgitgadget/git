@@ -1,18 +1,19 @@
-#include "cache.h"
-#include "alloc.h"
+#include "git-compat-util.h"
 #include "config.h"
 #include "entry.h"
 #include "gettext.h"
+#include "hash.h"
 #include "hex.h"
 #include "parallel-checkout.h"
 #include "pkt-line.h"
 #include "progress.h"
+#include "read-cache-ll.h"
 #include "run-command.h"
 #include "sigchain.h"
 #include "streaming.h"
+#include "symlinks.h"
 #include "thread-utils.h"
 #include "trace2.h"
-#include "wrapper.h"
 
 struct pc_worker {
 	struct child_process cp;
@@ -428,13 +429,7 @@ static void send_one_item(int fd, struct parallel_checkout_item *pc_item)
 	fixed_portion->ident = pc_item->ca.ident;
 	fixed_portion->name_len = name_len;
 	fixed_portion->working_tree_encoding_len = working_tree_encoding_len;
-	/*
-	 * We pad the unused bytes in the hash array because, otherwise,
-	 * Valgrind would complain about passing uninitialized bytes to a
-	 * write() syscall. The warning doesn't represent any real risk here,
-	 * but it could hinder the detection of actual errors.
-	 */
-	oidcpy_with_padding(&fixed_portion->oid, &pc_item->ce->oid);
+	oidcpy(&fixed_portion->oid, &pc_item->ce->oid);
 
 	variant = data + sizeof(*fixed_portion);
 	if (working_tree_encoding_len) {

@@ -43,7 +43,7 @@ static void write_test_table(struct strbuf *buf,
 		}
 	}
 
-	w = reftable_new_writer(&strbuf_add_void, buf, &opts);
+	w = reftable_new_writer(&strbuf_add_void, &noop_flush, buf, &opts);
 	reftable_writer_set_limits(w, min, max);
 
 	for (i = 0; i < n; i++) {
@@ -71,7 +71,7 @@ static void write_test_log_table(struct strbuf *buf,
 		.exact_log_message = 1,
 	};
 	struct reftable_writer *w = NULL;
-	w = reftable_new_writer(&strbuf_add_void, buf, &opts);
+	w = reftable_new_writer(&strbuf_add_void, &noop_flush, buf, &opts);
 	reftable_writer_set_limits(w, update_index, update_index);
 
 	for (i = 0; i < n; i++) {
@@ -89,16 +89,17 @@ static struct reftable_merged_table *
 merged_table_from_records(struct reftable_ref_record **refs,
 			  struct reftable_block_source **source,
 			  struct reftable_reader ***readers, int *sizes,
-			  struct strbuf *buf, int n)
+			  struct strbuf *buf, size_t n)
 {
-	int i = 0;
 	struct reftable_merged_table *mt = NULL;
+	struct reftable_table *tabs;
 	int err;
-	struct reftable_table *tabs =
-		reftable_calloc(n * sizeof(struct reftable_table));
-	*readers = reftable_calloc(n * sizeof(struct reftable_reader *));
-	*source = reftable_calloc(n * sizeof(**source));
-	for (i = 0; i < n; i++) {
+
+	REFTABLE_CALLOC_ARRAY(tabs, n);
+	REFTABLE_CALLOC_ARRAY(*readers, n);
+	REFTABLE_CALLOC_ARRAY(*source, n);
+
+	for (size_t i = 0; i < n; i++) {
 		write_test_table(&buf[i], refs[i], sizes[i]);
 		block_source_from_strbuf(&(*source)[i], &buf[i]);
 
@@ -123,16 +124,14 @@ static void readers_destroy(struct reftable_reader **readers, size_t n)
 
 static void test_merged_between(void)
 {
-	uint8_t hash1[GIT_SHA1_RAWSZ] = { 1, 2, 3, 0 };
-
 	struct reftable_ref_record r1[] = { {
-		.refname = "b",
+		.refname = (char *) "b",
 		.update_index = 1,
 		.value_type = REFTABLE_REF_VAL1,
-		.value.val1 = hash1,
+		.value.val1 = { 1, 2, 3, 0 },
 	} };
 	struct reftable_ref_record r2[] = { {
-		.refname = "a",
+		.refname = (char *) "a",
 		.update_index = 2,
 		.value_type = REFTABLE_REF_DELETION,
 	} };
@@ -147,7 +146,10 @@ static void test_merged_between(void)
 	int i;
 	struct reftable_ref_record ref = { NULL };
 	struct reftable_iterator it = { NULL };
-	int err = reftable_merged_table_seek_ref(mt, &it, "a");
+	int err;
+
+	merged_table_init_iter(mt, &it, BLOCK_TYPE_REF);
+	err = reftable_iterator_seek_ref(&it, "a");
 	EXPECT_ERR(err);
 
 	err = reftable_iterator_next_ref(&it, &ref);
@@ -165,45 +167,43 @@ static void test_merged_between(void)
 
 static void test_merged(void)
 {
-	uint8_t hash1[GIT_SHA1_RAWSZ] = { 1 };
-	uint8_t hash2[GIT_SHA1_RAWSZ] = { 2 };
 	struct reftable_ref_record r1[] = {
 		{
-			.refname = "a",
+			.refname = (char *) "a",
 			.update_index = 1,
 			.value_type = REFTABLE_REF_VAL1,
-			.value.val1 = hash1,
+			.value.val1 = { 1 },
 		},
 		{
-			.refname = "b",
+			.refname = (char *) "b",
 			.update_index = 1,
 			.value_type = REFTABLE_REF_VAL1,
-			.value.val1 = hash1,
+			.value.val1 = { 1 },
 		},
 		{
-			.refname = "c",
+			.refname = (char *) "c",
 			.update_index = 1,
 			.value_type = REFTABLE_REF_VAL1,
-			.value.val1 = hash1,
+			.value.val1 = { 1 },
 		}
 	};
 	struct reftable_ref_record r2[] = { {
-		.refname = "a",
+		.refname = (char *) "a",
 		.update_index = 2,
 		.value_type = REFTABLE_REF_DELETION,
 	} };
 	struct reftable_ref_record r3[] = {
 		{
-			.refname = "c",
+			.refname = (char *) "c",
 			.update_index = 3,
 			.value_type = REFTABLE_REF_VAL1,
-			.value.val1 = hash2,
+			.value.val1 = { 2 },
 		},
 		{
-			.refname = "d",
+			.refname = (char *) "d",
 			.update_index = 3,
 			.value_type = REFTABLE_REF_VAL1,
-			.value.val1 = hash1,
+			.value.val1 = { 1 },
 		},
 	};
 
@@ -221,14 +221,15 @@ static void test_merged(void)
 	struct reftable_reader **readers = NULL;
 	struct reftable_merged_table *mt =
 		merged_table_from_records(refs, &bs, &readers, sizes, bufs, 3);
-
 	struct reftable_iterator it = { NULL };
-	int err = reftable_merged_table_seek_ref(mt, &it, "a");
+	int err;
 	struct reftable_ref_record *out = NULL;
 	size_t len = 0;
 	size_t cap = 0;
 	int i = 0;
 
+	merged_table_init_iter(mt, &it, BLOCK_TYPE_REF);
+	err = reftable_iterator_seek_ref(&it, "a");
 	EXPECT_ERR(err);
 	EXPECT(reftable_merged_table_hash_id(mt) == GIT_SHA1_FORMAT_ID);
 	EXPECT(reftable_merged_table_min_update_index(mt) == 1);
@@ -236,14 +237,10 @@ static void test_merged(void)
 	while (len < 100) { /* cap loops/recursion. */
 		struct reftable_ref_record ref = { NULL };
 		int err = reftable_iterator_next_ref(&it, &ref);
-		if (err > 0) {
+		if (err > 0)
 			break;
-		}
-		if (len == cap) {
-			cap = 2 * cap + 1;
-			out = reftable_realloc(
-				out, sizeof(struct reftable_ref_record) * cap);
-		}
+
+		REFTABLE_ALLOC_GROW(out, len + 1, cap);
 		out[len++] = ref;
 	}
 	reftable_iterator_destroy(&it);
@@ -270,16 +267,17 @@ static struct reftable_merged_table *
 merged_table_from_log_records(struct reftable_log_record **logs,
 			      struct reftable_block_source **source,
 			      struct reftable_reader ***readers, int *sizes,
-			      struct strbuf *buf, int n)
+			      struct strbuf *buf, size_t n)
 {
-	int i = 0;
 	struct reftable_merged_table *mt = NULL;
+	struct reftable_table *tabs;
 	int err;
-	struct reftable_table *tabs =
-		reftable_calloc(n * sizeof(struct reftable_table));
-	*readers = reftable_calloc(n * sizeof(struct reftable_reader *));
-	*source = reftable_calloc(n * sizeof(**source));
-	for (i = 0; i < n; i++) {
+
+	REFTABLE_CALLOC_ARRAY(tabs, n);
+	REFTABLE_CALLOC_ARRAY(*readers, n);
+	REFTABLE_CALLOC_ARRAY(*source, n);
+
+	for (size_t i = 0; i < n; i++) {
 		write_test_log_table(&buf[i], logs[i], sizes[i], i + 1);
 		block_source_from_strbuf(&(*source)[i], &buf[i]);
 
@@ -296,51 +294,48 @@ merged_table_from_log_records(struct reftable_log_record **logs,
 
 static void test_merged_logs(void)
 {
-	uint8_t hash1[GIT_SHA1_RAWSZ] = { 1 };
-	uint8_t hash2[GIT_SHA1_RAWSZ] = { 2 };
-	uint8_t hash3[GIT_SHA1_RAWSZ] = { 3 };
 	struct reftable_log_record r1[] = {
 		{
-			.refname = "a",
+			.refname = (char *) "a",
 			.update_index = 2,
 			.value_type = REFTABLE_LOG_UPDATE,
 			.value.update = {
-				.old_hash = hash2,
+				.old_hash = { 2 },
 				/* deletion */
-				.name = "jane doe",
-				.email = "jane@invalid",
-				.message = "message2",
+				.name = (char *) "jane doe",
+				.email = (char *) "jane@invalid",
+				.message = (char *) "message2",
 			}
 		},
 		{
-			.refname = "a",
+			.refname = (char *) "a",
 			.update_index = 1,
 			.value_type = REFTABLE_LOG_UPDATE,
 			.value.update = {
-				.old_hash = hash1,
-				.new_hash = hash2,
-				.name = "jane doe",
-				.email = "jane@invalid",
-				.message = "message1",
+				.old_hash = { 1 },
+				.new_hash = { 2 },
+				.name = (char *) "jane doe",
+				.email = (char *) "jane@invalid",
+				.message = (char *) "message1",
 			}
 		},
 	};
 	struct reftable_log_record r2[] = {
 		{
-			.refname = "a",
+			.refname = (char *) "a",
 			.update_index = 3,
 			.value_type = REFTABLE_LOG_UPDATE,
 			.value.update = {
-				.new_hash = hash3,
-				.name = "jane doe",
-				.email = "jane@invalid",
-				.message = "message3",
+				.new_hash = { 3 },
+				.name = (char *) "jane doe",
+				.email = (char *) "jane@invalid",
+				.message = (char *) "message3",
 			}
 		},
 	};
 	struct reftable_log_record r3[] = {
 		{
-			.refname = "a",
+			.refname = (char *) "a",
 			.update_index = 2,
 			.value_type = REFTABLE_LOG_DELETION,
 		},
@@ -358,14 +353,15 @@ static void test_merged_logs(void)
 	struct reftable_reader **readers = NULL;
 	struct reftable_merged_table *mt = merged_table_from_log_records(
 		logs, &bs, &readers, sizes, bufs, 3);
-
 	struct reftable_iterator it = { NULL };
-	int err = reftable_merged_table_seek_log(mt, &it, "a");
+	int err;
 	struct reftable_log_record *out = NULL;
 	size_t len = 0;
 	size_t cap = 0;
 	int i = 0;
 
+	merged_table_init_iter(mt, &it, BLOCK_TYPE_LOG);
+	err = reftable_iterator_seek_log(&it, "a");
 	EXPECT_ERR(err);
 	EXPECT(reftable_merged_table_hash_id(mt) == GIT_SHA1_FORMAT_ID);
 	EXPECT(reftable_merged_table_min_update_index(mt) == 1);
@@ -373,14 +369,10 @@ static void test_merged_logs(void)
 	while (len < 100) { /* cap loops/recursion. */
 		struct reftable_log_record log = { NULL };
 		int err = reftable_iterator_next_log(&it, &log);
-		if (err > 0) {
+		if (err > 0)
 			break;
-		}
-		if (len == cap) {
-			cap = 2 * cap + 1;
-			out = reftable_realloc(
-				out, sizeof(struct reftable_log_record) * cap);
-		}
+
+		REFTABLE_ALLOC_GROW(out, len + 1, cap);
 		out[len++] = log;
 	}
 	reftable_iterator_destroy(&it);
@@ -391,7 +383,8 @@ static void test_merged_logs(void)
 						 GIT_SHA1_RAWSZ));
 	}
 
-	err = reftable_merged_table_seek_log_at(mt, &it, "a", 2);
+	merged_table_init_iter(mt, &it, BLOCK_TYPE_LOG);
+	err = reftable_iterator_seek_log_at(&it, "a", 2);
 	EXPECT_ERR(err);
 	reftable_log_record_release(&out[0]);
 	err = reftable_iterator_next_log(&it, &out[0]);
@@ -417,15 +410,15 @@ static void test_default_write_opts(void)
 	struct reftable_write_options opts = { 0 };
 	struct strbuf buf = STRBUF_INIT;
 	struct reftable_writer *w =
-		reftable_new_writer(&strbuf_add_void, &buf, &opts);
+		reftable_new_writer(&strbuf_add_void, &noop_flush, &buf, &opts);
 
 	struct reftable_ref_record rec = {
-		.refname = "master",
+		.refname = (char *) "master",
 		.update_index = 1,
 	};
 	int err;
 	struct reftable_block_source source = { NULL };
-	struct reftable_table *tab = reftable_calloc(sizeof(*tab) * 1);
+	struct reftable_table *tab = reftable_calloc(1, sizeof(*tab));
 	uint32_t hash_id;
 	struct reftable_reader *rd = NULL;
 	struct reftable_merged_table *merged = NULL;

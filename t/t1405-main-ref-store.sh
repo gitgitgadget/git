@@ -15,14 +15,6 @@ test_expect_success 'setup' '
 	test_commit one
 '
 
-test_expect_success REFFILES 'pack_refs(PACK_REFS_ALL | PACK_REFS_PRUNE)' '
-	N=`find .git/refs -type f | wc -l` &&
-	test "$N" != 0 &&
-	$RUN pack-refs PACK_REFS_PRUNE,PACK_REFS_ALL &&
-	N=`find .git/refs -type f` &&
-	test -z "$N"
-'
-
 test_expect_success 'create_symref(FOO, refs/heads/main)' '
 	$RUN create-symref FOO refs/heads/main nothing &&
 	echo refs/heads/main >expected &&
@@ -39,12 +31,6 @@ test_expect_success 'delete_refs(FOO, refs/tags/new-tag)' '
 	test_must_fail git rev-parse --symbolic-full-name FOO &&
 	test_must_fail git rev-parse FOO -- &&
 	test_must_fail git rev-parse refs/tags/new-tag --
-'
-
-# In reftable, we keep the reflogs around for deleted refs.
-test_expect_success !REFFILES 'delete-reflog(FOO, refs/tags/new-tag)' '
-	$RUN delete-reflog FOO &&
-	$RUN delete-reflog refs/tags/new-tag
 '
 
 test_expect_success 'rename_refs(main, new-main)' '
@@ -82,11 +68,11 @@ test_expect_success 'verify_ref(new-main)' '
 '
 
 test_expect_success 'for_each_reflog()' '
-	$RUN for-each-reflog | sort -k2 | cut -d" " -f 2- >actual &&
+	$RUN for-each-reflog >actual &&
 	cat >expected <<-\EOF &&
-	HEAD 0x1
-	refs/heads/main 0x0
-	refs/heads/new-main 0x0
+	HEAD
+	refs/heads/main
+	refs/heads/new-main
 	EOF
 	test_cmp expected actual
 '
@@ -112,7 +98,7 @@ test_expect_success 'delete_reflog(HEAD)' '
 	test_must_fail git reflog exists HEAD
 '
 
-test_expect_success REFFILES 'create-reflog(HEAD)' '
+test_expect_success 'create-reflog(HEAD)' '
 	$RUN create-reflog HEAD &&
 	git reflog exists HEAD
 '

@@ -7,12 +7,13 @@
  *
  */
 
-#include "cache.h"
+#define USE_THE_REPOSITORY_VARIABLE
+
+#include "git-compat-util.h"
 #include "abspath.h"
-#include "alloc.h"
+#include "base85.h"
 #include "config.h"
-#include "object-store.h"
-#include "blob.h"
+#include "object-store-ll.h"
 #include "delta.h"
 #include "diff.h"
 #include "dir.h"
@@ -20,15 +21,22 @@
 #include "gettext.h"
 #include "hex.h"
 #include "xdiff-interface.h"
-#include "ll-merge.h"
+#include "merge-ll.h"
 #include "lockfile.h"
+#include "name-hash.h"
+#include "object-name.h"
+#include "object-file.h"
 #include "parse-options.h"
+#include "path.h"
 #include "quote.h"
+#include "read-cache.h"
 #include "rerere.h"
 #include "apply.h"
 #include "entry.h"
 #include "setup.h"
-#include "wrapper.h"
+#include "symlinks.h"
+#include "wildmatch.h"
+#include "ws.h"
 
 struct gitdiff_data {
 	struct strbuf *root;
@@ -71,7 +79,8 @@ static int parse_whitespace_option(struct apply_state *state, const char *option
 		return 0;
 	}
 	/*
-	 * Please update $__git_whitespacelist in git-completion.bash
+	 * Please update $__git_whitespacelist in git-completion.bash,
+	 * Documentation/git-apply.txt, and Documentation/git-am.txt
 	 * when you add new options.
 	 */
 	return error(_("unrecognized whitespace option '%s'"), option);
@@ -128,6 +137,7 @@ void clear_apply_state(struct apply_state *state)
 	strset_clear(&state->removed_symlinks);
 	strset_clear(&state->kept_symlinks);
 	strbuf_release(&state->root);
+	FREE_AND_NULL(state->fake_ancestor);
 
 	/* &state->fn_table is cleared at the end of apply_patch() */
 }
@@ -405,9 +415,10 @@ static void say_patch_name(FILE *output, const char *fmt, struct patch *patch)
 
 static int read_patch_file(struct strbuf *sb, int fd)
 {
-	if (strbuf_read(sb, fd, 0) < 0 || sb->len >= MAX_APPLY_SIZE)
-		return error_errno("git apply: failed to read");
-
+	if (strbuf_read(sb, fd, 0) < 0)
+		return error_errno(_("failed to read patch"));
+	else if (sb->len >= MAX_APPLY_SIZE)
+		return error(_("patch too large"));
 	/*
 	 * Make sure that we have some slop in the buffer
 	 * so that we can do speculative "memcmp" etc, and
@@ -1284,8 +1295,15 @@ static char *git_header_name(int p_value,
 				return NULL; /* no postimage name */
 			second = skip_tree_prefix(p_value, name + len + 1,
 						  line_len - (len + 1));
+			/*
+			 * If we are at the SP at the end of a directory,
+			 * skip_tree_prefix() may return NULL as that makes
+			 * it appears as if we have an absolute path.
+			 * Keep going to find another SP.
+			 */
 			if (!second)
-				return NULL;
+				continue;
+
 			/*
 			 * Does len bytes starting at "name" and "second"
 			 * (that are separated by one HT or SP we just
@@ -2212,7 +2230,8 @@ static void reverse_patches(struct patch *p)
 		struct fragment *frag = p->fragments;
 
 		SWAP(p->new_name, p->old_name);
-		SWAP(p->new_mode, p->old_mode);
+		if (p->new_mode)
+			SWAP(p->new_mode, p->old_mode);
 		SWAP(p->is_new, p->is_delete);
 		SWAP(p->lines_added, p->lines_deleted);
 		SWAP(p->old_oid_prefix, p->new_oid_prefix);
@@ -2477,18 +2496,21 @@ static int match_fragment(struct apply_state *state,
 			  int match_beginning, int match_end)
 {
 	int i;
-	char *fixed_buf, *buf, *orig, *target;
-	struct strbuf fixed;
-	size_t fixed_len, postlen;
+	const char *orig, *target;
+	struct strbuf fixed = STRBUF_INIT;
+	size_t postlen;
 	int preimage_limit;
+	int ret;
 
 	if (preimage->nr + current_lno <= img->nr) {
 		/*
 		 * The hunk falls within the boundaries of img.
 		 */
 		preimage_limit = preimage->nr;
-		if (match_end && (preimage->nr + current_lno != img->nr))
-			return 0;
+		if (match_end && (preimage->nr + current_lno != img->nr)) {
+			ret = 0;
+			goto out;
+		}
 	} else if (state->ws_error_action == correct_ws_error &&
 		   (ws_rule & WS_BLANK_AT_EOF)) {
 		/*
@@ -2505,17 +2527,23 @@ static int match_fragment(struct apply_state *state,
 		 * we are not removing blanks at the end, so we
 		 * should reject the hunk at this position.
 		 */
-		return 0;
+		ret = 0;
+		goto out;
 	}
 
-	if (match_beginning && current_lno)
-		return 0;
+	if (match_beginning && current_lno) {
+		ret = 0;
+		goto out;
+	}
 
 	/* Quick hash check */
-	for (i = 0; i < preimage_limit; i++)
+	for (i = 0; i < preimage_limit; i++) {
 		if ((img->line[current_lno + i].flag & LINE_PATCHED) ||
-		    (preimage->line[i].hash != img->line[current_lno + i].hash))
-			return 0;
+		    (preimage->line[i].hash != img->line[current_lno + i].hash)) {
+			ret = 0;
+			goto out;
+		}
+	}
 
 	if (preimage_limit == preimage->nr) {
 		/*
@@ -2528,8 +2556,10 @@ static int match_fragment(struct apply_state *state,
 		if ((match_end
 		     ? (current + preimage->len == img->len)
 		     : (current + preimage->len <= img->len)) &&
-		    !memcmp(img->buf + current, preimage->buf, preimage->len))
-			return 1;
+		    !memcmp(img->buf + current, preimage->buf, preimage->len)) {
+			ret = 1;
+			goto out;
+		}
 	} else {
 		/*
 		 * The preimage extends beyond the end of img, so
@@ -2538,7 +2568,7 @@ static int match_fragment(struct apply_state *state,
 		 * There must be one non-blank context line that match
 		 * a line before the end of img.
 		 */
-		char *buf_end;
+		const char *buf, *buf_end;
 
 		buf = preimage->buf;
 		buf_end = buf;
@@ -2548,8 +2578,10 @@ static int match_fragment(struct apply_state *state,
 		for ( ; buf < buf_end; buf++)
 			if (!isspace(*buf))
 				break;
-		if (buf == buf_end)
-			return 0;
+		if (buf == buf_end) {
+			ret = 0;
+			goto out;
+		}
 	}
 
 	/*
@@ -2557,12 +2589,16 @@ static int match_fragment(struct apply_state *state,
 	 * fuzzy matching. We collect all the line length information because
 	 * we need it to adjust whitespace if we match.
 	 */
-	if (state->ws_ignore_action == ignore_ws_change)
-		return line_by_line_fuzzy_match(img, preimage, postimage,
-						current, current_lno, preimage_limit);
+	if (state->ws_ignore_action == ignore_ws_change) {
+		ret = line_by_line_fuzzy_match(img, preimage, postimage,
+					       current, current_lno, preimage_limit);
+		goto out;
+	}
 
-	if (state->ws_error_action != correct_ws_error)
-		return 0;
+	if (state->ws_error_action != correct_ws_error) {
+		ret = 0;
+		goto out;
+	}
 
 	/*
 	 * The hunk does not apply byte-by-byte, but the hash says
@@ -2591,7 +2627,7 @@ static int match_fragment(struct apply_state *state,
 	 * but in this loop we will only handle the part of the
 	 * preimage that falls within the file.
 	 */
-	strbuf_init(&fixed, preimage->len + 1);
+	strbuf_grow(&fixed, preimage->len + 1);
 	orig = preimage->buf;
 	target = img->buf + current;
 	for (i = 0; i < preimage_limit; i++) {
@@ -2627,8 +2663,10 @@ static int match_fragment(struct apply_state *state,
 			postlen += tgtfix.len;
 
 		strbuf_release(&tgtfix);
-		if (!match)
-			goto unmatch_exit;
+		if (!match) {
+			ret = 0;
+			goto out;
+		}
 
 		orig += oldlen;
 		target += tgtlen;
@@ -2649,9 +2687,13 @@ static int match_fragment(struct apply_state *state,
 		/* Try fixing the line in the preimage */
 		ws_fix_copy(&fixed, orig, oldlen, ws_rule, NULL);
 
-		for (j = fixstart; j < fixed.len; j++)
-			if (!isspace(fixed.buf[j]))
-				goto unmatch_exit;
+		for (j = fixstart; j < fixed.len; j++) {
+			if (!isspace(fixed.buf[j])) {
+				ret = 0;
+				goto out;
+			}
+		}
+
 
 		orig += oldlen;
 	}
@@ -2661,16 +2703,16 @@ static int match_fragment(struct apply_state *state,
 	 * has whitespace breakages unfixed, and fixing them makes the
 	 * hunk match.  Update the context lines in the postimage.
 	 */
-	fixed_buf = strbuf_detach(&fixed, &fixed_len);
 	if (postlen < postimage->len)
 		postlen = 0;
 	update_pre_post_images(preimage, postimage,
-			       fixed_buf, fixed_len, postlen);
-	return 1;
+			       fixed.buf, fixed.len, postlen);
 
- unmatch_exit:
+	ret = 1;
+
+out:
 	strbuf_release(&fixed);
-	return 0;
+	return ret;
 }
 
 static int find_pos(struct apply_state *state,
@@ -3664,7 +3706,7 @@ static int try_threeway(struct apply_state *state,
 	if (status) {
 		patch->conflicted_threeway = 1;
 		if (patch->is_new)
-			oidclr(&patch->threeway_stage[0]);
+			oidclr(&patch->threeway_stage[0], the_repository->hash_algo);
 		else
 			oidcpy(&patch->threeway_stage[0], &pre_oid);
 		oidcpy(&patch->threeway_stage[1], &our_oid);
@@ -3696,8 +3738,10 @@ static int apply_data(struct apply_state *state, struct patch *patch,
 			fprintf(stderr, _("Falling back to direct application...\n"));
 
 		/* Note: with --reject, apply_fragments() returns 0 */
-		if (patch->direct_to_threeway || apply_fragments(state, &image, patch) < 0)
+		if (patch->direct_to_threeway || apply_fragments(state, &image, patch) < 0) {
+			clear_image(&image);
 			return -1;
+		}
 	}
 	patch->result = image.buf;
 	patch->resultsize = image.len;
@@ -3770,8 +3814,17 @@ static int check_preimage(struct apply_state *state,
 		return error_errno("%s", old_name);
 	}
 
-	if (!state->cached && !previous)
-		st_mode = ce_mode_from_stat(*ce, st->st_mode);
+	if (!state->cached && !previous) {
+		if (*ce && !(*ce)->ce_mode)
+			BUG("ce_mode == 0 for path '%s'", old_name);
+
+		if (trust_executable_bit)
+			st_mode = ce_mode_from_stat(*ce, st->st_mode);
+		else if (*ce)
+			st_mode = (*ce)->ce_mode;
+		else
+			st_mode = patch->old_mode;
+	}
 
 	if (patch->is_new < 0)
 		patch->is_new = 0;
@@ -4423,6 +4476,7 @@ static int create_one_file(struct apply_state *state,
 			   const char *buf,
 			   unsigned long size)
 {
+	char *newpath = NULL;
 	int res;
 
 	if (state->cached)
@@ -4484,24 +4538,26 @@ static int create_one_file(struct apply_state *state,
 		unsigned int nr = getpid();
 
 		for (;;) {
-			char newpath[PATH_MAX];
-			mksnpath(newpath, sizeof(newpath), "%s~%u", path, nr);
+			newpath = mkpathdup("%s~%u", path, nr);
 			res = try_create_file(state, newpath, mode, buf, size);
 			if (res < 0)
-				return -1;
+				goto out;
 			if (!res) {
 				if (!rename(newpath, path))
-					return 0;
+					goto out;
 				unlink_or_warn(newpath);
 				break;
 			}
 			if (errno != EEXIST)
 				break;
 			++nr;
+			FREE_AND_NULL(newpath);
 		}
 	}
-	return error_errno(_("unable to write file '%s' mode %o"),
-			   path, mode);
+	res = error_errno(_("unable to write file '%s' mode %o"), path, mode);
+out:
+	free(newpath);
+	return res;
 }
 
 static int add_conflicted_stages_file(struct apply_state *state,
@@ -4584,9 +4640,9 @@ static int write_out_one_result(struct apply_state *state,
 static int write_out_one_reject(struct apply_state *state, struct patch *patch)
 {
 	FILE *rej;
-	char namebuf[PATH_MAX];
+	char *namebuf;
 	struct fragment *frag;
-	int cnt = 0;
+	int fd, cnt = 0;
 	struct strbuf sb = STRBUF_INIT;
 
 	for (cnt = 0, frag = patch->fragments; frag; frag = frag->next) {
@@ -4617,18 +4673,30 @@ static int write_out_one_reject(struct apply_state *state, struct patch *patch)
 		say_patch_name(stderr, sb.buf, patch);
 	strbuf_release(&sb);
 
-	cnt = strlen(patch->new_name);
-	if (ARRAY_SIZE(namebuf) <= cnt + 5) {
-		cnt = ARRAY_SIZE(namebuf) - 5;
-		warning(_("truncating .rej filename to %.*s.rej"),
-			cnt - 1, patch->new_name);
-	}
-	memcpy(namebuf, patch->new_name, cnt);
-	memcpy(namebuf + cnt, ".rej", 5);
+	namebuf = xstrfmt("%s.rej", patch->new_name);
 
-	rej = fopen(namebuf, "w");
-	if (!rej)
-		return error_errno(_("cannot open %s"), namebuf);
+	fd = open(namebuf, O_CREAT | O_EXCL | O_WRONLY, 0666);
+	if (fd < 0) {
+		if (errno != EEXIST) {
+			error_errno(_("cannot open %s"), namebuf);
+			goto error;
+		}
+		if (unlink(namebuf)) {
+			error_errno(_("cannot unlink '%s'"), namebuf);
+			goto error;
+		}
+		fd = open(namebuf, O_CREAT | O_EXCL | O_WRONLY, 0666);
+		if (fd < 0) {
+			error_errno(_("cannot open %s"), namebuf);
+			goto error;
+		}
+	}
+	rej = fdopen(fd, "w");
+	if (!rej) {
+		error_errno(_("cannot open %s"), namebuf);
+		close(fd);
+		goto error;
+	}
 
 	/* Normal git tools never deal with .rej, so do not pretend
 	 * this is a git patch by saying --git or giving extended
@@ -4652,6 +4720,8 @@ static int write_out_one_reject(struct apply_state *state, struct patch *patch)
 			fputc('\n', rej);
 	}
 	fclose(rej);
+error:
+	free(namebuf);
 	return -1;
 }
 

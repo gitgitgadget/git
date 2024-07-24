@@ -1,6 +1,6 @@
 #include "test-tool.h"
-#include "cache.h"
 #include "date.h"
+#include "trace.h"
 
 static const char *usage_msg = "\n"
 "  test-tool date relative [time_t]...\n"
@@ -52,7 +52,7 @@ static void show_dates(const char **argv, const char *format)
 			arg++;
 		tz = atoi(arg);
 
-		printf("%s -> %s\n", *argv, show_date(t, tz, &mode));
+		printf("%s -> %s\n", *argv, show_date(t, tz, mode));
 	}
 
 	date_mode_release(&mode);
@@ -81,7 +81,7 @@ static void parse_approxidate(const char **argv)
 {
 	for (; *argv; argv++) {
 		timestamp_t t;
-		t = approxidate_relative(*argv);
+		t = approxidate(*argv);
 		printf("%s -> %s\n", *argv, show_date(t, 0, DATE_MODE(ISO8601)));
 	}
 }
@@ -90,7 +90,7 @@ static void parse_approx_timestamp(const char **argv)
 {
 	for (; *argv; argv++) {
 		timestamp_t t;
-		t = approxidate_relative(*argv);
+		t = approxidate(*argv);
 		printf("%s -> %"PRItime"\n", *argv, t);
 	}
 }

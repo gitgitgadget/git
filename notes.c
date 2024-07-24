@@ -1,11 +1,12 @@
-#include "cache.h"
+#define USE_THE_REPOSITORY_VARIABLE
+
+#include "git-compat-util.h"
 #include "config.h"
 #include "environment.h"
 #include "hex.h"
 #include "notes.h"
-#include "object-store.h"
-#include "blob.h"
-#include "tree.h"
+#include "object-name.h"
+#include "object-store-ll.h"
 #include "utf8.h"
 #include "strbuf.h"
 #include "tree-walk.h"
@@ -150,7 +151,7 @@ static struct leaf_node *note_tree_find(struct notes_tree *t,
 	void **p = note_tree_search(t, &tree, &n, key_sha1);
 	if (GET_PTR_TYPE(*p) == PTR_TYPE_NOTE) {
 		struct leaf_node *l = (struct leaf_node *) CLR_PTR_TYPE(*p);
-		if (hasheq(key_sha1, l->key_oid.hash))
+		if (hasheq(key_sha1, l->key_oid.hash, the_repository->hash_algo))
 			return l;
 	}
 	return NULL;
@@ -354,7 +355,7 @@ static void add_non_note(struct notes_tree *t, char *path,
 	n->next = NULL;
 	n->path = path;
 	n->mode = mode;
-	oidread(&n->oid, sha1);
+	oidread(&n->oid, sha1, the_repository->hash_algo);
 	t->prev_non_note = n;
 
 	if (!t->first_non_note) {
@@ -427,6 +428,8 @@ static void load_subtree(struct notes_tree *t, struct leaf_node *subtree,
 			if (hex_to_bytes(object_oid.hash + prefix_len, entry.path,
 					 hashsz - prefix_len))
 				goto handle_non_note; /* entry.path is not a SHA1 */
+
+			memset(object_oid.hash + hashsz, 0, GIT_MAX_RAWSZ - hashsz);
 
 			type = PTR_TYPE_NOTE;
 		} else if (path_len == 2) {
@@ -946,7 +949,8 @@ void string_list_add_refs_by_glob(struct string_list *list, const char *glob)
 {
 	assert(list->strdup_strings);
 	if (has_glob_specials(glob)) {
-		for_each_glob_ref(string_list_add_one_ref, glob, list);
+		refs_for_each_glob_ref(get_main_ref_store(the_repository),
+				       string_list_add_one_ref, glob, list);
 	} else {
 		struct object_id oid;
 		if (repo_get_oid(the_repository, glob, &oid))
@@ -963,7 +967,7 @@ void string_list_add_refs_from_colon_sep(struct string_list *list,
 	char *globs_copy = xstrdup(globs);
 	int i;
 
-	string_list_split_in_place(&split, globs_copy, ':', -1);
+	string_list_split_in_place(&split, globs_copy, ":", -1);
 	string_list_remove_empty_items(&split, 0);
 
 	for (i = 0; i < split.nr; i++)
@@ -973,7 +977,9 @@ void string_list_add_refs_from_colon_sep(struct string_list *list,
 	free(globs_copy);
 }
 
-static int notes_display_config(const char *k, const char *v, void *cb)
+static int notes_display_config(const char *k, const char *v,
+				const struct config_context *ctx UNUSED,
+				void *cb)
 {
 	int *load_refs = cb;
 
@@ -1019,22 +1025,22 @@ void init_notes(struct notes_tree *t, const char *notes_ref,
 	t->root = (struct int_node *) xcalloc(1, sizeof(struct int_node));
 	t->first_non_note = NULL;
 	t->prev_non_note = NULL;
-	t->ref = xstrdup_or_null(notes_ref);
+	t->ref = xstrdup(notes_ref);
 	t->update_ref = (flags & NOTES_INIT_WRITABLE) ? t->ref : NULL;
 	t->combine_notes = combine_notes;
 	t->initialized = 1;
 	t->dirty = 0;
 
-	if (flags & NOTES_INIT_EMPTY || !notes_ref ||
+	if (flags & NOTES_INIT_EMPTY ||
 	    repo_get_oid_treeish(the_repository, notes_ref, &object_oid))
 		return;
-	if (flags & NOTES_INIT_WRITABLE && read_ref(notes_ref, &object_oid))
+	if (flags & NOTES_INIT_WRITABLE && refs_read_ref(get_main_ref_store(the_repository), notes_ref, &object_oid))
 		die("Cannot use notes ref %s", notes_ref);
 	if (get_tree_entry(the_repository, &object_oid, "", &oid, &mode))
 		die("Failed to read notes tree referenced by %s (%s)",
 		    notes_ref, oid_to_hex(&object_oid));
 
-	oidclr(&root_tree.key_oid);
+	oidclr(&root_tree.key_oid, the_repository->hash_algo);
 	oidcpy(&root_tree.val_oid, &oid);
 	load_subtree(t, &root_tree, t->root, 0);
 }
@@ -1058,6 +1064,12 @@ void init_display_notes(struct display_notes_opt *opt)
 {
 	memset(opt, 0, sizeof(*opt));
 	opt->use_default_notes = -1;
+	string_list_init_dup(&opt->extra_notes_refs);
+}
+
+void release_display_notes(struct display_notes_opt *opt)
+{
+	string_list_clear(&opt->extra_notes_refs, 0);
 }
 
 void enable_default_display_notes(struct display_notes_opt *opt, int *show_notes)
@@ -1071,19 +1083,15 @@ void enable_ref_display_notes(struct display_notes_opt *opt, int *show_notes,
 	struct strbuf buf = STRBUF_INIT;
 	strbuf_addstr(&buf, ref);
 	expand_notes_ref(&buf);
-	string_list_append(&opt->extra_notes_refs,
-			strbuf_detach(&buf, NULL));
+	string_list_append_nodup(&opt->extra_notes_refs,
+				 strbuf_detach(&buf, NULL));
 	*show_notes = 1;
 }
 
 void disable_display_notes(struct display_notes_opt *opt, int *show_notes)
 {
 	opt->use_default_notes = -1;
-	/* we have been strdup'ing ourselves, so trick
-	 * string_list into free()ing strings */
-	opt->extra_notes_refs.strdup_strings = 1;
 	string_list_clear(&opt->extra_notes_refs, 0);
-	opt->extra_notes_refs.strdup_strings = 0;
 	*show_notes = 0;
 }
 
@@ -1144,8 +1152,8 @@ int remove_note(struct notes_tree *t, const unsigned char *object_sha1)
 	if (!t)
 		t = &default_notes_tree;
 	assert(t->initialized);
-	oidread(&l.key_oid, object_sha1);
-	oidclr(&l.val_oid);
+	oidread(&l.key_oid, object_sha1, the_repository->hash_algo);
+	oidclr(&l.val_oid, the_repository->hash_algo);
 	note_tree_remove(t, t->root, 0, &l);
 	if (is_null_oid(&l.val_oid)) /* no note was removed */
 		return 1;
@@ -1215,11 +1223,16 @@ void prune_notes(struct notes_tree *t, int flags)
 	for_each_note(t, 0, prune_notes_helper, &l);
 
 	while (l) {
+		struct note_delete_list *next;
+
 		if (flags & NOTES_PRUNE_VERBOSE)
 			printf("%s\n", hash_to_hex(l->sha1));
 		if (!(flags & NOTES_PRUNE_DRYRUN))
 			remove_note(t, l->sha1);
-		l = l->next;
+
+		next = l->next;
+		free(l);
+		l = next;
 	}
 }
 

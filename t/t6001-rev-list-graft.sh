@@ -5,6 +5,7 @@ test_description='Revision traversal vs grafts and path limiter'
 GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME=main
 export GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME
 
+TEST_PASSES_SANITIZE_LEAK=true
 . ./test-lib.sh
 
 test_expect_success setup '
@@ -118,10 +119,10 @@ done
 
 test_expect_success 'show advice that grafts are deprecated' '
 	git show HEAD 2>err &&
-	test_i18ngrep "git replace" err &&
+	test_grep "git replace" err &&
 	test_config advice.graftFileDeprecated false &&
 	git show HEAD 2>err &&
-	test_i18ngrep ! "git replace" err
+	test_grep ! "git replace" err
 '
 
 test_done

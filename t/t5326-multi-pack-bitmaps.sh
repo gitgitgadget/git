@@ -434,4 +434,151 @@ test_expect_success 'tagged commits are selected for bitmapping' '
 	)
 '
 
+test_expect_success 'do not follow replace objects for MIDX bitmap' '
+	rm -fr repo &&
+	git init repo &&
+	test_when_finished "rm -fr repo" &&
+	(
+		cd repo &&
+
+		test_commit A &&
+		test_commit B &&
+		git checkout --orphan=orphan A &&
+		test_commit orphan &&
+
+		git replace A HEAD &&
+		git repack -ad --write-midx --write-bitmap-index &&
+
+		# generating reachability bitmaps with replace refs
+		# enabled will result in broken clones
+		git clone --no-local --bare . clone.git
+	)
+'
+
+corrupt_file () {
+	chmod a+w "$1" &&
+	printf "bogus" | dd of="$1" bs=1 seek="12" conv=notrunc
+}
+
+test_expect_success 'git fsck correctly identifies good and bad bitmaps' '
+	git init valid &&
+	test_when_finished rm -rf valid &&
+
+	test_commit_bulk 20 &&
+	git repack -adbf &&
+
+	# Move pack-bitmap aside so it is not deleted
+	# in next repack.
+	packbitmap=$(ls .git/objects/pack/pack-*.bitmap) &&
+	mv "$packbitmap" "$packbitmap.bak" &&
+
+	test_commit_bulk 10 &&
+	git repack -b --write-midx &&
+	midxbitmap=$(ls .git/objects/pack/multi-pack-index-*.bitmap) &&
+
+	# Copy MIDX bitmap to backup. Copy pack bitmap from backup.
+	cp "$midxbitmap" "$midxbitmap.bak" &&
+	cp "$packbitmap.bak" "$packbitmap" &&
+
+	# fsck works at first
+	git fsck 2>err &&
+	test_must_be_empty err &&
+
+	corrupt_file "$packbitmap" &&
+	test_must_fail git fsck 2>err &&
+	grep "bitmap file '\''$packbitmap'\'' has invalid checksum" err &&
+
+	cp "$packbitmap.bak" "$packbitmap" &&
+	corrupt_file "$midxbitmap" &&
+	test_must_fail git fsck 2>err &&
+	grep "bitmap file '\''$midxbitmap'\'' has invalid checksum" err &&
+
+	corrupt_file "$packbitmap" &&
+	test_must_fail git fsck 2>err &&
+	grep "bitmap file '\''$midxbitmap'\'' has invalid checksum" err &&
+	grep "bitmap file '\''$packbitmap'\'' has invalid checksum" err
+'
+
+test_expect_success 'corrupt MIDX with bitmap causes fallback' '
+	git init corrupt-midx-bitmap &&
+	(
+		cd corrupt-midx-bitmap &&
+
+		test_commit first &&
+		git repack -d &&
+		test_commit second &&
+		git repack -d &&
+
+		git multi-pack-index write --bitmap &&
+		checksum=$(midx_checksum $objdir) &&
+		for f in $midx $midx-$checksum.bitmap
+		do
+			mv $f $f.bak || return 1
+		done &&
+
+		# pack everything together, invalidating the MIDX
+		git repack -ad &&
+		# then restore the now-stale MIDX
+		for f in $midx $midx-$checksum.bitmap
+		do
+			mv $f.bak $f || return 1
+		done &&
+
+		git rev-list --count --objects --use-bitmap-index HEAD >out 2>err &&
+		# should attempt opening the broken pack twice (once
+		# from the attempt to load it via the stale bitmap, and
+		# again when attempting to load it from the stale MIDX)
+		# before falling back to the non-MIDX case
+		test 2 -eq $(grep -c "could not open pack" err) &&
+		test 6 -eq $(cat out)
+	)
+'
+
+for allow_pack_reuse in single multi
+do
+	test_expect_success "reading MIDX without BTMP chunk does not complain with $allow_pack_reuse pack reuse" '
+		test_when_finished "rm -rf midx-without-btmp" &&
+		git init midx-without-btmp &&
+		(
+			cd midx-without-btmp &&
+			test_commit initial &&
+
+			git repack -Adbl --write-bitmap-index --write-midx &&
+			GIT_TEST_MIDX_READ_BTMP=false git -c pack.allowPackReuse=$allow_pack_reuse \
+				pack-objects --all --use-bitmap-index --stdout </dev/null >/dev/null 2>err &&
+			test_must_be_empty err
+		)
+	'
+done
+
+test_expect_success 'remove one packfile between MIDX bitmap writes' '
+	git init remove-pack-between-writes &&
+	(
+		cd remove-pack-between-writes &&
+
+		test_commit A &&
+		test_commit B &&
+		test_commit C &&
+
+		# Create packs with the prefix "pack-A", "pack-B",
+		# "pack-C" to impose a lexicographic order on these
+		# packs so the pack being removed is always from the
+		# middle.
+		packdir=.git/objects/pack &&
+		A="$(echo A | git pack-objects $packdir/pack-A --revs)" &&
+		B="$(echo B | git pack-objects $packdir/pack-B --revs)" &&
+		C="$(echo C | git pack-objects $packdir/pack-C --revs)" &&
+
+		git multi-pack-index write --bitmap &&
+
+		cat >in <<-EOF &&
+		pack-A-$A.idx
+		pack-C-$C.idx
+		EOF
+		git multi-pack-index write --bitmap --stdin-packs <in &&
+
+		git rev-list --test-bitmap HEAD
+	)
+'
+
 test_done

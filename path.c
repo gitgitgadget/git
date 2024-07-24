@@ -1,11 +1,13 @@
 /*
  * Utilities for paths and pathnames
  */
+
+#define USE_THE_REPOSITORY_VARIABLE
+
 #include "git-compat-util.h"
 #include "abspath.h"
 #include "environment.h"
 #include "gettext.h"
-#include "hex.h"
 #include "repository.h"
 #include "strbuf.h"
 #include "string-list.h"
@@ -15,7 +17,7 @@
 #include "submodule-config.h"
 #include "path.h"
 #include "packfile.h"
-#include "object-store.h"
+#include "object-store-ll.h"
 #include "lockfile.h"
 #include "exec-cmd.h"
 
@@ -27,8 +29,6 @@ static int get_st_mode_bits(const char *path, int *mode)
 	*mode = st.st_mode;
 	return 0;
 }
-
-static char bad_path[] = "/bad-path/";
 
 static struct strbuf *get_pathname(void)
 {
@@ -57,21 +57,6 @@ static void strbuf_cleanup_path(struct strbuf *sb)
 	const char *path = cleanup_path(sb->buf);
 	if (path > sb->buf)
 		strbuf_remove(sb, 0, path - sb->buf);
-}
-
-char *mksnpath(char *buf, size_t n, const char *fmt, ...)
-{
-	va_list args;
-	unsigned len;
-
-	va_start(args, fmt);
-	len = vsnprintf(buf, n, fmt, args);
-	va_end(args);
-	if (len >= n) {
-		strlcpy(buf, bad_path, n);
-		return buf;
-	}
-	return (char *)cleanup_path(buf);
 }
 
 static int dir_prefix(const char *buf, const char *dir)
@@ -664,58 +649,6 @@ void strbuf_git_common_path(struct strbuf *sb,
 	va_end(args);
 }
 
-int validate_headref(const char *path)
-{
-	struct stat st;
-	char buffer[256];
-	const char *refname;
-	struct object_id oid;
-	int fd;
-	ssize_t len;
-
-	if (lstat(path, &st) < 0)
-		return -1;
-
-	/* Make sure it is a "refs/.." symlink */
-	if (S_ISLNK(st.st_mode)) {
-		len = readlink(path, buffer, sizeof(buffer)-1);
-		if (len >= 5 && !memcmp("refs/", buffer, 5))
-			return 0;
-		return -1;
-	}
-
-	/*
-	 * Anything else, just open it and try to see if it is a symbolic ref.
-	 */
-	fd = open(path, O_RDONLY);
-	if (fd < 0)
-		return -1;
-	len = read_in_full(fd, buffer, sizeof(buffer)-1);
-	close(fd);
-
-	if (len < 0)
-		return -1;
-	buffer[len] = '\0';
-
-	/*
-	 * Is it a symbolic ref?
-	 */
-	if (skip_prefix(buffer, "ref:", &refname)) {
-		while (isspace(*refname))
-			refname++;
-		if (starts_with(refname, "refs/"))
-			return 0;
-	}
-
-	/*
-	 * Is this a detached HEAD?
-	 */
-	if (!get_oid_hex(buffer, &oid))
-		return 0;
-
-	return -1;
-}
-
 static struct passwd *getpw_str(const char *username, size_t len)
 {
 	struct passwd *pw;
@@ -846,6 +779,7 @@ const char *enter_repo(const char *path, int strict)
 		if (!suffix[i])
 			return NULL;
 		gitfile = read_gitfile(used_path.buf);
+		die_upon_dubious_ownership(gitfile, NULL, used_path.buf);
 		if (gitfile) {
 			strbuf_reset(&used_path);
 			strbuf_addstr(&used_path, gitfile);
@@ -856,6 +790,7 @@ const char *enter_repo(const char *path, int strict)
 	}
 	else {
 		const char *gitfile = read_gitfile(path);
+		die_upon_dubious_ownership(gitfile, NULL, path);
 		if (gitfile)
 			path = gitfile;
 		if (chdir(path))
@@ -871,7 +806,7 @@ const char *enter_repo(const char *path, int strict)
 	return NULL;
 }
 
-static int calc_shared_perm(int mode)
+int calc_shared_perm(int mode)
 {
 	int tweak;
 
@@ -1210,6 +1145,26 @@ int normalize_path_copy_len(char *dst, const char *src, int *prefix_len)
 int normalize_path_copy(char *dst, const char *src)
 {
 	return normalize_path_copy_len(dst, src, NULL);
+}
+
+int strbuf_normalize_path(struct strbuf *src)
+{
+	struct strbuf dst = STRBUF_INIT;
+
+	strbuf_grow(&dst, src->len);
+	if (normalize_path_copy(dst.buf, src->buf) < 0) {
+		strbuf_release(&dst);
+		return -1;
+	}
+
+	/*
+	 * normalize_path does not tell us the new length, so we have to
+	 * compute it by looking for the new NUL it placed
+	 */
+	strbuf_setlen(&dst, strlen(dst.buf));
+	strbuf_swap(src, &dst);
+	strbuf_release(&dst);
+	return 0;
 }
 
 /*
@@ -1568,7 +1523,5 @@ REPO_GIT_PATH_FUNC(merge_msg, "MERGE_MSG")
 REPO_GIT_PATH_FUNC(merge_rr, "MERGE_RR")
 REPO_GIT_PATH_FUNC(merge_mode, "MERGE_MODE")
 REPO_GIT_PATH_FUNC(merge_head, "MERGE_HEAD")
-REPO_GIT_PATH_FUNC(merge_autostash, "MERGE_AUTOSTASH")
-REPO_GIT_PATH_FUNC(auto_merge, "AUTO_MERGE")
 REPO_GIT_PATH_FUNC(fetch_head, "FETCH_HEAD")
 REPO_GIT_PATH_FUNC(shallow, "shallow")

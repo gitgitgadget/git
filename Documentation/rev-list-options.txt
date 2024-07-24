@@ -56,7 +56,7 @@ endif::git-rev-list[]
 	error to use this option unless `--walk-reflogs` is in use.
 
 --grep=<pattern>::
-	Limit the commits output to ones with log message that
+	Limit the commits output to ones with a log message that
 	matches the specified pattern (regular expression).  With
 	more than one `--grep=<pattern>`, commits whose message
 	matches any of the given patterns are chosen (but see
@@ -72,7 +72,7 @@ endif::git-rev-list[]
 	instead of ones that match at least one.
 
 --invert-grep::
-	Limit the commits output to ones with log message that do not
+	Limit the commits output to ones with a log message that do not
 	match the pattern specified with `--grep=<pattern>`.
 
 -i::
@@ -151,6 +151,10 @@ endif::git-log[]
 --not::
 	Reverses the meaning of the '{caret}' prefix (or lack thereof)
 	for all following revision specifiers, up to the next `--not`.
+	When used on the command line before --stdin, the revisions passed
+	through stdin will not be affected by it. Conversely, when passed
+	via standard input, the revisions passed on the command line will
+	not be affected by it.
 
 --all::
 	Pretend as if all the refs in `refs/`, along with `HEAD`, are
@@ -236,10 +240,13 @@ ifndef::git-rev-list[]
 endif::git-rev-list[]
 
 --stdin::
-	In addition to the '<commit>' listed on the command
-	line, read them from the standard input. If a `--` separator is
-	seen, stop reading commits and start reading paths to limit the
-	result.
+	In addition to getting arguments from the command line, read
+	them from standard input as well. This accepts commits and
+	pseudo-options like `--all` and `--glob=`. When a `--` separator
+	is seen, the following input is treated as paths and used to
+	limit the result. Flags like `--not` which are read via standard input
+	are only respected for arguments passed in the same way and will not
+	influence any subsequent command line arguments.
 
 ifdef::git-rev-list[]
 --quiet::
@@ -309,12 +316,12 @@ list.
 With `--pretty` format other than `oneline` and `reference` (for obvious reasons),
 this causes the output to have two extra lines of information
 taken from the reflog.  The reflog designator in the output may be shown
-as `ref@{Nth}` (where `Nth` is the reverse-chronological index in the
-reflog) or as `ref@{timestamp}` (with the timestamp for that entry),
+as `ref@{<Nth>}` (where _<Nth>_ is the reverse-chronological index in the
+reflog) or as `ref@{<timestamp>}` (with the _<timestamp>_ for that entry),
 depending on a few rules:
 +
 --
-1. If the starting point is specified as `ref@{Nth}`, show the index
+1. If the starting point is specified as `ref@{<Nth>}`, show the index
    format.
 +
 2. If the starting point was specified as `ref@{now}`, show the
@@ -334,8 +341,11 @@ See also linkgit:git-reflog[1].
 Under `--pretty=reference`, this information will not be shown at all.
 
 --merge::
-	After a failed merge, show refs that touch files having a
-	conflict and don't exist on all heads to merge.
+	Show commits touching conflicted paths in the range `HEAD...<other>`,
+	where `<other>` is the first existing pseudoref in `MERGE_HEAD`,
+	`CHERRY_PICK_HEAD`, `REVERT_HEAD` or `REBASE_HEAD`. Only works
+	when the index has unmerged entries. This option can be used to show
+	relevant commits when resolving conflicts from a 3-way merge.
 
 --boundary::
 	Output excluded boundary commits. Boundary commits are
@@ -940,10 +950,10 @@ ifdef::git-rev-list[]
 +
 The form '--filter=blob:none' omits all blobs.
 +
-The form '--filter=blob:limit=<n>[kmg]' omits blobs larger than n bytes
-or units.  n may be zero.  The suffixes k, m, and g can be used to name
-units in KiB, MiB, or GiB.  For example, 'blob:limit=1k' is the same
-as 'blob:limit=1024'.
+The form '--filter=blob:limit=<n>[kmg]' omits blobs of size at least n
+bytes or units.  n may be zero.  The suffixes k, m, and g can be used
+to name units in KiB, MiB, or GiB.  For example, 'blob:limit=1k'
+is the same as 'blob:limit=1024'.
 +
 The form '--filter=object:type=(tag|commit|tree|blob)' omits all objects
 which are not of the requested type.
@@ -1012,6 +1022,10 @@ Unexpected missing objects will raise an error.
 +
 The form '--missing=print' is like 'allow-any', but will also print a
 list of the missing objects.  Object IDs are prefixed with a ``?'' character.
++
+If some tips passed to the traversal are missing, they will be
+considered as missing too, and the traversal will ignore them. In case
+we cannot get their Object ID though, an error will be raised.
 
 --exclude-promisor-objects::
 	(For internal use only.)  Prefilter object traversal at

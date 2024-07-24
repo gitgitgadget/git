@@ -1,12 +1,9 @@
 /*
  * Copyright (c) 2005, 2006 Rene Scharfe
  */
-#include "cache.h"
+#include "builtin.h"
 #include "commit.h"
 #include "tar.h"
-#include "builtin.h"
-#include "quote.h"
-#include "wrapper.h"
 
 static const char builtin_get_tar_commit_id_usage[] =
 "git get-tar-commit-id";
@@ -35,7 +32,7 @@ int cmd_get_tar_commit_id(int argc, const char **argv UNUSED, const char *prefix
 		die_errno("git get-tar-commit-id: read error");
 	if (n != HEADERSIZE)
 		die_errno("git get-tar-commit-id: EOF before reading tar header");
-	if (header->typeflag[0] != 'g')
+	if (header->typeflag[0] != TYPEFLAG_GLOBAL_HEADER)
 		return 1;
 
 	len = strtol(content, &end, 10);

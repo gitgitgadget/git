@@ -457,7 +457,7 @@ expect_invalid_filter_spec () {
 	test_must_fail git -C r3 rev-list --objects --filter="$spec" HEAD \
 		>actual 2>actual_stderr &&
 	test_must_be_empty actual &&
-	test_i18ngrep "$err" actual_stderr
+	test_grep "$err" actual_stderr
 }
 
 test_expect_success 'combine:... while URL-encoding things that should not be' '
@@ -670,7 +670,7 @@ test_expect_success 'rev-list W/ --missing=print' '
 	awk -f print_2.awk ls_files_result |
 	sort >expected &&
 
-	for id in `cat expected | sed "s|..|&/|"`
+	for id in `sed "s|..|&/|" expected`
 	do
 		rm r1/.git/objects/$id || return 1
 	done &&
@@ -699,6 +699,18 @@ test_expect_success 'expand blob limit in protocol' '
 		--filter=blob:limit=1k "file://$(pwd)/r2" limit &&
 	! grep "blob:limit=1k" trace &&
 	grep "blob:limit=1024" trace
+'
+
+test_expect_success EXPENSIVE 'large sparse filter file ignored' '
+	blob=$(dd if=/dev/zero bs=101M count=1 |
+	       git hash-object -w --stdin) &&
+	test_must_fail \
+		git rev-list --all --objects --filter=sparse:oid=$blob 2>err &&
+	cat >expect <<-EOF &&
+	warning: ignoring excessively large pattern blob: $blob
+	fatal: unable to parse sparse filter data in $blob
+	EOF
+	test_cmp expect err
 '
 
 test_done

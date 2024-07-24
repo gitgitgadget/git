@@ -1,15 +1,18 @@
-#include "cache.h"
-#include "diff.h"
-#include "diffcore.h"
+#define USE_THE_REPOSITORY_VARIABLE
+
+#include "git-compat-util.h"
 #include "gettext.h"
+#include "hash.h"
 #include "hex.h"
 #include "lockfile.h"
+#include "merge.h"
 #include "commit.h"
+#include "repository.h"
 #include "run-command.h"
 #include "resolve-undo.h"
+#include "tree.h"
 #include "tree-walk.h"
 #include "unpack-trees.h"
-#include "dir.h"
 
 static const char *merge_argument(struct commit *commit)
 {
@@ -76,8 +79,12 @@ int checkout_fast_forward(struct repository *r,
 		return -1;
 	}
 	for (i = 0; i < nr_trees; i++) {
-		parse_tree(trees[i]);
-		init_tree_desc(t+i, trees[i]->buffer, trees[i]->size);
+		if (parse_tree(trees[i]) < 0) {
+			rollback_lock_file(&lock_file);
+			return -1;
+		}
+		init_tree_desc(t+i, &trees[i]->object.oid,
+			       trees[i]->buffer, trees[i]->size);
 	}
 
 	memset(&opts, 0, sizeof(opts));

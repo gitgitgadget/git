@@ -46,9 +46,9 @@ static struct passwd *xgetpwuid_self(int *is_bogus)
 	pw = getpwuid(getuid());
 	if (!pw) {
 		static struct passwd fallback;
-		fallback.pw_name = "unknown";
+		fallback.pw_name = (char *) "unknown";
 #ifndef NO_GECOS_IN_PWENT
-		fallback.pw_gecos = "Unknown";
+		fallback.pw_gecos = (char *) "Unknown";
 #endif
 		pw = &fallback;
 		if (is_bogus)
@@ -203,7 +203,6 @@ void reset_ident_date(void)
 static int crud(unsigned char c)
 {
 	return  c <= 32  ||
-		c == '.' ||
 		c == ',' ||
 		c == ':' ||
 		c == ';' ||
@@ -671,7 +670,9 @@ static int set_ident(const char *var, const char *value)
 	return 0;
 }
 
-int git_ident_config(const char *var, const char *value, void *data UNUSED)
+int git_ident_config(const char *var, const char *value,
+		     const struct config_context *ctx UNUSED,
+		     void *data UNUSED)
 {
 	if (!strcmp(var, "user.useconfigonly")) {
 		ident_use_config_only = git_config_bool(var, value);

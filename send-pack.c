@@ -1,17 +1,18 @@
+#define USE_THE_REPOSITORY_VARIABLE
+
 #include "git-compat-util.h"
 #include "config.h"
 #include "commit.h"
+#include "date.h"
 #include "gettext.h"
 #include "hex.h"
-#include "refs.h"
-#include "object-store.h"
+#include "object-store-ll.h"
 #include "pkt-line.h"
 #include "sideband.h"
 #include "run-command.h"
 #include "remote.h"
 #include "connect.h"
 #include "send-pack.h"
-#include "quote.h"
 #include "transport.h"
 #include "version.h"
 #include "oid-array.h"
@@ -260,7 +261,7 @@ static int receive_status(struct packet_reader *reader, struct ref *refs)
 			if (p)
 				hint->remote_status = xstrdup(p);
 			else
-				hint->remote_status = "failed";
+				hint->remote_status = xstrdup("failed");
 		} else {
 			hint->status = REF_STATUS_OK;
 			hint->remote_status = xstrdup_or_null(p);
@@ -426,16 +427,25 @@ static void get_commons_through_negotiation(const char *url,
 	struct child_process child = CHILD_PROCESS_INIT;
 	const struct ref *ref;
 	int len = the_hash_algo->hexsz + 1; /* hash + NL */
+	int nr_negotiation_tip = 0;
 
 	child.git_cmd = 1;
 	child.no_stdin = 1;
 	child.out = -1;
 	strvec_pushl(&child.args, "fetch", "--negotiate-only", NULL);
 	for (ref = remote_refs; ref; ref = ref->next) {
-		if (!is_null_oid(&ref->new_oid))
-			strvec_pushf(&child.args, "--negotiation-tip=%s", oid_to_hex(&ref->new_oid));
+		if (!is_null_oid(&ref->new_oid)) {
+			strvec_pushf(&child.args, "--negotiation-tip=%s",
+				     oid_to_hex(&ref->new_oid));
+			nr_negotiation_tip++;
+		}
 	}
 	strvec_push(&child.args, url);
+
+	if (!nr_negotiation_tip) {
+		child_process_clear(&child);
+		return;
+	}
 
 	if (start_command(&child))
 		die(_("send-pack: unable to fork off fetch subprocess"));
@@ -538,7 +548,7 @@ int send_pack(struct send_pack_args *args,
 		die(_("the receiving end does not support this repository's hash algorithm"));
 
 	if (args->push_cert != SEND_PACK_PUSH_CERT_NEVER) {
-		int len;
+		size_t len;
 		push_cert_nonce = server_feature_value("push-cert", &len);
 		if (push_cert_nonce) {
 			reject_invalid_nonce(push_cert_nonce, len);

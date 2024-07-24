@@ -8,19 +8,23 @@
  * git-tag.sh and mktag.c by Linus Torvalds.
  */
 
-#include "cache.h"
-#include "config.h"
 #include "builtin.h"
+#include "config.h"
+#include "editor.h"
 #include "environment.h"
 #include "gettext.h"
 #include "hex.h"
 #include "refs.h"
 #include "parse-options.h"
+#include "path.h"
 #include "run-command.h"
-#include "object-store.h"
+#include "object-file.h"
+#include "object-name.h"
+#include "object-store-ll.h"
 #include "replace-object.h"
 #include "repository.h"
 #include "tag.h"
+#include "wildmatch.h"
 
 static const char * const git_replace_usage[] = {
 	N_("git replace [-f] <object> <replacement>"),
@@ -39,13 +43,14 @@ enum replace_format {
 };
 
 struct show_data {
+	struct repository *repo;
 	const char *pattern;
 	enum replace_format format;
 };
 
-static int show_reference(struct repository *r, const char *refname,
+static int show_reference(const char *refname,
 			  const struct object_id *oid,
-			  int flag, void *cb_data)
+			  int flag UNUSED, void *cb_data)
 {
 	struct show_data *data = cb_data;
 
@@ -58,11 +63,11 @@ static int show_reference(struct repository *r, const char *refname,
 			struct object_id object;
 			enum object_type obj_type, repl_type;
 
-			if (repo_get_oid(r, refname, &object))
+			if (repo_get_oid(data->repo, refname, &object))
 				return error(_("failed to resolve '%s' as a valid ref"), refname);
 
-			obj_type = oid_object_info(r, &object, NULL);
-			repl_type = oid_object_info(r, oid, NULL);
+			obj_type = oid_object_info(data->repo, &object, NULL);
+			repl_type = oid_object_info(data->repo, oid, NULL);
 
 			printf("%s (%s) -> %s (%s)\n", refname, type_name(obj_type),
 			       oid_to_hex(oid), type_name(repl_type));
@@ -76,6 +81,7 @@ static int list_replace_refs(const char *pattern, const char *format)
 {
 	struct show_data data;
 
+	data.repo = the_repository;
 	if (!pattern)
 		pattern = "*";
 	data.pattern = pattern;
@@ -95,7 +101,8 @@ static int list_replace_refs(const char *pattern, const char *format)
 			       "valid formats are 'short', 'medium' and 'long'"),
 			     format);
 
-	for_each_replace_ref(the_repository, show_reference, (void *)&data);
+	refs_for_each_replace_ref(get_main_ref_store(the_repository),
+				  show_reference, (void *)&data);
 
 	return 0;
 }
@@ -126,7 +133,7 @@ static int for_each_replace_name(const char **argv, each_replace_name_fn fn)
 		strbuf_addstr(&ref, oid_to_hex(&oid));
 		full_hex = ref.buf + base_len;
 
-		if (read_ref(ref.buf, &oid)) {
+		if (refs_read_ref(get_main_ref_store(the_repository), ref.buf, &oid)) {
 			error(_("replace ref '%s' not found"), full_hex);
 			had_error = 1;
 			continue;
@@ -141,7 +148,7 @@ static int for_each_replace_name(const char **argv, each_replace_name_fn fn)
 static int delete_replace_ref(const char *name, const char *ref,
 			      const struct object_id *oid)
 {
-	if (delete_ref(NULL, ref, oid, 0))
+	if (refs_delete_ref(get_main_ref_store(the_repository), NULL, ref, oid, 0))
 		return 1;
 	printf_ln(_("Deleted replace ref '%s'"), name);
 	return 0;
@@ -159,8 +166,8 @@ static int check_ref_valid(struct object_id *object,
 	if (check_refname_format(ref->buf, 0))
 		return error(_("'%s' is not a valid ref name"), ref->buf);
 
-	if (read_ref(ref->buf, prev))
-		oidclr(prev);
+	if (refs_read_ref(get_main_ref_store(the_repository), ref->buf, prev))
+		oidclr(prev, the_repository->hash_algo);
 	else if (!force)
 		return error(_("replace ref '%s' already exists"), ref->buf);
 	return 0;
@@ -194,10 +201,11 @@ static int replace_object_oid(const char *object_ref,
 		return -1;
 	}
 
-	transaction = ref_transaction_begin(&err);
+	transaction = ref_store_transaction_begin(get_main_ref_store(the_repository),
+						  &err);
 	if (!transaction ||
 	    ref_transaction_update(transaction, ref.buf, repl, &prev,
-				   0, NULL, &err) ||
+				   NULL, NULL, 0, NULL, &err) ||
 	    ref_transaction_commit(transaction, &err))
 		res = error("%s", err.buf);
 
@@ -405,7 +413,7 @@ struct check_mergetag_data {
 	const char **argv;
 };
 
-static int check_one_mergetag(struct commit *commit,
+static int check_one_mergetag(struct commit *commit UNUSED,
 			       struct commit_extra_header *extra,
 			       void *data)
 {
@@ -563,7 +571,7 @@ int cmd_replace(int argc, const char **argv, const char *prefix)
 		OPT_END()
 	};
 
-	read_replace_refs = 0;
+	disable_replace_refs();
 	git_config(git_default_config, NULL);
 
 	argc = parse_options(argc, argv, prefix, options, git_replace_usage, 0);

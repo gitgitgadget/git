@@ -30,40 +30,46 @@ test_expect_success 'set up basic repos' '
 	>bar &&
 	git add foo &&
 	test_tick &&
-	git config i18n.commitEncoding $test_encoding &&
+	test_config i18n.commitEncoding $test_encoding &&
 	commit_msg $test_encoding | git commit -F - &&
 	git add bar &&
 	test_tick &&
-	git commit -m "add bar" &&
-	git config --unset i18n.commitEncoding
+	git commit -m "add bar"
 '
 
 test_expect_success 'alias builtin format' '
 	git log --pretty=oneline >expected &&
-	git config pretty.test-alias oneline &&
+	test_config pretty.test-alias oneline &&
 	git log --pretty=test-alias >actual &&
 	test_cmp expected actual
 '
 
 test_expect_success 'alias masking builtin format' '
 	git log --pretty=oneline >expected &&
-	git config pretty.oneline "%H" &&
+	test_config pretty.oneline "%H" &&
 	git log --pretty=oneline >actual &&
 	test_cmp expected actual
 '
 
 test_expect_success 'alias user-defined format' '
 	git log --pretty="format:%h" >expected &&
-	git config pretty.test-alias "format:%h" &&
+	test_config pretty.test-alias "format:%h" &&
 	git log --pretty=test-alias >actual &&
 	test_cmp expected actual
 '
 
+test_expect_success 'alias user-defined format is matched case-insensitively' '
+	git log --pretty="format:%h" >expected &&
+	test_config pretty.testone "format:%h" &&
+	test_config pretty.testtwo testOne &&
+	git log --pretty=testTwo >actual &&
+	test_cmp expected actual
+'
+
 test_expect_success 'alias user-defined tformat with %s (ISO8859-1 encoding)' '
-	git config i18n.logOutputEncoding $test_encoding &&
+	test_config i18n.logOutputEncoding $test_encoding &&
 	git log --oneline >expected-s &&
 	git log --pretty="tformat:%h %s" >actual-s &&
-	git config --unset i18n.logOutputEncoding &&
 	test_cmp expected-s actual-s
 '
 
@@ -75,34 +81,34 @@ test_expect_success 'alias user-defined tformat with %s (utf-8 encoding)' '
 
 test_expect_success 'alias user-defined tformat' '
 	git log --pretty="tformat:%h" >expected &&
-	git config pretty.test-alias "tformat:%h" &&
+	test_config pretty.test-alias "tformat:%h" &&
 	git log --pretty=test-alias >actual &&
 	test_cmp expected actual
 '
 
 test_expect_success 'alias non-existent format' '
-	git config pretty.test-alias format-that-will-never-exist &&
+	test_config pretty.test-alias format-that-will-never-exist &&
 	test_must_fail git log --pretty=test-alias
 '
 
 test_expect_success 'alias of an alias' '
 	git log --pretty="tformat:%h" >expected &&
-	git config pretty.test-foo "tformat:%h" &&
-	git config pretty.test-bar test-foo &&
+	test_config pretty.test-foo "tformat:%h" &&
+	test_config pretty.test-bar test-foo &&
 	git log --pretty=test-bar >actual && test_cmp expected actual
 '
 
 test_expect_success 'alias masking an alias' '
 	git log --pretty=format:"Two %H" >expected &&
-	git config pretty.duplicate "format:One %H" &&
-	git config --add pretty.duplicate "format:Two %H" &&
+	test_config pretty.duplicate "format:One %H" &&
+	test_config pretty.duplicate "format:Two %H" --add &&
 	git log --pretty=duplicate >actual &&
 	test_cmp expected actual
 '
 
 test_expect_success 'alias loop' '
-	git config pretty.test-foo test-bar &&
-	git config pretty.test-bar test-foo &&
+	test_config pretty.test-foo test-bar &&
+	test_config pretty.test-bar test-foo &&
 	test_must_fail git log --pretty=test-foo
 '
 
@@ -156,7 +162,7 @@ test_expect_success 'NUL termination with --reflog --pretty=oneline' '
 	for r in $revs
 	do
 		git show -s --pretty=oneline "$r" >raw &&
-		cat raw | lf_to_nul || return 1
+		lf_to_nul <raw || return 1
 	done >expect &&
 	# the trailing NUL is already produced so we do not need to
 	# output another one
@@ -576,6 +582,38 @@ test_expect_success 'clean log decoration' '
 	test_cmp expected actual1
 '
 
+test_expect_success 'pretty format %decorate' '
+	git checkout -b foo &&
+	git commit --allow-empty -m "new commit" &&
+	git tag bar &&
+	git branch qux &&
+
+	echo " (HEAD -> foo, tag: bar, qux)" >expect1 &&
+	git log --format="%(decorate)" -1 >actual1 &&
+	test_cmp expect1 actual1 &&
+
+	echo "HEAD -> foo, tag: bar, qux" >expect2 &&
+	git log --format="%(decorate:prefix=,suffix=)" -1 >actual2 &&
+	test_cmp expect2 actual2 &&
+
+	echo "[ bar; qux; foo ]" >expect3 &&
+	git log --format="%(decorate:prefix=[ ,suffix= ],separator=%x3B ,tag=)" \
+		--decorate-refs=refs/ -1 >actual3 &&
+	test_cmp expect3 actual3 &&
+
+	# Try with a typo (in "separator"), in which case the placeholder should
+	# not be replaced.
+	echo "%(decorate:prefix=[ ,suffix= ],separater=; )" >expect4 &&
+	git log --format="%(decorate:prefix=[ ,suffix= ],separater=%x3B )" \
+		-1 >actual4 &&
+	test_cmp expect4 actual4 &&
+
+	echo "HEAD->foo bar qux" >expect5 &&
+	git log --format="%(decorate:prefix=,suffix=,separator= ,tag=,pointer=->)" \
+		-1 >actual5 &&
+	test_cmp expect5 actual5
+'
+
 cat >trailers <<EOF
 Signed-off-by: A U Thor <author@example.com>
 Acked-by: A U Thor <author@example.com>
@@ -924,6 +962,36 @@ test_expect_success '%S in git log --format works with other placeholders (part 
 	test_cmp expect actual
 '
 
+test_expect_success 'setup more commits for %S with --bisect' '
+	test_commit four &&
+	test_commit five &&
+
+	head1=$(git rev-parse --verify HEAD~0) &&
+	head2=$(git rev-parse --verify HEAD~1) &&
+	head3=$(git rev-parse --verify HEAD~2) &&
+	head4=$(git rev-parse --verify HEAD~3)
+'
+
+test_expect_success '%S with --bisect labels commits with refs/bisect/bad ref' '
+	git update-ref refs/bisect/bad-$head1 $head1 &&
+	git update-ref refs/bisect/go $head1 &&
+	git update-ref refs/bisect/bad-$head2 $head2 &&
+	git update-ref refs/bisect/b $head3 &&
+	git update-ref refs/bisect/bad-$head4 $head4 &&
+	git update-ref refs/bisect/good-$head4 $head4 &&
+
+	# We expect to see the range of commits betwee refs/bisect/good-$head4
+	# and refs/bisect/bad-$head1. The "source" ref is the nearest bisect ref
+	# from which the commit is reachable.
+	cat >expect <<-EOF &&
+	$head1 refs/bisect/bad-$head1
+	$head2 refs/bisect/bad-$head2
+	$head3 refs/bisect/bad-$head2
+	EOF
+	git log --bisect --format="%H %S" >actual &&
+	test_cmp expect actual
+'
+
 test_expect_success 'log --pretty=reference' '
 	git log --pretty="tformat:%h (%s, %as)" >expect &&
 	git log --pretty=reference >actual &&
@@ -1012,10 +1080,25 @@ test_expect_success '%(describe:tags) vs git describe --tags' '
 
 test_expect_success '%(describe:abbrev=...) vs git describe --abbrev=...' '
 	test_when_finished "git tag -d tagname" &&
+
+	# Case 1: We have commits between HEAD and the most recent tag
+	#	  reachable from it
+	test_commit --no-tag file &&
+	git describe --abbrev=15 >expect &&
+	git log -1 --format="%(describe:abbrev=15)" >actual &&
+	test_cmp expect actual &&
+
+	# Make sure the hash used is at least 15 digits long
+	sed -e "s/^.*-g\([0-9a-f]*\)$/\1/" <actual >hexpart &&
+	test 16 -le $(wc -c <hexpart) &&
+
+	# Case 2: We have a tag at HEAD, describe directly gives the
+	#	  name of the tag
 	git tag -a -m tagged tagname &&
 	git describe --abbrev=15 >expect &&
 	git log -1 --format="%(describe:abbrev=15)" >actual &&
-	test_cmp expect actual
+	test_cmp expect actual &&
+	test tagname = $(cat actual)
 '
 
 test_expect_success 'log --pretty with space stealing' '

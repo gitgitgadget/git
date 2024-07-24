@@ -19,12 +19,12 @@ DESCRIPTION
 This command has a modern `--write-tree` mode and a deprecated
 `--trivial-merge` mode.  With the exception of the
 <<DEPMERGE,DEPRECATED DESCRIPTION>> section at the end, the rest of
-this documentation describes modern `--write-tree` mode.
+this documentation describes the modern `--write-tree` mode.
 
 Performs a merge, but does not make any new commits and does not read
 from or write to either the working tree or index.
 
-The performed merge will use the same feature as the "real"
+The performed merge will use the same features as the "real"
 linkgit:git-merge[1], including:
 
   * three way content merges of individual files
@@ -64,10 +64,18 @@ OPTIONS
 	share no common history.  This flag can be given to override that
 	check and make the merge proceed anyway.
 
---merge-base=<commit>::
+--merge-base=<tree-ish>::
 	Instead of finding the merge-bases for <branch1> and <branch2>,
 	specify a merge-base for the merge, and specifying multiple bases is
 	currently not supported. This option is incompatible with `--stdin`.
++
+As the merge-base is provided directly, <branch1> and <branch2> do not need
+to specify commits; trees are enough.
+
+-X<option>::
+--strategy-option=<option>::
+	Pass the merge strategy-specific option through to the merge strategy.
+	See linkgit:git-merge[1] for details.
 
 [[OUTPUT]]
 OUTPUT
@@ -253,7 +261,7 @@ Do NOT attempt to guess or make the user guess the conflict types from
 the <<CFI,Conflicted file info>> list.  The information there is
 insufficient to do so.  For example: Rename/rename(1to2) conflicts (both
 sides renamed the same file differently) will result in three different
-file having higher order stages (but each only has one higher order
+files having higher order stages (but each only has one higher order
 stage), with no way (short of the <<IM,Informational messages>> section)
 to determine which three files are related.  File/directory conflicts
 also result in a file with exactly one higher order stage.
@@ -263,7 +271,7 @@ a file with exactly one higher order stage.  In all cases, the
 <<IM,Informational messages>> section has the necessary info, though it
 is not designed to be machine parseable.
 
-Do NOT assume that each paths from <<CFI,Conflicted file info>>, and
+Do NOT assume that each path from <<CFI,Conflicted file info>>, and
 the logical conflicts in the <<IM,Informational messages>> have a
 one-to-one mapping, nor that there is a one-to-many mapping, nor a
 many-to-one mapping.  Many-to-many mappings exist, meaning that each

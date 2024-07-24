@@ -4,8 +4,7 @@
 #include "hash.h"
 
 struct index_state;
-
-#define MAX_TRAVERSE_TREES 8
+struct repository;
 
 /**
  * The tree walking API is used to traverse and inspect trees.
@@ -25,6 +24,7 @@ struct name_entry {
  * A semi-opaque data structure used to maintain the current state of the walk.
  */
 struct tree_desc {
+	const struct git_hash_algo *algo;
 	/*
 	 * pointer into the memory representation of the tree. It always
 	 * points at the current entry being visited.
@@ -84,9 +84,11 @@ int update_tree_entry_gently(struct tree_desc *);
  * size parameters are assumed to be the same as the buffer and size
  * members of `struct tree`.
  */
-void init_tree_desc(struct tree_desc *desc, const void *buf, unsigned long size);
+void init_tree_desc(struct tree_desc *desc, const struct object_id *tree_oid,
+		    const void *buf, unsigned long size);
 
-int init_tree_desc_gently(struct tree_desc *desc, const void *buf, unsigned long size,
+int init_tree_desc_gently(struct tree_desc *desc, const struct object_id *oid,
+			  const void *buf, unsigned long size,
 			  enum tree_desc_flags flags);
 
 /*
@@ -223,7 +225,7 @@ enum interesting {
 
 enum interesting tree_entry_interesting(struct index_state *istate,
 					const struct name_entry *,
-					struct strbuf *, int,
+					struct strbuf *,
 					const struct pathspec *ps);
 
 #endif

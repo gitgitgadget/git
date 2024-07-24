@@ -1,6 +1,7 @@
 #include "builtin.h"
 #include "abspath.h"
 #include "gettext.h"
+#include "object-file.h"
 #include "parse-options.h"
 #include "diagnose.h"
 
@@ -17,7 +18,7 @@ int cmd_diagnose(int argc, const char **argv, const char *prefix)
 	struct tm tm;
 	enum diagnose_mode mode = DIAGNOSE_STATS;
 	char *option_output = NULL;
-	char *option_suffix = "%Y-%m-%d-%H%M";
+	const char *option_suffix = "%Y-%m-%d-%H%M";
 	char *prefixed_filename;
 
 	const struct option diagnose_options[] = {

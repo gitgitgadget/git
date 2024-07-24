@@ -14,7 +14,7 @@ repository that contains a bare repository and running a Git command
 within that directory.
 +
 This config setting is only respected in protected configuration (see
-<<SCOPES>>). This prevents the untrusted repository from tampering with
+<<SCOPES>>). This prevents untrusted repositories from tampering with
 this value.
 
 safe.directory::
@@ -32,7 +32,7 @@ override any such directories specified in the system config), add a
 `safe.directory` entry with an empty value.
 +
 This config setting is only respected in protected configuration (see
-<<SCOPES>>). This prevents the untrusted repository from tampering with this
+<<SCOPES>>). This prevents untrusted repositories from tampering with this
 value.
 +
 The value of this setting is interpolated, i.e. `~/<path>` expands to a
@@ -44,7 +44,8 @@ string `*`. This will allow all repositories to be treated as if their
 directory was listed in the `safe.directory` list. If `safe.directory=*`
 is set in system config and you want to re-enable this protection, then
 initialize your list with an empty value before listing the repositories
-that you deem safe.
+that you deem safe.  Giving a directory with `/*` appended to it will
+allow access to all repositories under the named directory.
 +
 As explained, Git only allows you to access repositories owned by
 yourself, i.e. the user who is running Git, by default.  When Git

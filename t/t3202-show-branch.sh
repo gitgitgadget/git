@@ -4,13 +4,10 @@ test_description='test show-branch'
 
 . ./test-lib.sh
 
-# arbitrary reference time: 2009-08-30 19:20:00
-GIT_TEST_DATE_NOW=1251660000; export GIT_TEST_DATE_NOW
-
 test_expect_success 'error descriptions on empty repository' '
 	current=$(git branch --show-current) &&
 	cat >expect <<-EOF &&
-	error: No commit on branch '\''$current'\'' yet.
+	error: no commit on branch '\''$current'\'' yet
 	EOF
 	test_must_fail git branch --edit-description 2>actual &&
 	test_cmp expect actual &&
@@ -21,7 +18,7 @@ test_expect_success 'error descriptions on empty repository' '
 test_expect_success 'fatal descriptions on empty repository' '
 	current=$(git branch --show-current) &&
 	cat >expect <<-EOF &&
-	fatal: No commit on branch '\''$current'\'' yet.
+	fatal: no commit on branch '\''$current'\'' yet
 	EOF
 	test_must_fail git branch --set-upstream-to=non-existent 2>actual &&
 	test_cmp expect actual &&
@@ -119,6 +116,22 @@ test_expect_success 'show branch --remotes' '
 	test_must_be_empty actual.out
 '
 
+test_expect_success 'show-branch --sparse' '
+	test_when_finished "git checkout branch10 && git branch -D branchA" &&
+	git checkout -b branchA branch10 &&
+	git merge -s ours -m "merge 1 and 10 to make A" branch1 &&
+	git commit --allow-empty -m "another" &&
+
+	git show-branch --sparse >out &&
+	grep "merge 1 and 10 to make A" out &&
+
+	git show-branch >out &&
+	! grep "merge 1 and 10 to make A" out &&
+
+	git show-branch --no-sparse >out &&
+	! grep "merge 1 and 10 to make A" out
+'
+
 test_expect_success 'setup show branch --list' '
 	sed "s/^> //" >expect <<-\EOF
 	>   [branch1] branch1
@@ -171,18 +184,6 @@ test_expect_success 'show branch --merge-base with N arguments' '
 	test_cmp expect actual
 '
 
-test_expect_success 'show branch --reflog=2' '
-	sed "s/^>	//" >expect <<-\EOF &&
-	>	! [refs/heads/branch10@{0}] (4 years, 5 months ago) commit: branch10
-	>	 ! [refs/heads/branch10@{1}] (4 years, 5 months ago) commit: branch10
-	>	--
-	>	+  [refs/heads/branch10@{0}] branch10
-	>	++ [refs/heads/branch10@{1}] initial
-	EOF
-	git show-branch --reflog=2 >actual &&
-	test_cmp actual expect
-'
-
 # incompatible options
 while read combo
 do
@@ -197,9 +198,18 @@ done <<\EOF
 --reflog --current
 EOF
 
+# unnegatable options
+for opt in topo-order date-order reflog
+do
+	test_expect_success "show-branch --no-$opt (should fail)" '
+		test_must_fail git show-branch --no-$opt 2>err &&
+		grep "unknown option .no-$opt." err
+	'
+done
+
 test_expect_success 'error descriptions on non-existent branch' '
 	cat >expect <<-EOF &&
-	error: No branch named '\''non-existent'\'.'
+	error: no branch named '\''non-existent'\''
 	EOF
 	test_must_fail git branch --edit-description non-existent 2>actual &&
 	test_cmp expect actual
@@ -213,12 +223,64 @@ test_expect_success 'fatal descriptions on non-existent branch' '
 	test_cmp expect actual &&
 
 	cat >expect <<-EOF &&
-	fatal: No branch named '\''non-existent'\''.
+	fatal: no branch named '\''non-existent'\''
 	EOF
 	test_must_fail git branch -c non-existent new-branch 2>actual &&
 	test_cmp expect actual &&
 	test_must_fail git branch -m non-existent new-branch 2>actual &&
 	test_cmp expect actual
+'
+
+test_expect_success 'error descriptions on orphan branch' '
+	test_when_finished git worktree remove -f wt &&
+	git worktree add wt --detach &&
+	git -C wt checkout --orphan orphan-branch &&
+	test_branch_op_in_wt() {
+		test_orphan_error() {
+			test_must_fail git $* 2>actual &&
+			test_grep "no commit on branch .orphan-branch. yet$" actual
+		} &&
+		test_orphan_error -C wt branch $1 $2 &&                # implicit branch
+		test_orphan_error -C wt branch $1 orphan-branch $2 &&  # explicit branch
+		test_orphan_error branch $1 orphan-branch $2           # different worktree
+	} &&
+	test_branch_op_in_wt --edit-description &&
+	test_branch_op_in_wt --set-upstream-to=ne &&
+	test_branch_op_in_wt -c new-branch
+'
+
+test_expect_success 'setup reflogs' '
+	test_commit base &&
+	git checkout -b branch &&
+	test_commit one &&
+	git reset --hard HEAD^ &&
+	test_commit two &&
+	test_commit three
+'
+
+test_expect_success '--reflog shows reflog entries' '
+	cat >expect <<-\EOF &&
+	! [branch@{0}] (0 seconds ago) commit: three
+	 ! [branch@{1}] (60 seconds ago) commit: two
+	  ! [branch@{2}] (2 minutes ago) reset: moving to HEAD^
+	   ! [branch@{3}] (2 minutes ago) commit: one
+	----
+	+    [branch@{0}] three
+	++   [branch@{1}] two
+	   + [branch@{3}] one
+	++++ [branch@{2}] base
+	EOF
+	# the output always contains relative timestamps; use
+	# a known time to get deterministic results
+	GIT_TEST_DATE_NOW=$test_tick \
+	git show-branch --reflog branch >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success '--reflog handles missing reflog' '
+	git reflog expire --expire=now branch &&
+	git show-branch --reflog branch >actual &&
+	test_must_be_empty actual
 '
 
 test_done

@@ -126,6 +126,7 @@
 /git-rebase
 /git-receive-pack
 /git-reflog
+/git-refs
 /git-remote
 /git-remote-http
 /git-remote-https
@@ -135,6 +136,7 @@
 /git-remote-ext
 /git-repack
 /git-replace
+/git-replay
 /git-request-pull
 /git-rerere
 /git-reset
@@ -222,6 +224,7 @@
 /TAGS
 /cscope*
 /compile_commands.json
+/.cache/
 *.hcc
 *.obj
 *.lib

@@ -27,7 +27,7 @@ void put_be16(uint8_t *out, uint16_t i)
 	out[1] = (uint8_t)(i & 0xff);
 }
 
-int binsearch(size_t sz, int (*f)(size_t k, void *args), void *args)
+size_t binsearch(size_t sz, int (*f)(size_t k, void *args), void *args)
 {
 	size_t lo = 0;
 	size_t hi = sz;
@@ -39,8 +39,11 @@ int binsearch(size_t sz, int (*f)(size_t k, void *args), void *args)
 	 */
 	while (hi - lo > 1) {
 		size_t mid = lo + (hi - lo) / 2;
+		int ret = f(mid, args);
+		if (ret < 0)
+			return sz;
 
-		if (f(mid, args))
+		if (ret > 0)
 			hi = mid;
 		else
 			lo = mid;
@@ -64,12 +67,11 @@ void free_names(char **a)
 	reftable_free(a);
 }
 
-int names_length(char **names)
+size_t names_length(const char **names)
 {
-	char **p = names;
-	for (; *p; p++) {
-		/* empty */
-	}
+	const char **p = names;
+	while (*p)
+		p++;
 	return p - names;
 }
 
@@ -89,30 +91,23 @@ void parse_names(char *buf, int size, char ***namesp)
 			next = end;
 		}
 		if (p < next) {
-			if (names_len == names_cap) {
-				names_cap = 2 * names_cap + 1;
-				names = reftable_realloc(
-					names, names_cap * sizeof(*names));
-			}
+			REFTABLE_ALLOC_GROW(names, names_len + 1, names_cap);
 			names[names_len++] = xstrdup(p);
 		}
 		p = next + 1;
 	}
 
-	names = reftable_realloc(names, (names_len + 1) * sizeof(*names));
+	REFTABLE_REALLOC_ARRAY(names, names_len + 1);
 	names[names_len] = NULL;
 	*namesp = names;
 }
 
-int names_equal(char **a, char **b)
+int names_equal(const char **a, const char **b)
 {
-	int i = 0;
-	for (; a[i] && b[i]; i++) {
-		if (strcmp(a[i], b[i])) {
+	size_t i = 0;
+	for (; a[i] && b[i]; i++)
+		if (strcmp(a[i], b[i]))
 			return 0;
-		}
-	}
-
 	return a[i] == b[i];
 }
 

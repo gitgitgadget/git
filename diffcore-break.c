@@ -1,9 +1,13 @@
 /*
  * Copyright (C) 2005 Junio C Hamano
  */
-#include "cache.h"
-#include "diff.h"
+
+#define USE_THE_REPOSITORY_VARIABLE
+
+#include "git-compat-util.h"
 #include "diffcore.h"
+#include "hash.h"
+#include "object.h"
 #include "promisor-remote.h"
 
 static int should_break(struct repository *r,

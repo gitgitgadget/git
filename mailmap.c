@@ -1,12 +1,15 @@
-#include "cache.h"
+#define USE_THE_REPOSITORY_VARIABLE
+
+#include "git-compat-util.h"
 #include "environment.h"
 #include "string-list.h"
 #include "mailmap.h"
-#include "object-store.h"
+#include "object-name.h"
+#include "object-store-ll.h"
 #include "setup.h"
 
-const char *git_mailmap_file;
-const char *git_mailmap_blob;
+char *git_mailmap_file;
+char *git_mailmap_blob;
 
 struct mailmap_info {
 	char *name;
@@ -215,7 +218,7 @@ int read_mailmap(struct string_list *map)
 	map->cmp = namemap_cmp;
 
 	if (!git_mailmap_blob && is_bare_repository())
-		git_mailmap_blob = "HEAD:.mailmap";
+		git_mailmap_blob = xstrdup("HEAD:.mailmap");
 
 	if (!startup_info->have_repository || !is_bare_repository())
 		err |= read_mailmap_file(map, ".mailmap",

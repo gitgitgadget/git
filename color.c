@@ -1,8 +1,11 @@
-#include "cache.h"
+#include "git-compat-util.h"
 #include "config.h"
 #include "color.h"
+#include "editor.h"
 #include "gettext.h"
-#include "hex.h"
+#include "hex-ll.h"
+#include "pager.h"
+#include "strbuf.h"
 
 static int git_use_color_default = GIT_COLOR_AUTO;
 int color_stdout_is_tty = -1;
@@ -61,12 +64,16 @@ static int match_word(const char *word, int len, const char *match)
 	return !strncasecmp(word, match, len) && !match[len];
 }
 
-static int get_hex_color(const char *in, unsigned char *out)
+static int get_hex_color(const char **inp, int width, unsigned char *out)
 {
+	const char *in = *inp;
 	unsigned int val;
-	val = (hexval(in[0]) << 4) | hexval(in[1]);
+
+	assert(width == 1 || width == 2);
+	val = (hexval(in[0]) << 4) | hexval(in[width - 1]);
 	if (val & ~0xff)
 		return -1;
+	*inp += width;
 	*out = val;
 	return 0;
 }
@@ -132,11 +139,14 @@ static int parse_color(struct color *out, const char *name, int len)
 		return 0;
 	}
 
-	/* Try a 24-bit RGB value */
-	if (len == 7 && name[0] == '#') {
-		if (!get_hex_color(name + 1, &out->red) &&
-		    !get_hex_color(name + 3, &out->green) &&
-		    !get_hex_color(name + 5, &out->blue)) {
+	/* Try a 24- or 12-bit RGB value prefixed with '#' */
+	if ((len == 7 || len == 4) && name[0] == '#') {
+		int width_per_color = (len == 7) ? 2 : 1;
+		const char *color = name + 1;
+
+		if (!get_hex_color(&color, width_per_color, &out->red) &&
+		    !get_hex_color(&color, width_per_color, &out->green) &&
+		    !get_hex_color(&color, width_per_color, &out->blue)) {
 			out->type = COLOR_RGB;
 			return 0;
 		}
@@ -425,14 +435,6 @@ int git_color_config(const char *var, const char *value, void *cb UNUSED)
 	}
 
 	return 0;
-}
-
-int git_color_default_config(const char *var, const char *value, void *cb)
-{
-	if (git_color_config(var, value, cb) < 0)
-		return -1;
-
-	return git_default_config(var, value, cb);
 }
 
 void color_print_strbuf(FILE *fp, const char *color, const struct strbuf *sb)

@@ -4,6 +4,7 @@
 struct repository;
 struct strbuf;
 struct string_list;
+struct worktree;
 
 /*
  * The result to all functions which return statically allocated memory may be
@@ -22,12 +23,6 @@ const char *mkpath(const char *fmt, ...)
  */
 char *mkpathdup(const char *fmt, ...)
 	__attribute__((format (printf, 1, 2)));
-
-/*
- * Construct a path and place the result in the provided buffer `buf`.
- */
-char *mksnpath(char *buf, size_t n, const char *fmt, ...)
-	__attribute__((format (printf, 3, 4)));
 
 /*
  * The `git_common_path` family of functions will construct a path into a
@@ -86,6 +81,14 @@ void strbuf_repo_git_path(struct strbuf *sb,
  */
 const char *git_path(const char *fmt, ...)
 	__attribute__((format (printf, 1, 2)));
+
+/*
+ * Similar to git_path() but can produce paths for a specified
+ * worktree instead of current one
+ */
+const char *worktree_git_path(const struct worktree *wt,
+			      const char *fmt, ...)
+	__attribute__((format (printf, 2, 3)));
 
 /*
  * Return a path into the main repository's (the_repository) git directory.
@@ -175,14 +178,12 @@ const char *git_path_merge_msg(struct repository *r);
 const char *git_path_merge_rr(struct repository *r);
 const char *git_path_merge_mode(struct repository *r);
 const char *git_path_merge_head(struct repository *r);
-const char *git_path_merge_autostash(struct repository *r);
-const char *git_path_auto_merge(struct repository *r);
 const char *git_path_fetch_head(struct repository *r);
 const char *git_path_shallow(struct repository *r);
 
 int ends_with_path_components(const char *path, const char *components);
-int validate_headref(const char *ref);
 
+int calc_shared_perm(int mode);
 int adjust_shared_perm(const char *path);
 
 char *interpolate_path(const char *path, int real_home);
@@ -191,6 +192,11 @@ const char *remove_leading_path(const char *in, const char *prefix);
 const char *relative_path(const char *in, const char *prefix, struct strbuf *sb);
 int normalize_path_copy_len(char *dst, const char *src, int *prefix_len);
 int normalize_path_copy(char *dst, const char *src);
+/**
+ * Normalize in-place the path contained in the strbuf. If an error occurs,
+ * the contents of "sb" are left untouched, and -1 is returned.
+ */
+int strbuf_normalize_path(struct strbuf *src);
 int longest_ancestor_length(const char *path, struct string_list *prefixes);
 char *strip_path_suffix(const char *path, const char *suffix);
 int daemon_avoid_alias(const char *path);

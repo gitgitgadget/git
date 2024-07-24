@@ -4,7 +4,6 @@
  * It just splits a mbox into a list of files: "0001" "0002" ..
  * so you can process them further from there.
  */
-#include "cache.h"
 #include "builtin.h"
 #include "gettext.h"
 #include "string-list.h"
@@ -114,8 +113,8 @@ static int populate_maildir_list(struct string_list *list, const char *path)
 	DIR *dir;
 	struct dirent *dent;
 	char *name = NULL;
-	char *subs[] = { "cur", "new", NULL };
-	char **sub;
+	const char *subs[] = { "cur", "new", NULL };
+	const char **sub;
 	int ret = -1;
 
 	for (sub = subs; *sub; ++sub) {

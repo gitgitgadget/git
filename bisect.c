@@ -1,4 +1,6 @@
-#include "cache.h"
+#define USE_THE_REPOSITORY_VARIABLE
+
+#include "git-compat-util.h"
 #include "config.h"
 #include "commit.h"
 #include "diff.h"
@@ -9,7 +11,6 @@
 #include "refs.h"
 #include "list-objects.h"
 #include "quote.h"
-#include "hash-lookup.h"
 #include "run-command.h"
 #include "log-tree.h"
 #include "bisect.h"
@@ -17,7 +18,9 @@
 #include "strvec.h"
 #include "commit-slab.h"
 #include "commit-reach.h"
-#include "object-store.h"
+#include "object-name.h"
+#include "object-store-ll.h"
+#include "path.h"
 #include "dir.h"
 
 static struct oid_array good_revs;
@@ -156,6 +159,9 @@ static void show_list(const char *debug, int counted, int nr,
 						  &size);
 		const char *subject_start;
 		int subject_len;
+
+		if (!buf)
+			die(_("unable to read %s"), oid_to_hex(&commit->object.oid));
 
 		fprintf(stderr, "%c%c%c ",
 			(commit_flags & TREESAME) ? ' ' : 'T',
@@ -465,11 +471,11 @@ static int register_ref(const char *refname, const struct object_id *oid,
 
 static int read_bisect_refs(void)
 {
-	return for_each_ref_in("refs/bisect/", register_ref, NULL);
+	return refs_for_each_ref_in(get_main_ref_store(the_repository),
+				    "refs/bisect/", register_ref, NULL);
 }
 
 static GIT_PATH_FUNC(git_path_bisect_names, "BISECT_NAMES")
-static GIT_PATH_FUNC(git_path_bisect_expected_rev, "BISECT_EXPECTED_REV")
 static GIT_PATH_FUNC(git_path_bisect_ancestors_ok, "BISECT_ANCESTORS_OK")
 static GIT_PATH_FUNC(git_path_bisect_run, "BISECT_RUN")
 static GIT_PATH_FUNC(git_path_bisect_start, "BISECT_START")
@@ -705,26 +711,10 @@ static enum bisect_error error_if_skipped_commits(struct commit_list *tried,
 
 static int is_expected_rev(const struct object_id *oid)
 {
-	const char *filename = git_path_bisect_expected_rev();
-	struct stat st;
-	struct strbuf str = STRBUF_INIT;
-	FILE *fp;
-	int res = 0;
-
-	if (stat(filename, &st) || !S_ISREG(st.st_mode))
+	struct object_id expected_oid;
+	if (refs_read_ref(get_main_ref_store(the_repository), "BISECT_EXPECTED_REV", &expected_oid))
 		return 0;
-
-	fp = fopen_or_warn(filename, "r");
-	if (!fp)
-		return 0;
-
-	if (strbuf_getline_lf(&str, fp) != EOF)
-		res = !strcmp(str.buf, oid_to_hex(oid));
-
-	strbuf_release(&str);
-	fclose(fp);
-
-	return res;
+	return oideq(oid, &expected_oid);
 }
 
 enum bisect_error bisect_checkout(const struct object_id *bisect_rev,
@@ -734,11 +724,14 @@ enum bisect_error bisect_checkout(const struct object_id *bisect_rev,
 	struct pretty_print_context pp = {0};
 	struct strbuf commit_msg = STRBUF_INIT;
 
-	update_ref(NULL, "BISECT_EXPECTED_REV", bisect_rev, NULL, 0, UPDATE_REFS_DIE_ON_ERR);
+	refs_update_ref(get_main_ref_store(the_repository), NULL,
+			"BISECT_EXPECTED_REV", bisect_rev, NULL, 0,
+			UPDATE_REFS_DIE_ON_ERR);
 
 	if (no_checkout) {
-		update_ref(NULL, "BISECT_HEAD", bisect_rev, NULL, 0,
-			   UPDATE_REFS_DIE_ON_ERR);
+		refs_update_ref(get_main_ref_store(the_repository), NULL,
+				"BISECT_HEAD", bisect_rev, NULL, 0,
+				UPDATE_REFS_DIE_ON_ERR);
 	} else {
 		struct child_process cmd = CHILD_PROCESS_INIT;
 
@@ -849,10 +842,11 @@ static void handle_skipped_merge_base(const struct object_id *mb)
 static enum bisect_error check_merge_bases(int rev_nr, struct commit **rev, int no_checkout)
 {
 	enum bisect_error res = BISECT_OK;
-	struct commit_list *result;
+	struct commit_list *result = NULL;
 
-	result = repo_get_merge_bases_many(the_repository, rev[0], rev_nr - 1,
-					   rev + 1);
+	if (repo_get_merge_bases_many(the_repository, rev[0], rev_nr - 1,
+				      rev + 1, &result) < 0)
+		exit(128);
 
 	for (; result; result = result->next) {
 		const struct object_id *mb = &result->item->object.oid;
@@ -958,23 +952,32 @@ static enum bisect_error check_good_are_ancestors_of_bad(struct repository *r,
 }
 
 /*
- * This does "git diff-tree --pretty COMMIT" without one fork+exec.
+ * Display a commit summary to the user.
  */
-static void show_diff_tree(struct repository *r,
-			   const char *prefix,
-			   struct commit *commit)
+static void show_commit(struct commit *commit)
 {
-	const char *argv[] = {
-		"diff-tree", "--pretty", "--stat", "--summary", "--cc", NULL
-	};
-	struct rev_info opt;
+	struct child_process show = CHILD_PROCESS_INIT;
 
-	git_config(git_diff_ui_config, NULL);
-	repo_init_revisions(r, &opt, prefix);
-
-	setup_revisions(ARRAY_SIZE(argv) - 1, argv, &opt, NULL);
-	log_tree_commit(&opt, commit);
-	release_revisions(&opt);
+	/*
+	 * Call git show with --no-pager, as it would otherwise
+	 * paginate the "git show" output only, not the output
+	 * from bisect_next_all(); this can be fixed by moving
+	 * it into a --format parameter, but that would override
+	 * the user's default options for "git show", which we
+	 * are trying to honour.
+	 */
+	strvec_pushl(&show.args,
+		     "--no-pager",
+		     "show",
+		     "--stat",
+		     "--summary",
+		     "--no-abbrev-commit",
+		     "--diff-merges=first-parent",
+		     oid_to_hex(&commit->object.oid), NULL);
+	show.git_cmd = 1;
+	if (run_command(&show))
+		die(_("unable to start 'show' for object '%s'"),
+		    oid_to_hex(&commit->object.oid));
 }
 
 /*
@@ -1030,7 +1033,8 @@ enum bisect_error bisect_next_all(struct repository *r, const char *prefix)
 	 * If no_checkout is non-zero, the bisection process does not
 	 * checkout the trial commit but instead simply updates BISECT_HEAD.
 	 */
-	int no_checkout = ref_exists("BISECT_HEAD");
+	int no_checkout = refs_ref_exists(get_main_ref_store(the_repository),
+					  "BISECT_HEAD");
 	unsigned bisect_flags = 0;
 
 	read_bisect_terms(&term_bad, &term_good);
@@ -1091,7 +1095,7 @@ enum bisect_error bisect_next_all(struct repository *r, const char *prefix)
 		printf("%s is the first %s commit\n", oid_to_hex(bisect_rev),
 			term_bad);
 
-		show_diff_tree(r, prefix, revs.commits->item);
+		show_commit(revs.commits->item);
 		/*
 		 * This means the bisection process succeeded.
 		 * Using BISECT_INTERNAL_SUCCESS_1ST_BAD_FOUND (-10)
@@ -1181,12 +1185,16 @@ int bisect_clean_state(void)
 
 	/* There may be some refs packed during bisection */
 	struct string_list refs_for_removal = STRING_LIST_INIT_NODUP;
-	for_each_ref_in("refs/bisect", mark_for_removal, (void *) &refs_for_removal);
+	refs_for_each_ref_in(get_main_ref_store(the_repository),
+			     "refs/bisect", mark_for_removal,
+			     (void *) &refs_for_removal);
 	string_list_append(&refs_for_removal, xstrdup("BISECT_HEAD"));
-	result = delete_refs("bisect: remove", &refs_for_removal, REF_NO_DEREF);
+	string_list_append(&refs_for_removal, xstrdup("BISECT_EXPECTED_REV"));
+	result = refs_delete_refs(get_main_ref_store(the_repository),
+				  "bisect: remove", &refs_for_removal,
+				  REF_NO_DEREF);
 	refs_for_removal.strdup_strings = 1;
 	string_list_clear(&refs_for_removal, 0);
-	unlink_or_warn(git_path_bisect_expected_rev());
 	unlink_or_warn(git_path_bisect_ancestors_ok());
 	unlink_or_warn(git_path_bisect_log());
 	unlink_or_warn(git_path_bisect_names());

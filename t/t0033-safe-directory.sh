@@ -71,13 +71,52 @@ test_expect_success 'safe.directory=*, but is reset' '
 	expect_rejected_dir
 '
 
+test_expect_success 'safe.directory with matching glob' '
+	git config --global --unset-all safe.directory &&
+	p=$(pwd) &&
+	git config --global safe.directory "${p%/*}/*" &&
+	git status
+'
+
+test_expect_success 'safe.directory with unmatching glob' '
+	git config --global --unset-all safe.directory &&
+	p=$(pwd) &&
+	git config --global safe.directory "${p%/*}no/*" &&
+	expect_rejected_dir
+'
+
 test_expect_success 'safe.directory in included file' '
+	git config --global --unset-all safe.directory &&
 	cat >gitconfig-include <<-EOF &&
 	[safe]
 		directory = "$(pwd)"
 	EOF
 	git config --global --add include.path "$(pwd)/gitconfig-include" &&
 	git status
+'
+
+test_expect_success 'local clone of unowned repo refused in unsafe directory' '
+	test_when_finished "rm -rf source" &&
+	git init source &&
+	(
+		sane_unset GIT_TEST_ASSUME_DIFFERENT_OWNER &&
+		test_commit -C source initial
+	) &&
+	test_must_fail git clone --local source target &&
+	test_path_is_missing target
+'
+
+test_expect_success 'local clone of unowned repo accepted in safe directory' '
+	test_when_finished "rm -rf source" &&
+	git init source &&
+	(
+		sane_unset GIT_TEST_ASSUME_DIFFERENT_OWNER &&
+		test_commit -C source initial
+	) &&
+	test_must_fail git clone --local source target &&
+	git config --global --add safe.directory "$(pwd)/source/.git" &&
+	git clone --local source target &&
+	test_path_is_dir target
 '
 
 test_done

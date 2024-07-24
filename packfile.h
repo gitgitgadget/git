@@ -6,9 +6,21 @@
 
 /* in object-store.h */
 struct packed_git;
-struct pack_entry;
-struct pack_window;
 struct object_info;
+
+struct pack_window {
+	struct pack_window *next;
+	unsigned char *base;
+	off_t offset;
+	size_t len;
+	unsigned int last_used;
+	unsigned int inuse_cnt;
+};
+
+struct pack_entry {
+	off_t offset;
+	struct packed_git *p;
+};
 
 /*
  * Generate the filename to be used for a pack file with checksum "sha1" and
@@ -42,7 +54,7 @@ const char *pack_basename(struct packed_git *p);
 struct packed_git *parse_pack_index(unsigned char *sha1, const char *idx_path);
 
 typedef void each_file_in_pack_dir_fn(const char *full_path, size_t full_path_len,
-				      const char *file_pach, void *data);
+				      const char *file_name, void *data);
 void for_each_file_in_pack_dir(const char *objdir,
 			       each_file_in_pack_dir_fn fn,
 			       void *data);
@@ -88,6 +100,8 @@ void close_pack_index(struct packed_git *);
 int close_pack_fd(struct packed_git *p);
 
 uint32_t get_pack_fanout(struct packed_git *p, uint32_t value);
+
+struct raw_object_store;
 
 unsigned char *use_pack(struct packed_git *, struct pack_window **, off_t, unsigned long *);
 void close_pack_windows(struct packed_git *);

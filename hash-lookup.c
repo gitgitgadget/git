@@ -1,5 +1,9 @@
-#include "cache.h"
+#define USE_THE_REPOSITORY_VARIABLE
+
+#include "git-compat-util.h"
+#include "hash.h"
 #include "hash-lookup.h"
+#include "read-cache-ll.h"
 
 static uint32_t take2(const struct object_id *oid, size_t ofs)
 {
@@ -110,7 +114,8 @@ int bsearch_hash(const unsigned char *hash, const uint32_t *fanout_nbo,
 
 	while (lo < hi) {
 		unsigned mi = lo + (hi - lo) / 2;
-		int cmp = hashcmp(table + mi * stride, hash);
+		int cmp = hashcmp(table + mi * stride, hash,
+				  the_repository->hash_algo);
 
 		if (!cmp) {
 			if (result)

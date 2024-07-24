@@ -1,9 +1,13 @@
+#define USE_THE_REPOSITORY_VARIABLE
+
 #include "git-compat-util.h"
 #include "notes-cache.h"
-#include "object-store.h"
+#include "object-store-ll.h"
+#include "pretty.h"
 #include "repository.h"
 #include "commit.h"
 #include "refs.h"
+#include "strbuf.h"
 
 static int notes_cache_match_validity(struct repository *r,
 				      const char *ref,
@@ -15,7 +19,7 @@ static int notes_cache_match_validity(struct repository *r,
 	struct strbuf msg = STRBUF_INIT;
 	int ret;
 
-	if (read_ref(ref, &oid) < 0)
+	if (refs_read_ref(get_main_ref_store(the_repository), ref, &oid) < 0)
 		return 0;
 
 	commit = lookup_commit_reference_gently(r, &oid, 1);
@@ -64,8 +68,8 @@ int notes_cache_write(struct notes_cache *c)
 	if (commit_tree(c->validity, strlen(c->validity), &tree_oid, NULL,
 			&commit_oid, NULL, NULL) < 0)
 		return -1;
-	if (update_ref("update notes cache", c->tree.update_ref, &commit_oid,
-		       NULL, 0, UPDATE_REFS_QUIET_ON_ERR) < 0)
+	if (refs_update_ref(get_main_ref_store(the_repository), "update notes cache", c->tree.update_ref, &commit_oid,
+			    NULL, 0, UPDATE_REFS_QUIET_ON_ERR) < 0)
 		return -1;
 
 	return 0;

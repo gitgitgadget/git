@@ -196,6 +196,11 @@ int is_executable(const char *name);
 int exists_in_PATH(const char *command);
 
 /**
+ * Return the path that is used to execute Unix shell command-lines.
+ */
+char *git_shell_path(void);
+
+/**
  * Start a sub-process. Takes a pointer to a `struct child_process`
  * that specifies the details and returns pipe FDs (if requested).
  * See below for details.
@@ -216,6 +221,13 @@ int finish_command_in_signal(struct child_process *);
  * to a `struct child_process` that specifies the details.
  */
 int run_command(struct child_process *);
+
+/*
+ * Prepare a `struct child_process` to run auto-maintenance. Returns 1 if the
+ * process has been prepared and is ready to run, or 0 in case auto-maintenance
+ * should be skipped.
+ */
+int prepare_auto_maintenance(int quiet, struct child_process *maint);
 
 /*
  * Trigger an auto-gc
@@ -503,7 +515,7 @@ void run_processes_parallel(const struct run_process_parallel_opts *opts);
  * exception of GIT_CONFIG_PARAMETERS and GIT_CONFIG_COUNT (which cause the
  * corresponding environment variables to be unset in the subprocess) and adds
  * an environment variable pointing to new_git_dir. See local_repo_env in
- * cache.h for more information.
+ * environment.h for more information.
  */
 void prepare_other_repo_env(struct strvec *env, const char *new_git_dir);
 
@@ -563,5 +575,7 @@ enum start_bg_result start_bg_command(struct child_process *cmd,
 				      start_bg_wait_cb *wait_cb,
 				      void *cb_data,
 				      unsigned int timeout_sec);
+
+int sane_execvp(const char *file, char *const argv[]);
 
 #endif

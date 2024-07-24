@@ -68,13 +68,13 @@ test_expect_success 'talking with a receiver without push certificate support' '
 test_expect_success 'push --signed fails with a receiver without push certificate support' '
 	prepare_dst &&
 	test_must_fail git push --signed dst noop ff +noff 2>err &&
-	test_i18ngrep "the receiving end does not support" err
+	test_grep "the receiving end does not support" err
 '
 
 test_expect_success 'push --signed=1 is accepted' '
 	prepare_dst &&
 	test_must_fail git push --signed=1 dst noop ff +noff 2>err &&
-	test_i18ngrep "the receiving end does not support" err
+	test_grep "the receiving end does not support" err
 '
 
 test_expect_success GPG 'no certificate for a signed push with no update' '
@@ -303,7 +303,7 @@ test_expect_success GPGSM 'fail without key and heed user.signingkey x509' '
 		EOF
 		sed -n -e "s/^nonce /NONCE=/p" -e "/^$/q" dst/push-cert
 	) >expect.in &&
-	key=$(cat "${GNUPGHOME}/trustlist.txt" | cut -d" " -f1 | tr -d ":") &&
+	key=$(cut -d" " -f1 <"${GNUPGHOME}/trustlist.txt" | tr -d ":") &&
 	sed -e "s/^KEY=/KEY=${key}/" expect.in >expect &&
 
 	noop=$(git rev-parse noop) &&
@@ -378,7 +378,7 @@ test_expect_success GPG 'failed atomic push does not execute GPG' '
 			--signed --atomic --porcelain \
 			dst noop ff noff >out 2>err &&
 
-	test_i18ngrep ! "gpg failed to sign" err &&
+	test_grep ! "gpg failed to sign" err &&
 	cat >expect <<-EOF &&
 	To dst
 	=	refs/heads/noop:refs/heads/noop	[up to date]

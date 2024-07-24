@@ -33,6 +33,13 @@ test_expect_success 'setup' '
 	echo ignored-by-tree.d export-ignore >>.gitattributes &&
 	git add ignored-by-tree ignored-by-tree.d .gitattributes &&
 
+	mkdir subdir &&
+	>subdir/included &&
+	>subdir/ignored-by-subtree &&
+	>subdir/ignored-by-tree &&
+	echo ignored-by-subtree export-ignore >subdir/.gitattributes &&
+	git add subdir &&
+
 	echo ignored by worktree >ignored-by-worktree &&
 	echo ignored-by-worktree export-ignore >.gitattributes &&
 	git add ignored-by-worktree &&
@@ -93,6 +100,15 @@ test_expect_exists	archive-pathspec-wildcard/ignored-by-worktree
 test_expect_missing	archive-pathspec-wildcard/excluded-by-pathspec.d
 test_expect_missing	archive-pathspec-wildcard/excluded-by-pathspec.d/file
 
+test_expect_success 'git -C subdir archive' '
+	git -C subdir archive HEAD >archive-subdir.tar &&
+	extract_tar_to_dir archive-subdir
+'
+
+test_expect_exists	archive-subdir/included
+test_expect_missing	archive-subdir/ignored-by-subtree
+test_expect_missing	archive-subdir/ignored-by-tree
+
 test_expect_success 'git archive with worktree attributes' '
 	git archive --worktree-attributes HEAD >worktree.tar &&
 	(mkdir worktree && cd worktree && "$TAR" xf -) <worktree.tar
@@ -117,12 +133,13 @@ test_expect_success 'git archive vs. bare' '
 '
 
 test_expect_success 'git archive with worktree attributes, bare' '
-	(cd bare && git archive --worktree-attributes HEAD) >bare-worktree.tar &&
+	(cd bare &&
+	git -c attr.tree=HEAD archive --worktree-attributes HEAD) >bare-worktree.tar &&
 	(mkdir bare-worktree && cd bare-worktree && "$TAR" xf -) <bare-worktree.tar
 '
 
 test_expect_missing	bare-worktree/ignored
-test_expect_exists	bare-worktree/ignored-by-tree
+test_expect_missing	bare-worktree/ignored-by-tree
 test_expect_exists	bare-worktree/ignored-by-worktree
 
 test_expect_success 'export-subst' '

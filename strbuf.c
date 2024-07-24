@@ -1,14 +1,10 @@
-#include "cache.h"
-#include "abspath.h"
-#include "alloc.h"
-#include "environment.h"
+#include "git-compat-util.h"
 #include "gettext.h"
-#include "hex.h"
-#include "refs.h"
+#include "hex-ll.h"
+#include "strbuf.h"
 #include "string-list.h"
 #include "utf8.h"
 #include "date.h"
-#include "wrapper.h"
 
 int starts_with(const char *str, const char *prefix)
 {
@@ -26,6 +22,17 @@ int istarts_with(const char *str, const char *prefix)
 			return 1;
 		else if (tolower(*str) != tolower(*prefix))
 			return 0;
+}
+
+int starts_with_mem(const char *str, size_t len, const char *prefix)
+{
+	const char *end = str + len;
+	for (; ; str++, prefix++) {
+		if (!*prefix)
+			return 1;
+		else if (str == end || *str != *prefix)
+			return 0;
+	}
 }
 
 int skip_to_optional_arg_default(const char *str, const char *prefix,
@@ -270,7 +277,7 @@ void strbuf_vinsertf(struct strbuf *sb, size_t pos, const char *fmt, va_list ap)
 	len = vsnprintf(sb->buf + sb->len, 0, fmt, cp);
 	va_end(cp);
 	if (len < 0)
-		BUG("your vsnprintf is broken (returned %d)", len);
+		die(_("unable to format message: %s"), fmt);
 	if (!len)
 		return; /* nothing to do */
 	if (unsigned_add_overflows(sb->len, len))
@@ -304,6 +311,15 @@ void strbuf_add(struct strbuf *sb, const void *data, size_t len)
 	strbuf_grow(sb, len);
 	memcpy(sb->buf + sb->len, data, len);
 	strbuf_setlen(sb, sb->len + len);
+}
+
+void strbuf_addstrings(struct strbuf *sb, const char *s, size_t n)
+{
+	size_t len = strlen(s);
+
+	strbuf_grow(sb, st_mult(len, n));
+	for (size_t i = 0; i < n; i++)
+		strbuf_add(sb, s, len);
 }
 
 void strbuf_addbuf(struct strbuf *sb, const struct strbuf *sb2)
@@ -344,18 +360,17 @@ void strbuf_addf(struct strbuf *sb, const char *fmt, ...)
 }
 
 static void add_lines(struct strbuf *out,
-			const char *prefix1,
-			const char *prefix2,
-			const char *buf, size_t size)
+			const char *prefix,
+			const char *buf, size_t size,
+			int space_after_prefix)
 {
 	while (size) {
-		const char *prefix;
 		const char *next = memchr(buf, '\n', size);
 		next = next ? (next + 1) : (buf + size);
 
-		prefix = ((prefix2 && (buf[0] == '\n' || buf[0] == '\t'))
-			  ? prefix2 : prefix1);
 		strbuf_addstr(out, prefix);
+		if (space_after_prefix && buf[0] != '\n' && buf[0] != '\t')
+			strbuf_addch(out, ' ');
 		strbuf_add(out, buf, next - buf);
 		size -= next - buf;
 		buf = next;
@@ -363,19 +378,14 @@ static void add_lines(struct strbuf *out,
 	strbuf_complete_line(out);
 }
 
-void strbuf_add_commented_lines(struct strbuf *out, const char *buf, size_t size)
+void strbuf_add_commented_lines(struct strbuf *out, const char *buf,
+				size_t size, const char *comment_prefix)
 {
-	static char prefix1[3];
-	static char prefix2[2];
-
-	if (prefix1[0] != comment_line_char) {
-		xsnprintf(prefix1, sizeof(prefix1), "%c ", comment_line_char);
-		xsnprintf(prefix2, sizeof(prefix2), "%c", comment_line_char);
-	}
-	add_lines(out, prefix1, prefix2, buf, size);
+	add_lines(out, comment_prefix, buf, size, 1);
 }
 
-void strbuf_commented_addf(struct strbuf *sb, const char *fmt, ...)
+void strbuf_commented_addf(struct strbuf *sb, const char *comment_prefix,
+			   const char *fmt, ...)
 {
 	va_list params;
 	struct strbuf buf = STRBUF_INIT;
@@ -385,7 +395,7 @@ void strbuf_commented_addf(struct strbuf *sb, const char *fmt, ...)
 	strbuf_vaddf(&buf, fmt, params);
 	va_end(params);
 
-	strbuf_add_commented_lines(sb, buf.buf, buf.len);
+	strbuf_add_commented_lines(sb, buf.buf, buf.len, comment_prefix);
 	if (incomplete_line)
 		sb->buf[--sb->len] = '\0';
 
@@ -403,7 +413,7 @@ void strbuf_vaddf(struct strbuf *sb, const char *fmt, va_list ap)
 	len = vsnprintf(sb->buf + sb->len, sb->alloc - sb->len, fmt, cp);
 	va_end(cp);
 	if (len < 0)
-		BUG("your vsnprintf is broken (returned %d)", len);
+		die(_("unable to format message: %s"), fmt);
 	if (len > strbuf_avail(sb)) {
 		strbuf_grow(sb, len);
 		len = vsnprintf(sb->buf + sb->len, sb->alloc - sb->len, fmt, ap);
@@ -413,36 +423,19 @@ void strbuf_vaddf(struct strbuf *sb, const char *fmt, va_list ap)
 	strbuf_setlen(sb, sb->len + len);
 }
 
-void strbuf_expand(struct strbuf *sb, const char *format, expand_fn_t fn,
-		   void *context)
+int strbuf_expand_step(struct strbuf *sb, const char **formatp)
 {
-	for (;;) {
-		const char *percent;
-		size_t consumed;
+	const char *format = *formatp;
+	const char *percent = strchrnul(format, '%');
 
-		percent = strchrnul(format, '%');
-		strbuf_add(sb, format, percent - format);
-		if (!*percent)
-			break;
-		format = percent + 1;
-
-		if (*format == '%') {
-			strbuf_addch(sb, '%');
-			format++;
-			continue;
-		}
-
-		consumed = fn(sb, format, context);
-		if (consumed)
-			format += consumed;
-		else
-			strbuf_addch(sb, '%');
-	}
+	strbuf_add(sb, format, percent - format);
+	if (!*percent)
+		return 0;
+	*formatp = percent + 1;
+	return 1;
 }
 
-size_t strbuf_expand_literal_cb(struct strbuf *sb,
-				const char *placeholder,
-				void *context UNUSED)
+size_t strbuf_expand_literal(struct strbuf *sb, const char *placeholder)
 {
 	int ch;
 
@@ -461,20 +454,24 @@ size_t strbuf_expand_literal_cb(struct strbuf *sb,
 	return 0;
 }
 
-size_t strbuf_expand_dict_cb(struct strbuf *sb, const char *placeholder,
-		void *context)
+void strbuf_expand_bad_format(const char *format, const char *command)
 {
-	struct strbuf_expand_dict_entry *e = context;
-	size_t len;
+	const char *end;
 
-	for (; e->placeholder && (len = strlen(e->placeholder)); e++) {
-		if (!strncmp(placeholder, e->placeholder, len)) {
-			if (e->value)
-				strbuf_addstr(sb, e->value);
-			return len;
-		}
-	}
-	return 0;
+	if (*format != '(')
+		/* TRANSLATORS: The first %s is a command like "ls-tree". */
+		die(_("bad %s format: element '%s' does not start with '('"),
+		    command, format);
+
+	end = strchr(format + 1, ')');
+	if (!end)
+		/* TRANSLATORS: The first %s is a command like "ls-tree". */
+		die(_("bad %s format: element '%s' does not end in ')'"),
+		    command, format);
+
+	/* TRANSLATORS: %s is a command like "ls-tree". */
+	die(_("bad %s format: %%%.*s"),
+	    command, (int)(end - format + 1), format);
 }
 
 void strbuf_addbuf_percentquote(struct strbuf *dst, const struct strbuf *src)
@@ -703,8 +700,10 @@ int strbuf_getwholeline(struct strbuf *sb, FILE *fp, int term)
 int strbuf_appendwholeline(struct strbuf *sb, FILE *fp, int term)
 {
 	struct strbuf line = STRBUF_INIT;
-	if (strbuf_getwholeline(&line, fp, term))
+	if (strbuf_getwholeline(&line, fp, term)) {
+		strbuf_release(&line);
 		return EOF;
+	}
 	strbuf_addbuf(sb, &line);
 	strbuf_release(&line);
 	return 0;
@@ -719,16 +718,21 @@ static int strbuf_getdelim(struct strbuf *sb, FILE *fp, int term)
 	return 0;
 }
 
-int strbuf_getline(struct strbuf *sb, FILE *fp)
+int strbuf_getdelim_strip_crlf(struct strbuf *sb, FILE *fp, int term)
 {
-	if (strbuf_getwholeline(sb, fp, '\n'))
+	if (strbuf_getwholeline(sb, fp, term))
 		return EOF;
-	if (sb->buf[sb->len - 1] == '\n') {
+	if (term == '\n' && sb->buf[sb->len - 1] == '\n') {
 		strbuf_setlen(sb, sb->len - 1);
 		if (sb->len && sb->buf[sb->len - 1] == '\r')
 			strbuf_setlen(sb, sb->len - 1);
 	}
 	return 0;
+}
+
+int strbuf_getline(struct strbuf *sb, FILE *fp)
+{
+	return strbuf_getdelim_strip_crlf(sb, fp, '\n');
 }
 
 int strbuf_getline_lf(struct strbuf *sb, FILE *fp)
@@ -780,7 +784,7 @@ ssize_t strbuf_read_file(struct strbuf *sb, const char *path, size_t hint)
 void strbuf_add_lines(struct strbuf *out, const char *prefix,
 		      const char *buf, size_t size)
 {
-	add_lines(out, prefix, NULL, buf, size);
+	add_lines(out, prefix, buf, size, 0);
 }
 
 void strbuf_addstr_xml_quoted(struct strbuf *buf, const char *s)
@@ -807,25 +811,6 @@ void strbuf_addstr_xml_quoted(struct strbuf *buf, const char *s)
 		}
 		s++;
 	}
-}
-
-int is_rfc3986_reserved_or_unreserved(char ch)
-{
-	if (is_rfc3986_unreserved(ch))
-		return 1;
-	switch (ch) {
-		case '!': case '*': case '\'': case '(': case ')': case ';':
-		case ':': case '@': case '&': case '=': case '+': case '$':
-		case ',': case '/': case '?': case '#': case '[': case ']':
-			return 1;
-	}
-	return 0;
-}
-
-int is_rfc3986_unreserved(char ch)
-{
-	return isalnum(ch) ||
-		ch == '-' || ch == '_' || ch == '.' || ch == '~';
 }
 
 static void strbuf_add_urlencode(struct strbuf *sb, const char *s, size_t len,
@@ -896,42 +881,6 @@ void strbuf_humanise_bytes(struct strbuf *buf, off_t bytes)
 void strbuf_humanise_rate(struct strbuf *buf, off_t bytes)
 {
 	strbuf_humanise(buf, bytes, 1);
-}
-
-void strbuf_add_absolute_path(struct strbuf *sb, const char *path)
-{
-	if (!*path)
-		die("The empty string is not a valid path");
-	if (!is_absolute_path(path)) {
-		struct stat cwd_stat, pwd_stat;
-		size_t orig_len = sb->len;
-		char *cwd = xgetcwd();
-		char *pwd = getenv("PWD");
-		if (pwd && strcmp(pwd, cwd) &&
-		    !stat(cwd, &cwd_stat) &&
-		    (cwd_stat.st_dev || cwd_stat.st_ino) &&
-		    !stat(pwd, &pwd_stat) &&
-		    pwd_stat.st_dev == cwd_stat.st_dev &&
-		    pwd_stat.st_ino == cwd_stat.st_ino)
-			strbuf_addstr(sb, pwd);
-		else
-			strbuf_addstr(sb, cwd);
-		if (sb->len > orig_len && !is_dir_sep(sb->buf[sb->len - 1]))
-			strbuf_addch(sb, '/');
-		free(cwd);
-	}
-	strbuf_addstr(sb, path);
-}
-
-void strbuf_add_real_path(struct strbuf *sb, const char *path)
-{
-	if (sb->len) {
-		struct strbuf resolved = STRBUF_INIT;
-		strbuf_realpath(&resolved, path, 1);
-		strbuf_addbuf(sb, &resolved);
-		strbuf_release(&resolved);
-	} else
-		strbuf_realpath(sb, path, 1);
 }
 
 int printf_ln(const char *fmt, ...)
@@ -1020,37 +969,20 @@ void strbuf_addftime(struct strbuf *sb, const char *fmt, const struct tm *tm,
 	 * we want for %z, but the computation for %s has to convert to number
 	 * of seconds.
 	 */
-	for (;;) {
-		const char *percent = strchrnul(fmt, '%');
-		strbuf_add(&munged_fmt, fmt, percent - fmt);
-		if (!*percent)
-			break;
-		fmt = percent + 1;
-		switch (*fmt) {
-		case '%':
+	while (strbuf_expand_step(&munged_fmt, &fmt)) {
+		if (skip_prefix(fmt, "%", &fmt))
 			strbuf_addstr(&munged_fmt, "%%");
-			fmt++;
-			break;
-		case 's':
+		else if (skip_prefix(fmt, "s", &fmt))
 			strbuf_addf(&munged_fmt, "%"PRItime,
 				    (timestamp_t)tm_to_time_t(tm) -
 				    3600 * (tz_offset / 100) -
 				    60 * (tz_offset % 100));
-			fmt++;
-			break;
-		case 'z':
+		else if (skip_prefix(fmt, "z", &fmt))
 			strbuf_addf(&munged_fmt, "%+05d", tz_offset);
-			fmt++;
-			break;
-		case 'Z':
-			if (suppress_tz_name) {
-				fmt++;
-				break;
-			}
-			/* FALLTHROUGH */
-		default:
+		else if (suppress_tz_name && skip_prefix(fmt, "Z", &fmt))
+			; /* nothing */
+		else
 			strbuf_addch(&munged_fmt, '%');
-		}
 	}
 	fmt = munged_fmt.buf;
 
@@ -1076,21 +1008,6 @@ void strbuf_addftime(struct strbuf *sb, const char *fmt, const struct tm *tm,
 	}
 	strbuf_release(&munged_fmt);
 	strbuf_setlen(sb, sb->len + len);
-}
-
-void strbuf_repo_add_unique_abbrev(struct strbuf *sb, struct repository *repo,
-				   const struct object_id *oid, int abbrev_len)
-{
-	int r;
-	strbuf_grow(sb, GIT_MAX_HEXSZ + 1);
-	r = repo_find_unique_abbrev_r(repo, sb->buf + sb->len, oid, abbrev_len);
-	strbuf_setlen(sb, sb->len + r);
-}
-
-void strbuf_add_unique_abbrev(struct strbuf *sb, const struct object_id *oid,
-			      int abbrev_len)
-{
-	strbuf_repo_add_unique_abbrev(sb, the_repository, oid, abbrev_len);
 }
 
 /*
@@ -1122,10 +1039,10 @@ static size_t cleanup(char *line, size_t len)
  *
  * If last line does not have a newline at the end, one is added.
  *
- * Enable skip_comments to skip every line starting with comment
- * character.
+ * Pass a non-NULL comment_prefix to skip every line starting
+ * with it.
  */
-void strbuf_stripspace(struct strbuf *sb, int skip_comments)
+void strbuf_stripspace(struct strbuf *sb, const char *comment_prefix)
 {
 	size_t empties = 0;
 	size_t i, j, len, newlen;
@@ -1138,7 +1055,8 @@ void strbuf_stripspace(struct strbuf *sb, int skip_comments)
 		eol = memchr(sb->buf + i, '\n', sb->len - i);
 		len = eol ? eol - (sb->buf + i) + 1 : sb->len - i;
 
-		if (skip_comments && len && sb->buf[i] == comment_line_char) {
+		if (comment_prefix && len &&
+		    starts_with(sb->buf + i, comment_prefix)) {
 			newlen = 0;
 			continue;
 		}
@@ -1157,54 +1075,6 @@ void strbuf_stripspace(struct strbuf *sb, int skip_comments)
 	}
 
 	strbuf_setlen(sb, j);
-}
-
-int strbuf_normalize_path(struct strbuf *src)
-{
-	struct strbuf dst = STRBUF_INIT;
-
-	strbuf_grow(&dst, src->len);
-	if (normalize_path_copy(dst.buf, src->buf) < 0) {
-		strbuf_release(&dst);
-		return -1;
-	}
-
-	/*
-	 * normalize_path does not tell us the new length, so we have to
-	 * compute it by looking for the new NUL it placed
-	 */
-	strbuf_setlen(&dst, strlen(dst.buf));
-	strbuf_swap(src, &dst);
-	strbuf_release(&dst);
-	return 0;
-}
-
-int strbuf_edit_interactively(struct strbuf *buffer, const char *path,
-			      const char *const *env)
-{
-	char *path2 = NULL;
-	int fd, res = 0;
-
-	if (!is_absolute_path(path))
-		path = path2 = xstrdup(git_path("%s", path));
-
-	fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-	if (fd < 0)
-		res = error_errno(_("could not open '%s' for writing"), path);
-	else if (write_in_full(fd, buffer->buf, buffer->len) < 0) {
-		res = error_errno(_("could not write to '%s'"), path);
-		close(fd);
-	} else if (close(fd) < 0)
-		res = error_errno(_("could not close '%s'"), path);
-	else {
-		strbuf_reset(buffer);
-		if (launch_editor(path, buffer, env) < 0)
-			res = error_errno(_("could not edit '%s'"), path);
-		unlink(path);
-	}
-
-	free(path2);
-	return res;
 }
 
 void strbuf_strip_file_from_path(struct strbuf *sb)

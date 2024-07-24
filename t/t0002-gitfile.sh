@@ -22,13 +22,13 @@ test_expect_success 'initial setup' '
 test_expect_success 'bad setup: invalid .git file format' '
 	echo "gitdir $REAL" >.git &&
 	test_must_fail git rev-parse 2>.err &&
-	test_i18ngrep "invalid gitfile format" .err
+	test_grep "invalid gitfile format" .err
 '
 
 test_expect_success 'bad setup: invalid .git file path' '
 	echo "gitdir: $REAL.not" >.git &&
 	test_must_fail git rev-parse 2>.err &&
-	test_i18ngrep "not a git repository" .err
+	test_grep "not a git repository" .err
 '
 
 test_expect_success 'final setup + check rev-parse --git-dir' '
@@ -40,7 +40,7 @@ test_expect_success 'final setup + check rev-parse --git-dir' '
 
 test_expect_success 'check hash-object' '
 	echo "foo" >bar &&
-	SHA=$(cat bar | git hash-object -w --stdin) &&
+	SHA=$(git hash-object -w --stdin <bar) &&
 	test_path_is_file "$REAL/objects/$(objpath $SHA)"
 '
 

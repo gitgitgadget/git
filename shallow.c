@@ -1,23 +1,25 @@
-#include "cache.h"
-#include "alloc.h"
+#define USE_THE_REPOSITORY_VARIABLE
+
+#include "git-compat-util.h"
 #include "hex.h"
 #include "repository.h"
 #include "tempfile.h"
 #include "lockfile.h"
-#include "object-store.h"
+#include "object-store-ll.h"
 #include "commit.h"
 #include "tag.h"
 #include "pkt-line.h"
-#include "remote.h"
 #include "refs.h"
 #include "oid-array.h"
+#include "path.h"
 #include "diff.h"
 #include "revision.h"
 #include "commit-slab.h"
 #include "list-objects.h"
 #include "commit-reach.h"
 #include "shallow.h"
-#include "wrapper.h"
+#include "statinfo.h"
+#include "trace.h"
 
 void set_alternate_shallow_file(struct repository *r, const char *path, int override)
 {
@@ -37,8 +39,10 @@ int register_shallow(struct repository *r, const struct object_id *oid)
 
 	oidcpy(&graft->oid, oid);
 	graft->nr_parent = -1;
-	if (commit && commit->object.parsed)
+	if (commit && commit->object.parsed) {
+		free_commit_list(commit->parents);
 		commit->parents = NULL;
+	}
 	return register_commit_graft(r, graft, 0);
 }
 
@@ -676,8 +680,10 @@ void assign_shallow_commits_to_refs(struct shallow_info *info,
 	 * connect to old refs. If not (e.g. force ref updates) it'll
 	 * have to go down to the current shallow commits.
 	 */
-	head_ref(mark_uninteresting, NULL);
-	for_each_ref(mark_uninteresting, NULL);
+	refs_head_ref(get_main_ref_store(the_repository), mark_uninteresting,
+		      NULL);
+	refs_for_each_ref(get_main_ref_store(the_repository),
+			  mark_uninteresting, NULL);
 
 	/* Mark potential bottoms so we won't go out of bound */
 	for (i = 0; i < nr_shallow; i++) {
@@ -780,8 +786,8 @@ static void post_assign_shallow(struct shallow_info *info,
 	info->nr_theirs = dst;
 
 	memset(&ca, 0, sizeof(ca));
-	head_ref(add_ref, &ca);
-	for_each_ref(add_ref, &ca);
+	refs_head_ref(get_main_ref_store(the_repository), add_ref, &ca);
+	refs_for_each_ref(get_main_ref_store(the_repository), add_ref, &ca);
 
 	/* Remove unreachable shallow commits from "ours" */
 	for (i = dst = 0; i < info->nr_ours; i++) {
@@ -792,12 +798,16 @@ static void post_assign_shallow(struct shallow_info *info,
 		if (!*bitmap)
 			continue;
 		for (j = 0; j < bitmap_nr; j++)
-			if (bitmap[0][j] &&
-			    /* Step 7, reachability test at commit level */
-			    !repo_in_merge_bases_many(the_repository, c, ca.nr, ca.commits)) {
-				update_refstatus(ref_status, info->ref->nr, *bitmap);
-				dst++;
-				break;
+			if (bitmap[0][j]) {
+				/* Step 7, reachability test at commit level */
+				int ret = repo_in_merge_bases_many(the_repository, c, ca.nr, ca.commits, 1);
+				if (ret < 0)
+					exit(128);
+				if (!ret) {
+					update_refstatus(ref_status, info->ref->nr, *bitmap);
+					dst++;
+					break;
+				}
 			}
 	}
 	info->nr_ours = dst;
@@ -816,8 +826,10 @@ int delayed_reachability_test(struct shallow_info *si, int c)
 			struct commit_array ca;
 
 			memset(&ca, 0, sizeof(ca));
-			head_ref(add_ref, &ca);
-			for_each_ref(add_ref, &ca);
+			refs_head_ref(get_main_ref_store(the_repository),
+				      add_ref, &ca);
+			refs_for_each_ref(get_main_ref_store(the_repository),
+					  add_ref, &ca);
 			si->commits = ca.commits;
 			si->nr_commits = ca.nr;
 		}
@@ -825,7 +837,10 @@ int delayed_reachability_test(struct shallow_info *si, int c)
 		si->reachable[c] = repo_in_merge_bases_many(the_repository,
 							    commit,
 							    si->nr_commits,
-							    si->commits);
+							    si->commits,
+							    1);
+		if (si->reachable[c] < 0)
+			exit(128);
 		si->need_reachability_test[c] = 0;
 	}
 	return si->reachable[c];

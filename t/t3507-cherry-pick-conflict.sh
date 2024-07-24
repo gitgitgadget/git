@@ -60,6 +60,7 @@ test_expect_success 'advice from failed cherry-pick' '
 	hint: You can instead skip this commit with "git cherry-pick --skip".
 	hint: To abort and get back to the state before "git cherry-pick",
 	hint: run "git cherry-pick --abort".
+	hint: Disable this message with "git config advice.mergeConflict false"
 	EOF
 	test_must_fail git cherry-pick picked 2>actual &&
 
@@ -74,6 +75,7 @@ test_expect_success 'advice from failed cherry-pick --no-commit' "
 	error: could not apply \$picked... picked
 	hint: after resolving the conflicts, mark the corrected paths
 	hint: with 'git add <paths>' or 'git rm <paths>'
+	hint: Disable this message with \"git config advice.mergeConflict false\"
 	EOF
 	test_must_fail git cherry-pick --no-commit picked 2>actual &&
 
@@ -177,7 +179,7 @@ test_expect_success 'partial commit of cherry-pick fails' '
 	git add foo &&
 	test_must_fail git commit foo 2>err &&
 
-	test_i18ngrep "cannot do a partial commit during a cherry-pick." err
+	test_grep "cannot do a partial commit during a cherry-pick." err
 '
 
 test_expect_success 'commit --amend of cherry-pick fails' '
@@ -188,7 +190,7 @@ test_expect_success 'commit --amend of cherry-pick fails' '
 	git add foo &&
 	test_must_fail git commit --amend 2>err &&
 
-	test_i18ngrep "in the middle of a cherry-pick -- cannot amend." err
+	test_grep "in the middle of a cherry-pick -- cannot amend." err
 '
 
 test_expect_success 'successful final commit clears cherry-pick state' '
@@ -498,7 +500,7 @@ test_expect_success \
 test_expect_success 'failed cherry-pick does not forget -s' '
 	pristine_detach initial &&
 	test_must_fail git cherry-pick -s picked &&
-	test_i18ngrep -e "Signed-off-by" .git/MERGE_MSG
+	test_grep -e "Signed-off-by" .git/MERGE_MSG
 '
 
 test_expect_success 'commit after failed cherry-pick does not add duplicated -s' '
@@ -563,7 +565,7 @@ test_expect_success 'cherry-pick preserves sparse-checkout' '
 	echo /unrelated >.git/info/sparse-checkout &&
 	git read-tree --reset -u HEAD &&
 	test_must_fail git cherry-pick -Xours picked>actual &&
-	test_i18ngrep ! "Changes not staged for commit:" actual
+	test_grep ! "Changes not staged for commit:" actual
 '
 
 test_expect_success 'cherry-pick --continue remembers --keep-redundant-commits' '

@@ -5,14 +5,12 @@
  *
  * Based on git-verify-tag
  */
-#include "cache.h"
-#include "config.h"
 #include "builtin.h"
+#include "config.h"
 #include "gettext.h"
-#include "object-store.h"
+#include "object-name.h"
 #include "repository.h"
 #include "commit.h"
-#include "run-command.h"
 #include "parse-options.h"
 #include "gpg-interface.h"
 

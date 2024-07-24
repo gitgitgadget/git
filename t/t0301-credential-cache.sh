@@ -8,6 +8,14 @@ test -z "$NO_UNIX_SOCKETS" || {
 	skip_all='skipping credential-cache tests, unix sockets not available'
 	test_done
 }
+if test_have_prereq MINGW
+then
+	service_running=$(sc query afunix | grep "4  RUNNING")
+	test -z "$service_running" || {
+		skip_all='skipping credential-cache tests, unix sockets not available'
+		test_done
+	}
+fi
 
 uname_s=$(uname -s)
 case $uname_s in
@@ -29,6 +37,9 @@ test_atexit 'git credential-cache exit'
 
 # test that the daemon works with no special setup
 helper_test cache
+helper_test_password_expiry_utc cache
+helper_test_oauth_refresh_token cache
+helper_test_authtype cache
 
 test_expect_success 'socket defaults to ~/.cache/git/credential/socket' '
 	test_when_finished "

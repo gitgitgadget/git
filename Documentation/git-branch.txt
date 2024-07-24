@@ -156,6 +156,10 @@ in another worktree linked to the same repository.
 --ignore-case::
 	Sorting and filtering branches are case insensitive.
 
+--omit-empty::
+	Do not print a newline after formatted refs where the format expands
+	to the empty string.
+
 --column[=<options>]::
 --no-column::
 	Display branch listing in columns. See configuration variable
@@ -308,7 +312,8 @@ superproject's "origin/main", but tracks the submodule's "origin/main".
 	option is omitted, the current HEAD will be used instead.
 
 <oldbranch>::
-	The name of an existing branch to rename.
+	The name of an existing branch.  If this option is omitted,
+	the name of the current branch will be used instead.
 
 <newbranch>::
 	The new name for an existing branch. The same restrictions as for
@@ -320,7 +325,7 @@ superproject's "origin/main", but tracks the submodule's "origin/main".
 	multiple times, in which case the last key becomes the primary
 	key. The keys supported are the same as those in `git
 	for-each-ref`. Sort order defaults to the value configured for the
-	`branch.sort` variable if exists, or to sorting based on the
+	`branch.sort` variable if it exists, or to sorting based on the
 	full refname (including `refs/...` prefix). This lists
 	detached HEAD (if present) first, then local branches and
 	finally remote-tracking branches. See linkgit:git-config[1].

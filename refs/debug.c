@@ -1,6 +1,7 @@
 #include "git-compat-util.h"
 #include "hex.h"
 #include "refs-internal.h"
+#include "string-list.h"
 #include "trace.h"
 
 static struct trace_key trace_refs = TRACE_KEY_INIT(REFS);
@@ -32,11 +33,18 @@ struct ref_store *maybe_debug_wrap_ref_store(const char *gitdir, struct ref_stor
 	return (struct ref_store *)res;
 }
 
-static int debug_init_db(struct ref_store *refs, struct strbuf *err)
+static void debug_release(struct ref_store *refs)
 {
 	struct debug_ref_store *drefs = (struct debug_ref_store *)refs;
-	int res = drefs->refs->be->init_db(drefs->refs, err);
-	trace_printf_key(&trace_refs, "init_db: %d\n", res);
+	drefs->refs->be->release(drefs->refs);
+	trace_printf_key(&trace_refs, "release\n");
+}
+
+static int debug_create_on_disk(struct ref_store *refs, int flags, struct strbuf *err)
+{
+	struct debug_ref_store *drefs = (struct debug_ref_store *)refs;
+	int res = drefs->refs->be->create_on_disk(drefs->refs, flags, err);
+	trace_printf_key(&trace_refs, "create_on_disk: %d\n", res);
 	return res;
 }
 
@@ -122,37 +130,11 @@ static int debug_initial_transaction_commit(struct ref_store *refs,
 	return res;
 }
 
-static int debug_pack_refs(struct ref_store *ref_store, unsigned int flags)
+static int debug_pack_refs(struct ref_store *ref_store, struct pack_refs_opts *opts)
 {
 	struct debug_ref_store *drefs = (struct debug_ref_store *)ref_store;
-	int res = drefs->refs->be->pack_refs(drefs->refs, flags);
+	int res = drefs->refs->be->pack_refs(drefs->refs, opts);
 	trace_printf_key(&trace_refs, "pack_refs: %d\n", res);
-	return res;
-}
-
-static int debug_create_symref(struct ref_store *ref_store,
-			       const char *ref_name, const char *target,
-			       const char *logmsg)
-{
-	struct debug_ref_store *drefs = (struct debug_ref_store *)ref_store;
-	int res = drefs->refs->be->create_symref(drefs->refs, ref_name, target,
-						 logmsg);
-	trace_printf_key(&trace_refs, "create_symref: %s -> %s \"%s\": %d\n", ref_name,
-		target, logmsg, res);
-	return res;
-}
-
-static int debug_delete_refs(struct ref_store *ref_store, const char *msg,
-			     struct string_list *refnames, unsigned int flags)
-{
-	struct debug_ref_store *drefs = (struct debug_ref_store *)ref_store;
-	int res =
-		drefs->refs->be->delete_refs(drefs->refs, msg, refnames, flags);
-	int i;
-	trace_printf_key(&trace_refs, "delete_refs {\n");
-	for (i = 0; i < refnames->nr; i++)
-		trace_printf_key(&trace_refs, "%s\n", refnames->items[i].string);
-	trace_printf_key(&trace_refs, "}: %d\n", res);
 	return res;
 }
 
@@ -194,7 +176,6 @@ static int debug_ref_iterator_advance(struct ref_iterator *ref_iterator)
 		trace_printf_key(&trace_refs, "iterator_advance: %s (0)\n",
 			diter->iter->refname);
 
-	diter->base.ordered = diter->iter->ordered;
 	diter->base.refname = diter->iter->refname;
 	diter->base.oid = diter->iter->oid;
 	diter->base.flags = diter->iter->flags;
@@ -228,13 +209,14 @@ static struct ref_iterator_vtable debug_ref_iterator_vtable = {
 
 static struct ref_iterator *
 debug_ref_iterator_begin(struct ref_store *ref_store, const char *prefix,
-			 unsigned int flags)
+			 const char **exclude_patterns, unsigned int flags)
 {
 	struct debug_ref_store *drefs = (struct debug_ref_store *)ref_store;
 	struct ref_iterator *res =
-		drefs->refs->be->iterator_begin(drefs->refs, prefix, flags);
+		drefs->refs->be->iterator_begin(drefs->refs, prefix,
+						exclude_patterns, flags);
 	struct debug_ref_iterator *diter = xcalloc(1, sizeof(*diter));
-	base_ref_iterator_init(&diter->base, &debug_ref_iterator_vtable, 1);
+	base_ref_iterator_init(&diter->base, &debug_ref_iterator_vtable);
 	diter->iter = res;
 	trace_printf_key(&trace_refs, "ref_iterator_begin: \"%s\" (0x%x)\n",
 			 prefix, flags);
@@ -438,10 +420,10 @@ static int debug_reflog_expire(struct ref_store *ref_store, const char *refname,
 }
 
 struct ref_storage_be refs_be_debug = {
-	.next = NULL,
 	.name = "debug",
 	.init = NULL,
-	.init_db = debug_init_db,
+	.release = debug_release,
+	.create_on_disk = debug_create_on_disk,
 
 	/*
 	 * None of these should be NULL. If the "files" backend (in
@@ -455,8 +437,6 @@ struct ref_storage_be refs_be_debug = {
 	.initial_transaction_commit = debug_initial_transaction_commit,
 
 	.pack_refs = debug_pack_refs,
-	.create_symref = debug_create_symref,
-	.delete_refs = debug_delete_refs,
 	.rename_ref = debug_rename_ref,
 	.copy_ref = debug_copy_ref,
 

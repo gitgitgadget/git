@@ -22,6 +22,7 @@ test_description="merge cases"
 #                     underscore notation is to differentiate different
 #                     files that might be renamed into each other's paths.)
 
+TEST_PASSES_SANITIZE_LEAK=true
 . ./test-lib.sh
 . "$TEST_DIRECTORY"/lib-merge.sh
 
@@ -375,7 +376,7 @@ test_expect_success '2c: Modify b & add c VS rename b->c' '
 		export GIT_MERGE_VERBOSITY &&
 		test_must_fail git merge -s recursive B^0 >out 2>err &&
 
-		test_i18ngrep "CONFLICT (.*/add):" out &&
+		test_grep "CONFLICT (.*/add):" out &&
 		test_must_be_empty err &&
 
 		git ls-files -s >index_files &&

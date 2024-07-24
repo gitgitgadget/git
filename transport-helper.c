@@ -1,13 +1,15 @@
-#include "cache.h"
+#define USE_THE_REPOSITORY_VARIABLE
+
+#include "git-compat-util.h"
 #include "transport.h"
 #include "quote.h"
 #include "run-command.h"
 #include "commit.h"
-#include "diff.h"
 #include "environment.h"
 #include "gettext.h"
 #include "hex.h"
-#include "revision.h"
+#include "object-name.h"
+#include "repository.h"
 #include "remote.h"
 #include "string-list.h"
 #include "thread-utils.h"
@@ -17,12 +19,12 @@
 #include "refspec.h"
 #include "transport-internal.h"
 #include "protocol.h"
-#include "wrapper.h"
+#include "packfile.h"
 
 static int debug;
 
 struct helper_data {
-	const char *name;
+	char *name;
 	struct child_process *helper;
 	FILE *out;
 	unsigned fetch : 1,
@@ -111,6 +113,7 @@ static void do_take_over(struct transport *transport)
 	data = (struct helper_data *)transport->data;
 	transport_take_over(transport, data->helper);
 	fclose(data->out);
+	free(data->name);
 	free(data);
 }
 
@@ -253,6 +256,7 @@ static int disconnect_helper(struct transport *transport)
 		close(data->helper->out);
 		fclose(data->out);
 		res = finish_command(data->helper);
+		FREE_AND_NULL(data->name);
 		FREE_AND_NULL(data->helper);
 	}
 	return res;
@@ -433,6 +437,8 @@ static int fetch_with_fetch(struct transport *transport,
 			warning(_("%s unexpectedly said: '%s'"), data->name, buf.buf);
 	}
 	strbuf_release(&buf);
+
+	reprepare_packed_git(the_repository);
 	return 0;
 }
 
@@ -549,7 +555,7 @@ static int fetch_with_import(struct transport *transport,
 		else
 			private = xstrdup(name);
 		if (private) {
-			if (read_ref(private, &posn->old_oid) < 0)
+			if (refs_read_ref(get_main_ref_store(the_repository), private, &posn->old_oid) < 0)
 				die(_("could not read ref %s"), private);
 			free(private);
 		}
@@ -627,7 +633,8 @@ static int process_connect_service(struct transport *transport,
 		ret = run_connect(transport, &cmdbuf);
 	} else if (data->stateless_connect &&
 		   (get_protocol_version_config() == protocol_v2) &&
-		   !strcmp("git-upload-pack", name)) {
+		   (!strcmp("git-upload-pack", name) ||
+		    !strcmp("git-upload-archive", name))) {
 		strbuf_addf(&cmdbuf, "stateless-connect %s\n", name);
 		ret = run_connect(transport, &cmdbuf);
 		if (ret)
@@ -644,6 +651,7 @@ static int process_connect(struct transport *transport,
 	struct helper_data *data = transport->data;
 	const char *name;
 	const char *exec;
+	int ret;
 
 	name = for_push ? "git-receive-pack" : "git-upload-pack";
 	if (for_push)
@@ -651,7 +659,10 @@ static int process_connect(struct transport *transport,
 	else
 		exec = data->transport_options.uploadpack;
 
-	return process_connect_service(transport, name, exec);
+	ret = process_connect_service(transport, name, exec);
+	if (ret)
+		do_take_over(transport);
+	return ret;
 }
 
 static int connect_helper(struct transport *transport, const char *name,
@@ -661,14 +672,14 @@ static int connect_helper(struct transport *transport, const char *name,
 
 	/* Get_helper so connect is inited. */
 	get_helper(transport);
-	if (!data->connect)
-		die(_("operation not supported by protocol"));
 
 	if (!process_connect_service(transport, name, exec))
 		die(_("can't connect to subservice %s"), name);
 
 	fd[0] = data->helper->out;
 	fd[1] = data->helper->in;
+
+	do_take_over(transport);
 	return 0;
 }
 
@@ -683,10 +694,8 @@ static int fetch_refs(struct transport *transport,
 
 	get_helper(transport);
 
-	if (process_connect(transport, 0)) {
-		do_take_over(transport);
+	if (process_connect(transport, 0))
 		return transport->vtable->fetch_refs(transport, nr_heads, to_fetch);
-	}
 
 	/*
 	 * If we reach here, then the server, the client, and/or the transport
@@ -918,8 +927,10 @@ static int push_update_refs_status(struct helper_data *data,
 			private = apply_refspecs(&data->rs, ref->name);
 			if (!private)
 				continue;
-			update_ref("update by helper", private, &(ref->new_oid),
-				   NULL, 0, 0);
+			refs_update_ref(get_main_ref_store(the_repository),
+					"update by helper", private,
+					&(ref->new_oid),
+					NULL, 0, 0);
 			free(private);
 		} else {
 			for (report = ref->report; report; report = report->next) {
@@ -929,11 +940,12 @@ static int push_update_refs_status(struct helper_data *data,
 							 : ref->name);
 				if (!private)
 					continue;
-				update_ref("update by helper", private,
-					   report->new_oid
-					   ? report->new_oid
-					   : &(ref->new_oid),
-					   NULL, 0, 0);
+				refs_update_ref(get_main_ref_store(the_repository),
+						"update by helper", private,
+						report->new_oid
+						? report->new_oid
+						: &(ref->new_oid),
+						NULL, 0, 0);
 				free(private);
 			}
 		}
@@ -1073,7 +1085,7 @@ static int push_refs_with_export(struct transport *transport,
 	set_common_push_options(transport, data->name, flags);
 	if (flags & TRANSPORT_PUSH_FORCE) {
 		if (set_helper_option(transport, "force", "true") != 0)
-			warning(_("helper %s does not support 'force'"), data->name);
+			warning(_("helper %s does not support '--force'"), data->name);
 	}
 
 	helper = get_helper(transport);
@@ -1100,9 +1112,11 @@ static int push_refs_with_export(struct transport *transport,
 					int flag;
 
 					/* Follow symbolic refs (mainly for HEAD). */
-					name = resolve_ref_unsafe(ref->peer_ref->name,
-								  RESOLVE_REF_READING,
-								  &oid, &flag);
+					name = refs_resolve_ref_unsafe(get_main_ref_store(the_repository),
+								       ref->peer_ref->name,
+								       RESOLVE_REF_READING,
+								       &oid,
+								       &flag);
 					if (!name || !(flag & REF_ISSYMREF))
 						name = ref->peer_ref->name;
 
@@ -1143,10 +1157,8 @@ static int push_refs(struct transport *transport,
 {
 	struct helper_data *data = transport->data;
 
-	if (process_connect(transport, 1)) {
-		do_take_over(transport);
+	if (process_connect(transport, 1))
 		return transport->vtable->push_refs(transport, remote_refs, flags);
-	}
 
 	if (!remote_refs) {
 		fprintf(stderr,
@@ -1187,11 +1199,9 @@ static struct ref *get_refs_list(struct transport *transport, int for_push,
 {
 	get_helper(transport);
 
-	if (process_connect(transport, for_push)) {
-		do_take_over(transport);
+	if (process_connect(transport, for_push))
 		return transport->vtable->get_refs_list(transport, for_push,
 							transport_options);
-	}
 
 	return get_refs_list_using_list(transport, for_push);
 }
@@ -1209,16 +1219,13 @@ static struct ref *get_refs_list_using_list(struct transport *transport,
 	data->get_refs_list_called = 1;
 	helper = get_helper(transport);
 
-	if (data->object_format) {
-		write_str_in_full(helper->in, "option object-format\n");
-		if (recvline(data, &buf) || strcmp(buf.buf, "ok"))
-			exit(128);
-	}
+	if (data->object_format)
+		set_helper_option(transport, "object-format", "true");
 
 	if (data->push && for_push)
-		write_str_in_full(helper->in, "list for-push\n");
+		write_constant(helper->in, "list for-push\n");
 	else
-		write_str_in_full(helper->in, "list\n");
+		write_constant(helper->in, "list\n");
 
 	while (1) {
 		char *eov, *eon;
@@ -1254,7 +1261,7 @@ static struct ref *get_refs_list_using_list(struct transport *transport,
 		if (eon) {
 			if (has_attribute(eon + 1, "unchanged")) {
 				(*tail)->status |= REF_STATUS_UPTODATE;
-				if (read_ref((*tail)->name, &(*tail)->old_oid) < 0)
+				if (refs_read_ref(get_main_ref_store(the_repository), (*tail)->name, &(*tail)->old_oid) < 0)
 					die(_("could not read ref %s"),
 					    (*tail)->name);
 			}
@@ -1275,10 +1282,8 @@ static int get_bundle_uri(struct transport *transport)
 {
 	get_helper(transport);
 
-	if (process_connect(transport, 0)) {
-		do_take_over(transport);
+	if (process_connect(transport, 0))
 		return transport->vtable->get_bundle_uri(transport);
-	}
 
 	return -1;
 }
@@ -1296,7 +1301,7 @@ static struct transport_vtable vtable = {
 int transport_helper_init(struct transport *transport, const char *name)
 {
 	struct helper_data *data = xcalloc(1, sizeof(*data));
-	data->name = name;
+	data->name = xstrdup(name);
 
 	transport_check_allowed(name);
 

@@ -1,13 +1,9 @@
 #!/bin/sh
 
 test_description='hunk edit with "commit -p -m"'
-. ./test-lib.sh
 
-if ! test_have_prereq PERL
-then
-	skip_all="skipping '$test_description' tests, perl not available"
-	test_done
-fi
+TEST_PASSES_SANITIZE_LEAK=true
+. ./test-lib.sh
 
 test_expect_success 'setup (initial)' '
 	echo line1 >file &&

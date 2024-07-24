@@ -139,7 +139,7 @@ test_expect_success !MINGW 'shortlog can read --format=raw output' '
 
 test_expect_success 'shortlog from non-git directory refuses extra arguments' '
 	test_must_fail env GIT_DIR=non-existing git shortlog foo 2>out &&
-	test_i18ngrep "too many arguments" out
+	test_grep "too many arguments" out
 '
 
 test_expect_success 'shortlog should add newline when input line matches wraplen' '
@@ -306,6 +306,38 @@ test_expect_success 'shortlog de-duplicates trailers in a single commit' '
 
 	cat >expect <<-\EOF &&
 	     2	Foo
+	     1	Bar
+	EOF
+	git shortlog -ns --group=trailer:repeated-trailer -2 HEAD >actual &&
+	test_cmp expect actual
+'
+
+# Trailers that have unfolded (single line) and folded (multiline) values which
+# are otherwise identical are treated as the same trailer for de-duplication.
+test_expect_success 'shortlog de-duplicates trailers in a single commit (folded/unfolded values)' '
+	git commit --allow-empty -F - <<-\EOF &&
+	subject one
+
+	this message has two distinct values, plus a repeat (folded)
+
+	Repeated-trailer: Foo foo foo
+	Repeated-trailer: Bar
+	Repeated-trailer: Foo
+	  foo foo
+	EOF
+
+	git commit --allow-empty -F - <<-\EOF &&
+	subject two
+
+	similar to the previous, but without the second distinct value
+
+	Repeated-trailer: Foo foo foo
+	Repeated-trailer: Foo
+	  foo foo
+	EOF
+
+	cat >expect <<-\EOF &&
+	     2	Foo foo foo
 	     1	Bar
 	EOF
 	git shortlog -ns --group=trailer:repeated-trailer -2 HEAD >actual &&

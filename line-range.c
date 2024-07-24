@@ -1,7 +1,6 @@
 #include "git-compat-util.h"
 #include "line-range.h"
 #include "xdiff-interface.h"
-#include "strbuf.h"
 #include "userdiff.h"
 
 /*
@@ -235,6 +234,8 @@ static const char *parse_range_funcname(
 	}
 
 	regfree(&regexp);
+	if (xecfg)
+		xdiff_clear_find_func(xecfg);
 	free(xecfg);
 	free(pattern);
 

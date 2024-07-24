@@ -1,11 +1,15 @@
-#include "cache.h"
+#define USE_THE_REPOSITORY_VARIABLE
+
+#include "git-compat-util.h"
+#include "advice.h"
 #include "strvec.h"
 #include "repository.h"
-#include "config.h"
+#include "parse.h"
 #include "dir.h"
 #include "environment.h"
 #include "gettext.h"
 #include "hex.h"
+#include "name-hash.h"
 #include "tree.h"
 #include "tree-walk.h"
 #include "cache-tree.h"
@@ -13,12 +17,15 @@
 #include "progress.h"
 #include "refs.h"
 #include "attr.h"
+#include "read-cache.h"
 #include "split-index.h"
 #include "sparse-index.h"
 #include "submodule.h"
 #include "submodule-config.h"
+#include "symlinks.h"
+#include "trace2.h"
 #include "fsmonitor.h"
-#include "object-store.h"
+#include "object-store-ll.h"
 #include "promisor-remote.h"
 #include "entry.h"
 #include "parallel-checkout.h"
@@ -859,8 +866,8 @@ static int traverse_trees_recursive(int n, unsigned long dirmask,
 	struct unpack_trees_options *o = info->data;
 	int i, ret, bottom;
 	int nr_buf = 0;
-	struct tree_desc t[MAX_UNPACK_TREES];
-	void *buf[MAX_UNPACK_TREES];
+	struct tree_desc *t;
+	void **buf;
 	struct traverse_info newinfo;
 	struct name_entry *p;
 	int nr_entries;
@@ -897,6 +904,9 @@ static int traverse_trees_recursive(int n, unsigned long dirmask,
 	newinfo.pathlen = st_add3(newinfo.pathlen, tree_entry_len(p), 1);
 	newinfo.df_conflicts |= df_conflicts;
 
+	ALLOC_ARRAY(t, n);
+	ALLOC_ARRAY(buf, n);
+
 	/*
 	 * Fetch the tree from the ODB for each peer directory in the
 	 * n commits.
@@ -932,6 +942,8 @@ static int traverse_trees_recursive(int n, unsigned long dirmask,
 
 	for (i = 0; i < nr_buf; i++)
 		free(buf[i]);
+	free(buf);
+	free(t);
 
 	return ret;
 }
@@ -2308,7 +2320,8 @@ static int verify_clean_subdirectory(const struct cache_entry *ce,
 
 	if (S_ISGITLINK(ce->ce_mode)) {
 		struct object_id oid;
-		int sub_head = resolve_gitlink_ref(ce->name, "HEAD", &oid);
+		int sub_head = repo_resolve_gitlink_ref(the_repository, ce->name,
+							"HEAD", &oid);
 		/*
 		 * If we are not going to update the submodule, then
 		 * we don't care.

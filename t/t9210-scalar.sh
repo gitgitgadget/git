@@ -154,7 +154,14 @@ test_expect_success 'scalar clone' '
 		test_cmp expect actual &&
 
 		test_path_is_missing 1/2 &&
-		test_must_fail git rev-list --missing=print $second &&
+
+		# This relies on the fact that the presence of "--missing"
+		# on the command line forces lazy fetching off before
+		# "$second^{blob}" gets parsed.  Without "^{blob}", a
+		# bare object name "$second" is taken into the queue and
+		# the command may not fail with a fixed "rev-list --missing".
+		test_must_fail git rev-list --missing=print "$second^{blob}" -- &&
+
 		git rev-list $second &&
 		git cat-file blob $second >actual &&
 		echo "second" >expect &&
@@ -171,6 +178,44 @@ test_expect_success 'scalar reconfigure' '
 	git -C one/src config core.preloadIndex false &&
 	scalar reconfigure -a &&
 	test true = "$(git -C one/src config core.preloadIndex)"
+'
+
+test_expect_success 'scalar reconfigure --all with includeIf.onbranch' '
+	repos="two three four" &&
+	for num in $repos
+	do
+		git init $num/src &&
+		scalar register $num/src &&
+		git -C $num/src config includeif."onbranch:foo".path something &&
+		git -C $num/src config core.preloadIndex false || return 1
+	done &&
+
+	scalar reconfigure --all &&
+
+	for num in $repos
+	do
+		test true = "$(git -C $num/src config core.preloadIndex)" || return 1
+	done
+'
+
+ test_expect_success 'scalar reconfigure --all with detached HEADs' '
+	repos="two three four" &&
+	for num in $repos
+	do
+		rm -rf $num/src &&
+		git init $num/src &&
+		scalar register $num/src &&
+		git -C $num/src config core.preloadIndex false &&
+		test_commit -C $num/src initial &&
+		git -C $num/src switch --detach HEAD || return 1
+	done &&
+
+	scalar reconfigure --all &&
+
+	for num in $repos
+	do
+		test true = "$(git -C $num/src config core.preloadIndex)" || return 1
+	done
 '
 
 test_expect_success '`reconfigure -a` removes stale config entries' '

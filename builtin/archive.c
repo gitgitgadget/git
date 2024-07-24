@@ -2,14 +2,13 @@
  * Copyright (c) 2006 Franck Bui-Huu
  * Copyright (c) 2006 Rene Scharfe
  */
-#include "cache.h"
 #include "builtin.h"
 #include "archive.h"
 #include "gettext.h"
 #include "transport.h"
 #include "parse-options.h"
 #include "pkt-line.h"
-#include "sideband.h"
+#include "repository.h"
 
 static void create_output_file(const char *output_file)
 {
@@ -32,9 +31,7 @@ static int run_remote_archiver(int argc, const char **argv,
 	struct packet_reader reader;
 
 	_remote = remote_get(remote);
-	if (!_remote->url[0])
-		die(_("git archive: Remote with no URL"));
-	transport = transport_get(_remote, _remote->url[0]);
+	transport = transport_get(_remote, _remote->url.v[0]);
 	transport_connect(transport, "git-upload-archive", exec, fd);
 
 	/*
@@ -93,6 +90,7 @@ int cmd_archive(int argc, const char **argv, const char *prefix)
 			N_("path to the remote git-upload-archive command")),
 		OPT_END()
 	};
+	int ret;
 
 	argc = parse_options(argc, argv, prefix, local_opts, NULL,
 			     PARSE_OPT_KEEP_ALL);
@@ -107,6 +105,8 @@ int cmd_archive(int argc, const char **argv, const char *prefix)
 
 	setvbuf(stderr, NULL, _IOLBF, BUFSIZ);
 
-	UNLEAK(output);
-	return write_archive(argc, argv, prefix, the_repository, output, 0);
+	ret = write_archive(argc, argv, prefix, the_repository, output, 0);
+
+	free(output);
+	return ret;
 }

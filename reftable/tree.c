@@ -6,10 +6,10 @@ license that can be found in the LICENSE file or at
 https://developers.google.com/open-source/licenses/bsd
 */
 
+#include "system.h"
 #include "tree.h"
 
 #include "basics.h"
-#include "system.h"
 
 struct tree_node *tree_search(void *key, struct tree_node **rootp,
 			      int (*compare)(const void *, const void *),
@@ -20,8 +20,8 @@ struct tree_node *tree_search(void *key, struct tree_node **rootp,
 		if (!insert) {
 			return NULL;
 		} else {
-			struct tree_node *n =
-				reftable_calloc(sizeof(struct tree_node));
+			struct tree_node *n;
+			REFTABLE_CALLOC_ARRAY(n, 1);
 			n->key = key;
 			*rootp = n;
 			return *rootp;

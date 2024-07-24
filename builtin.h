@@ -1,10 +1,15 @@
 #ifndef BUILTIN_H
 #define BUILTIN_H
 
+/*
+ * TODO: Almost all of our builtins access `the_repository` by necessity
+ * because they do not get passed a pointer to it. We should adapt the function
+ * signature of those main functions to accept a `struct repository *` and then
+ * remove the macro here.
+ */
+#define USE_THE_REPOSITORY_VARIABLE
+
 #include "git-compat-util.h"
-#include "strbuf.h"
-#include "cache.h"
-#include "commit.h"
 
 /*
  * builtin API
@@ -210,10 +215,12 @@ int cmd_rebase(int argc, const char **argv, const char *prefix);
 int cmd_rebase__interactive(int argc, const char **argv, const char *prefix);
 int cmd_receive_pack(int argc, const char **argv, const char *prefix);
 int cmd_reflog(int argc, const char **argv, const char *prefix);
+int cmd_refs(int argc, const char **argv, const char *prefix);
 int cmd_remote(int argc, const char **argv, const char *prefix);
 int cmd_remote_ext(int argc, const char **argv, const char *prefix);
 int cmd_remote_fd(int argc, const char **argv, const char *prefix);
 int cmd_repack(int argc, const char **argv, const char *prefix);
+int cmd_replay(int argc, const char **argv, const char *prefix);
 int cmd_rerere(int argc, const char **argv, const char *prefix);
 int cmd_reset(int argc, const char **argv, const char *prefix);
 int cmd_restore(int argc, const char **argv, const char *prefix);

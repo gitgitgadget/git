@@ -2,42 +2,18 @@
 #define HEX_H
 
 #include "hash.h"
-
-extern const signed char hexval_table[256];
-static inline unsigned int hexval(unsigned char c)
-{
-	return hexval_table[c];
-}
+#include "hex-ll.h"
 
 /*
- * Convert two consecutive hexadecimal digits into a char.  Return a
- * negative value on error.  Don't run over the end of short strings.
- */
-static inline int hex2chr(const char *s)
-{
-	unsigned int val = hexval(s[0]);
-	return (val & ~0xf) ? val : (val << 4) | hexval(s[1]);
-}
-
-/*
- * Try to read a SHA1 in hexadecimal format from the 40 characters
- * starting at hex.  Write the 20-byte result to sha1 in binary form.
+ * Try to read a hash (specified by the_hash_algo) in hexadecimal
+ * format from the 40 (or whatever length the hash algorithm uses)
+ * characters starting at hex.  Write the 20-byte (or the length of
+ * the hash) result to hash in binary form.
  * Return 0 on success.  Reading stops if a NUL is encountered in the
  * input, so it is safe to pass this function an arbitrary
  * null-terminated string.
  */
-int get_sha1_hex(const char *hex, unsigned char *sha1);
-int get_oid_hex(const char *hex, struct object_id *sha1);
-
-/* Like get_oid_hex, but for an arbitrary hash algorithm. */
 int get_oid_hex_algop(const char *hex, struct object_id *oid, const struct git_hash_algo *algop);
-
-/*
- * Read `len` pairs of hexadecimal digits from `hex` and write the
- * values to `binary` as `len` bytes. Return 0 on success, or -1 if
- * the input does not consist of hex digits).
- */
-int hex_to_bytes(unsigned char *binary, const char *hex, size_t len);
 
 /*
  * Convert a binary hash in "unsigned char []" or an object name in
@@ -55,7 +31,6 @@ int hex_to_bytes(unsigned char *binary, const char *hex, size_t len);
 char *hash_to_hex_algop_r(char *buffer, const unsigned char *hash, const struct git_hash_algo *);
 char *oid_to_hex_r(char *out, const struct object_id *oid);
 char *hash_to_hex_algop(const unsigned char *hash, const struct git_hash_algo *);	/* static buffer result! */
-char *hash_to_hex(const unsigned char *hash);						/* same static buffer */
 char *oid_to_hex(const struct object_id *oid);						/* same static buffer */
 
 /*
@@ -65,12 +40,8 @@ char *oid_to_hex(const struct object_id *oid);						/* same static buffer */
  * other invalid character.  end is only updated on success; otherwise, it is
  * unmodified.
  */
-int parse_oid_hex(const char *hex, struct object_id *oid, const char **end);
-
-/* Like parse_oid_hex, but for an arbitrary hash algorithm. */
 int parse_oid_hex_algop(const char *hex, struct object_id *oid, const char **end,
 			const struct git_hash_algo *algo);
-
 
 /*
  * These functions work like get_oid_hex and parse_oid_hex, but they will parse
@@ -81,4 +52,19 @@ int parse_oid_hex_algop(const char *hex, struct object_id *oid, const char **end
 int get_oid_hex_any(const char *hex, struct object_id *oid);
 int parse_oid_hex_any(const char *hex, struct object_id *oid, const char **end);
 
-#endif
+#ifdef USE_THE_REPOSITORY_VARIABLE
+
+/* Like get_oid_hex_algop, but for `the_hash_algo`. */
+int get_hash_hex(const char *hex, unsigned char *hash);
+int get_oid_hex(const char *hex, struct object_id *oid);
+
+/* Like parse_oid_hex_algop, but uses `the_hash_algo`. */
+int parse_oid_hex(const char *hex, struct object_id *oid, const char **end);
+
+/*
+ * Same as `hash_to_hex_algop()`, but uses `the_hash_algo`.
+ */
+char *hash_to_hex(const unsigned char *hash);
+
+#endif /* USE_THE_REPOSITORY_VARIABLE */
+#endif /* HEX_H */

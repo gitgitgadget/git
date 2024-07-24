@@ -1,6 +1,8 @@
 #!/bin/sh
 
 test_description='basic credential helper tests'
+
+TEST_PASSES_SANITIZE_LEAK=true
 . ./test-lib.sh
 . "$TEST_DIRECTORY"/lib-credential.sh
 
@@ -12,7 +14,13 @@ test_expect_success 'setup helper scripts' '
 	IFS==
 	while read key value; do
 		echo >&2 "$whoami: $key=$value"
-		eval "$key=$value"
+		if test -z "${key%%*\[\]}"
+		then
+			key=${key%%\[\]}
+			eval "$key=\"\$$key $value\""
+		else
+			eval "$key=$value"
+		fi
 	done
 	IFS=$OIFS
 	EOF
@@ -33,6 +41,30 @@ test_expect_success 'setup helper scripts' '
 	. ./dump
 	test -z "$user" || echo username=$user
 	test -z "$pass" || echo password=$pass
+	EOF
+
+	write_script git-credential-verbatim-cred <<-\EOF &&
+	authtype=$1; shift
+	credential=$1; shift
+	. ./dump
+	echo capability[]=authtype
+	echo capability[]=state
+	test -z "${capability##*authtype*}" || exit 0
+	test -z "$authtype" || echo authtype=$authtype
+	test -z "$credential" || echo credential=$credential
+	test -z "${capability##*state*}" || exit 0
+	echo state[]=verbatim-cred:foo
+	EOF
+
+	write_script git-credential-verbatim-ephemeral <<-\EOF &&
+	authtype=$1; shift
+	credential=$1; shift
+	. ./dump
+	echo capability[]=authtype
+	test -z "${capability##*authtype*}" || exit 0
+	test -z "$authtype" || echo authtype=$authtype
+	test -z "$credential" || echo credential=$credential
+	echo "ephemeral=1"
 	EOF
 
 	write_script git-credential-verbatim-with-expiry <<-\EOF &&
@@ -64,6 +96,67 @@ test_expect_success 'credential_fill invokes helper' '
 	EOF
 '
 
+test_expect_success 'credential_fill invokes helper with credential' '
+	check fill "verbatim-cred Bearer token" <<-\EOF
+	capability[]=authtype
+	protocol=http
+	host=example.com
+	--
+	capability[]=authtype
+	authtype=Bearer
+	credential=token
+	protocol=http
+	host=example.com
+	--
+	verbatim-cred: get
+	verbatim-cred: capability[]=authtype
+	verbatim-cred: protocol=http
+	verbatim-cred: host=example.com
+	EOF
+'
+
+test_expect_success 'credential_fill invokes helper with ephemeral credential' '
+	check fill "verbatim-ephemeral Bearer token" <<-\EOF
+	capability[]=authtype
+	protocol=http
+	host=example.com
+	--
+	capability[]=authtype
+	authtype=Bearer
+	credential=token
+	ephemeral=1
+	protocol=http
+	host=example.com
+	--
+	verbatim-ephemeral: get
+	verbatim-ephemeral: capability[]=authtype
+	verbatim-ephemeral: protocol=http
+	verbatim-ephemeral: host=example.com
+	EOF
+'
+test_expect_success 'credential_fill invokes helper with credential and state' '
+	check fill "verbatim-cred Bearer token" <<-\EOF
+	capability[]=authtype
+	capability[]=state
+	protocol=http
+	host=example.com
+	--
+	capability[]=authtype
+	capability[]=state
+	authtype=Bearer
+	credential=token
+	protocol=http
+	host=example.com
+	state[]=verbatim-cred:foo
+	--
+	verbatim-cred: get
+	verbatim-cred: capability[]=authtype
+	verbatim-cred: capability[]=state
+	verbatim-cred: protocol=http
+	verbatim-cred: host=example.com
+	EOF
+'
+
 test_expect_success 'credential_fill invokes multiple helpers' '
 	check fill useless "verbatim foo bar" <<-\EOF
 	protocol=http
@@ -83,6 +176,45 @@ test_expect_success 'credential_fill invokes multiple helpers' '
 	EOF
 '
 
+test_expect_success 'credential_fill response does not get capabilities when helpers are incapable' '
+	check fill useless "verbatim foo bar" <<-\EOF
+	capability[]=authtype
+	capability[]=state
+	protocol=http
+	host=example.com
+	--
+	protocol=http
+	host=example.com
+	username=foo
+	password=bar
+	--
+	useless: get
+	useless: capability[]=authtype
+	useless: capability[]=state
+	useless: protocol=http
+	useless: host=example.com
+	verbatim: get
+	verbatim: capability[]=authtype
+	verbatim: capability[]=state
+	verbatim: protocol=http
+	verbatim: host=example.com
+	EOF
+'
+
+test_expect_success 'credential_fill response does not get capabilities when caller is incapable' '
+	check fill "verbatim-cred Bearer token" <<-\EOF
+	protocol=http
+	host=example.com
+	--
+	protocol=http
+	host=example.com
+	--
+	verbatim-cred: get
+	verbatim-cred: protocol=http
+	verbatim-cred: host=example.com
+	EOF
+'
+
 test_expect_success 'credential_fill stops when we get a full response' '
 	check fill "verbatim one two" "verbatim three four" <<-\EOF
 	protocol=http
@@ -96,6 +228,25 @@ test_expect_success 'credential_fill stops when we get a full response' '
 	verbatim: get
 	verbatim: protocol=http
 	verbatim: host=example.com
+	EOF
+'
+
+test_expect_success 'credential_fill thinks a credential is a full response' '
+	check fill "verbatim-cred Bearer token" "verbatim three four" <<-\EOF
+	capability[]=authtype
+	protocol=http
+	host=example.com
+	--
+	capability[]=authtype
+	authtype=Bearer
+	credential=token
+	protocol=http
+	host=example.com
+	--
+	verbatim-cred: get
+	verbatim-cred: capability[]=authtype
+	verbatim-cred: protocol=http
+	verbatim-cred: host=example.com
 	EOF
 '
 
@@ -175,6 +326,20 @@ test_expect_success 'credential_fill passes along metadata' '
 	EOF
 '
 
+test_expect_success 'credential_fill produces no credential without capability' '
+	check fill "verbatim-cred Bearer token" <<-\EOF
+	protocol=http
+	host=example.com
+	--
+	protocol=http
+	host=example.com
+	--
+	verbatim-cred: get
+	verbatim-cred: protocol=http
+	verbatim-cred: host=example.com
+	EOF
+'
+
 test_expect_success 'credential_approve calls all helpers' '
 	check approve useless "verbatim one two" <<-\EOF
 	protocol=http
@@ -211,6 +376,24 @@ test_expect_success 'credential_approve stores password expiry' '
 	useless: username=foo
 	useless: password=bar
 	useless: password_expiry_utc=9999999999
+	EOF
+'
+
+test_expect_success 'credential_approve stores oauth refresh token' '
+	check approve useless <<-\EOF
+	protocol=http
+	host=example.com
+	username=foo
+	password=bar
+	oauth_refresh_token=xyzzy
+	--
+	--
+	useless: store
+	useless: protocol=http
+	useless: host=example.com
+	useless: username=foo
+	useless: password=bar
+	useless: oauth_refresh_token=xyzzy
 	EOF
 '
 
@@ -808,8 +991,8 @@ test_expect_success 'credential config with partial URLs' '
 
 	git -c credential.$partial.helper=yep \
 		-c credential.with%0anewline.username=uh-oh \
-		credential fill <stdin >stdout 2>stderr &&
-	test_i18ngrep "skipping credential lookup for key" stderr
+		credential fill <stdin 2>stderr &&
+	test_grep "skipping credential lookup for key" stderr
 '
 
 test_done

@@ -1,8 +1,12 @@
-#include "../../cache.h"
+#define USE_THE_REPOSITORY_VARIABLE
+
+#include "../../git-compat-util.h"
 #include "../../json-writer.h"
+#include "../../repository.h"
+#include "../../trace2.h"
 #include "lazyload.h"
-#include <Psapi.h>
-#include <tlHelp32.h>
+#include <psapi.h>
+#include <tlhelp32.h>
 
 /*
  * An arbitrarily chosen value to limit the size of the ancestor

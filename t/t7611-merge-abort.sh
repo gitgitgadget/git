@@ -25,6 +25,7 @@ Next, test git merge --abort with the following variables:
 GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME=main
 export GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME
 
+TEST_PASSES_SANITIZE_LEAK=true
 . ./test-lib.sh
 
 test_expect_success 'setup' '
@@ -50,7 +51,7 @@ pre_merge_head="$(git rev-parse HEAD)"
 
 test_expect_success 'fails without MERGE_HEAD (unstarted merge)' '
 	test_must_fail git merge --abort 2>output &&
-	test_i18ngrep MERGE_HEAD output
+	test_grep MERGE_HEAD output
 '
 
 test_expect_success 'fails without MERGE_HEAD (unstarted merge): .git/MERGE_HEAD sanity' '
@@ -64,7 +65,7 @@ test_expect_success 'fails without MERGE_HEAD (completed merge)' '
 	# Merge successfully completed
 	post_merge_head="$(git rev-parse HEAD)" &&
 	test_must_fail git merge --abort 2>output &&
-	test_i18ngrep MERGE_HEAD output
+	test_grep MERGE_HEAD output
 '
 
 test_expect_success 'fails without MERGE_HEAD (completed merge): .git/MERGE_HEAD sanity' '

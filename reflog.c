@@ -1,10 +1,13 @@
+#define USE_THE_REPOSITORY_VARIABLE
+
 #include "git-compat-util.h"
 #include "gettext.h"
-#include "object-store.h"
+#include "object-store-ll.h"
 #include "reflog.h"
 #include "refs.h"
 #include "revision.h"
-#include "worktree.h"
+#include "tree.h"
+#include "tree-walk.h"
 
 /* Remember to update object flag allocation in object.h */
 #define INCOMPLETE	(1u<<10)
@@ -38,7 +41,7 @@ static int tree_is_complete(const struct object_id *oid)
 		tree->buffer = data;
 		tree->size = size;
 	}
-	init_tree_desc(&desc, tree->buffer, tree->size);
+	init_tree_desc(&desc, &tree->object.oid, tree->buffer, tree->size);
 	complete = 1;
 	while (tree_entry(&desc, &entry)) {
 		if (!repo_has_object_file(the_repository, &entry.oid) ||
@@ -342,7 +345,8 @@ void reflog_expiry_prepare(const char *refname,
 	case UE_ALWAYS:
 		return;
 	case UE_HEAD:
-		for_each_ref(push_tip_to_list, &cb->tips);
+		refs_for_each_ref(get_main_ref_store(the_repository),
+				  push_tip_to_list, &cb->tips);
 		for (elem = cb->tips; elem; elem = elem->next)
 			commit_list_insert(elem->item, &cb->mark_list);
 		break;
@@ -407,7 +411,7 @@ int reflog_delete(const char *rev, enum expire_reflog_flags flags, int verbose)
 	if (!spec)
 		return error(_("not a reflog: %s"), rev);
 
-	if (!dwim_log(rev, spec - rev, NULL, &ref)) {
+	if (!repo_dwim_log(the_repository, rev, spec - rev, NULL, &ref)) {
 		status |= error(_("no reflog for '%s'"), rev);
 		goto cleanup;
 	}
@@ -415,19 +419,22 @@ int reflog_delete(const char *rev, enum expire_reflog_flags flags, int verbose)
 	recno = strtoul(spec + 2, &ep, 10);
 	if (*ep == '}') {
 		cmd.recno = -recno;
-		for_each_reflog_ent(ref, count_reflog_ent, &cmd);
+		refs_for_each_reflog_ent(get_main_ref_store(the_repository),
+					 ref, count_reflog_ent, &cmd);
 	} else {
 		cmd.expire_total = approxidate(spec + 2);
-		for_each_reflog_ent(ref, count_reflog_ent, &cmd);
+		refs_for_each_reflog_ent(get_main_ref_store(the_repository),
+					 ref, count_reflog_ent, &cmd);
 		cmd.expire_total = 0;
 	}
 
 	cb.cmd = cmd;
-	status |= reflog_expire(ref, flags,
-				reflog_expiry_prepare,
-				should_prune_fn,
-				reflog_expiry_cleanup,
-				&cb);
+	status |= refs_reflog_expire(get_main_ref_store(the_repository), ref,
+				     flags,
+				     reflog_expiry_prepare,
+				     should_prune_fn,
+				     reflog_expiry_cleanup,
+				     &cb);
 
  cleanup:
 	free(ref);

@@ -28,14 +28,14 @@ prompt_given ()
 
 test_expect_success 'basic usage requires no repo' '
 	test_expect_code 129 git difftool -h >output &&
-	test_i18ngrep ^usage: output &&
+	test_grep ^usage: output &&
 	# create a ceiling directory to prevent Git from finding a repo
 	mkdir -p not/repo &&
 	test_when_finished rm -r not &&
 	test_expect_code 129 \
 	env GIT_CEILING_DIRECTORIES="$(pwd)/not" \
 	git -C not/repo difftool -h >output &&
-	test_i18ngrep ^usage: output
+	test_grep ^usage: output
 '
 
 # Create a file on main and change it on branch
@@ -91,58 +91,67 @@ test_expect_success 'difftool forwards arguments to diff' '
 	rm for-diff
 '
 
-test_expect_success 'difftool ignores exit code' '
-	test_config difftool.error.cmd false &&
-	git difftool -y -t error branch
-'
+for opt in '' '--dir-diff'
+do
+	test_expect_success "difftool ${opt:-without options} ignores exit code" '
+		test_config difftool.error.cmd false &&
+		git difftool ${opt} -y -t error branch
+	'
 
-test_expect_success 'difftool forwards exit code with --trust-exit-code' '
-	test_config difftool.error.cmd false &&
-	test_must_fail git difftool -y --trust-exit-code -t error branch
-'
+	test_expect_success "difftool ${opt:-without options} forwards exit code with --trust-exit-code" '
+		test_config difftool.error.cmd false &&
+		test_must_fail git difftool ${opt} -y --trust-exit-code -t error branch
+	'
 
-test_expect_success 'difftool forwards exit code with --trust-exit-code for built-ins' '
-	test_config difftool.vimdiff.path false &&
-	test_must_fail git difftool -y --trust-exit-code -t vimdiff branch
-'
+	test_expect_success "difftool ${opt:-without options} forwards exit code with --trust-exit-code for built-ins" '
+		test_config difftool.vimdiff.path false &&
+		test_must_fail git difftool ${opt} -y --trust-exit-code -t vimdiff branch
+	'
 
-test_expect_success 'difftool honors difftool.trustExitCode = true' '
-	test_config difftool.error.cmd false &&
-	test_config difftool.trustExitCode true &&
-	test_must_fail git difftool -y -t error branch
-'
+	test_expect_success "difftool ${opt:-without options} honors difftool.trustExitCode = true" '
+		test_config difftool.error.cmd false &&
+		test_config difftool.trustExitCode true &&
+		test_must_fail git difftool ${opt} -y -t error branch
+	'
 
-test_expect_success 'difftool honors difftool.trustExitCode = false' '
-	test_config difftool.error.cmd false &&
-	test_config difftool.trustExitCode false &&
-	git difftool -y -t error branch
-'
+	test_expect_success "difftool ${opt:-without options} honors difftool.trustExitCode = false" '
+		test_config difftool.error.cmd false &&
+		test_config difftool.trustExitCode false &&
+		git difftool ${opt} -y -t error branch
+	'
 
-test_expect_success 'difftool ignores exit code with --no-trust-exit-code' '
-	test_config difftool.error.cmd false &&
-	test_config difftool.trustExitCode true &&
-	git difftool -y --no-trust-exit-code -t error branch
-'
+	test_expect_success "difftool ${opt:-without options} ignores exit code with --no-trust-exit-code" '
+		test_config difftool.error.cmd false &&
+		test_config difftool.trustExitCode true &&
+		git difftool ${opt} -y --no-trust-exit-code -t error branch
+	'
 
-test_expect_success 'difftool stops on error with --trust-exit-code' '
-	test_when_finished "rm -f for-diff .git/fail-right-file" &&
-	test_when_finished "git reset -- for-diff" &&
-	write_script .git/fail-right-file <<-\EOF &&
-	echo failed
-	exit 1
-	EOF
-	>for-diff &&
-	git add for-diff &&
-	test_must_fail git difftool -y --trust-exit-code \
-		--extcmd .git/fail-right-file branch >actual &&
-	test_line_count = 1 actual
-'
+	test_expect_success "difftool ${opt:-without options} stops on error with --trust-exit-code" '
+		test_when_finished "rm -f for-diff .git/fail-right-file" &&
+		test_when_finished "git reset -- for-diff" &&
+		write_script .git/fail-right-file <<-\EOF &&
+		echo failed
+		exit 1
+		EOF
+		>for-diff &&
+		git add for-diff &&
+		test_must_fail git difftool ${opt} -y --trust-exit-code \
+			--extcmd .git/fail-right-file branch >actual &&
+		test_line_count = 1 actual
+	'
 
-test_expect_success 'difftool honors exit status if command not found' '
-	test_config difftool.nonexistent.cmd i-dont-exist &&
-	test_config difftool.trustExitCode false &&
-	test_must_fail git difftool -y -t nonexistent branch
-'
+	test_expect_success "difftool ${opt:-without options} honors exit status if command not found" '
+		test_config difftool.nonexistent.cmd i-dont-exist &&
+		test_config difftool.trustExitCode false &&
+		if test "${opt}" = --dir-diff
+		then
+			expected_code=127
+		else
+			expected_code=128
+		fi &&
+		test_expect_code ${expected_code} git difftool ${opt} -y -t nonexistent branch
+	'
+done
 
 test_expect_success 'difftool honors --gui' '
 	difftool_test_setup &&
@@ -152,6 +161,58 @@ test_expect_success 'difftool honors --gui' '
 
 	echo branch >expect &&
 	git difftool --no-prompt --gui branch >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'difftool with guiDefault auto selects gui tool when there is DISPLAY' '
+	difftool_test_setup &&
+	test_config merge.tool bogus-tool &&
+	test_config diff.tool bogus-tool &&
+	test_config diff.guitool test-tool &&
+	test_config difftool.guiDefault auto &&
+	DISPLAY=SOMETHING && export DISPLAY &&
+
+	echo branch >expect &&
+	git difftool --no-prompt branch >actual &&
+	test_cmp expect actual
+'
+test_expect_success 'difftool with guiDefault auto selects regular tool when no DISPLAY' '
+	difftool_test_setup &&
+	test_config diff.guitool bogus-tool &&
+	test_config diff.tool test-tool &&
+	test_config difftool.guiDefault Auto &&
+	DISPLAY= && export DISPLAY &&
+
+	echo branch >expect &&
+	git difftool --no-prompt branch >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'difftool with guiDefault true selects gui tool' '
+	difftool_test_setup &&
+	test_config diff.tool bogus-tool &&
+	test_config diff.guitool test-tool &&
+	test_config difftool.guiDefault true &&
+
+	DISPLAY= && export DISPLAY &&
+	echo branch >expect &&
+	git difftool --no-prompt branch >actual &&
+	test_cmp expect actual &&
+
+	DISPLAY=Something && export DISPLAY &&
+	echo branch >expect &&
+	git difftool --no-prompt branch >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'difftool --no-gui trumps config guiDefault' '
+	difftool_test_setup &&
+	test_config diff.guitool bogus-tool &&
+	test_config diff.tool test-tool &&
+	test_config difftool.guiDefault true &&
+
+	echo branch >expect &&
+	git difftool --no-prompt --no-gui branch >actual &&
 	test_cmp expect actual
 '
 

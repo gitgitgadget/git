@@ -1,11 +1,11 @@
 #include "builtin.h"
-#include "cache.h"
 #include "config.h"
 #include "commit.h"
 #include "diff.h"
 #include "environment.h"
 #include "gettext.h"
 #include "string-list.h"
+#include "repository.h"
 #include "revision.h"
 #include "utf8.h"
 #include "mailmap.h"
@@ -245,7 +245,6 @@ void shortlog_add_commit(struct shortlog *log, struct commit *commit)
 
 	ctx.fmt = CMIT_FMT_USERFORMAT;
 	ctx.abbrev = log->abbrev;
-	ctx.print_email_subject = 1;
 	ctx.date_mode = log->date_mode;
 	ctx.output_encoding = get_log_output_encoding();
 
@@ -436,7 +435,7 @@ parse_done:
 		usage_with_options(shortlog_usage, options);
 	}
 
-	if (setup_revisions(argc, argv, &rev, NULL) != 1) {
+	if (!nongit && setup_revisions(argc, argv, &rev, NULL) != 1) {
 		error(_("unrecognized argument: %s"), argv[1]);
 		usage_with_options(shortlog_usage, options);
 	}
@@ -461,11 +460,8 @@ parse_done:
 	else
 		get_from_rev(&rev, &log);
 
-	release_revisions(&rev);
-
 	shortlog_output(&log);
-	if (log.file != stdout)
-		fclose(log.file);
+	release_revisions(&rev);
 	return 0;
 }
 

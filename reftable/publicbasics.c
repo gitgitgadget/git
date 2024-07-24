@@ -6,10 +6,10 @@ license that can be found in the LICENSE file or at
 https://developers.google.com/open-source/licenses/bsd
 */
 
+#include "system.h"
 #include "reftable-malloc.h"
 
 #include "basics.h"
-#include "system.h"
 
 static void *(*reftable_malloc_ptr)(size_t sz);
 static void *(*reftable_realloc_ptr)(void *, size_t);
@@ -37,8 +37,9 @@ void reftable_free(void *p)
 		free(p);
 }
 
-void *reftable_calloc(size_t sz)
+void *reftable_calloc(size_t nelem, size_t elsize)
 {
+	size_t sz = st_mult(nelem, elsize);
 	void *p = reftable_malloc(sz);
 	memset(p, 0, sz);
 	return p;

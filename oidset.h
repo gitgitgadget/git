@@ -48,6 +48,12 @@ int oidset_contains(const struct oidset *set, const struct object_id *oid);
 int oidset_insert(struct oidset *set, const struct object_id *oid);
 
 /**
+ * Insert all the oids that are in set 'src' into set 'dest'; a copy
+ * is made of each oid inserted into set 'dest'.
+ */
+void oidset_insert_from_set(struct oidset *dest, struct oidset *src);
+
+/**
  * Remove the oid from the set.
  *
  * Returns 1 if the oid was present in the set, 0 otherwise.
@@ -74,7 +80,8 @@ void oidset_clear(struct oidset *set);
  * are allowed.  Leading whitespace and empty or white-space only lines are
  * ignored.
  */
-void oidset_parse_file(struct oidset *set, const char *path);
+void oidset_parse_file(struct oidset *set, const char *path,
+		       const struct git_hash_algo *algop);
 
 /*
  * Similar to the above, but with a callback which can (1) return non-zero to
@@ -83,6 +90,7 @@ void oidset_parse_file(struct oidset *set, const char *path);
  */
 typedef int (*oidset_parse_tweak_fn)(struct object_id *, void *);
 void oidset_parse_file_carefully(struct oidset *set, const char *path,
+				 const struct git_hash_algo *algop,
 				 oidset_parse_tweak_fn fn, void *cbdata);
 
 struct oidset_iter {

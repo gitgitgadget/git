@@ -7,10 +7,13 @@
  * files. Useful when you write a file that you want to be
  * able to verify hasn't been messed with afterwards.
  */
+
+#define USE_THE_REPOSITORY_VARIABLE
+
 #include "git-compat-util.h"
 #include "progress.h"
 #include "csum-file.h"
-#include "wrapper.h"
+#include "hash.h"
 
 static void verify_buffer_or_die(struct hashfile *f,
 				 const void *buf,
@@ -68,12 +71,12 @@ int finalize_hashfile(struct hashfile *f, unsigned char *result,
 	hashflush(f);
 
 	if (f->skip_hash)
-		hashclr(f->buffer);
+		hashclr(f->buffer, the_repository->hash_algo);
 	else
 		the_hash_algo->final_fn(f->buffer, &f->ctx);
 
 	if (result)
-		hashcpy(result, f->buffer);
+		hashcpy(result, f->buffer, the_repository->hash_algo);
 	if (flags & CSUM_HASH_IN_STREAM)
 		flush(f, f->buffer, the_hash_algo->rawsz);
 	if (flags & CSUM_FSYNC)
@@ -207,7 +210,7 @@ int hashfile_truncate(struct hashfile *f, struct hashfile_checkpoint *checkpoint
 	    lseek(f->fd, offset, SEEK_SET) != offset)
 		return -1;
 	f->total = offset;
-	f->ctx = checkpoint->ctx;
+	the_hash_algo->clone_fn(&f->ctx, &checkpoint->ctx);
 	f->offset = 0; /* hashflush() was called in checkpoint */
 	return 0;
 }
@@ -237,5 +240,5 @@ int hashfile_checksum_valid(const unsigned char *data, size_t total_len)
 	the_hash_algo->update_fn(&ctx, data, data_len);
 	the_hash_algo->final_fn(got, &ctx);
 
-	return hasheq(got, data + data_len);
+	return hasheq(got, data + data_len, the_repository->hash_algo);
 }

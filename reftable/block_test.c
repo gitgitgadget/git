@@ -32,30 +32,28 @@ static void test_block_read_write(void)
 	int i = 0;
 	int n;
 	struct block_reader br = { 0 };
-	struct block_iter it = { .last_key = STRBUF_INIT };
+	struct block_iter it = BLOCK_ITER_INIT;
 	int j = 0;
 	struct strbuf want = STRBUF_INIT;
 
-	block.data = reftable_calloc(block_size);
+	REFTABLE_CALLOC_ARRAY(block.data, block_size);
 	block.len = block_size;
 	block.source = malloc_block_source();
 	block_writer_init(&bw, BLOCK_TYPE_REF, block.data, block_size,
 			  header_off, hash_size(GIT_SHA1_FORMAT_ID));
 
-	rec.u.ref.refname = "";
+	rec.u.ref.refname = (char *) "";
 	rec.u.ref.value_type = REFTABLE_REF_DELETION;
 	n = block_writer_add(&bw, &rec);
 	EXPECT(n == REFTABLE_API_ERROR);
 
 	for (i = 0; i < N; i++) {
 		char name[100];
-		uint8_t hash[GIT_SHA1_RAWSZ];
 		snprintf(name, sizeof(name), "branch%02d", i);
-		memset(hash, i, sizeof(hash));
 
 		rec.u.ref.refname = name;
 		rec.u.ref.value_type = REFTABLE_REF_VAL1;
-		rec.u.ref.value.val1 = hash;
+		memset(rec.u.ref.value.val1, i, GIT_SHA1_RAWSZ);
 
 		names[i] = xstrdup(name);
 		n = block_writer_add(&bw, &rec);
@@ -71,7 +69,7 @@ static void test_block_read_write(void)
 
 	block_reader_init(&br, &block, header_off, block_size, GIT_SHA1_RAWSZ);
 
-	block_reader_start(&br, &it);
+	block_iter_seek_start(&it, &br);
 
 	while (1) {
 		int r = block_iter_next(&it, &rec);
@@ -87,11 +85,11 @@ static void test_block_read_write(void)
 	block_iter_close(&it);
 
 	for (i = 0; i < N; i++) {
-		struct block_iter it = { .last_key = STRBUF_INIT };
+		struct block_iter it = BLOCK_ITER_INIT;
 		strbuf_reset(&want);
 		strbuf_addstr(&want, names[i]);
 
-		n = block_reader_seek(&br, &it, &want);
+		n = block_iter_seek_key(&it, &br, &want);
 		EXPECT(n == 0);
 
 		n = block_iter_next(&it, &rec);
@@ -100,7 +98,7 @@ static void test_block_read_write(void)
 		EXPECT_STREQ(names[i], rec.u.ref.refname);
 
 		want.len--;
-		n = block_reader_seek(&br, &it, &want);
+		n = block_iter_seek_key(&it, &br, &want);
 		EXPECT(n == 0);
 
 		n = block_iter_next(&it, &rec);

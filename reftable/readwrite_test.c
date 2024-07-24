@@ -11,7 +11,6 @@ https://developers.google.com/open-source/licenses/bsd
 #include "basics.h"
 #include "block.h"
 #include "blocksource.h"
-#include "constants.h"
 #include "reader.h"
 #include "record.h"
 #include "test_framework.h"
@@ -52,26 +51,25 @@ static void write_table(char ***names, struct strbuf *buf, int N,
 		.hash_id = hash_id,
 	};
 	struct reftable_writer *w =
-		reftable_new_writer(&strbuf_add_void, buf, &opts);
+		reftable_new_writer(&strbuf_add_void, &noop_flush, buf, &opts);
 	struct reftable_ref_record ref = { NULL };
 	int i = 0, n;
 	struct reftable_log_record log = { NULL };
 	const struct reftable_stats *stats = NULL;
-	*names = reftable_calloc(sizeof(char *) * (N + 1));
+
+	REFTABLE_CALLOC_ARRAY(*names, N + 1);
+
 	reftable_writer_set_limits(w, update_index, update_index);
 	for (i = 0; i < N; i++) {
-		uint8_t hash[GIT_SHA256_RAWSZ] = { 0 };
 		char name[100];
 		int n;
-
-		set_test_hash(hash, i);
 
 		snprintf(name, sizeof(name), "refs/heads/branch%02d", i);
 
 		ref.refname = name;
 		ref.update_index = update_index;
 		ref.value_type = REFTABLE_REF_VAL1;
-		ref.value.val1 = hash;
+		set_test_hash(ref.value.val1, i);
 		(*names)[i] = xstrdup(name);
 
 		n = reftable_writer_add_ref(w, &ref);
@@ -79,19 +77,16 @@ static void write_table(char ***names, struct strbuf *buf, int N,
 	}
 
 	for (i = 0; i < N; i++) {
-		uint8_t hash[GIT_SHA256_RAWSZ] = { 0 };
 		char name[100];
 		int n;
-
-		set_test_hash(hash, i);
 
 		snprintf(name, sizeof(name), "refs/heads/branch%02d", i);
 
 		log.refname = name;
 		log.update_index = update_index;
 		log.value_type = REFTABLE_LOG_UPDATE;
-		log.value.update.new_hash = hash;
-		log.value.update.message = "message";
+		set_test_hash(log.value.update.new_hash, i);
+		log.value.update.message = (char *) "message";
 
 		n = reftable_writer_add_log(w, &log);
 		EXPECT(n == 0);
@@ -123,29 +118,26 @@ static void test_log_buffer_size(void)
 	int err;
 	int i;
 	struct reftable_log_record
-		log = { .refname = "refs/heads/master",
+		log = { .refname = (char *) "refs/heads/master",
 			.update_index = 0xa,
 			.value_type = REFTABLE_LOG_UPDATE,
 			.value = { .update = {
-					   .name = "Han-Wen Nienhuys",
-					   .email = "hanwen@google.com",
+					   .name = (char *) "Han-Wen Nienhuys",
+					   .email = (char *) "hanwen@google.com",
 					   .tz_offset = 100,
 					   .time = 0x5e430672,
-					   .message = "commit: 9\n",
+					   .message = (char *) "commit: 9\n",
 				   } } };
 	struct reftable_writer *w =
-		reftable_new_writer(&strbuf_add_void, &buf, &opts);
+		reftable_new_writer(&strbuf_add_void, &noop_flush, &buf, &opts);
 
 	/* This tests buffer extension for log compression. Must use a random
 	   hash, to ensure that the compressed part is larger than the original.
 	*/
-	uint8_t hash1[GIT_SHA1_RAWSZ], hash2[GIT_SHA1_RAWSZ];
 	for (i = 0; i < GIT_SHA1_RAWSZ; i++) {
-		hash1[i] = (uint8_t)(rand() % 256);
-		hash2[i] = (uint8_t)(rand() % 256);
+		log.value.update.old_hash[i] = (uint8_t)(git_rand() % 256);
+		log.value.update.new_hash[i] = (uint8_t)(git_rand() % 256);
 	}
-	log.value.update.old_hash = hash1;
-	log.value.update.new_hash = hash2;
 	reftable_writer_set_limits(w, update_index, update_index);
 	err = reftable_writer_add_log(w, &log);
 	EXPECT_ERR(err);
@@ -163,25 +155,26 @@ static void test_log_overflow(void)
 		.block_size = ARRAY_SIZE(msg),
 	};
 	int err;
-	struct reftable_log_record
-		log = { .refname = "refs/heads/master",
-			.update_index = 0xa,
-			.value_type = REFTABLE_LOG_UPDATE,
-			.value = { .update = {
-					   .name = "Han-Wen Nienhuys",
-					   .email = "hanwen@google.com",
-					   .tz_offset = 100,
-					   .time = 0x5e430672,
-					   .message = msg,
-				   } } };
+	struct reftable_log_record log = {
+		.refname = (char *) "refs/heads/master",
+		.update_index = 0xa,
+		.value_type = REFTABLE_LOG_UPDATE,
+		.value = {
+			.update = {
+				.old_hash = { 1 },
+				.new_hash = { 2 },
+				.name = (char *) "Han-Wen Nienhuys",
+				.email = (char *) "hanwen@google.com",
+				.tz_offset = 100,
+				.time = 0x5e430672,
+				.message = msg,
+			},
+		},
+	};
 	struct reftable_writer *w =
-		reftable_new_writer(&strbuf_add_void, &buf, &opts);
-
-	uint8_t hash1[GIT_SHA1_RAWSZ]  = {1}, hash2[GIT_SHA1_RAWSZ] = { 2 };
+		reftable_new_writer(&strbuf_add_void, &noop_flush, &buf, &opts);
 
 	memset(msg, 'x', sizeof(msg) - 1);
-	log.value.update.old_hash = hash1;
-	log.value.update.new_hash = hash2;
 	reftable_writer_set_limits(w, update_index, update_index);
 	err = reftable_writer_add_log(w, &log);
 	EXPECT(err == REFTABLE_ENTRY_TOO_BIG_ERROR);
@@ -192,7 +185,7 @@ static void test_log_overflow(void)
 static void test_log_write_read(void)
 {
 	int N = 2;
-	char **names = reftable_calloc(sizeof(char *) * (N + 1));
+	char **names = reftable_calloc(N + 1, sizeof(*names));
 	int err;
 	struct reftable_write_options opts = {
 		.block_size = 256,
@@ -206,7 +199,7 @@ static void test_log_write_read(void)
 	struct reftable_block_source source = { NULL };
 	struct strbuf buf = STRBUF_INIT;
 	struct reftable_writer *w =
-		reftable_new_writer(&strbuf_add_void, &buf, &opts);
+		reftable_new_writer(&strbuf_add_void, &noop_flush, &buf, &opts);
 	const struct reftable_stats *stats = NULL;
 	reftable_writer_set_limits(w, 0, N);
 	for (i = 0; i < N; i++) {
@@ -221,16 +214,13 @@ static void test_log_write_read(void)
 		EXPECT_ERR(err);
 	}
 	for (i = 0; i < N; i++) {
-		uint8_t hash1[GIT_SHA1_RAWSZ], hash2[GIT_SHA1_RAWSZ];
 		struct reftable_log_record log = { NULL };
-		set_test_hash(hash1, i);
-		set_test_hash(hash2, i + 1);
 
 		log.refname = names[i];
 		log.update_index = i;
 		log.value_type = REFTABLE_LOG_UPDATE;
-		log.value.update.old_hash = hash1;
-		log.value.update.new_hash = hash2;
+		set_test_hash(log.value.update.old_hash, i);
+		set_test_hash(log.value.update.new_hash, i + 1);
 
 		err = reftable_writer_add_log(w, &log);
 		EXPECT_ERR(err);
@@ -249,7 +239,9 @@ static void test_log_write_read(void)
 	err = init_reader(&rd, &source, "file.log");
 	EXPECT_ERR(err);
 
-	err = reftable_reader_seek_ref(&rd, &it, names[N - 1]);
+	reftable_reader_init_ref_iterator(&rd, &it);
+
+	err = reftable_iterator_seek_ref(&it, names[N - 1]);
 	EXPECT_ERR(err);
 
 	err = reftable_iterator_next_ref(&it, &ref);
@@ -262,7 +254,9 @@ static void test_log_write_read(void)
 	reftable_iterator_destroy(&it);
 	reftable_ref_record_release(&ref);
 
-	err = reftable_reader_seek_log(&rd, &it, "");
+	reftable_reader_init_log_iterator(&rd, &it);
+
+	err = reftable_iterator_seek_log(&it, "");
 	EXPECT_ERR(err);
 
 	i = 0;
@@ -298,29 +292,26 @@ static void test_log_zlib_corruption(void)
 	struct reftable_block_source source = { 0 };
 	struct strbuf buf = STRBUF_INIT;
 	struct reftable_writer *w =
-		reftable_new_writer(&strbuf_add_void, &buf, &opts);
+		reftable_new_writer(&strbuf_add_void, &noop_flush, &buf, &opts);
 	const struct reftable_stats *stats = NULL;
-	uint8_t hash1[GIT_SHA1_RAWSZ] = { 1 };
-	uint8_t hash2[GIT_SHA1_RAWSZ] = { 2 };
 	char message[100] = { 0 };
 	int err, i, n;
-
 	struct reftable_log_record log = {
-		.refname = "refname",
+		.refname = (char *) "refname",
 		.value_type = REFTABLE_LOG_UPDATE,
 		.value = {
 			.update = {
-				.new_hash = hash1,
-				.old_hash = hash2,
-				.name = "My Name",
-				.email = "myname@invalid",
+				.new_hash = { 1 },
+				.old_hash = { 2 },
+				.name = (char *) "My Name",
+				.email = (char *) "myname@invalid",
 				.message = message,
 			},
 		},
 	};
 
 	for (i = 0; i < sizeof(message) - 1; i++)
-		message[i] = (uint8_t)(rand() % 64 + ' ');
+		message[i] = (uint8_t)(git_rand() % 64 + ' ');
 
 	reftable_writer_set_limits(w, 1, 1);
 
@@ -343,7 +334,8 @@ static void test_log_zlib_corruption(void)
 	err = init_reader(&rd, &source, "file.log");
 	EXPECT_ERR(err);
 
-	err = reftable_reader_seek_log(&rd, &it, "refname");
+	reftable_reader_init_log_iterator(&rd, &it);
+	err = reftable_iterator_seek_log(&it, "refname");
 	EXPECT(err == REFTABLE_ZLIB_ERROR);
 
 	reftable_iterator_destroy(&it);
@@ -371,7 +363,8 @@ static void test_table_read_write_sequential(void)
 	err = init_reader(&rd, &source, "file.ref");
 	EXPECT_ERR(err);
 
-	err = reftable_reader_seek_ref(&rd, &it, "");
+	reftable_reader_init_ref_iterator(&rd, &it);
+	err = reftable_iterator_seek_ref(&it, "");
 	EXPECT_ERR(err);
 
 	while (1) {
@@ -425,7 +418,8 @@ static void test_table_read_api(void)
 	err = init_reader(&rd, &source, "file.ref");
 	EXPECT_ERR(err);
 
-	err = reftable_reader_seek_ref(&rd, &it, names[0]);
+	reftable_reader_init_ref_iterator(&rd, &it);
+	err = reftable_iterator_seek_ref(&it, names[0]);
 	EXPECT_ERR(err);
 
 	err = reftable_iterator_next_log(&it, &log);
@@ -470,7 +464,8 @@ static void test_table_read_write_seek(int index, int hash_id)
 	}
 
 	for (i = 1; i < N; i++) {
-		int err = reftable_reader_seek_ref(&rd, &it, names[i]);
+		reftable_reader_init_ref_iterator(&rd, &it);
+		err = reftable_iterator_seek_ref(&it, names[i]);
 		EXPECT_ERR(err);
 		err = reftable_iterator_next_ref(&it, &ref);
 		EXPECT_ERR(err);
@@ -485,7 +480,8 @@ static void test_table_read_write_seek(int index, int hash_id)
 	strbuf_addstr(&pastLast, names[N - 1]);
 	strbuf_addstr(&pastLast, "/");
 
-	err = reftable_reader_seek_ref(&rd, &it, pastLast.buf);
+	reftable_reader_init_ref_iterator(&rd, &it);
+	err = reftable_iterator_seek_ref(&it, pastLast.buf);
 	if (err == 0) {
 		struct reftable_ref_record ref = { NULL };
 		int err = reftable_iterator_next_ref(&it, &ref);
@@ -523,7 +519,7 @@ static void test_table_read_write_seek_index(void)
 static void test_table_refs_for(int indexed)
 {
 	int N = 50;
-	char **want_names = reftable_calloc(sizeof(char *) * (N + 1));
+	char **want_names = reftable_calloc(N + 1, sizeof(*want_names));
 	int want_names_len = 0;
 	uint8_t want_hash[GIT_SHA1_RAWSZ];
 
@@ -539,7 +535,7 @@ static void test_table_refs_for(int indexed)
 
 	struct strbuf buf = STRBUF_INIT;
 	struct reftable_writer *w =
-		reftable_new_writer(&strbuf_add_void, &buf, &opts);
+		reftable_new_writer(&strbuf_add_void, &noop_flush, &buf, &opts);
 
 	struct reftable_iterator it = { NULL };
 	int j;
@@ -550,8 +546,6 @@ static void test_table_refs_for(int indexed)
 		uint8_t hash[GIT_SHA1_RAWSZ];
 		char fill[51] = { 0 };
 		char name[100];
-		uint8_t hash1[GIT_SHA1_RAWSZ];
-		uint8_t hash2[GIT_SHA1_RAWSZ];
 		struct reftable_ref_record ref = { NULL };
 
 		memset(hash, i, sizeof(hash));
@@ -561,11 +555,9 @@ static void test_table_refs_for(int indexed)
 		name[40] = 0;
 		ref.refname = name;
 
-		set_test_hash(hash1, i / 4);
-		set_test_hash(hash2, 3 + i / 4);
 		ref.value_type = REFTABLE_REF_VAL2;
-		ref.value.val2.value = hash1;
-		ref.value.val2.target_value = hash2;
+		set_test_hash(ref.value.val2.value, i / 4);
+		set_test_hash(ref.value.val2.target_value, 3 + i / 4);
 
 		/* 80 bytes / entry, so 3 entries per block. Yields 17
 		 */
@@ -573,8 +565,8 @@ static void test_table_refs_for(int indexed)
 		n = reftable_writer_add_ref(w, &ref);
 		EXPECT(n == 0);
 
-		if (!memcmp(hash1, want_hash, GIT_SHA1_RAWSZ) ||
-		    !memcmp(hash2, want_hash, GIT_SHA1_RAWSZ)) {
+		if (!memcmp(ref.value.val2.value, want_hash, GIT_SHA1_RAWSZ) ||
+		    !memcmp(ref.value.val2.target_value, want_hash, GIT_SHA1_RAWSZ)) {
 			want_names[want_names_len++] = xstrdup(name);
 		}
 	}
@@ -593,7 +585,8 @@ static void test_table_refs_for(int indexed)
 		rd.obj_offsets.is_present = 0;
 	}
 
-	err = reftable_reader_seek_ref(&rd, &it, "");
+	reftable_reader_init_ref_iterator(&rd, &it);
+	err = reftable_iterator_seek_ref(&it, "");
 	EXPECT_ERR(err);
 	reftable_iterator_destroy(&it);
 
@@ -636,7 +629,7 @@ static void test_write_empty_table(void)
 	struct reftable_write_options opts = { 0 };
 	struct strbuf buf = STRBUF_INIT;
 	struct reftable_writer *w =
-		reftable_new_writer(&strbuf_add_void, &buf, &opts);
+		reftable_new_writer(&strbuf_add_void, &noop_flush, &buf, &opts);
 	struct reftable_block_source source = { NULL };
 	struct reftable_reader *rd = NULL;
 	struct reftable_ref_record rec = { NULL };
@@ -656,7 +649,8 @@ static void test_write_empty_table(void)
 	err = reftable_new_reader(&rd, &source, "filename");
 	EXPECT_ERR(err);
 
-	err = reftable_reader_seek_ref(rd, &it, "");
+	reftable_reader_init_ref_iterator(rd, &it);
+	err = reftable_iterator_seek_ref(&it, "");
 	EXPECT_ERR(err);
 
 	err = reftable_iterator_next_ref(&it, &rec);
@@ -674,12 +668,11 @@ static void test_write_object_id_min_length(void)
 	};
 	struct strbuf buf = STRBUF_INIT;
 	struct reftable_writer *w =
-		reftable_new_writer(&strbuf_add_void, &buf, &opts);
-	uint8_t hash[GIT_SHA1_RAWSZ] = {42};
+		reftable_new_writer(&strbuf_add_void, &noop_flush, &buf, &opts);
 	struct reftable_ref_record ref = {
 		.update_index = 1,
 		.value_type = REFTABLE_REF_VAL1,
-		.value.val1 = hash,
+		.value.val1 = {42},
 	};
 	int err;
 	int i;
@@ -710,12 +703,11 @@ static void test_write_object_id_length(void)
 	};
 	struct strbuf buf = STRBUF_INIT;
 	struct reftable_writer *w =
-		reftable_new_writer(&strbuf_add_void, &buf, &opts);
-	uint8_t hash[GIT_SHA1_RAWSZ] = {42};
+		reftable_new_writer(&strbuf_add_void, &noop_flush, &buf, &opts);
 	struct reftable_ref_record ref = {
 		.update_index = 1,
 		.value_type = REFTABLE_REF_VAL1,
-		.value.val1 = hash,
+		.value.val1 = {42},
 	};
 	int err;
 	int i;
@@ -745,9 +737,9 @@ static void test_write_empty_key(void)
 	struct reftable_write_options opts = { 0 };
 	struct strbuf buf = STRBUF_INIT;
 	struct reftable_writer *w =
-		reftable_new_writer(&strbuf_add_void, &buf, &opts);
+		reftable_new_writer(&strbuf_add_void, &noop_flush, &buf, &opts);
 	struct reftable_ref_record ref = {
-		.refname = "",
+		.refname = (char *) "",
 		.update_index = 1,
 		.value_type = REFTABLE_REF_DELETION,
 	};
@@ -768,21 +760,21 @@ static void test_write_key_order(void)
 	struct reftable_write_options opts = { 0 };
 	struct strbuf buf = STRBUF_INIT;
 	struct reftable_writer *w =
-		reftable_new_writer(&strbuf_add_void, &buf, &opts);
+		reftable_new_writer(&strbuf_add_void, &noop_flush, &buf, &opts);
 	struct reftable_ref_record refs[2] = {
 		{
-			.refname = "b",
+			.refname = (char *) "b",
 			.update_index = 1,
 			.value_type = REFTABLE_REF_SYMREF,
 			.value = {
-				.symref = "target",
+				.symref = (char *) "target",
 			},
 		}, {
-			.refname = "a",
+			.refname = (char *) "a",
 			.update_index = 1,
 			.value_type = REFTABLE_REF_SYMREF,
 			.value = {
-				.symref = "target",
+				.symref = (char *) "target",
 			},
 		}
 	};
@@ -795,6 +787,140 @@ static void test_write_key_order(void)
 	EXPECT(err == REFTABLE_API_ERROR);
 	reftable_writer_close(w);
 	reftable_writer_free(w);
+	strbuf_release(&buf);
+}
+
+static void test_write_multiple_indices(void)
+{
+	struct reftable_write_options opts = {
+		.block_size = 100,
+	};
+	struct strbuf writer_buf = STRBUF_INIT, buf = STRBUF_INIT;
+	struct reftable_block_source source = { 0 };
+	struct reftable_iterator it = { 0 };
+	const struct reftable_stats *stats;
+	struct reftable_writer *writer;
+	struct reftable_reader *reader;
+	int err, i;
+
+	writer = reftable_new_writer(&strbuf_add_void, &noop_flush, &writer_buf, &opts);
+	reftable_writer_set_limits(writer, 1, 1);
+	for (i = 0; i < 100; i++) {
+		struct reftable_ref_record ref = {
+			.update_index = 1,
+			.value_type = REFTABLE_REF_VAL1,
+			.value.val1 = {i},
+		};
+
+		strbuf_reset(&buf);
+		strbuf_addf(&buf, "refs/heads/%04d", i);
+		ref.refname = buf.buf,
+
+		err = reftable_writer_add_ref(writer, &ref);
+		EXPECT_ERR(err);
+	}
+
+	for (i = 0; i < 100; i++) {
+		struct reftable_log_record log = {
+			.update_index = 1,
+			.value_type = REFTABLE_LOG_UPDATE,
+			.value.update = {
+				.old_hash = { i },
+				.new_hash = { i },
+			},
+		};
+
+		strbuf_reset(&buf);
+		strbuf_addf(&buf, "refs/heads/%04d", i);
+		log.refname = buf.buf,
+
+		err = reftable_writer_add_log(writer, &log);
+		EXPECT_ERR(err);
+	}
+
+	reftable_writer_close(writer);
+
+	/*
+	 * The written data should be sufficiently large to result in indices
+	 * for each of the block types.
+	 */
+	stats = reftable_writer_stats(writer);
+	EXPECT(stats->ref_stats.index_offset > 0);
+	EXPECT(stats->obj_stats.index_offset > 0);
+	EXPECT(stats->log_stats.index_offset > 0);
+
+	block_source_from_strbuf(&source, &writer_buf);
+	err = reftable_new_reader(&reader, &source, "filename");
+	EXPECT_ERR(err);
+
+	/*
+	 * Seeking the log uses the log index now. In case there is any
+	 * confusion regarding indices we would notice here.
+	 */
+	reftable_reader_init_log_iterator(reader, &it);
+	err = reftable_iterator_seek_log(&it, "");
+	EXPECT_ERR(err);
+
+	reftable_iterator_destroy(&it);
+	reftable_writer_free(writer);
+	reftable_reader_free(reader);
+	strbuf_release(&writer_buf);
+	strbuf_release(&buf);
+}
+
+static void test_write_multi_level_index(void)
+{
+	struct reftable_write_options opts = {
+		.block_size = 100,
+	};
+	struct strbuf writer_buf = STRBUF_INIT, buf = STRBUF_INIT;
+	struct reftable_block_source source = { 0 };
+	struct reftable_iterator it = { 0 };
+	const struct reftable_stats *stats;
+	struct reftable_writer *writer;
+	struct reftable_reader *reader;
+	int err;
+
+	writer = reftable_new_writer(&strbuf_add_void, &noop_flush, &writer_buf, &opts);
+	reftable_writer_set_limits(writer, 1, 1);
+	for (size_t i = 0; i < 200; i++) {
+		struct reftable_ref_record ref = {
+			.update_index = 1,
+			.value_type = REFTABLE_REF_VAL1,
+			.value.val1 = {i},
+		};
+
+		strbuf_reset(&buf);
+		strbuf_addf(&buf, "refs/heads/%03" PRIuMAX, (uintmax_t)i);
+		ref.refname = buf.buf,
+
+		err = reftable_writer_add_ref(writer, &ref);
+		EXPECT_ERR(err);
+	}
+	reftable_writer_close(writer);
+
+	/*
+	 * The written refs should be sufficiently large to result in a
+	 * multi-level index.
+	 */
+	stats = reftable_writer_stats(writer);
+	EXPECT(stats->ref_stats.max_index_level == 2);
+
+	block_source_from_strbuf(&source, &writer_buf);
+	err = reftable_new_reader(&reader, &source, "filename");
+	EXPECT_ERR(err);
+
+	/*
+	 * Seeking the last ref should work as expected.
+	 */
+	reftable_reader_init_ref_iterator(reader, &it);
+	err = reftable_iterator_seek_ref(&it, "refs/heads/199");
+	EXPECT_ERR(err);
+
+	reftable_iterator_destroy(&it);
+	reftable_writer_free(writer);
+	reftable_reader_free(reader);
+	strbuf_release(&writer_buf);
 	strbuf_release(&buf);
 }
 
@@ -847,5 +973,7 @@ int readwrite_test_main(int argc, const char *argv[])
 	RUN_TEST(test_log_overflow);
 	RUN_TEST(test_write_object_id_length);
 	RUN_TEST(test_write_object_id_min_length);
+	RUN_TEST(test_write_multiple_indices);
+	RUN_TEST(test_write_multi_level_index);
 	return 0;
 }

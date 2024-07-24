@@ -3,11 +3,11 @@
 #include "gettext.h"
 #include "hex.h"
 #include "pkt-line.h"
-#include "strvec.h"
 #include "hash.h"
 #include "hex.h"
 #include "object.h"
-#include "object-store.h"
+#include "object-store-ll.h"
+#include "repository.h"
 #include "string-list.h"
 #include "strbuf.h"
 
@@ -53,7 +53,7 @@ static void send_info(struct repository *r, struct packet_writer *writer,
 		struct object_id oid;
 		unsigned long object_size;
 
-		if (get_oid_hex(oid_str, &oid) < 0) {
+		if (get_oid_hex_algop(oid_str, &oid, r->hash_algo) < 0) {
 			packet_writer_error(
 				writer,
 				"object-info: protocol error, expected to get oid, not '%s'",
@@ -79,7 +79,7 @@ static void send_info(struct repository *r, struct packet_writer *writer,
 
 int cap_object_info(struct repository *r, struct packet_reader *request)
 {
-	struct requested_info info;
+	struct requested_info info = { 0 };
 	struct packet_writer writer;
 	struct string_list oid_str_list = STRING_LIST_INIT_DUP;
 

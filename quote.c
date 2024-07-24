@@ -1,5 +1,5 @@
-#include "cache.h"
-#include "alloc.h"
+#include "git-compat-util.h"
+#include "path.h"
 #include "quote.h"
 #include "strbuf.h"
 #include "strvec.h"

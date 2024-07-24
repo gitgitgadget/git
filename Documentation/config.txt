@@ -11,7 +11,7 @@ file. The file `/etc/gitconfig` can be used to store a system-wide
 default configuration.
 
 The configuration variables are used by both the Git plumbing
-and the porcelains. The variables are divided into sections, wherein
+and the porcelain commands. The variables are divided into sections, wherein
 the fully qualified variable name of the variable itself is the last
 dot-separated segment and the section name is everything before the last
 dot. The variable names are case-insensitive, allow only alphanumeric
@@ -22,9 +22,10 @@ multivalued.
 Syntax
 ~~~~~~
 
-The syntax is fairly flexible and permissive; whitespaces are mostly
-ignored.  The '#' and ';' characters begin comments to the end of line,
-blank lines are ignored.
+The syntax is fairly flexible and permissive.  Whitespace characters,
+which in this context are the space character (SP) and the horizontal
+tabulation (HT), are mostly ignored.  The '#' and ';' characters begin
+comments to the end of line.  Blank lines are ignored.
 
 The file consists of sections and variables.  A section begins with
 the name of the section in square brackets and continues until the next
@@ -63,16 +64,17 @@ the variable is the boolean "true").
 The variable names are case-insensitive, allow only alphanumeric characters
 and `-`, and must start with an alphabetic character.
 
-A line that defines a value can be continued to the next line by
-ending it with a `\`; the backslash and the end-of-line are
-stripped.  Leading whitespaces after 'name =', the remainder of the
-line after the first comment character '#' or ';', and trailing
-whitespaces of the line are discarded unless they are enclosed in
-double quotes.  Internal whitespaces within the value are retained
-verbatim.
+Whitespace characters surrounding `name`, `=` and `value` are discarded.
+Internal whitespace characters within 'value' are retained verbatim.
+Comments starting with either `#` or `;` and extending to the end of line
+are discarded.  A line that defines a value can be continued to the next
+line by ending it with a backslash (`\`);  the backslash and the end-of-line
+characters are discarded.
 
-Inside double quotes, double quote `"` and backslash `\` characters
-must be escaped: use `\"` for `"` and `\\` for `\`.
+If `value` needs to contain leading or trailing whitespace characters,
+it must be enclosed in double quotation marks (`"`).  Inside double quotation
+marks, double quote (`"`) and backslash (`\`) characters must be escaped:
+use `\"` for `"` and `\\` for `\`.
 
 The following escape sequences (beside `\"` and `\\`) are recognized:
 `\n` for newline character (NL), `\t` for horizontal tabulation (HT, TAB)
@@ -103,7 +105,7 @@ was found.  See below for examples.
 Conditional includes
 ~~~~~~~~~~~~~~~~~~~~
 
-You can include a config file from another conditionally by setting a
+You can conditionally include a config file from another by setting an
 `includeIf.<condition>.path` variable to the name of the file to be
 included.
 
@@ -118,7 +120,7 @@ are:
 	pattern, the include condition is met.
 +
 The .git location may be auto-discovered, or come from `$GIT_DIR`
-environment variable. If the repository is auto discovered via a .git
+environment variable. If the repository is auto-discovered via a .git
 file (e.g. from submodules, or a linked worktree), the .git location
 would be the final location where the .git directory is, not where the
 .git file is.
@@ -182,7 +184,7 @@ included, Git breaks the cycle by prohibiting these files from affecting
 the resolution of these conditions (thus, prohibiting them from
 declaring remote URLs).
 +
-As for the naming of this keyword, it is for forwards compatibiliy with
+As for the naming of this keyword, it is for forwards compatibility with
 a naming scheme that supports more variable-based include conditions,
 but currently Git only supports the exact keyword described above.
 
@@ -314,7 +316,8 @@ terminals, this is usually not the same as setting to "white black".
 Colors may also be given as numbers between 0 and 255; these use ANSI
 256-color mode (but note that not all terminals may support this).  If
 your terminal supports it, you may also specify 24-bit RGB values as
-hex, like `#ff0ab3`.
+hex, like `#ff0ab3`, or 12-bit RGB values like `#f1b`, which is
+equivalent to the 24-bit color `#ff11bb`.
 +
 The accepted attributes are `bold`, `dim`, `ul`, `blink`, `reverse`,
 `italic`, and `strike` (for crossed-out or "strikethrough" letters).
@@ -369,17 +372,19 @@ inventing new variables for use in your own tool, make sure their
 names do not conflict with those that are used by Git itself and
 other popular tools, and describe them in your documentation.
 
-include::config/advice.txt[]
-
-include::config/core.txt[]
-
 include::config/add.txt[]
+
+include::config/advice.txt[]
 
 include::config/alias.txt[]
 
 include::config/am.txt[]
 
 include::config/apply.txt[]
+
+include::config/attr.txt[]
+
+include::config/bitmap-pseudo-merge.txt[]
 
 include::config/blame.txt[]
 
@@ -403,9 +408,11 @@ include::config/commit.txt[]
 
 include::config/commitgraph.txt[]
 
-include::config/credential.txt[]
-
 include::config/completion.txt[]
+
+include::config/core.txt[]
+
+include::config/credential.txt[]
 
 include::config/diff.txt[]
 
@@ -419,9 +426,9 @@ include::config/feature.txt[]
 
 include::config/fetch.txt[]
 
-include::config/format.txt[]
-
 include::config/filter.txt[]
+
+include::config/format.txt[]
 
 include::config/fsck.txt[]
 
@@ -433,9 +440,9 @@ include::config/gitcvs.txt[]
 
 include::config/gitweb.txt[]
 
-include::config/grep.txt[]
-
 include::config/gpg.txt[]
+
+include::config/grep.txt[]
 
 include::config/gui.txt[]
 
@@ -483,6 +490,8 @@ include::config/pager.txt[]
 
 include::config/pretty.txt[]
 
+include::config/promisor.txt[]
+
 include::config/protocol.txt[]
 
 include::config/pull.txt[]
@@ -492,6 +501,8 @@ include::config/push.txt[]
 include::config/rebase.txt[]
 
 include::config/receive.txt[]
+
+include::config/reftable.txt[]
 
 include::config/remote.txt[]
 
@@ -517,9 +528,9 @@ include::config/splitindex.txt[]
 
 include::config/ssh.txt[]
 
-include::config/status.txt[]
-
 include::config/stash.txt[]
+
+include::config/status.txt[]
 
 include::config/submodule.txt[]
 

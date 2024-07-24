@@ -31,6 +31,7 @@ struct merge_options {
 
 	/* xdiff-related options (patience, ignore whitespace, ours/theirs) */
 	long xdl_opts;
+	int conflict_style;
 	enum {
 		MERGE_VARIANT_NORMAL = 0,
 		MERGE_VARIANT_OURS,
@@ -54,6 +55,9 @@ struct merge_options {
 };
 
 void init_merge_options(struct merge_options *opt, struct repository *repo);
+
+void copy_merge_options(struct merge_options *dst, struct merge_options *src);
+void clear_merge_options(struct merge_options *opt);
 
 /* parse the option in s and update the relevant field of opt */
 int parse_merge_opt(struct merge_options *opt, const char *s);
@@ -100,7 +104,7 @@ int merge_trees(struct merge_options *opt,
 int merge_recursive(struct merge_options *opt,
 		    struct commit *h1,
 		    struct commit *h2,
-		    struct commit_list *merge_bases,
+		    const struct commit_list *merge_bases,
 		    struct commit **result);
 
 /*
@@ -119,7 +123,7 @@ int merge_recursive_generic(struct merge_options *opt,
 			    const struct object_id *head,
 			    const struct object_id *merge,
 			    int num_merge_bases,
-			    const struct object_id **merge_bases,
+			    const struct object_id *merge_bases,
 			    struct commit **result);
 
 #endif

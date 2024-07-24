@@ -52,6 +52,17 @@ test_expect_success 'shared=all' '
 	test 2 = $(git config core.sharedrepository)
 '
 
+test_expect_success 'template cannot set core.bare' '
+	test_when_finished "rm -rf subdir" &&
+	test_when_finished "rm -rf templates" &&
+	test_config core.bare true &&
+	umask 0022 &&
+	mkdir -p templates/ &&
+	cp .git/config templates/config &&
+	git init --template=templates subdir &&
+	test_path_is_missing subdir/HEAD
+'
+
 test_expect_success POSIXPERM 'update-server-info honors core.sharedRepository' '
 	: > a1 &&
 	git add a1 &&
@@ -89,7 +100,7 @@ do
 		rm -f .git/info/refs &&
 		git update-server-info &&
 		actual="$(test_modebits .git/info/refs)" &&
-		verbose test "x$actual" = "x-$y"
+		test "x$actual" = "x-$y"
 
 	'
 
@@ -99,7 +110,7 @@ do
 		rm -f .git/info/refs &&
 		git update-server-info &&
 		actual="$(test_modebits .git/info/refs)" &&
-		verbose test "x$actual" = "x-$x"
+		test "x$actual" = "x-$x"
 
 	'
 
@@ -113,22 +124,6 @@ test_expect_success POSIXPERM 'info/refs respects umask in unshared repo' '
 	echo "-rw-rw-r--" >expect &&
 	test_modebits .git/info/refs >actual &&
 	test_cmp expect actual
-'
-
-test_expect_success POSIXPERM 'git reflog expire honors core.sharedRepository' '
-	umask 077 &&
-	git config core.sharedRepository group &&
-	git reflog expire --all &&
-	actual="$(ls -l .git/logs/refs/heads/main)" &&
-	case "$actual" in
-	-rw-rw-*)
-		: happy
-		;;
-	*)
-		echo Ooops, .git/logs/refs/heads/main is not 066x [$actual]
-		false
-		;;
-	esac
 '
 
 test_expect_success POSIXPERM 'forced modes' '

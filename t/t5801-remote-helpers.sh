@@ -38,6 +38,29 @@ test_expect_success 'cloning from local repo' '
 	test_cmp server/file local/file
 '
 
+test_expect_success 'clone with remote.*.vcs config' '
+	GIT_TRACE=$PWD/vcs-clone.trace \
+	git clone --no-local -c remote.origin.vcs=testgit "$PWD/server" vcs-clone &&
+	test_grep remote-testgit vcs-clone.trace
+'
+
+test_expect_success 'fetch with configured remote.*.vcs' '
+	git init vcs-fetch &&
+	git -C vcs-fetch config remote.origin.vcs testgit &&
+	git -C vcs-fetch config remote.origin.url "$PWD/server" &&
+	GIT_TRACE=$PWD/vcs-fetch.trace \
+	git -C vcs-fetch fetch origin &&
+	test_grep remote-testgit vcs-fetch.trace
+'
+
+test_expect_success 'vcs remote with no url' '
+	NOURL_UPSTREAM=$PWD/server &&
+	export NOURL_UPSTREAM &&
+	git init vcs-nourl &&
+	git -C vcs-nourl config remote.origin.vcs nourl &&
+	git -C vcs-nourl fetch origin
+'
+
 test_expect_success 'create new commit on remote' '
 	(cd server &&
 	 echo content >>file &&
@@ -137,7 +160,7 @@ test_expect_success 'forced push' '
 test_expect_success 'cloning without refspec' '
 	GIT_REMOTE_TESTGIT_NOREFSPEC=1 \
 	git clone "testgit::${PWD}/server" local2 2>error &&
-	test_i18ngrep "this remote helper should implement refspec capability" error &&
+	test_grep "this remote helper should implement refspec capability" error &&
 	compare_refs local2 HEAD server HEAD
 '
 
@@ -145,7 +168,7 @@ test_expect_success 'pulling without refspecs' '
 	(cd local2 &&
 	git reset --hard &&
 	GIT_REMOTE_TESTGIT_NOREFSPEC=1 git pull 2>../error) &&
-	test_i18ngrep "this remote helper should implement refspec capability" error &&
+	test_grep "this remote helper should implement refspec capability" error &&
 	compare_refs local2 HEAD server HEAD
 '
 
@@ -157,7 +180,7 @@ test_expect_success 'pushing without refspecs' '
 	GIT_REMOTE_TESTGIT_NOREFSPEC=1 &&
 	export GIT_REMOTE_TESTGIT_NOREFSPEC &&
 	test_must_fail git push 2>../error) &&
-	test_i18ngrep "remote-helper doesn.t support push; refspec needed" error
+	test_grep "remote-helper doesn.t support push; refspec needed" error
 '
 
 test_expect_success 'pulling without marks' '
@@ -256,7 +279,7 @@ clean_mark () {
 test_expect_success 'proper failure checks for fetching' '
 	(cd local &&
 	test_must_fail env GIT_REMOTE_TESTGIT_FAILURE=1 git fetch 2>error &&
-	test_i18ngrep -q "error while running fast-import" error
+	test_grep -q "error while running fast-import" error
 	)
 '
 

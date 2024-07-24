@@ -45,6 +45,32 @@ test_expect_success 'check names' '
 	test_cmp expect actual
 '
 
+test_expect_success 'check urls' '
+	cat >expect <<-\EOF &&
+	./bar/baz/foo.git
+	https://example.com/foo.git
+	http://example.com:80/deeper/foo.git
+	EOF
+
+	test-tool submodule check-url >actual <<-\EOF &&
+	./bar/baz/foo.git
+	https://example.com/foo.git
+	http://example.com:80/deeper/foo.git
+	-a./foo
+	../../..//test/foo.git
+	../../../../../:localhost:8080/foo.git
+	..\../.\../:example.com/foo.git
+	./%0ahost=example.com/foo.git
+	https://one.example.com/evil?%0ahost=two.example.com
+	https:///example.com/foo.git
+	http://example.com:test/foo.git
+	https::example.com/foo.git
+	http:::example.com/foo.git
+	EOF
+
+	test_cmp expect actual
+'
+
 test_expect_success 'create innocent subrepo' '
 	git init innocent &&
 	git -C innocent commit --allow-empty -m foo
@@ -238,7 +264,7 @@ test_expect_success 'fsck detects non-blob .gitmodules' '
 		git ls-tree HEAD | sed s/subdir/.gitmodules/ | git mktree &&
 
 		test_must_fail git fsck 2>output &&
-		test_i18ngrep gitmodulesBlob output
+		test_grep gitmodulesBlob output
 	)
 '
 
@@ -252,8 +278,8 @@ test_expect_success 'fsck detects corrupt .gitmodules' '
 		git commit -m "broken gitmodules" &&
 
 		git fsck 2>output &&
-		test_i18ngrep gitmodulesParse output &&
-		test_i18ngrep ! "bad config" output
+		test_grep gitmodulesParse output &&
+		test_grep ! "bad config" output
 	)
 '
 
@@ -275,7 +301,7 @@ test_expect_success WINDOWS 'prevent git~1 squatting on Windows' '
 		hash="$(echo x | git hash-object -w --stdin)" &&
 		test_must_fail git update-index --add \
 			--cacheinfo 160000,$rev,d\\a 2>err &&
-		test_i18ngrep "Invalid path" err &&
+		test_grep "Invalid path" err &&
 		git -c core.protectNTFS=false update-index --add \
 			--cacheinfo 100644,$modules,.gitmodules \
 			--cacheinfo 160000,$rev,c \
@@ -289,12 +315,12 @@ test_expect_success WINDOWS 'prevent git~1 squatting on Windows' '
 	then
 		test_must_fail git -c core.protectNTFS=false \
 			clone --recurse-submodules squatting squatting-clone 2>err &&
-		test_i18ngrep -e "directory not empty" -e "not an empty directory" err &&
+		test_grep -e "directory not empty" -e "not an empty directory" err &&
 		! grep gitdir squatting-clone/d/a/git~2
 	fi
 '
 
-test_expect_success 'git dirs of sibling submodules must not be nested' '
+test_expect_success 'setup submodules with nested git dirs' '
 	git init nested &&
 	test_commit -C nested nested &&
 	(
@@ -312,9 +338,39 @@ test_expect_success 'git dirs of sibling submodules must not be nested' '
 		git add .gitmodules thing1 thing2 &&
 		test_tick &&
 		git commit -m nested
-	) &&
+	)
+'
+
+test_expect_success 'git dirs of sibling submodules must not be nested' '
 	test_must_fail git clone --recurse-submodules nested clone 2>err &&
-	test_i18ngrep "is inside git dir" err
+	test_grep "is inside git dir" err
+'
+
+test_expect_success 'submodule git dir nesting detection must work with parallel cloning' '
+	test_must_fail git clone --recurse-submodules --jobs=2 nested clone_parallel 2>err &&
+	cat err &&
+	grep -E "(already exists|is inside git dir|not a git repository)" err &&
+	{
+		test_path_is_missing .git/modules/hippo/HEAD ||
+		test_path_is_missing .git/modules/hippo/hooks/HEAD
+	}
+'
+
+test_expect_success 'checkout -f --recurse-submodules must not use a nested gitdir' '
+	git clone nested nested_checkout &&
+	(
+		cd nested_checkout &&
+		git submodule init &&
+		git submodule update thing1 &&
+		mkdir -p .git/modules/hippo/hooks/refs &&
+		mkdir -p .git/modules/hippo/hooks/objects/info &&
+		echo "../../../../objects" >.git/modules/hippo/hooks/objects/info/alternates &&
+		echo "ref: refs/heads/master" >.git/modules/hippo/hooks/HEAD
+	) &&
+	test_must_fail git -C nested_checkout checkout -f --recurse-submodules HEAD 2>err &&
+	cat err &&
+	grep "is inside git dir" err &&
+	test_path_is_missing nested_checkout/thing2/.git
 '
 
 test_done

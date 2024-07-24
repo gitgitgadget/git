@@ -4,8 +4,8 @@
 /**
  * The strvec API allows one to dynamically build and store
  * NULL-terminated arrays of strings. A strvec maintains the invariant that the
- * `items` member always points to a non-NULL array, and that the array is
- * always NULL-terminated at the element pointed to by `items[nr]`. This
+ * `v` member always points to a non-NULL array, and that the array is
+ * always NULL-terminated at the element pointed to by `v[nr]`. This
  * makes the result suitable for passing to functions expecting to receive
  * argv from main().
  *
@@ -22,7 +22,7 @@ extern const char *empty_strvec[];
 
 /**
  * A single array. This should be initialized by assignment from
- * `STRVEC_INIT`, or by calling `strvec_init`. The `items`
+ * `STRVEC_INIT`, or by calling `strvec_init`. The `v`
  * member contains the actual array; the `nr` member contains the
  * number of elements in the array, not including the terminating
  * NULL.
@@ -46,6 +46,9 @@ void strvec_init(struct strvec *);
 /* Push a copy of a string onto the end of the array. */
 const char *strvec_push(struct strvec *, const char *);
 
+/* Push an allocated string onto the end of the array, taking ownership. */
+void strvec_push_nodup(struct strvec *array, char *value);
+
 /**
  * Format a string and push it onto the end of the array. This is a
  * convenience wrapper combining `strbuf_addf` and `strvec_push`.
@@ -65,6 +68,19 @@ void strvec_pushl(struct strvec *, ...);
 void strvec_pushv(struct strvec *, const char **);
 
 /**
+ * Replace the value at the given index with a new value. The index must be
+ * valid. Returns a pointer to the inserted value.
+ */
+const char *strvec_replace(struct strvec *array, size_t idx, const char *replacement);
+
+/*
+ * Remove the value at the given index. The remainder of the array will be
+ * moved to fill the resulting gap. The provided index must point into the
+ * array.
+ */
+void strvec_remove(struct strvec *array, size_t idx);
+
+/**
  * Remove the final element from the array. If there are no
  * elements in the array, do nothing.
  */
@@ -80,7 +96,7 @@ void strvec_split(struct strvec *, const char *);
 void strvec_clear(struct strvec *);
 
 /**
- * Disconnect the `items` member from the `strvec` struct and
+ * Disconnect the `v` member from the `strvec` struct and
  * return it. The caller is responsible for freeing the memory used
  * by the array, and by the strings it references. After detaching,
  * the `strvec` is in a reinitialized state and can be pushed

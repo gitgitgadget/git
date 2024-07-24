@@ -13,6 +13,7 @@ or warnings to log.'
 GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME=main
 export GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME
 
+TEST_PASSES_SANITIZE_LEAK=true
 . ./lib-gitweb.sh
 
 # ----------------------------------------------------------------------
@@ -627,6 +628,7 @@ test_expect_success \
 test_expect_success 'setup' '
 	version=$(git config core.repositoryformatversion) &&
 	algo=$(test_might_fail git config extensions.objectformat) &&
+	refstorage=$(test_might_fail git config extensions.refstorage) &&
 	cat >.git/config <<-\EOF &&
 	# testing noval and alternate separator
 	[gitweb]
@@ -637,6 +639,10 @@ test_expect_success 'setup' '
 	if test -n "$algo"
 	then
 		git config extensions.objectformat "$algo"
+	fi &&
+	if test -n "$refstorage"
+	then
+		git config extensions.refstorage "$refstorage"
 	fi
 '
 

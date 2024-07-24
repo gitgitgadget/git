@@ -1,6 +1,7 @@
 #ifndef OIDMAP_H
 #define OIDMAP_H
 
+#include "hash.h"
 #include "hashmap.h"
 
 /*

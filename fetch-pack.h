@@ -2,7 +2,6 @@
 #define FETCH_PACK_H
 
 #include "string-list.h"
-#include "run-command.h"
 #include "protocol.h"
 #include "list-objects-filter-options.h"
 #include "oidset.h"
@@ -101,5 +100,10 @@ void negotiate_using_fetch(const struct oid_array *negotiation_tips,
  * matched.  Return 0 if all sought refs were matched, otherwise 1.
  */
 int report_unmatched_refs(struct ref **sought, int nr_sought);
+
+/*
+ * Return true if checks for broken objects in received pack are required.
+ */
+int fetch_pack_fsck_objects(void);
 
 #endif

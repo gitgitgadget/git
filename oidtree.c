@@ -4,7 +4,6 @@
  */
 #include "git-compat-util.h"
 #include "oidtree.h"
-#include "alloc.h"
 #include "hash.h"
 
 struct oidtree_iter_data {
@@ -43,7 +42,7 @@ void oidtree_insert(struct oidtree *ot, const struct object_id *oid)
 	 * Clear the padding and copy the result in separate steps to
 	 * respect the 4-byte alignment needed by struct object_id.
 	 */
-	oidcpy_with_padding(&k, oid);
+	oidcpy(&k, oid);
 	memcpy(on->k, &k, sizeof(k));
 
 	/*
@@ -61,7 +60,7 @@ int oidtree_contains(struct oidtree *ot, const struct object_id *oid)
 	struct object_id k;
 	size_t klen = sizeof(k);
 
-	oidcpy_with_padding(&k, oid);
+	oidcpy(&k, oid);
 
 	if (oid->algo == GIT_HASH_UNKNOWN)
 		klen -= sizeof(oid->algo);

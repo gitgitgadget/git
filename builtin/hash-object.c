@@ -9,12 +9,13 @@
 #include "config.h"
 #include "gettext.h"
 #include "hex.h"
-#include "object-store.h"
+#include "object-file.h"
+#include "object-store-ll.h"
 #include "blob.h"
 #include "quote.h"
 #include "parse-options.h"
-#include "exec-cmd.h"
 #include "setup.h"
+#include "strbuf.h"
 #include "write-or-die.h"
 
 /*
@@ -121,6 +122,9 @@ int cmd_hash_object(int argc, const char **argv, const char *prefix)
 		prefix = setup_git_directory();
 	else
 		prefix = setup_git_directory_gently(&nongit);
+
+	if (nongit && !the_hash_algo)
+		repo_set_hash_algo(the_repository, GIT_HASH_SHA1);
 
 	if (vpath && prefix) {
 		vpath_free = prefix_filename(prefix, vpath);

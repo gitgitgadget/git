@@ -62,7 +62,8 @@ static enum fsmonitor_reason check_remote(struct repository *r)
 }
 #endif
 
-static enum fsmonitor_reason check_for_incompatible(struct repository *r, int ipc)
+static enum fsmonitor_reason check_for_incompatible(struct repository *r,
+						    int ipc MAYBE_UNUSED)
 {
 	if (!r->worktree) {
 		/*
@@ -102,6 +103,7 @@ static struct fsmonitor_settings *alloc_settings(void)
 static void lookup_fsmonitor_settings(struct repository *r)
 {
 	const char *const_str;
+	char *to_free = NULL;
 	int bool_value;
 
 	if (r->settings.fsmonitor)
@@ -128,8 +130,9 @@ static void lookup_fsmonitor_settings(struct repository *r)
 		break;
 
 	case -1: /* config value set to an arbitrary string */
-		if (repo_config_get_pathname(r, "core.fsmonitor", &const_str))
+		if (repo_config_get_pathname(r, "core.fsmonitor", &to_free))
 			return; /* should not happen */
+		const_str = to_free;
 		break;
 
 	default: /* should not happen */
@@ -140,6 +143,7 @@ static void lookup_fsmonitor_settings(struct repository *r)
 		fsm_settings__set_hook(r, const_str);
 	else
 		fsm_settings__set_disabled(r);
+	free(to_free);
 }
 
 enum fsmonitor_mode fsm_settings__get_mode(struct repository *r)

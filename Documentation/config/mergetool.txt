@@ -22,8 +22,8 @@ mergetool.<tool>.trustExitCode::
 	For a custom merge command, specify whether the exit code of
 	the merge command can be used to determine whether the merge was
 	successful.  If this is not set to true then the merge target file
-	timestamp is checked and the merge assumed to have been successful
-	if the file has been updated, otherwise the user is prompted to
+	timestamp is checked, and the merge is assumed to have been successful
+	if the file has been updated; otherwise, the user is prompted to
 	indicate the success of the merge.
 
 mergetool.meld.hasOutput::
@@ -37,7 +37,7 @@ mergetool.meld.hasOutput::
 
 mergetool.meld.useAutoMerge::
 	When the `--auto-merge` is given, meld will merge all non-conflicting
-	parts automatically, highlight the conflicting parts and wait for
+	parts automatically, highlight the conflicting parts, and wait for
 	user decision.  Setting `mergetool.meld.useAutoMerge` to `true` tells
 	Git to unconditionally use the `--auto-merge` option with `meld`.
 	Setting this value to `auto` makes git detect whether `--auto-merge`
@@ -45,17 +45,24 @@ mergetool.meld.useAutoMerge::
 	value of `false` avoids using `--auto-merge` altogether, and is the
 	default value.
 
-mergetool.vimdiff.layout::
-	The vimdiff backend uses this variable to control how its split
-	windows look like. Applies even if you are using Neovim (`nvim`) or
-	gVim (`gvim`) as the merge tool. See BACKEND SPECIFIC HINTS section
-ifndef::git-mergetool[]
-	in linkgit:git-mergetool[1].
+mergetool.<vimdiff variant>.layout::
+	Configure the split window layout for vimdiff's `<variant>`, which is any of `vimdiff`,
+	`nvimdiff`, `gvimdiff`.
+	Upon launching `git mergetool` with `--tool=<variant>` (or without `--tool`
+	if `merge.tool` is configured as `<variant>`), Git will consult
+	`mergetool.<variant>.layout` to determine the tool's layout. If the
+	variant-specific configuration is not available, `vimdiff`'s is used as
+	fallback.  If that too is not available, a default layout with 4 windows
+	will be used.  To configure the layout, see the `BACKEND SPECIFIC HINTS`
+ifdef::git-mergetool[]
+	section.
 endif::[]
-	for details.
+ifndef::git-mergetool[]
+	section in linkgit:git-mergetool[1].
+endif::[]
 
 mergetool.hideResolved::
-	During a merge Git will automatically resolve as many conflicts as
+	During a merge, Git will automatically resolve as many conflicts as
 	possible and write the 'MERGED' file containing conflict markers around
 	any conflicts that it cannot resolve; 'LOCAL' and 'REMOTE' normally
 	represent the versions of the file from before Git's conflict
@@ -74,7 +81,7 @@ mergetool.keepTemporaries::
 	When invoking a custom merge tool, Git uses a set of temporary
 	files to pass to the tool. If the tool returns an error and this
 	variable is set to `true`, then these temporary files will be
-	preserved, otherwise they will be removed after the tool has
+	preserved; otherwise, they will be removed after the tool has
 	exited. Defaults to `false`.
 
 mergetool.writeToTemp::
@@ -85,3 +92,10 @@ mergetool.writeToTemp::
 
 mergetool.prompt::
 	Prompt before each invocation of the merge resolution program.
+
+mergetool.guiDefault::
+	Set `true` to use the `merge.guitool` by default (equivalent to
+	specifying the `--gui` argument), or `auto` to select `merge.guitool`
+	or `merge.tool` depending on the presence of a `DISPLAY` environment
+	variable value. The default is `false`, where the `--gui` argument
+	must be provided explicitly for the `merge.guitool` to be used.

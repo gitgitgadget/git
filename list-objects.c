@@ -1,4 +1,6 @@
-#include "cache.h"
+#define USE_THE_REPOSITORY_VARIABLE
+
+#include "git-compat-util.h"
 #include "tag.h"
 #include "commit.h"
 #include "gettext.h"
@@ -12,8 +14,9 @@
 #include "list-objects-filter.h"
 #include "list-objects-filter-options.h"
 #include "packfile.h"
-#include "object-store.h"
+#include "object-store-ll.h"
 #include "trace.h"
+#include "environment.h"
 
 struct traversal_context {
 	struct rev_info *revs;
@@ -21,6 +24,7 @@ struct traversal_context {
 	show_commit_fn show_commit;
 	void *show_data;
 	struct filter *filter;
+	int depth;
 };
 
 static void show_commit(struct traversal_context *ctx,
@@ -37,6 +41,9 @@ static void show_object(struct traversal_context *ctx,
 {
 	if (!ctx->show_object)
 		return;
+	if (ctx->revs->unpacked && has_object_pack(&object->oid))
+		return;
+
 	ctx->show_object(object, name, ctx->show_data);
 }
 
@@ -97,12 +104,12 @@ static void process_tree_contents(struct traversal_context *ctx,
 	enum interesting match = ctx->revs->diffopt.pathspec.nr == 0 ?
 		all_entries_interesting : entry_not_interesting;
 
-	init_tree_desc(&desc, tree->buffer, tree->size);
+	init_tree_desc(&desc, &tree->object.oid, tree->buffer, tree->size);
 
 	while (tree_entry(&desc, &entry)) {
 		if (match != all_entries_interesting) {
 			match = tree_entry_interesting(ctx->revs->repo->index,
-						       &entry, base, 0,
+						       &entry, base,
 						       &ctx->revs->diffopt.pathspec);
 			if (match == all_entries_not_interesting)
 				break;
@@ -118,7 +125,9 @@ static void process_tree_contents(struct traversal_context *ctx,
 				    entry.path, oid_to_hex(&tree->object.oid));
 			}
 			t->object.flags |= NOT_USER_GIVEN;
+			ctx->depth++;
 			process_tree(ctx, t, base, entry.path);
+			ctx->depth--;
 		}
 		else if (S_ISGITLINK(entry.mode))
 			; /* ignore gitlink */
@@ -156,6 +165,9 @@ static void process_tree(struct traversal_context *ctx,
 	    !revs->include_check_obj(&tree->object, revs->include_check_data))
 		return;
 
+	if (ctx->depth > max_allowed_tree_depth)
+		die("exceeded maximum allowed tree depth");
+
 	failed_parse = parse_tree_gently(tree, 1);
 	if (failed_parse) {
 		if (revs->ignore_missing_links)
@@ -170,7 +182,7 @@ static void process_tree(struct traversal_context *ctx,
 		    is_promisor_object(&obj->oid))
 			return;
 
-		if (!revs->do_not_die_on_missing_tree)
+		if (!revs->do_not_die_on_missing_objects)
 			die("bad tree object %s", oid_to_hex(&obj->oid));
 	}
 
@@ -349,6 +361,7 @@ static void traverse_non_commits(struct traversal_context *ctx,
 		if (!path)
 			path = "";
 		if (obj->type == OBJ_TREE) {
+			ctx->depth = 0;
 			process_tree(ctx, (struct tree *)obj, base, path);
 			continue;
 		}
@@ -381,6 +394,9 @@ static void do_traverse(struct traversal_context *ctx)
 		 */
 		if (!ctx->revs->tree_objects)
 			; /* do not bother loading tree */
+		else if (ctx->revs->do_not_die_on_missing_objects &&
+			 oidset_contains(&ctx->revs->missing_commits, &commit->object.oid))
+			;
 		else if (repo_get_commit_tree(the_repository, commit)) {
 			struct tree *tree = repo_get_commit_tree(the_repository,
 								 commit);

@@ -287,6 +287,15 @@ struct option {
 	.help = (h), \
 	.callback = &parse_opt_string_list, \
 }
+#define OPT_STRVEC(s, l, v, a, h) { \
+	.type = OPTION_CALLBACK, \
+	.short_name = (s), \
+	.long_name = (l), \
+	.value = (v), \
+	.argh = (a), \
+	.help = (h), \
+	.callback = &parse_opt_strvec, \
+}
 #define OPT_UYN(s, l, v, h) { \
 	.type = OPTION_CALLBACK, \
 	.short_name = (s), \
@@ -346,7 +355,7 @@ struct option {
 	.type = OPTION_ALIAS, \
 	.short_name = (s), \
 	.long_name = (l), \
-	.value = (source_long_name), \
+	.value = (char *)(source_long_name), \
 }
 
 #define OPT_SUBCOMMAND_F(l, v, fn, f) { \
@@ -436,6 +445,8 @@ static inline void die_for_incompatible_opt3(int opt1, const char *opt1_name,
 
 /*----- incremental advanced APIs -----*/
 
+struct parse_opt_cmdmode_list;
+
 /*
  * It's okay for the caller to consume argv/argc in the usual way.
  * Other fields of that structure are private to parse-options and should not
@@ -450,7 +461,7 @@ struct parse_opt_ctx_t {
 	unsigned has_subcommands;
 	const char *prefix;
 	const char **alias_groups; /* must be in groups of 3 elements! */
-	struct option *updated_options;
+	struct parse_opt_cmdmode_list *cmdmode_list;
 };
 
 void parse_options_start(struct parse_opt_ctx_t *ctx,
@@ -480,6 +491,7 @@ int parse_opt_commits(const struct option *, const char *, int);
 int parse_opt_commit(const struct option *, const char *, int);
 int parse_opt_tertiary(const struct option *, const char *, int);
 int parse_opt_string_list(const struct option *, const char *, int);
+int parse_opt_strvec(const struct option *, const char *, int);
 int parse_opt_noop_cb(const struct option *, const char *, int);
 int parse_opt_passthru(const struct option *, const char *, int);
 int parse_opt_passthru_argv(const struct option *, const char *, int);
@@ -570,5 +582,11 @@ int parse_opt_tracking_mode(const struct option *, const char *, int);
 #define OPT_PATHSPEC_FROM_FILE(v) OPT_FILENAME(0, "pathspec-from-file", v, N_("read pathspec from file"))
 #define OPT_PATHSPEC_FILE_NUL(v)  OPT_BOOL(0, "pathspec-file-nul", v, N_("with --pathspec-from-file, pathspec elements are separated with NUL character"))
 #define OPT_AUTOSTASH(v) OPT_BOOL(0, "autostash", v, N_("automatically stash/stash pop before and after"))
+
+#define OPT_IPVERSION(v) \
+	OPT_SET_INT_F('4', "ipv4", (v), N_("use IPv4 addresses only"), \
+		TRANSPORT_FAMILY_IPV4, PARSE_OPT_NONEG), \
+	OPT_SET_INT_F('6', "ipv6", (v), N_("use IPv6 addresses only"), \
+		TRANSPORT_FAMILY_IPV6, PARSE_OPT_NONEG)
 
 #endif

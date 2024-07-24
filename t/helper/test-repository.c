@@ -1,10 +1,10 @@
+#define USE_THE_REPOSITORY_VARIABLE
+
 #include "test-tool.h"
 #include "commit-graph.h"
 #include "commit.h"
-#include "config.h"
 #include "environment.h"
 #include "hex.h"
-#include "object-store.h"
 #include "object.h"
 #include "repository.h"
 #include "setup.h"

@@ -6,6 +6,8 @@
 struct strbuf;
 
 struct worktree {
+	/* The repository this worktree belongs to. */
+	struct repository *repo;
 	char *path;
 	char *id;
 	char *head_ref;		/* NULL if HEAD is broken or detached */
@@ -56,6 +58,13 @@ const char *get_worktree_git_dir(const struct worktree *wt);
 struct worktree *find_worktree(struct worktree **list,
 			       const char *prefix,
 			       const char *arg);
+
+/*
+ * Look up the worktree corresponding to `id`, or NULL of no such worktree
+ * exists.
+ */
+struct worktree *get_linked_worktree(const char *id,
+				     int skip_reading_head);
 
 /*
  * Return the worktree corresponding to `path`, or NULL if no such worktree
@@ -135,6 +144,11 @@ void repair_worktrees(worktree_repair_fn, void *cb_data);
 void repair_worktree_at_path(const char *, worktree_repair_fn, void *cb_data);
 
 /*
+ * Free up the memory for a worktree.
+ */
+void free_worktree(struct worktree *);
+
+/*
  * Free up the memory for worktree(s)
  */
 void free_worktrees(struct worktree **);
@@ -162,14 +176,6 @@ int other_head_refs(each_ref_fn fn, void *cb_data);
 
 int is_worktree_being_rebased(const struct worktree *wt, const char *target);
 int is_worktree_being_bisected(const struct worktree *wt, const char *target);
-
-/*
- * Similar to git_path() but can produce paths for a specified
- * worktree instead of current one
- */
-const char *worktree_git_path(const struct worktree *wt,
-			      const char *fmt, ...)
-	__attribute__((format (printf, 2, 3)));
 
 /*
  * Return a refname suitable for access from the current ref store.

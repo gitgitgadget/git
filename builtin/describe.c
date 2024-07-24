@@ -1,5 +1,4 @@
-#define USE_THE_INDEX_VARIABLE
-#include "cache.h"
+#include "builtin.h"
 #include "config.h"
 #include "environment.h"
 #include "gettext.h"
@@ -7,22 +6,23 @@
 #include "lockfile.h"
 #include "commit.h"
 #include "tag.h"
-#include "blob.h"
 #include "refs.h"
-#include "builtin.h"
-#include "exec-cmd.h"
+#include "object-name.h"
 #include "parse-options.h"
+#include "read-cache-ll.h"
 #include "revision.h"
 #include "diff.h"
 #include "hashmap.h"
 #include "setup.h"
 #include "strvec.h"
 #include "run-command.h"
-#include "object-store.h"
+#include "object-store-ll.h"
 #include "list-objects.h"
 #include "commit-slab.h"
+#include "wildmatch.h"
 
 #define MAX_TAGS	(FLAG_BITS - 1)
+#define DEFAULT_CANDIDATES 10
 
 define_commit_slab(commit_names, struct commit_name *);
 
@@ -39,7 +39,7 @@ static int tags;	/* Allow lightweight tags */
 static int longformat;
 static int first_parent;
 static int abbrev = -1; /* unspecified */
-static int max_candidates = 10;
+static int max_candidates = DEFAULT_CANDIDATES;
 static struct hashmap names;
 static int have_util;
 static struct string_list patterns = STRING_LIST_INIT_NODUP;
@@ -51,6 +51,10 @@ static struct commit_names commit_names;
 /* diff-index command arguments to check if working tree is dirty. */
 static const char *diff_index_args[] = {
 	"diff-index", "--quiet", "HEAD", "--", NULL
+};
+
+static const char *update_index_args[] = {
+	"update-index", "--unmerged", "-q", "--refresh", NULL
 };
 
 struct commit_name {
@@ -200,7 +204,7 @@ static int get_name(const char *path, const struct object_id *oid,
 	}
 
 	/* Is it annotated? */
-	if (!peel_iterated_oid(oid, &peeled)) {
+	if (!peel_iterated_oid(the_repository, oid, &peeled)) {
 		is_annotated = !oideq(oid, &peeled);
 	} else {
 		oidcpy(&peeled, oid);
@@ -555,6 +559,17 @@ static void describe(const char *arg, int last_one)
 	strbuf_release(&sb);
 }
 
+static int option_parse_exact_match(const struct option *opt, const char *arg,
+				    int unset)
+{
+	int *val = opt->value;
+
+	BUG_ON_OPT_ARG(arg);
+
+	*val = unset ? DEFAULT_CANDIDATES : 0;
+	return 0;
+}
+
 int cmd_describe(int argc, const char **argv, const char *prefix)
 {
 	int contains = 0;
@@ -566,8 +581,9 @@ int cmd_describe(int argc, const char **argv, const char *prefix)
 		OPT_BOOL(0, "long",       &longformat, N_("always use long format")),
 		OPT_BOOL(0, "first-parent", &first_parent, N_("only follow first parent")),
 		OPT__ABBREV(&abbrev),
-		OPT_SET_INT(0, "exact-match", &max_candidates,
-			    N_("only output exact matches"), 0),
+		OPT_CALLBACK_F(0, "exact-match", &max_candidates, NULL,
+			       N_("only output exact matches"),
+			       PARSE_OPT_NOARG, option_parse_exact_match),
 		OPT_INTEGER(0, "candidates", &max_candidates,
 			    N_("consider <n> most recent tags (default: 10)")),
 		OPT_STRING_LIST(0, "match", &patterns, N_("pattern"),
@@ -625,13 +641,22 @@ int cmd_describe(int argc, const char **argv, const char *prefix)
 	}
 
 	hashmap_init(&names, commit_name_neq, NULL, 0);
-	for_each_rawref(get_name, NULL);
+	refs_for_each_rawref(get_main_ref_store(the_repository), get_name,
+			     NULL);
 	if (!hashmap_get_size(&names) && !always)
 		die(_("No names found, cannot describe anything."));
 
 	if (argc == 0) {
 		if (broken) {
 			struct child_process cp = CHILD_PROCESS_INIT;
+
+			strvec_pushv(&cp.args, update_index_args);
+			cp.git_cmd = 1;
+			cp.no_stdin = 1;
+			cp.no_stdout = 1;
+			run_command(&cp);
+
+			child_process_init(&cp);
 			strvec_pushv(&cp.args, diff_index_args);
 			cp.git_cmd = 1;
 			cp.no_stdin = 1;
@@ -655,11 +680,13 @@ int cmd_describe(int argc, const char **argv, const char *prefix)
 			struct lock_file index_lock = LOCK_INIT;
 			struct rev_info revs;
 			struct strvec args = STRVEC_INIT;
-			int fd, result;
+			int fd;
 
 			setup_work_tree();
+			prepare_repo_settings(the_repository);
+			the_repository->settings.command_requires_full_index = 0;
 			repo_read_index(the_repository);
-			refresh_index(&the_index, REFRESH_QUIET|REFRESH_UNMERGED,
+			refresh_index(the_repository->index, REFRESH_QUIET|REFRESH_UNMERGED,
 				      NULL, NULL, NULL);
 			fd = repo_hold_locked_index(the_repository,
 						    &index_lock, 0);
@@ -670,9 +697,9 @@ int cmd_describe(int argc, const char **argv, const char *prefix)
 			strvec_pushv(&args, diff_index_args);
 			if (setup_revisions(args.nr, args.v, &revs, NULL) != 1)
 				BUG("malformed internal diff-index command line");
-			result = run_diff_index(&revs, 0);
+			run_diff_index(&revs, 0);
 
-			if (!diff_result_code(&revs.diffopt, result))
+			if (!diff_result_code(&revs.diffopt))
 				suffix = NULL;
 			else
 				suffix = dirty;

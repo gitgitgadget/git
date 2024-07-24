@@ -1,7 +1,10 @@
-#include "cache.h"
+#define USE_THE_REPOSITORY_VARIABLE
+
+#include "git-compat-util.h"
 #include "environment.h"
 #include "tag.h"
-#include "object-store.h"
+#include "object-name.h"
+#include "object-store-ll.h"
 #include "commit.h"
 #include "tree.h"
 #include "blob.h"
@@ -9,7 +12,6 @@
 #include "gpg-interface.h"
 #include "hex.h"
 #include "packfile.h"
-#include "wrapper.h"
 
 const char *tag_type = "tag";
 
@@ -91,10 +93,10 @@ struct object *deref_tag(struct repository *r, struct object *o, const char *war
 	return o;
 }
 
-struct object *deref_tag_noverify(struct object *o)
+struct object *deref_tag_noverify(struct repository *r, struct object *o)
 {
 	while (o && o->type == OBJ_TAG) {
-		o = parse_object(the_repository, &o->oid);
+		o = parse_object(r, &o->oid);
 		if (o && o->type == OBJ_TAG && ((struct tag *)o)->tagged)
 			o = ((struct tag *)o)->tagged;
 		else
