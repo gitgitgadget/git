@@ -147,6 +147,7 @@ struct grep_opt {
 	int count;
 	int word_regexp;
 	int all_match;
+	int match_header_or_grep;
 	int no_body_match;
 	int body_hit;
 #define GREP_BINARY_DEFAULT	0
