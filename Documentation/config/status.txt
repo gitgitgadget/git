@@ -33,7 +33,8 @@ status.renames::
 	Whether and how Git detects renames in linkgit:git-status[1] and
 	linkgit:git-commit[1] .  If set to "false", rename detection is
 	disabled. If set to "true", basic rename detection is enabled.
-	If set to "copies" or "copy", Git will detect copies, as well.
+	If set to "copies" or "copy", Git will detect copies, as well.  If
+	set to "copies-harder", Git will try harder to detect copies.
 	Defaults to the value of diff.renames.
 
 status.showStash::
