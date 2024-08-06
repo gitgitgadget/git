@@ -1,5 +1,37 @@
+[[DATE-FORMATS]]
 DATE FORMATS
 ------------
+
+`yesterday`::
+	Change commit time to yesterday, that is, 24 hours ago.
+
+`noon`::
+	Change commit time to noon, that is 12:00. If current
+	time is less than 12:00, the time will be set to 12:00
+	on the previous day, else it will be set to 12:00 on
+	the same day.
+
+`midnight`::
+	Change commit time to midnight, that is, 00:00.
+
+`tea`::
+	Change commit time to 17:00(tea time). If the current
+	time is less than 17:00, the time will be set to 17:00
+	on the previous day, else it will be set to 17:00 on
+	the same day.
+
+`PM`::
+	Change commit time from AM to PM. If the current time
+	is already greater than 12:00, then the time remains
+	unaltered.
+
+`AM`::
+	Change commit time from PM to AM. If current time is
+	already less than 12:00, then the time remains
+	unaltered.
+
+`now`::
+	Change commit time to current time.
 
 The `GIT_AUTHOR_DATE` and `GIT_COMMITTER_DATE` environment variables
 support the following date formats:
