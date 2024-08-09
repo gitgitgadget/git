@@ -548,6 +548,32 @@ static void filter_sparse_oid__init(
 	object_context_release(&oc);
 }
 
+static void filter_sparse_file_path__init(
+	struct list_objects_filter_options *filter_options,
+	struct filter *filter)
+{
+	struct filter_sparse_data *d = xcalloc(1, sizeof(*d));
+	struct strbuf strbuf = STRBUF_INIT;
+	char *buf;
+	size_t size;
+
+	strbuf_addf(&strbuf, "%s\n", filter_options->spec_buffer);
+	buf = strbuf_detach(&strbuf, &size);
+	if (add_patterns_from_buffer(buf, size, "", 0, &d->pl) < 0)
+		die(_("unable to parse sparse filter data: %s"),
+		    filter_options->spec_buffer);
+	strbuf_release(&strbuf);
+
+	ALLOC_GROW(d->array_frame, d->nr + 1, d->alloc);
+	d->array_frame[d->nr].default_match = 0; /* default to include */
+	d->array_frame[d->nr].child_prov_omit = 0;
+	d->nr++;
+
+	filter->filter_data = d;
+	filter->filter_object_fn = filter_sparse;
+	filter->free_fn = filter_sparse_free;
+}
+
 /*
  * A filter for list-objects to omit large blobs.
  * And to OPTIONALLY collect a list of the omitted OIDs.
@@ -761,6 +787,7 @@ static filter_init_fn s_filters[] = {
 	filter_blobs_limit__init,
 	filter_trees_depth__init,
 	filter_sparse_oid__init,
+	filter_sparse_file_path__init,
 	filter_object_type__init,
 	filter_combine__init,
 };
