@@ -10,7 +10,7 @@ SYNOPSIS
 --------
 [verse]
 'git-upload-pack' [--[no-]strict] [--timeout=<n>] [--stateless-rpc]
-		  [--advertise-refs] <directory>
+		  [--advertise-refs] [--show-service] <directory>
 
 DESCRIPTION
 -----------
@@ -43,6 +43,17 @@ OPTIONS
 	Transport" in the linkgit:gitprotocol-v2[5]
 	documentation. Also understood by
 	linkgit:git-receive-pack[1].
+
+--show-service::
+	Output the "# service=git-upload-pack" pktline and the
+	"0000" flush pktline firstly. Since the git client needs
+	the git server to send the first pktline
+	"# service=$servicename", this option allows the git
+	server to delegate the functionality of sending this pktline
+	to `git-upload-pack`.
+	Note that this option can only be used together with
+	`--http-backend-info-refs` and it is not applicable when
+	using protocol v2.
 
 <directory>::
 	The repository to sync from.
