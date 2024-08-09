@@ -29,6 +29,13 @@
  */
 
 /**
+ ** CURLOPT_RESOLVE was added in 7.21.3, released in December 2010.
+ */
+#if LIBCURL_VERSION_NUM >= 0x071503
+#define GIT_CURL_HAVE_CURLOPT_RESOLVE 1
+#endif
+
+/**
  * CURL_SOCKOPT_OK was added in 7.21.5, released in April 2011.
  */
 #if LIBCURL_VERSION_NUM < 0x071505
