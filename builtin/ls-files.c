@@ -44,6 +44,7 @@ static int show_eol;
 static int recurse_submodules;
 static int skipping_duplicates;
 static int show_sparse_dirs;
+static int exclude_links;
 
 static const char *prefix;
 static int max_prefix_len;
@@ -169,6 +170,11 @@ static void show_other_files(struct index_state *istate,
 		struct dir_entry *ent = dir->entries[i];
 		if (!index_name_is_other(istate, ent->name, ent->len))
 			continue;
+		if (exclude_links) {
+			struct stat st;
+			if (!lstat(ent->name, &st) && S_ISLNK(st.st_mode))
+				continue;
+		}
 		show_dir_entry(istate, tag_other, ent);
 	}
 }
@@ -424,6 +430,8 @@ static void show_files(struct repository *repo, struct dir_struct *dir)
 			continue;
 		if (ce->ce_flags & CE_UPDATE)
 			continue;
+		if (exclude_links && S_ISLNK(ce->ce_mode))
+			continue;
 		if ((show_cached || show_stage) &&
 		    (!show_unmerged || ce_stage(ce))) {
 			show_ce(repo, dir, ce, fullname.buf,
@@ -616,6 +624,8 @@ int cmd_ls_files(int argc, const char **argv, const char *cmd_prefix)
 			N_("add the standard git exclusions"),
 			PARSE_OPT_NOARG | PARSE_OPT_NONEG,
 			option_parse_exclude_standard),
+		OPT_BOOL(0, "exclude-links", &exclude_links,
+			 N_("do not print symbolic links")),
 		OPT_SET_INT_F(0, "full-name", &prefix_len,
 			      N_("make the output relative to the project top directory"),
 			      0, PARSE_OPT_NONEG),
