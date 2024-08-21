@@ -14,10 +14,10 @@ TEST_PASSES_SANITIZE_LEAK=true
 . "$GIT_BUILD_DIR/contrib/completion/git-prompt.sh"
 
 actual="$TRASH_DIRECTORY/actual"
-c_red='\001\e[31m\002'
-c_green='\001\e[32m\002'
-c_lblue='\001\e[1;34m\002'
-c_clear='\001\e[0m\002'
+c_red='\\001\e[31m\\002'
+c_green='\\001\e[32m\\002'
+c_lblue='\\001\e[1;34m\\002'
+c_clear='\\001\e[0m\\002'
 
 test_expect_success 'setup for prompt tests' '
 	git init otherrepo &&
