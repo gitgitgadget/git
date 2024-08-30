@@ -1,3 +1,4 @@
+#include "git-compat-util.h"
 #include "builtin.h"
 #include "config.h"
 #include "diff.h"
@@ -29,14 +30,16 @@ static int scan_hunk_header(const char *p, int *p_before, int *p_after)
 {
 	static const char digits[] = "0123456789";
 	const char *q, *r;
+	char *endp;
 	int n;
 
 	q = p + 4;
 	n = strspn(q, digits);
 	if (q[n] == ',') {
 		q += n + 1;
-		*p_before = atoi(q);
-		n = strspn(q, digits);
+		if (strtoi_with_tail(q, 10, p_before, &endp) != 0)
+			return 0;
+		n = endp - q;
 	} else {
 		*p_before = 1;
 	}
@@ -48,8 +51,9 @@ static int scan_hunk_header(const char *p, int *p_before, int *p_after)
 	n = strspn(r, digits);
 	if (r[n] == ',') {
 		r += n + 1;
-		*p_after = atoi(r);
-		n = strspn(r, digits);
+		if (strtoi_with_tail(r, 10, p_after, &endp) != 0)
+			return 0;
+		n = endp - r;
 	} else {
 		*p_after = 1;
 	}

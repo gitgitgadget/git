@@ -1317,14 +1317,24 @@ static inline int strtoul_ui(char const *s, int base, unsigned int *result)
 	return 0;
 }
 
-static inline int strtol_i(char const *s, int base, int *result)
+#define strtol_i(s,b,r) strtoi_with_tail((s), (b), (r), NULL)
+static inline int strtoi_with_tail(char const *s, int base, int *result, char **endp)
 {
 	long ul;
-	char *p;
+	char *dummy = NULL;
 
+	if (!endp)
+		endp = &dummy;
 	errno = 0;
-	ul = strtol(s, &p, base);
-	if (errno || *p || p == s || (int) ul != ul)
+	ul = strtol(s, endp, base);
+	if (errno ||
+	    /*
+	     * if we are told to parse to the end of the string by
+	     * passing NULL to endp, it is an error to have any
+	     * remaining character after the digits.
+	     */
+	   (dummy && *dummy) ||
+	    *endp == s || (int) ul != ul)
 		return -1;
 	*result = ul;
 	return 0;
