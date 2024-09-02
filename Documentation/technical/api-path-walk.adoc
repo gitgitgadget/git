@@ -68,5 +68,6 @@ Examples
 --------
 
 See example usages in:
-	`t/helper/test-path-walk.c`,
 	`builtin/backfill.c`
+	`t/helper/test-path-walk.c`
+	`builtin/survey.c`
