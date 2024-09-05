@@ -56,4 +56,22 @@ test_size 'big pack size with --path-walk' '
 	test_file_size out
 '
 
+test_perf 'repack' '
+	git repack -adf
+'
+
+test_size 'repack size' '
+	pack=$(ls .git/objects/pack/pack-*.pack) &&
+	test_file_size "$pack"
+'
+
+test_perf 'repack with --path-walk' '
+	git repack -adf --path-walk
+'
+
+test_size 'repack size with --path-walk' '
+	pack=$(ls .git/objects/pack/pack-*.pack) &&
+	test_file_size "$pack"
+'
+
 test_done
