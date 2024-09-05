@@ -3775,6 +3775,48 @@ proc external_diff_get_one_file {diffid filename diffdir} {
                "revision $diffid"]
 }
 
+proc check_for_renames_in_diff {diffidfrom diffidto filepath} {
+    global nullid nullid2
+
+    if {$diffidfrom eq $nullid} {
+        set rev [list $diffidto -R]
+    } elseif {$diffidfrom eq $nullid2} {
+        set rev [list $diffidto --cached -R]
+    } elseif {$diffidto eq $nullid} {
+        set rev [list $diffidfrom]
+    } elseif {$diffidto eq $nullid2} {
+        set rev [list $diffidfrom --cached]
+    } else {
+        set rev [list $diffidfrom..$diffidto]
+    }
+
+    set renames [list {}]
+    if {[catch {eval exec git diff $rev --find-renames --stat --raw --diff-filter=R} cmd_result]} {
+        error_popup "[mc "Error getting file rename info for file \"%s\" from commit %s to %s." \
+                            $filepath $diffidfrom $diffidto] $cmd_result.\n\n"
+    }
+    set filename [file tail $filepath]
+    set esc_chars {\\ | ? ^ * . $ \[ \] + \( \) \{ \}}
+    foreach char $esc_chars {
+        set filename [string map [list $char \\$char] $filename]
+    }
+    set regex_base {\d+\s\d+\s\S+\s\S+\s\S+\s+}
+    set regex_ren_from $regex_base[subst -nobackslashes -nocommands {(\S+$filename)\s+(\S+)}]
+    set regex_ren_to $regex_base[subst -nobackslashes -nocommands {(\S+)\s+(\S+$filename)}]
+    if {[regexp -line -- $regex_ren_from $cmd_result whole_match ren_from ren_to]} {
+        if {$ren_from ne {} && $ren_to ne {}} {
+            lappend renames $ren_from
+            lappend renames $ren_to
+        }
+    } elseif {[regexp -line -- $regex_ren_to $cmd_result whole_match ren_from ren_to]} {
+        if {$ren_from ne {} && $ren_to ne {}} {
+            lappend renames $ren_from
+            lappend renames $ren_to
+        }
+    }
+    return $renames
+}
+
 proc external_diff {} {
     global nullid nullid2
     global flist_menu_file
@@ -3805,8 +3847,16 @@ proc external_diff {} {
     if {$diffdir eq {}} return
 
     # gather files to diff
-    set difffromfile [external_diff_get_one_file $diffidfrom $flist_menu_file $diffdir]
-    set difftofile [external_diff_get_one_file $diffidto $flist_menu_file $diffdir]
+    set renamed_filenames [check_for_renames_in_diff $diffidfrom $diffidto $flist_menu_file]
+    set rename_from_filename [lindex $renamed_filenames 1]
+    set rename_to_filename [lindex $renamed_filenames 2]
+    if { ($rename_from_filename != {}) && ($rename_to_filename != {}) } {
+        set difffromfile [external_diff_get_one_file $diffidfrom $rename_from_filename $diffdir]
+        set difftofile [external_diff_get_one_file $diffidto $rename_to_filename $diffdir]
+    } else {
+        set difffromfile [external_diff_get_one_file $diffidfrom $flist_menu_file $diffdir]
+        set difftofile [external_diff_get_one_file $diffidto $flist_menu_file $diffdir]
+    }
 
     if {$difffromfile ne {} && $difftofile ne {}} {
         set cmd [list [shellsplit $extdifftool] $difffromfile $difftofile]
