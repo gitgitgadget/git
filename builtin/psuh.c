@@ -2,6 +2,8 @@
 #include "config.h"
 #include "gettext.h"
 
+const char *cfg_name;
+
 int cmd_psuh(int argc, const char **argv, const char *prefix)
 {
     printf(Q_("Your args (there is %d):\n",
@@ -14,7 +16,6 @@ int cmd_psuh(int argc, const char **argv, const char *prefix)
     printf(_("Your current working directory:\n<top-level>%s%s\n"),
 	   prefix ? "/" : "", prefix ? prefix : "");
 
-    const char *cfg_name;
     git_config(git_default_config, NULL);
     if (git_config_get_string_tmp("user.name", &cfg_name) > 0)
 	printf(_("No name found in config\n"));
