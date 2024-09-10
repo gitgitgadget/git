@@ -149,6 +149,7 @@ git-pack-refs                           ancillarymanipulators
 git-patch-id                            purehelpers
 git-prune                               ancillarymanipulators   complete
 git-prune-packed                        plumbingmanipulators
+git-psuh                                mainporcelain           info
 git-pull                                mainporcelain           remote
 git-push                                mainporcelain           remote
 git-quiltimport                         foreignscminterface
