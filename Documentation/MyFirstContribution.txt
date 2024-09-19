@@ -122,7 +122,7 @@ branch of the upstream project. Create the `psuh` branch you will use for
 development like so:
 
 ----
-$ git checkout -b psuh origin/master
+$ git switch -c psuh origin/master
 ----
 
 We'll make a number of commits here in order to demonstrate how to send a topic
@@ -878,7 +878,7 @@ on `master`, so go ahead and update as shown below, or using your preferred
 workflow.
 
 ----
-$ git checkout master
+$ git switch master
 $ git pull -r
 $ git rebase master psuh
 ----
@@ -1148,7 +1148,7 @@ We'll reuse our `psuh` topic branch for v2. Before we make any changes, we'll
 mark the tip of our v1 branch for easy reference:
 
 ----
-$ git checkout psuh
+$ git switch psuh
 $ git branch psuh-v1
 ----
 
