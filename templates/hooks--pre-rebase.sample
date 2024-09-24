@@ -17,11 +17,10 @@
 
 publish=next
 basebranch="$1"
-if test "$#" = 2
-then
+if [ "$#" -eq 2 ]; then
 	topic="refs/heads/$2"
 else
-	topic=`git symbolic-ref HEAD` ||
+	topic=$(git symbolic-ref HEAD) ||
 	exit 0 ;# we do not interrupt rebasing detached HEAD
 fi
 
@@ -43,28 +42,25 @@ git show-ref -q "$topic" || {
 }
 
 # Is topic fully merged to master?
-not_in_master=`git rev-list --pretty=oneline ^master "$topic"`
-if test -z "$not_in_master"
-then
+not_in_master=$(git rev-list --pretty=oneline ^master "$topic")
+if [ -z "$not_in_master" ]; then
 	echo >&2 "$topic is fully merged to master; better remove it."
 	exit 1 ;# we could allow it, but there is no point.
 fi
 
 # Is topic ever merged to next?  If so you should not be rebasing it.
-only_next_1=`git rev-list ^master "^$topic" ${publish} | sort`
-only_next_2=`git rev-list ^master           ${publish} | sort`
-if test "$only_next_1" = "$only_next_2"
-then
-	not_in_topic=`git rev-list "^$topic" master`
-	if test -z "$not_in_topic"
-	then
+only_next_1=$(git rev-list ^master "^$topic" ${publish} | sort)
+only_next_2=$(git rev-list ^master           ${publish} | sort)
+if [ "$only_next_1" = "$only_next_2" ]; then
+	not_in_topic=$(git rev-list "^$topic" master)
+	if [ -z "$not_in_topic" ]; then
 		echo >&2 "$topic is already up to date with master"
 		exit 1 ;# we could allow it, but there is no point.
 	else
 		exit 0
 	fi
 else
-	not_in_next=`git rev-list --pretty=oneline ^${publish} "$topic"`
+	not_in_next=$(git rev-list --pretty=oneline ^${publish} "$topic")
 	@PERL_PATH@ -e '
 		my $topic = $ARGV[0];
 		my $msg = "* $topic has commits already merged to public branch:\n";

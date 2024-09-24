@@ -10,5 +10,5 @@
 
 . git-sh-setup
 precommit="$(git rev-parse --git-path hooks/pre-commit)"
-test -x "$precommit" && exec "$precommit" ${1+"$@"}
+[ -x "$precommit" ] && exec "$precommit" ${1+"$@"}
 :

@@ -37,7 +37,7 @@ if [ -z "$GIT_DIR" ]; then
 	exit 1
 fi
 
-if [ -z "$refname" -o -z "$oldrev" -o -z "$newrev" ]; then
+if [ -z "$refname" ] || [ -z "$oldrev" ] || [ -z "$newrev" ]; then
 	echo "usage: $0 <ref> <oldrev> <newrev>" >&2
 	exit 1
 fi
@@ -60,11 +60,11 @@ esac
 
 # --- Check types
 # if $newrev is 0000...0000, it's a commit to delete a ref.
-zero=$(git hash-object --stdin </dev/null | tr '[0-9a-f]' '0')
+zero=$(git hash-object --stdin </dev/null | tr '[:alnum:]' '0')
 if [ "$newrev" = "$zero" ]; then
 	newrev_type=delete
 else
-	newrev_type=$(git cat-file -t $newrev)
+	newrev_type=$(git cat-file -t "$newrev")
 fi
 
 case "$refname","$newrev_type" in
@@ -86,7 +86,7 @@ case "$refname","$newrev_type" in
 		;;
 	refs/tags/*,tag)
 		# annotated tag
-		if [ "$allowmodifytag" != "true" ] && git rev-parse $refname > /dev/null 2>&1
+		if [ "$allowmodifytag" != "true" ] && git rev-parse "$refname" > /dev/null 2>&1
 		then
 			echo "*** Tag '$refname' already exists." >&2
 			echo "*** Modifying a tag is not allowed in this repository." >&2
@@ -95,7 +95,7 @@ case "$refname","$newrev_type" in
 		;;
 	refs/heads/*,commit)
 		# branch
-		if [ "$oldrev" = "$zero" -a "$denycreatebranch" = "true" ]; then
+		if [ "$oldrev" = "$zero" ] && [ "$denycreatebranch" = "true" ]; then
 			echo "*** Creating a branch is not allowed in this repository" >&2
 			exit 1
 		fi
