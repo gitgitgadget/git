@@ -1105,6 +1105,10 @@ parse_done:
 		add_pending_object(&revs, &head_commit->object, "HEAD");
 	}
 
+	if (!ignore_revs_file_list.nr) {
+		string_list_insert(&ignore_revs_file_list, ".git-blame-ignore-revs");
+	}
+
 	init_scoreboard(&sb);
 	sb.revs = &revs;
 	sb.contents_from = contents_from;
