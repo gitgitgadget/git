@@ -6,11 +6,15 @@
 #include "gettext.h"
 #include "repository.h"
 #include "wt-status.h"
-
+#include "commit.h"
+#include "pretty.h"
+#include "strbuf.h"
 
 int cmd_psuh(int argc, const char **argv, const char *prefix, struct repository *repo) {
         const char *cfg_name;
         struct wt_status status;
+        struct commit *c = NULL;
+        struct strbuf commitline = STRBUF_INIT;
         int i;
 
         printf("%d\n", repo->different_commondir);
@@ -37,6 +41,14 @@ int cmd_psuh(int argc, const char **argv, const char *prefix, struct repository 
         wt_status_prepare(the_repository, &status);
         git_config(git_default_config, &status);
         printf(_("Your current branch: %s\n"), status.branch);
+
+        // get info from a commit
+        c = lookup_commit_reference_by_name("psuh");
+
+        if (c != NULL) {
+                pp_commit_easy(CMIT_FMT_ONELINE, c, &commitline);
+                printf(_("Current commit: %s"), commitline.buf);
+        }
         return 0;
 
 }
