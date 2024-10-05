@@ -1,6 +1,6 @@
 #define USE_THE_REPOSITORY_VARIABLE
 
-#include <stdio.h>
+#include "git-compat-util.h"
 #include "builtin.h"
 #include "config.h"
 #include "gettext.h"
@@ -9,6 +9,12 @@
 #include "commit.h"
 #include "pretty.h"
 #include "strbuf.h"
+#include "parse-options.h"
+
+static const char * const psuh_usage[] = {
+        N_("git psuh [<arg>...]"),
+        NULL,
+};
 
 int cmd_psuh(int argc, const char **argv, const char *prefix, struct repository *repo) {
         const char *cfg_name;
@@ -17,6 +23,11 @@ int cmd_psuh(int argc, const char **argv, const char *prefix, struct repository 
         struct strbuf commitline = STRBUF_INIT;
         int i;
 
+        struct option options[] = {
+                OPT_END()
+        };
+
+        argc = parse_options(argc, argv, prefix, options, psuh_usage, 0);
         printf("%d\n", repo->different_commondir);
         printf(_("%s\n"), prefix);
 
