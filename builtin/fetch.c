@@ -486,6 +486,32 @@ static void filter_prefetch_refspec(struct refspec *rs)
 	}
 }
 
+static int pattern_matches_ref(const char *pattern, const char *refname)
+{
+	if (strchr(pattern, '*'))
+		return match_refspec_name_with_pattern(pattern, refname, NULL, NULL) != 0;
+	return strcmp(pattern, refname) == 0;
+}
+
+static int matches_prefetch_refs(const char *refname, const struct string_list *prefetch_refs)
+{
+	int has_positive = 0, matched_positive = 0, matched_negative = 0;
+
+	for (int i = 0; i < prefetch_refs->nr; i++) {
+		const char *pattern = prefetch_refs->items[i].string;
+		int is_negative = (*pattern == '!');
+		if (is_negative) pattern++;
+		else has_positive = 1;
+
+		if (pattern_matches_ref(pattern, refname)) {
+			if (is_negative) matched_negative = 1;
+			else matched_positive = 1;
+		}
+	}
+
+	return has_positive ? (matched_positive && !matched_negative) : !matched_negative;
+}
+
 static struct ref *get_ref_map(struct remote *remote,
 			       const struct ref *remote_refs,
 			       struct refspec *rs,
@@ -502,7 +528,11 @@ static struct ref *get_ref_map(struct remote *remote,
 	struct hashmap existing_refs;
 	int existing_refs_populated = 0;
 
+	struct ref *prefetch_filtered_ref_map = NULL, **ref_map_tail = &prefetch_filtered_ref_map;
+	struct ref *next;
+
 	filter_prefetch_refspec(rs);
+
 	if (remote)
 		filter_prefetch_refspec(&remote->fetch);
 
@@ -610,6 +640,29 @@ static struct ref *get_ref_map(struct remote *remote,
 		ref_map = apply_negative_refspecs(ref_map, rs);
 	else
 		ref_map = apply_negative_refspecs(ref_map, &remote->fetch);
+
+	/**
+	 * Filter out advertised refs that we don't want to fetch during
+	 * prefetch if a prefetchref config is set
+	 */
+
+	if (prefetch && remote->prefetch_refs.nr) {
+		prefetch_filtered_ref_map = NULL;
+		ref_map_tail = &prefetch_filtered_ref_map;
+
+		for (rm = ref_map; rm; rm = next) {
+			next = rm->next;
+			rm->next = NULL;
+
+			if (matches_prefetch_refs(rm->name, &remote->prefetch_refs)) {
+				*ref_map_tail = rm;
+				ref_map_tail = &rm->next;
+			} else {
+				free_one_ref(rm);
+			}
+		}
+		ref_map = prefetch_filtered_ref_map;
+	}
 
 	ref_map = ref_remove_duplicates(ref_map);
 

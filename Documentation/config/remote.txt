@@ -33,6 +33,13 @@ remote.<name>.fetch::
 	The default set of "refspec" for linkgit:git-fetch[1]. See
 	linkgit:git-fetch[1].
 
+remote.<name>.prefetchref::
+	Specify the refs to be prefetched when fetching from this
+	remote. The value is a space-separated list of ref patterns
+	(e.g., "refs/heads/main !refs/heads/develop*"). This can be
+	used to optimize fetch operations by specifying exactly which
+	refs should be prefetched.
+
 remote.<name>.push::
 	The default set of "refspec" for linkgit:git-push[1]. See
 	linkgit:git-push[1].

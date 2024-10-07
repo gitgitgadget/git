@@ -5,6 +5,7 @@
 #include "hashmap.h"
 #include "refspec.h"
 #include "strvec.h"
+#include "string-list.h"
 
 struct option;
 struct transport_ls_refs_options;
@@ -76,6 +77,8 @@ struct remote {
 	struct refspec push;
 
 	struct refspec fetch;
+
+	struct string_list prefetch_refs;
 
 	/*
 	 * The setting for whether to fetch tags (as a separate rule from the
@@ -206,6 +209,9 @@ struct ref *copy_ref_list(const struct ref *ref);
 int count_refspec_match(const char *, struct ref *refs, struct ref **matched_ref);
 
 int check_ref_type(const struct ref *ref, int flags);
+
+int match_refspec_name_with_pattern(const char *key, const char *name,
+					const char *value, char **result);
 
 /*
  * Free a single ref and its peer, or an entire list of refs and their peers,

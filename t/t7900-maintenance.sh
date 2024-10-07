@@ -246,6 +246,91 @@ test_expect_success 'prefetch multiple remotes' '
 	test_subcommand git fetch remote2 $fetchargs <skip-remote1.txt
 '
 
+test_expect_success 'prefetch with positive prefetch ref patterns' '
+	test_create_repo filter-prefetch-positive &&
+	(
+		cd filter-prefetch-positive &&
+		test_commit initial &&
+		git clone . clone2 &&
+		git remote add remote2 "file://$(pwd)/clone2" &&
+
+		cd clone2 &&
+		git checkout -b feature && test_commit feature-commit-2 &&
+		git checkout -b wip/test && test_commit wip-test-commit-2 &&
+		git checkout -b topic/x && test_commit topic-x-commit-2 &&
+		git push -f origin feature wip/test topic/x &&
+		cd .. &&
+
+		git config remote.remote2.prefetchref "refs/heads/feature" &&
+		fetchargs="--prefetch --prune --no-tags --no-write-fetch-head \
+			--recurse-submodules=no --quiet" &&
+		GIT_TRACE2_EVENT="$(pwd)/prefetch-positive.txt" \
+			git maintenance run --task=prefetch 2>/dev/null &&
+		test_subcommand git fetch remote2 $fetchargs <prefetch-positive.txt &&
+
+		git rev-parse refs/prefetch/remotes/remote2/feature &&
+		test_must_fail git rev-parse refs/prefetch/remotes/remote2/wip/test &&
+		test_must_fail git rev-parse refs/prefetch/remotes/remote2/topic/x
+	)
+'
+
+test_expect_success 'prefetch with negative prefetch ref patterns' '
+	test_create_repo filter-prefetch-negative &&
+	(
+		cd filter-prefetch-negative &&
+		test_commit initial &&
+		git clone . clone3 &&
+		git remote add remote3 "file://$(pwd)/clone3" &&
+		cat .git/config &&
+
+		cd clone3 &&
+		git checkout -b feature && test_commit feature-commit-3 &&
+		git checkout -b wip/test && test_commit wip-test-commit-3 &&
+		git checkout -b topic/x && test_commit topic-x-commit-3 &&
+		git push -f origin feature wip/test topic/x &&
+		cd .. &&
+
+		git config remote.remote3.prefetchref "!refs/heads/wip/*" &&
+		fetchargs="--prefetch --prune --no-tags --no-write-fetch-head \
+			--recurse-submodules=no --quiet" &&
+		GIT_TRACE2_EVENT="$(pwd)/prefetch-negative.txt" \
+			git maintenance run --task=prefetch 2>/dev/null &&
+		test_subcommand git fetch remote3 $fetchargs <prefetch-negative.txt &&
+		git rev-parse refs/prefetch/remotes/remote3/feature &&
+		git rev-parse refs/prefetch/remotes/remote3/topic/x &&
+		test_must_fail git rev-parse refs/prefetch/remotes/remote3/wip/test
+	)
+'
+
+test_expect_success 'prefetch with positive & negative prefetch ref patterns' '
+	test_create_repo filter-prefetch-mixed &&
+	(
+		cd filter-prefetch-mixed &&
+		test_commit initial &&
+		git clone . clone4 &&
+		git remote add remote4 "file://$(pwd)/clone4" &&
+
+		cd clone4 &&
+		git checkout -b feature && test_commit feature-commit-4 &&
+		git checkout -b topic/x && test_commit topic-x-commit-4 &&
+		git checkout -b topic/y && test_commit topic-y-commit-4 &&
+		git push -f origin feature topic/x topic/y &&
+		cd .. &&
+
+		git config remote.remote4.prefetchref \
+			"refs/heads/topic/* !refs/heads/topic/y" &&
+		fetchargs="--prefetch --prune --no-tags --no-write-fetch-head \
+			--recurse-submodules=no --quiet" &&
+		GIT_TRACE2_EVENT="$(pwd)/prefetch-mixed.txt" \
+			git maintenance run --task=prefetch 2>/dev/null &&
+		test_subcommand git fetch remote4 $fetchargs <prefetch-mixed.txt &&
+
+		test_must_fail git rev-parse refs/prefetch/remotes/remote4/feature &&
+		test_must_fail git rev-parse refs/prefetch/remotes/remote4/topic/y &&
+		git rev-parse refs/prefetch/remotes/remote4/topic/x
+	)
+'
+
 test_expect_success 'loose-objects task' '
 	# Repack everything so we know the state of the object dir
 	git repack -adk &&
