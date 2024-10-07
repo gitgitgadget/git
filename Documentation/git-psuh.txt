@@ -1,0 +1,32 @@
+git-psuh(1)
+===========
+
+NAME
+----
+git-psuh - Delight users' typo with a shy horse
+
+
+SYNOPSIS
+--------
+[verse]
+'git-psuh [<arg>...]'
+
+DESCRIPTION
+-----------
+Prints the commandline variables,
+gets the user's current working directory and prints it,
+the user's name in the git config file, the current branch
+and also the commitline.
+
+
+OPTIONS[[OPTIONS]]
+------------------
+...
+
+OUTPUT
+------
+...
+
+GIT
+---
+Part of the git[1] suite
