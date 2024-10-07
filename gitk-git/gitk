@@ -3662,11 +3662,33 @@ proc external_diff_get_one_file {diffid filename diffdir} {
                "revision $diffid"]
 }
 
+proc check_for_renames_in_diff {filepath} {
+    global ctext
+
+    set renamed_filenames [list {}]
+    set filename [file tail $filepath]
+    set rename_from_text_length 12
+    set rename_to_text_length 10
+    set reg_expr_rename_from {^rename from (.*$filename)}
+    set reg_expr_rename_from [subst -nobackslashes -nocommands $reg_expr_rename_from]
+    set reg_expr_rename_to {^rename to (.*)}
+    set rename_from_text_index [$ctext search -elide -regexp -- $reg_expr_rename_from 0.0]
+    if { ($rename_from_text_index != {})} {
+        set rename_to_text_index [$ctext search -elide -regexp -- $reg_expr_rename_to $rename_from_text_index]
+        if { ($rename_from_text_index != {}) && ($rename_to_text_index != {}) } {
+            lappend renamed_filenames [$ctext get "$rename_from_text_index + $rename_from_text_length chars" "$rename_from_text_index lineend"]
+            lappend renamed_filenames [$ctext get "$rename_to_text_index + $rename_to_text_length chars" "$rename_to_text_index lineend"]
+        }
+    }
+    return $renamed_filenames
+}
+
 proc external_diff {} {
     global nullid nullid2
     global flist_menu_file
     global diffids
     global extdifftool
+    global file_rename_detection
 
     if {[llength $diffids] == 1} {
         # no reference commit given
@@ -3692,8 +3714,21 @@ proc external_diff {} {
     if {$diffdir eq {}} return
 
     # gather files to diff
-    set difffromfile [external_diff_get_one_file $diffidfrom $flist_menu_file $diffdir]
-    set difftofile [external_diff_get_one_file $diffidto $flist_menu_file $diffdir]
+    if {$file_rename_detection} {
+        set renamed_filenames [check_for_renames_in_diff $flist_menu_file]
+        set rename_from_filename [lindex $renamed_filenames 1]
+        set rename_to_filename [lindex $renamed_filenames 2]
+        if { ($rename_from_filename != {}) && ($rename_to_filename != {}) } {
+            set difffromfile [external_diff_get_one_file $diffidfrom $rename_from_filename $diffdir]
+            set difftofile [external_diff_get_one_file $diffidto $rename_to_filename $diffdir]
+        } else {
+            set difffromfile [external_diff_get_one_file $diffidfrom $flist_menu_file $diffdir]
+            set difftofile [external_diff_get_one_file $diffidto $flist_menu_file $diffdir]
+        }
+    } else {
+        set difffromfile [external_diff_get_one_file $diffidfrom $flist_menu_file $diffdir]
+        set difftofile [external_diff_get_one_file $diffidto $flist_menu_file $diffdir]
+    }
 
     if {$difffromfile ne {} && $difftofile ne {}} {
         set cmd [list [shellsplit $extdifftool] $difffromfile $difftofile]
@@ -11577,7 +11612,7 @@ proc create_prefs_page {w} {
 proc prefspage_general {notebook} {
     global NS maxwidth maxgraphpct showneartags showlocalchanges
     global tabstop limitdiffs autoselect autosellen extdifftool perfile_attrs
-    global hideremotes want_ttk have_ttk maxrefs web_browser
+    global hideremotes want_ttk have_ttk maxrefs web_browser file_rename_detection
 
     set page [create_prefs_page $notebook.general]
 
@@ -11639,12 +11674,16 @@ proc prefspage_general {notebook} {
     grid $page.lgen - -sticky w -pady 10
     ${NS}::checkbutton $page.want_ttk -variable want_ttk \
         -text [mc "Use themed widgets"]
+    ${NS}::checkbutton $page.file_rename_detection -variable file_rename_detection \
+        -text [mc "Use ext diff file rename detection"]
+    ${NS}::label $page.file_rename_detection_note -text [mc "(EXPERIMENTAL\nTries to find the file path of a\nrenamed file in external diff)"]
     if {$have_ttk} {
         ${NS}::label $page.ttk_note -text [mc "(change requires restart)"]
     } else {
         ${NS}::label $page.ttk_note -text [mc "(currently unavailable)"]
     }
     grid x $page.want_ttk $page.ttk_note -sticky w
+    grid x $page.file_rename_detection $page.file_rename_detection_note -sticky w
     return $page
 }
 
@@ -11725,7 +11764,7 @@ proc doprefs {} {
     global oldprefs prefstop showneartags showlocalchanges
     global uicolor bgcolor fgcolor ctext diffcolors selectbgcolor markbgcolor
     global tabstop limitdiffs autoselect autosellen extdifftool perfile_attrs
-    global hideremotes want_ttk have_ttk
+    global hideremotes want_ttk have_ttk file_rename_detection
 
     set top .gitkprefs
     set prefstop $top
@@ -11734,7 +11773,7 @@ proc doprefs {} {
         return
     }
     foreach v {maxwidth maxgraphpct showneartags showlocalchanges \
-                   limitdiffs tabstop perfile_attrs hideremotes want_ttk} {
+                   limitdiffs tabstop perfile_attrs hideremotes want_ttk file_rename_detection} {
         set oldprefs($v) [set $v]
     }
     ttk_toplevel $top
@@ -11860,7 +11899,7 @@ proc prefscan {} {
     global oldprefs prefstop
 
     foreach v {maxwidth maxgraphpct showneartags showlocalchanges \
-                   limitdiffs tabstop perfile_attrs hideremotes want_ttk} {
+                   limitdiffs tabstop perfile_attrs hideremotes want_ttk file_rename_detection} {
         global $v
         set $v $oldprefs($v)
     }
@@ -12404,6 +12443,7 @@ set autoselect 1
 set autosellen 40
 set perfile_attrs 0
 set want_ttk 1
+set file_rename_detection 0
 
 if {[tk windowingsystem] eq "aqua"} {
     set extdifftool "opendiff"
@@ -12498,7 +12538,7 @@ config_check_tmp_exists 50
 set config_variables {
     mainfont textfont uifont tabstop findmergefiles maxgraphpct maxwidth
     cmitmode wrapcomment autoselect autosellen showneartags maxrefs visiblerefs
-    hideremotes showlocalchanges datetimeformat limitdiffs uicolor want_ttk
+    hideremotes showlocalchanges datetimeformat limitdiffs uicolor want_ttk file_rename_detection
     bgcolor fgcolor uifgcolor uifgdisabledcolor colors diffcolors mergecolors
     markbgcolor diffcontext selectbgcolor foundbgcolor currentsearchhitbgcolor
     extdifftool perfile_attrs headbgcolor headfgcolor headoutlinecolor
