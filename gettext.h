@@ -31,7 +31,7 @@
 #ifndef NO_GETTEXT
 extern int git_gettext_enabled;
 void git_setup_gettext(void);
-int gettext_width(const char *s);
+size_t gettext_width(const char *s);
 #else
 #define git_gettext_enabled (0)
 static inline void git_setup_gettext(void)
