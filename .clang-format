@@ -43,10 +43,9 @@ AlignConsecutiveDeclarations: false
 #   int cccccccc;
 AlignEscapedNewlines: Left
 
-# Align operands of binary and ternary expressions
-# int aaa = bbbbbbbbbbb +
-#           cccccc;
-AlignOperands: true
+# Don't enforce alignment after linebreaks and instead
+# rely on the ContinuationIndentWidth value.
+AlignOperands: false
 
 # Don't align trailing comments
 # int a; // Comment a
