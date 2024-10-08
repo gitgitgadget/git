@@ -12,7 +12,11 @@ UseTab: Always
 TabWidth: 8
 IndentWidth: 8
 ContinuationIndentWidth: 8
-ColumnLimit: 80
+
+# While we recommend keeping column limit to 80, we don't want to
+# enforce it as we generally are more lenient with this rule and
+# prefer to prioritize readability.
+ColumnLimit: 0
 
 # C Language specifics
 Language: Cpp
