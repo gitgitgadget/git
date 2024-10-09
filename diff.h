@@ -396,6 +396,7 @@ struct diff_options {
 
 	struct repository *repo;
 	struct strmap *additional_path_headers;
+	struct pattern_list *sparse_checkout_patterns;
 
 	int no_free;
 };
