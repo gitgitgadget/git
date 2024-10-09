@@ -102,6 +102,7 @@ case "$jobname" in
 ClangFormat)
 	sudo apt-get -q update
 	sudo apt-get -q -y install clang-format
+	clang-format -version
 	;;
 StaticAnalysis)
 	sudo apt-get -q update
