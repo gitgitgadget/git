@@ -13,7 +13,7 @@
 
 static const char * const upload_pack_usage[] = {
 	N_("git-upload-pack [--[no-]strict] [--timeout=<n>] [--stateless-rpc]\n"
-	   "                [--advertise-refs] <directory>"),
+	   "                [--advertise-refs] [--show-service] <directory>"),
 	NULL
 };
 
@@ -27,6 +27,7 @@ int cmd_upload_pack(int argc,
 	int advertise_refs = 0;
 	int stateless_rpc = 0;
 	int timeout = 0;
+	int show_service = 0;
 	struct option options[] = {
 		OPT_BOOL(0, "stateless-rpc", &stateless_rpc,
 			 N_("quit after a single request/response exchange")),
@@ -37,8 +38,10 @@ int cmd_upload_pack(int argc,
 			 N_("do not try <directory>/.git/ if <directory> is no Git directory")),
 		OPT_INTEGER(0, "timeout", &timeout,
 			    N_("interrupt transfer after <n> seconds of inactivity")),
+		OPT_BOOL(0, "show-service", &show_service, N_("show service information")),
 		OPT_END()
 	};
+	enum protocol_version version = determine_protocol_version_server();
 
 	packet_trace_identity("upload-pack");
 	disable_replace_refs();
@@ -57,7 +60,17 @@ int cmd_upload_pack(int argc,
 	if (!enter_repo(dir, strict))
 		die("'%s' does not appear to be a git repository", dir);
 
-	switch (determine_protocol_version_server()) {
+
+	if (show_service) {
+		if (!advertise_refs)
+			die(_("options '%s' and '%s' should be used together"), "--show-service", "--http-backend-info-refs");
+		if (version != protocol_v2) {
+			packet_write_fmt(1, "# service=git-upload-pack\n");
+			packet_flush(1);
+		}
+	}
+
+	switch (version) {
 	case protocol_v2:
 		if (advertise_refs)
 			protocol_v2_advertise_capabilities();
