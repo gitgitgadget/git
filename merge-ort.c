@@ -4920,7 +4920,7 @@ static void merge_start(struct merge_options *opt, struct merge_result *result)
 	 * sanity check them anyway.
 	 */
 	assert(opt->detect_renames >= -1 &&
-	       opt->detect_renames <= DIFF_DETECT_COPY);
+	       opt->detect_renames <= DIFF_DETECT_COPY_HARDER);
 	assert(opt->verbosity >= 0 && opt->verbosity <= 5);
 	assert(opt->buffer_output <= 2);
 	assert(opt->obuf.len == 0);
