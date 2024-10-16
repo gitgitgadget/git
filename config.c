@@ -615,6 +615,8 @@ static int config_parse_pair(const char *key, const char *value,
 
 	if (!strlen(key))
 		return error(_("empty config key"));
+	if (!value || !strlen(value))
+		return error(_("empty config value"));
 	if (git_config_parse_key(key, &canonical_name, NULL))
 		return -1;
 
