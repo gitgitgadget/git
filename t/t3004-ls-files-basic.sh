@@ -52,4 +52,30 @@ test_expect_success SYMLINKS 'ls-files with absolute paths to symlinks' '
 	test_cmp expect actual
 '
 
+test_expect_success 'git ls-files --stage with --object-only' '
+	git init test &&
+	test_when_finished "rm -rf test" &&
+	echo a >test/a.txt &&
+	echo b >test/b.txt &&
+	git -C test add a.txt b.txt &&
+	oid1=$(git -C test hash-object a.txt) &&
+	oid2=$(git -C test hash-object b.txt) &&
+	git -C test ls-files --stage --object-only >actual &&
+	cat >expect <<-EOF &&
+	$oid1
+	$oid2
+	EOF
+	test_cmp expect actual
+'
+
+test_expect_success 'git ls-files --object-only without --stage or --resolve-undo' '
+	git init test &&
+	test_when_finished "rm -rf test" &&
+	echo a >test/a.txt &&
+	echo b >test/b.txt &&
+	git -C test add a.txt b.txt &&
+	test_must_fail git -C test ls-files --object-only 2>stderr &&
+	grep "fatal: ls-files --object-only only used with --stage or --resolve-undo" stderr
+'
+
 test_done
