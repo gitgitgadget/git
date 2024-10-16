@@ -24,7 +24,7 @@ ifdef::git-pull[]
 endif::git-pull[]
 +
 The format of a <refspec> parameter is an optional plus
-`+`, followed by the source <src>, followed
+`+`, followed by the source ref <src>, followed
 by a colon `:`, followed by the destination ref <dst>.
 The colon can be omitted when <dst> is empty.  <src> is
 typically a ref, but it can also be a fully spelled hex object
