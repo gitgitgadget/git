@@ -649,6 +649,10 @@ Also, these upper-case letters can be downcased to exclude.  E.g.
 Note that not all diffs can feature all types. For instance, copied and
 renamed entries cannot appear if detection for those types is disabled.
 
+--restrict::
+	Restrict the diff filespec in the sparse-checkout cone(s).
+	See linkgit:git-sparse-checkout[1] for more details.
+
 -S<string>::
 	Look for differences that change the number of occurrences of
 	the specified string (i.e. addition/deletion) in a file.

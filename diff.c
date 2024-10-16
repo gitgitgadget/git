@@ -5108,6 +5108,19 @@ static int diff_opt_diff_filter(const struct option *option,
 	return 0;
 }
 
+static int diff_opt_diff_restrict(const struct option *option,
+				const char *optarg, int unset)
+{
+	struct diff_options *opt = option->value;
+
+	BUG_ON_OPT_NEG(unset);
+	CALLOC_ARRAY(opt->sparse_checkout_patterns, 1);
+
+	if (get_sparse_checkout_patterns(opt->sparse_checkout_patterns) < 0)
+		FREE_AND_NULL(opt->sparse_checkout_patterns);
+	return 0;
+}
+
 static void enable_patch_output(int *fmt)
 {
 	*fmt &= ~DIFF_FORMAT_NO_OUTPUT;
@@ -5886,6 +5899,9 @@ struct option *add_diff_options(const struct option *opts,
 		OPT_CALLBACK_F(0, "diff-filter", options, N_("[(A|C|D|M|R|T|U|X|B)...[*]]"),
 			       N_("select files by diff type"),
 			       PARSE_OPT_NONEG, diff_opt_diff_filter),
+		OPT_CALLBACK_F(0, "restrict", options, NULL,
+			       N_("restrict files in sparse-checkout patterns"),
+			       PARSE_OPT_NONEG | PARSE_OPT_OPTARG, diff_opt_diff_restrict),
 		{ OPTION_CALLBACK, 0, "output", options, N_("<file>"),
 		  N_("output to a specific file"),
 		  PARSE_OPT_NONEG, NULL, 0, diff_opt_output },
@@ -6853,6 +6869,24 @@ free_queue:
 	}
 }
 
+
+static int match_sparse_checkout_patterns_by_spec(const struct diff_options *options, struct diff_filespec *spec) {
+	int dtype = DT_REG;
+
+	if (!spec)
+		return 0;
+
+	return path_matches_pattern_list(spec->path, strlen(spec->path),
+					 "", &dtype, options->sparse_checkout_patterns,
+					 the_repository->index) > 0;
+}
+
+static int match_sparse_checkout_patterns(const struct diff_options *options, const struct diff_filepair *p)
+{
+	return match_sparse_checkout_patterns_by_spec(options, p->one) ||
+	       match_sparse_checkout_patterns_by_spec(options, p->two);
+}
+
 static int match_filter(const struct diff_options *options, const struct diff_filepair *p)
 {
 	return (((p->status == DIFF_STATUS_MODIFIED) &&
@@ -6862,6 +6896,28 @@ static int match_filter(const struct diff_options *options, const struct diff_fi
 		   filter_bit_tst(DIFF_STATUS_MODIFIED, options)))) ||
 		((p->status != DIFF_STATUS_MODIFIED) &&
 		 filter_bit_tst(p->status, options)));
+}
+
+static void diffcore_apply_restrict(struct diff_options *options)
+{
+	int i;
+	struct diff_queue_struct *q = &diff_queued_diff;
+	struct diff_queue_struct outq;
+
+	DIFF_QUEUE_CLEAR(&outq);
+
+	if (!options->sparse_checkout_patterns)
+		return;
+
+	for (i = 0; i < q->nr; i++) {
+		struct diff_filepair *p = q->queue[i];
+		if (match_sparse_checkout_patterns(options, p))
+			diff_q(&outq, p);
+		else
+			diff_free_filepair(p);
+	}
+	free(q->queue);
+	*q = outq;
 }
 
 static void diffcore_apply_filter(struct diff_options *options)
@@ -7083,6 +7139,7 @@ void diffcore_std(struct diff_options *options)
 		/* See try_to_follow_renames() in tree-diff.c */
 		diff_resolve_rename_copy();
 	diffcore_apply_filter(options);
+	diffcore_apply_restrict(options);
 
 	if (diff_queued_diff.nr && !options->flags.diff_from_contents)
 		options->flags.has_changes = 1;
