@@ -1567,4 +1567,33 @@ test_expect_success 'empty notes do not invoke the editor' '
 	git notes remove HEAD
 '
 
+test_expect_success '"git notes add" with -m/-F invokes the editor with -e' '
+	test_commit 19th &&
+	GIT_EDITOR="true" git notes add -m "note message" -e &&
+	git notes remove HEAD &&
+	echo "message from file" >file_1 &&
+	GIT_EDITOR="true" git notes add -F file_1 -e &&
+	git notes remove HEAD
+'
+
+test_expect_success 'git notes append with -m/-F invokes editor with -e' '
+	test_commit 20th &&
+	GIT_EDITOR="true" git notes add -m "initial note" -e &&
+	GIT_EDITOR="true" git notes append -m "appended note" -e &&
+	git notes remove HEAD &&
+	echo  "initial note" >note_a &&
+	echo "appended note" >note_b &&
+	GIT_EDITOR="true" git notes add -F note_a -e &&
+	GIT_EDITOR="true" git notes append -F note_b -e &&
+	git notes remove HEAD
+'
+
+test_expect_success 'append note with multiple combinations of -m, -F and -e, invokes editor' '
+	test_commit 21st &&
+	echo "foo-file-1" >note_1 &&
+	echo "foo-file-2" >note_2 &&
+	GIT_EDITOR="true" git notes append -F note_1 -m "message-1" -F note_2 -m "message-2" -e &&
+	git notes remove HEAD
+'
+
 test_done
