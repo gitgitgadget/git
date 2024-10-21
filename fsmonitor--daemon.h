@@ -51,6 +51,7 @@ struct fsmonitor_daemon_state {
 	int cookie_seq;
 	struct hashmap cookies;
 
+	pthread_mutex_t listen_lock;
 	int listen_error_code;
 	int health_error_code;
 	struct fsm_listen_data *listen_data;
@@ -166,6 +167,9 @@ void fsmonitor_publish(struct fsmonitor_daemon_state *state,
  * threads.
  */
 void fsmonitor_force_resync(struct fsmonitor_daemon_state *state);
+
+int fsmonitor_get_listen_error_code(struct fsmonitor_daemon_state *state);
+void fsmonitor_set_listen_error_code(struct fsmonitor_daemon_state *state, int error_code);
 
 #endif /* HAVE_FSMONITOR_DAEMON_BACKEND */
 #endif /* FSMONITOR_DAEMON_H */

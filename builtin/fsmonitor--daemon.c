@@ -172,6 +172,9 @@ static enum fsmonitor_cookie_item_result with_lock__wait_for_cookie(
 	trace_printf_key(&trace_fsmonitor, "cookie-wait: '%s' '%s'",
 			 cookie->name, cookie_pathname.buf);
 
+	while (fsmonitor_get_listen_error_code(state) == 0)
+		sleep_millisec(50);
+
 	/*
 	 * Create the cookie file on disk and then wait for a notification
 	 * that the listener thread has seen it.
@@ -604,6 +607,23 @@ void fsmonitor_force_resync(struct fsmonitor_daemon_state *state)
 	pthread_mutex_lock(&state->main_lock);
 	with_lock__do_force_resync(state);
 	pthread_mutex_unlock(&state->main_lock);
+}
+
+int fsmonitor_get_listen_error_code(struct fsmonitor_daemon_state *state)
+{
+	int error_code;
+
+	pthread_mutex_lock(&state->listen_lock);
+	error_code = state->listen_error_code;
+	pthread_mutex_unlock(&state->listen_lock);
+	return error_code;
+}
+
+void fsmonitor_set_listen_error_code(struct fsmonitor_daemon_state *state, int error_code)
+{
+	pthread_mutex_lock(&state->listen_lock);
+	state->listen_error_code = error_code;
+	pthread_mutex_unlock(&state->listen_lock);
 }
 
 /*
@@ -1285,6 +1305,7 @@ static int fsmonitor_run_daemon(void)
 	hashmap_init(&state.cookies, cookies_cmp, NULL, 0);
 	pthread_mutex_init(&state.main_lock, NULL);
 	pthread_cond_init(&state.cookies_cond, NULL);
+	pthread_mutex_init(&state.listen_lock, NULL);
 	state.listen_error_code = 0;
 	state.health_error_code = 0;
 	state.current_token_data = fsmonitor_new_token_data();

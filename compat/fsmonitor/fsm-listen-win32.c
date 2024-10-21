@@ -732,14 +732,13 @@ void fsm_listen__loop(struct fsmonitor_daemon_state *state)
 	DWORD dwWait;
 	int result;
 
-	state->listen_error_code = 0;
-
 	if (start_rdcw_watch(data->watch_worktree) == -1)
 		goto force_error_stop;
 
 	if (data->watch_gitdir &&
 	    start_rdcw_watch(data->watch_gitdir) == -1)
 		goto force_error_stop;
+	fsmonitor_set_listen_error_code(state, 1);
 
 	/*
 	 * Now that we've established the rdcw watches, we can start
@@ -803,7 +802,7 @@ void fsm_listen__loop(struct fsmonitor_daemon_state *state)
 	}
 
 force_error_stop:
-	state->listen_error_code = -1;
+	fsmonitor_set_listen_error_code(state, -1);
 
 force_shutdown:
 	/*
