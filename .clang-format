@@ -12,7 +12,11 @@ UseTab: Always
 TabWidth: 8
 IndentWidth: 8
 ContinuationIndentWidth: 8
-ColumnLimit: 80
+
+# While we recommend keeping column limit to 80, we don't want to
+# enforce it as we generally are more lenient with this rule and
+# prefer to prioritize readability.
+ColumnLimit: 0
 
 # C Language specifics
 Language: Cpp
@@ -39,10 +43,9 @@ AlignConsecutiveDeclarations: false
 #   int cccccccc;
 AlignEscapedNewlines: Left
 
-# Align operands of binary and ternary expressions
-# int aaa = bbbbbbbbbbb +
-#           cccccc;
-AlignOperands: true
+# Don't enforce alignment after linebreaks and instead
+# rely on the ContinuationIndentWidth value.
+AlignOperands: false
 
 # Don't align trailing comments
 # int a; // Comment a
