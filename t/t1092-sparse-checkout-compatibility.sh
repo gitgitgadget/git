@@ -525,6 +525,58 @@ test_expect_success 'diff --cached' '
 	test_all_match git diff --cached
 '
 
+test_expect_success 'diff --restrict' '
+	init_repos &&
+
+	test_all_match mkdir modules &&
+	test_all_match touch modules/a &&
+	test_all_match touch deep/b &&
+	test_all_match git rm deep/a &&
+	test_all_match git add --sparse modules deep &&
+	run_on_all git diff --restrict --staged --stat &&
+	cat >expect <<-EOF &&
+	 deep/a | 1 -
+	 deep/b | 0
+	 2 files changed, 1 deletion(-)
+	EOF
+	test_cmp expect sparse-checkout-out &&
+	cat >expect <<-EOF &&
+	 deep/a | 1 -
+	 deep/b | 0
+	 2 files changed, 1 deletion(-)
+	EOF
+	test_cmp expect sparse-index-out &&
+	cat >expect <<-EOF &&
+	 deep/a    | 1 -
+	 deep/b    | 0
+	 modules/a | 0
+	 3 files changed, 1 deletion(-)
+	EOF
+	test_cmp expect full-checkout-out &&
+	run_on_all git diff --staged --stat &&
+	cat >expect <<-EOF &&
+	 deep/a    | 1 -
+	 deep/b    | 0
+	 modules/a | 0
+	 3 files changed, 1 deletion(-)
+	EOF
+	test_cmp expect sparse-checkout-out &&
+	cat >expect <<-EOF &&
+	 deep/a    | 1 -
+	 deep/b    | 0
+	 modules/a | 0
+	 3 files changed, 1 deletion(-)
+	EOF
+	test_cmp expect sparse-index-out &&
+	cat >expect <<-EOF &&
+	 deep/a    | 1 -
+	 deep/b    | 0
+	 modules/a | 0
+	 3 files changed, 1 deletion(-)
+	EOF
+	test_cmp expect full-checkout-out
+'
+
 # NEEDSWORK: sparse-checkout behaves differently from full-checkout when
 # running this test with 'df-conflict-2' after 'df-conflict-1'.
 test_expect_success 'diff with renames and conflicts' '
