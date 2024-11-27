@@ -515,6 +515,7 @@ void fsm_listen__loop(struct fsmonitor_daemon_state *state)
 		goto force_error_stop_without_loop;
 	}
 	data->stream_started = 1;
+	fsmonitor_set_listen_error_code(state, 1);
 
 	/*
 	 * Our fs event listener is now running, so it's safe to start
@@ -528,7 +529,7 @@ void fsm_listen__loop(struct fsmonitor_daemon_state *state)
 
 	switch (data->shutdown_style) {
 	case FORCE_ERROR_STOP:
-		state->listen_error_code = -1;
+		fsmonitor_set_listen_error_code(state, -1);
 		/* fall thru */
 	case FORCE_SHUTDOWN:
 		ipc_server_stop_async(state->ipc_server_data);
@@ -540,7 +541,7 @@ void fsm_listen__loop(struct fsmonitor_daemon_state *state)
 	return;
 
 force_error_stop_without_loop:
-	state->listen_error_code = -1;
+	fsmonitor_set_listen_error_code(state, -1);
 	ipc_server_stop_async(state->ipc_server_data);
 	return;
 }
