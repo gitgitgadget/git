@@ -3771,7 +3771,7 @@ static int merge_start(struct merge_options *opt, struct tree *head)
 	assert(opt->branch1 && opt->branch2);
 
 	assert(opt->detect_renames >= -1 &&
-	       opt->detect_renames <= DIFF_DETECT_COPY);
+	       opt->detect_renames <= DIFF_DETECT_COPY_HARDER);
 	assert(opt->detect_directory_renames >= MERGE_DIRECTORY_RENAMES_NONE &&
 	       opt->detect_directory_renames <= MERGE_DIRECTORY_RENAMES_TRUE);
 	assert(opt->rename_limit >= -1);

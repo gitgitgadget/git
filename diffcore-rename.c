@@ -302,7 +302,7 @@ static int find_identical_files(struct hashmap *srcs,
 		}
 		/* Give higher scores to sources that haven't been used already */
 		score = !source->rename_used;
-		if (source->rename_used && options->detect_rename != DIFF_DETECT_COPY)
+		if (source->rename_used && options->detect_rename != DIFF_DETECT_COPY && options->detect_rename != DIFF_DETECT_COPY_HARDER)
 			continue;
 		score += basename_same(source, target);
 		if (score > best_score) {
@@ -1408,7 +1408,7 @@ void diffcore_rename_extended(struct diff_options *options,
 	trace2_region_enter("diff", "setup", options->repo);
 	info.setup = 0;
 	assert(!dir_rename_count || strmap_empty(dir_rename_count));
-	want_copies = (detect_rename == DIFF_DETECT_COPY);
+	want_copies = (detect_rename == DIFF_DETECT_COPY || detect_rename == DIFF_DETECT_COPY_HARDER);
 	if (dirs_removed && (break_idx || want_copies))
 		BUG("dirs_removed incompatible with break/copy detection");
 	if (break_idx && relevant_sources)

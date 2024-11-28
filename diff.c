@@ -211,8 +211,11 @@ int git_config_rename(const char *var, const char *value)
 {
 	if (!value)
 		return DIFF_DETECT_RENAME;
+	if (!strcasecmp(value, "copies-harder"))
+		return DIFF_DETECT_COPY_HARDER;
 	if (!strcasecmp(value, "copies") || !strcasecmp(value, "copy"))
-		return  DIFF_DETECT_COPY;
+		return DIFF_DETECT_COPY;
+
 	return git_config_bool(var,value) ? DIFF_DETECT_RENAME : 0;
 }
 
@@ -4898,8 +4901,11 @@ void diff_setup_done(struct diff_options *options)
 	else
 		options->flags.diff_from_contents = 0;
 
-	if (options->flags.find_copies_harder)
+	/* Just fold this in as it makes the patch-to-git smaller */
+	if (options->flags.find_copies_harder || options->detect_rename == DIFF_DETECT_COPY_HARDER) {
+		options->flags.find_copies_harder = 1;
 		options->detect_rename = DIFF_DETECT_COPY;
+	}
 
 	if (!options->flags.relative_name)
 		options->prefix = NULL;
@@ -5338,7 +5344,7 @@ static int diff_opt_find_copies(const struct option *opt,
 	if (*arg != 0)
 		return error(_("invalid argument to %s"), opt->long_name);
 
-	if (options->detect_rename == DIFF_DETECT_COPY)
+	if (options->detect_rename == DIFF_DETECT_COPY || options->detect_rename == DIFF_DETECT_COPY_HARDER)
 		options->flags.find_copies_harder = 1;
 	else
 		options->detect_rename = DIFF_DETECT_COPY;
