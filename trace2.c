@@ -759,7 +759,7 @@ void trace2_def_param_fl(const char *file, int line, const char *param,
 	int j;
 	const char *redacted;
 
-	if (!trace2_enabled)
+	if (!trace2_enabled || !value)
 		return;
 
 	redacted = redact_arg(value);
