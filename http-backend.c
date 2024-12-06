@@ -542,6 +542,7 @@ static void get_info_refs(struct strbuf *hdr, char *arg UNUSED)
 	if (service_name) {
 		const char *argv[] = {NULL /* service name */,
 			"--http-backend-info-refs",
+			"--show-service",
 			".", NULL};
 		struct rpc_service *svc = select_service(hdr, service_name);
 
@@ -549,12 +550,6 @@ static void get_info_refs(struct strbuf *hdr, char *arg UNUSED)
 			svc->name);
 		hdr_str(hdr, content_type, buf.buf);
 		end_headers(hdr);
-
-
-		if (determine_protocol_version_server() != protocol_v2) {
-			packet_write_fmt(1, "# service=git-%s\n", svc->name);
-			packet_flush(1);
-		}
 
 		argv[0] = svc->name;
 		run_service(argv, 0);

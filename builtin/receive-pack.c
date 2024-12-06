@@ -2504,6 +2504,7 @@ int cmd_receive_pack(int argc,
 		     struct repository *repo UNUSED)
 {
 	int advertise_refs = 0;
+	int show_service = 0;
 	struct command *commands;
 	struct oid_array shallow = OID_ARRAY_INIT;
 	struct oid_array ref = OID_ARRAY_INIT;
@@ -2516,8 +2517,10 @@ int cmd_receive_pack(int argc,
 		OPT_HIDDEN_BOOL(0, "http-backend-info-refs", &advertise_refs, NULL),
 		OPT_ALIAS(0, "advertise-refs", "http-backend-info-refs"),
 		OPT_HIDDEN_BOOL(0, "reject-thin-pack-for-testing", &reject_thin, NULL),
+		OPT_BOOL(0, "show-service", &show_service, N_("show service information")),
 		OPT_END()
 	};
+	enum protocol_version version = determine_protocol_version_server();
 
 	packet_trace_identity("receive-pack");
 
@@ -2544,7 +2547,16 @@ int cmd_receive_pack(int argc,
 	else if (0 <= transfer_unpack_limit)
 		unpack_limit = transfer_unpack_limit;
 
-	switch (determine_protocol_version_server()) {
+	if (show_service) {
+		if (!advertise_refs)
+			die(_("options '%s' and '%s' should be used together"), "--show-service", "--http-backend-info-refs");
+		if (version != protocol_v2) {
+			packet_write_fmt(1, "# service=git-receive-pack\n");
+			packet_flush(1);
+		}
+	}
+
+	switch (version) {
 	case protocol_v2:
 		/*
 		 * push support for protocol v2 has not been implemented yet,

@@ -157,4 +157,124 @@ test_expect_success 'git receive-pack --advertise-refs: v2' '
 	test_cmp actual expect
 '
 
+test_expect_success 'git upload-pack --advertise-refs --show-service: v0' '
+	# With no specified protocol
+	cat >expect <<-EOF &&
+	# service=git-upload-pack
+	0000
+	$(git rev-parse HEAD) HEAD
+	$(git rev-parse HEAD) $(git symbolic-ref HEAD)
+	0000
+	EOF
+
+	git upload-pack --advertise-refs --show-service . >out 2>err &&
+	test-tool pkt-line unpack <out >actual &&
+	test_must_be_empty err &&
+	test_cmp actual expect &&
+
+	# With explicit v0
+	GIT_PROTOCOL=version=0 \
+	git upload-pack --advertise-refs --show-service . >out 2>err &&
+	test-tool pkt-line unpack <out >actual 2>err &&
+	test_must_be_empty err &&
+	test_cmp actual expect
+
+'
+
+test_expect_success 'git receive-pack --advertise-refs --show-service: v0' '
+	# With no specified protocol
+	cat >expect <<-EOF &&
+	# service=git-receive-pack
+	0000
+	$(git rev-parse HEAD) $(git symbolic-ref HEAD)
+	0000
+	EOF
+
+	git receive-pack --advertise-refs --show-service . >out 2>err &&
+	test-tool pkt-line unpack <out >actual &&
+	test_must_be_empty err &&
+	test_cmp actual expect &&
+
+	# With explicit v0
+	GIT_PROTOCOL=version=0 \
+	git receive-pack --advertise-refs --show-service . >out 2>err &&
+	test-tool pkt-line unpack <out >actual 2>err &&
+	test_must_be_empty err &&
+	test_cmp actual expect
+
+'
+
+test_expect_success 'git upload-pack --advertise-refs --show-service: v1' '
+	# With no specified protocol
+	cat >expect <<-EOF &&
+	# service=git-upload-pack
+	0000
+	version 1
+	$(git rev-parse HEAD) HEAD
+	$(git rev-parse HEAD) $(git symbolic-ref HEAD)
+	0000
+	EOF
+
+	GIT_PROTOCOL=version=1 \
+	git upload-pack --advertise-refs --show-service . >out &&
+
+	test-tool pkt-line unpack <out >actual 2>err &&
+	test_must_be_empty err &&
+	test_cmp actual expect
+'
+
+test_expect_success 'git receive-pack --advertise-refs --show-service: v1' '
+	# With no specified protocol
+	cat >expect <<-EOF &&
+	# service=git-receive-pack
+	0000
+	version 1
+	$(git rev-parse HEAD) $(git symbolic-ref HEAD)
+	0000
+	EOF
+
+	GIT_PROTOCOL=version=1 \
+	git receive-pack --advertise-refs --show-service . >out &&
+
+	test-tool pkt-line unpack <out >actual 2>err &&
+	test_must_be_empty err &&
+	test_cmp actual expect
+'
+
+test_expect_success 'git upload-pack --advertise-refs --show-service: v2' '
+	cat >expect <<-EOF &&
+	version 2
+	agent=FAKE
+	ls-refs=unborn
+	fetch=shallow wait-for-done
+	server-option
+	object-format=$(test_oid algo)
+	object-info
+	0000
+	EOF
+
+	GIT_PROTOCOL=version=2 \
+	GIT_USER_AGENT=FAKE \
+	git upload-pack --advertise-refs --show-service . >out 2>err &&
+
+	test-tool pkt-line unpack <out >actual &&
+	test_must_be_empty err &&
+	test_cmp actual expect
+'
+
+test_expect_success 'git receive-pack --advertise-refs --show-service: v2' '
+	# There is no v2 yet for receive-pack, implicit v0
+	cat >expect <<-EOF &&
+	$(git rev-parse HEAD) $(git symbolic-ref HEAD)
+	0000
+	EOF
+
+	GIT_PROTOCOL=version=2 \
+	git receive-pack --advertise-refs --show-service . >out 2>err &&
+
+	test-tool pkt-line unpack <out >actual &&
+	test_must_be_empty err &&
+	test_cmp actual expect
+'
+
 test_done
