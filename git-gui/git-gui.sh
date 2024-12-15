@@ -2273,6 +2273,7 @@ proc do_explore {} {
 # Open file relative to the working tree by the default associated app.
 proc do_file_open {file} {
 	global _gitworktree
+	if {[string index $file 0] eq {~}} {set file ./$file}
 	set explorer [get_explorer]
 	set full_file_path [file join $_gitworktree $file]
 	exec $explorer [file nativename $full_file_path] &
