@@ -71,6 +71,14 @@ endif::git-rev-list[]
 	Limit the commits output to ones that match all given `--grep`,
 	instead of ones that match at least one.
 
+--match-header-or-grep::
+	Limit the commits output to ones that match either header patterns
+	(`--author`, `--committer`, or `--grep-reflog`) or `--grep`, instead
+	of ones that match both the header and grep patterns
++
+For example, `--author=me --grep=Co-authored-by: me` limits to commits either
+authored or co-authored by me.
+
 --invert-grep::
 	Limit the commits output to ones with a log message that do not
 	match the pattern specified with `--grep=<pattern>`.
