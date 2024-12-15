@@ -8,6 +8,5 @@
 # To enable this hook, rename this file to "pre-merge-commit".
 
 . git-sh-setup
-test -x "$GIT_DIR/hooks/pre-commit" &&
-        exec "$GIT_DIR/hooks/pre-commit"
+[ -x "$GIT_DIR/hooks/pre-commit" ] && exec "$GIT_DIR/hooks/pre-commit"
 :

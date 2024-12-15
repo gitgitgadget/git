@@ -6,11 +6,9 @@
 #
 # To enable this hook, rename this file to "pre-receive".
 
-if test -n "$GIT_PUSH_OPTION_COUNT"
-then
+if [ -n "$GIT_PUSH_OPTION_COUNT" ]; then
 	i=0
-	while test "$i" -lt "$GIT_PUSH_OPTION_COUNT"
-	do
+	while [ "$i" -lt "$GIT_PUSH_OPTION_COUNT" ]; do
 		eval "value=\$GIT_PUSH_OPTION_$i"
 		case "$value" in
 		echoback=*)
