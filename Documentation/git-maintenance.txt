@@ -158,6 +158,19 @@ pack-refs::
 	need to iterate across many references. See linkgit:git-pack-refs[1]
 	for more information.
 
+prune-remote-refs::
+	The `prune-remote-refs` task runs `git remote prune` on each remote
+	repository registered in the local repository. This task helps clean
+	up deleted remote branches, improving the performance of operations
+	that iterate through the refs. See linkgit:git-remote[1] for more
+	information. This task is disabled by default.
++
+NOTE: This task is opt-in to prevent unexpected removal of remote refs
+for users of git-maintenance. It is recommended for power users who
+are comfortable with configuring maintenance tasks and understand the
+implications of automatic pruning. For others, running `git remote prune`
+manually might be more appropriate.
+
 OPTIONS
 -------
 --auto::
