@@ -2510,9 +2510,8 @@ static int do_pick_commit(struct repository *r,
 		*check_todo = !!(flags & EDIT_MSG);
 		if (!res && reword) {
 fast_forward_edit:
-			res = run_git_commit(NULL, opts, EDIT_MSG |
-					     VERIFY_MSG | AMEND_MSG |
-					     (flags & ALLOW_EMPTY));
+			flags = EDIT_MSG | VERIFY_MSG | AMEND_MSG | ALLOW_EMPTY;
+			res = run_git_commit(NULL, opts, flags);
 			*check_todo = 1;
 		}
 	}
