@@ -446,6 +446,50 @@ test_expect_success 'pack-refs task' '
 	test_subcommand git pack-refs --all --prune <pack-refs.txt
 '
 
+test_expect_success 'prune-remote-refs task not enabled by default' '
+	git clone . prune-test &&
+	(
+		cd prune-test &&
+		GIT_TRACE2_EVENT="$(pwd)/prune.txt" git maintenance run 2>err &&
+		test_subcommand ! git remote prune origin <prune.txt
+	)
+'
+
+test_expect_success 'prune-remote-refs task cleans stale remote refs' '
+	test_commit initial &&
+
+	# Create two separate remote repos
+	git clone . remote1 &&
+	git clone . remote2 &&
+
+	git clone . prune-test-clean &&
+	(
+		cd prune-test-clean &&
+		git config maintenance.prune-remote-refs.enabled true &&
+
+		# Add both remotes
+		git remote add remote1 "../remote1" &&
+		git remote add remote2 "../remote2" &&
+
+		# Create and push branches to both remotes
+		git branch -f side2 HEAD &&
+		git push remote1 side2 &&
+		git push remote2 side2 &&
+
+		# Rename branches in each remote to simulate a stale branch
+		git -C ../remote1 branch -m side2 side3 &&
+		git -C ../remote2 branch -m side2 side4 &&
+
+		GIT_TRACE2_EVENT="$(pwd)/prune.txt" git maintenance run --task=prune-remote-refs &&
+
+		# Verify pruning happened for both remotes
+		test_subcommand git remote prune remote1 <prune.txt &&
+		test_subcommand git remote prune remote2 <prune.txt &&
+		test_must_fail git rev-parse refs/remotes/remote1/side2 &&
+		test_must_fail git rev-parse refs/remotes/remote2/side2
+	)
+'
+
 test_expect_success '--auto and --schedule incompatible' '
 	test_must_fail git maintenance run --auto --schedule=daily 2>err &&
 	test_grep "at most one" err
