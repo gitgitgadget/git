@@ -18,7 +18,7 @@ SYNOPSIS
 		[-x <pattern>|--exclude=<pattern>]
 		[-X <file>|--exclude-from=<file>]
 		[--exclude-per-directory=<file>]
-		[--exclude-standard]
+		[--exclude-standard] [--exclude-links]
 		[--error-unmatch] [--with-tree=<tree-ish>]
 		[--full-name] [--recurse-submodules]
 		[--abbrev[=<n>]] [--format=<format>] [--] [<file>...]
@@ -127,6 +127,9 @@ OPTIONS
 --exclude-standard::
 	Add the standard Git exclusions: .git/info/exclude, .gitignore
 	in each directory, and the user's global exclusion file.
+
+--exclude-links::
+	Do not list symbolic links.
 
 --error-unmatch::
 	If any <file> does not appear in the index, treat this as an
