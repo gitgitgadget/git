@@ -433,7 +433,8 @@ static int keep_one_pack(struct string_list_item *item, void *data UNUSED)
 static void add_repack_all_option(struct gc_config *cfg,
 				  struct string_list *keep_pack)
 {
-	if (cfg->prune_expire && !strcmp(cfg->prune_expire, "now"))
+	if (cfg->prune_expire && !strcmp(cfg->prune_expire, "now")
+		&& !(cfg->cruft_packs && cfg->repack_expire_to))
 		strvec_push(&repack, "-a");
 	else if (cfg->cruft_packs) {
 		strvec_push(&repack, "--cruft");
