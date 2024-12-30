@@ -603,6 +603,23 @@ test_expect_success FUNNYNAMES '--batch-check, -Z with newline in input' '
 	test_cmp expect actual
 '
 
+test_expect_success FUNNYNAMES 'setup with curly braches in input' '
+	git branch "foo{bar" &&
+	git branch "foo@"
+'
+
+test_expect_success FUNNYNAMES 'object reference with curly brace' '
+	git cat-file -p "foo{bar:hello" >actual &&
+	git cat-file -p HEAD:hello >expect &&
+	test_cmp expect actual
+'
+
+test_expect_success FUNNYNAMES 'object reference with at-sign' '
+	git cat-file -p "foo@@{0}:hello" >actual &&
+	git cat-file -p HEAD:hello >expect &&
+	test_cmp expect actual
+'
+
 test_expect_success 'setup blobs which are likely to delta' '
 	test-tool genrandom foo 10240 >foo &&
 	{ cat foo && echo plus; } >foo-plus &&
