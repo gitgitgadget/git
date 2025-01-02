@@ -2184,7 +2184,7 @@ __git_log_gitk_options="
 # Options that go well for log and shortlog (not gitk)
 __git_log_shortlog_options="
 	--author= --committer= --grep=
-	--all-match --invert-grep
+	--all-match --invert-grep --match-header-or-grep
 "
 # Options accepted by log and show
 __git_log_show_options="

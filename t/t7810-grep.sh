@@ -971,6 +971,14 @@ test_expect_success 'log --grep --author uses intersection' '
 	test_cmp expect actual
 '
 
+test_expect_success 'log --grep --author --match-header-or-grep uses union' '
+	# grep matches only third and fourth
+	# author matches only initial and third
+	git log --author="A U Thor" --grep=r --match-header-or-grep --format=%s >actual &&
+	test_write_lines fourth third initial >expect &&
+	test_cmp expect actual
+'
+
 test_expect_success 'log --grep --grep --author takes union of greps and intersects with author' '
 	# grep matches initial and second but not third
 	# author matches only initial and third
@@ -981,7 +989,23 @@ test_expect_success 'log --grep --grep --author takes union of greps and interse
 	test_cmp expect actual
 '
 
-test_expect_success 'log ---all-match -grep --author --author still takes union of authors and intersects with grep' '
+test_expect_success 'log --author --grep --grep --match-header-or-grep takes union of greps and author' '
+	# grep matches initial and second but not third
+	# author matches only initial and third
+	git log --author="A U Thor" --grep=second --grep=initial --match-header-or-grep --format=%s >actual &&
+	test_write_lines third second initial >expect &&
+	test_cmp expect actual
+'
+
+test_expect_success 'log --author --grep --grep --all-match --match-header-or-grep still takes union of greps and author' '
+	# grep matches initial and second but not third
+	# author matches only initial and third
+	git log --author="A U Thor" --grep=second --grep=initial --all-match --match-header-or-grep --format=%s >actual &&
+	test_write_lines third second initial >expect &&
+	test_cmp expect actual
+'
+
+test_expect_success 'log --all-match --grep --author --author still takes union of authors and intersects with grep' '
 	# grep matches only initial and third
 	# author matches all but second
 	git log --all-match --author="Thor" --author="Night" --grep=i --format=%s >actual &&

@@ -805,7 +805,7 @@ void compile_grep_patterns(struct grep_opt *opt)
 
 	if (!opt->pattern_expression)
 		opt->pattern_expression = header_expr;
-	else if (opt->all_match)
+	else if (opt->all_match || opt->match_header_or_grep)
 		opt->pattern_expression = grep_splice_or(header_expr,
 							 opt->pattern_expression);
 	else
@@ -1843,7 +1843,7 @@ int grep_source(struct grep_opt *opt, struct grep_source *gs)
 	opt->body_hit = 0;
 	grep_source_1(opt, gs, 1);
 
-	if (opt->all_match && !chk_hit_marker(opt->pattern_expression))
+	if (!opt->match_header_or_grep && opt->all_match && !chk_hit_marker(opt->pattern_expression))
 		return 0;
 	if (opt->no_body_match && opt->body_hit)
 		return 0;
