@@ -573,9 +573,21 @@ static int git_unknown_cmd_config(const char *var, const char *value,
 		} else if (!strcmp(value, "prompt")) {
 			cfg->autocorrect = AUTOCORRECT_PROMPT;
 		} else {
-			int v = git_config_int(var, value, ctx->kvi);
-			cfg->autocorrect = (v < 0)
-				? AUTOCORRECT_IMMEDIATELY : v;
+			int is_bool;
+			int v = git_config_bool_or_int(var, value, ctx->kvi, &is_bool);
+			if (is_bool) {
+				if (v == 0) {
+					cfg->autocorrect = 0;
+				} else {
+					cfg->autocorrect = AUTOCORRECT_IMMEDIATELY;
+				}
+			} else {
+				if (v < 0 || v == 1) {
+					cfg->autocorrect = AUTOCORRECT_IMMEDIATELY;
+				} else {
+					cfg->autocorrect = v;
+				}
+			}
 		}
 	}
 	/* Also use aliases for command lookup */
