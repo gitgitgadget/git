@@ -16,7 +16,9 @@ help.autoCorrect::
 deciseconds (0.1 sec).
 	 - "immediate": run the suggested command immediately.
 	 - "prompt": show the suggestion and prompt for confirmation to run
-the command.
+the command. The default choice at the prompt is "No"
+	 - "prompt-yes": show the suggestion and prompt for confirmation to run
+the command. The default choice at the prompt is "Yes"
 	 - "never": don't run or show any suggested command.
 
 help.htmlPath::
