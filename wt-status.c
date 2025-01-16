@@ -1342,9 +1342,11 @@ static int split_commit_in_progress(struct wt_status *s)
 
 /*
  * Turn
- * "pick d6a2f0303e897ec257dd0e0a39a5ccb709bc2047 some message"
+ * "pick d6a2f0303e897ec257dd0e0a39a5ccb709bc2047 some message" and
+ * "merge -C d6a2f0303e897ec257dd0e0a39a5ccb709bc2047 some-branch"
  * into
- * "pick d6a2f03 some message"
+ * "pick d6a2f03 some message" and
+ * "merge -C d6a2f03 some-branch"
  *
  * The function assumes that the line does not contain useless spaces
  * before or after the command.
@@ -1360,20 +1362,31 @@ static void abbrev_oid_in_line(struct strbuf *line)
 	    starts_with(line->buf, "l "))
 		return;
 
-	split = strbuf_split_max(line, ' ', 3);
+	split = strbuf_split_max(line, ' ', 4);
 	if (split[0] && split[1]) {
 		struct object_id oid;
+		struct strbuf *hash;
 
+		if ((!strcmp(split[0]->buf, "merge ") ||
+		     !strcmp(split[0]->buf, "m "    ) ||
+		     !strcmp(split[0]->buf, "fixup ") ||
+		     !strcmp(split[0]->buf, "f "    )) &&
+		    (!strcmp(split[1]->buf, "-C ") ||
+		     !strcmp(split[1]->buf, "-c "))) {
+			hash = split[2];
+		} else {
+			hash = split[1];
+		}
 		/*
 		 * strbuf_split_max left a space. Trim it and re-add
 		 * it after abbreviation.
 		 */
-		strbuf_trim(split[1]);
-		if (!repo_get_oid(the_repository, split[1]->buf, &oid)) {
-			strbuf_reset(split[1]);
-			strbuf_add_unique_abbrev(split[1], &oid,
+		strbuf_trim(hash);
+		if (!repo_get_oid(the_repository, hash->buf, &oid)) {
+			strbuf_reset(hash);
+			strbuf_add_unique_abbrev(hash, &oid,
 						 DEFAULT_ABBREV);
-			strbuf_addch(split[1], ' ');
+			strbuf_addch(hash, ' ');
 			strbuf_reset(line);
 			for (i = 0; split[i]; i++)
 				strbuf_addbuf(line, split[i]);
