@@ -3405,6 +3405,13 @@ static int collect_renames(struct merge_options *opt,
 			continue;
 		}
 
+		if (opt->detect_directory_renames == MERGE_DIRECTORY_RENAMES_NONE &&
+		    p->status == 'R') {
+			possibly_cache_new_pair(renames, p, side_index, NULL);
+			pool_diff_free_filepair(&opt->priv->pool, p);
+			continue;
+		}
+
 		new_path = check_for_directory_rename(opt, p->two->path,
 						      side_index,
 						      dir_renames_for_side,
