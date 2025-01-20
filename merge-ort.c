@@ -403,6 +403,9 @@ struct merge_options_internal {
 	/* call_depth: recursion level counter for merging merge bases */
 	int call_depth;
 
+	/* vmb_favor: preferred resolution variant for virtual merge base */
+	unsigned vmb_favor;
+
 	/* field that holds submodule conflict information */
 	struct string_list conflicted_submodules;
 };
@@ -2072,7 +2075,7 @@ static int merge_3way(struct merge_options *opt,
 
 	if (opt->priv->call_depth) {
 		ll_opts.virtual_ancestor = 1;
-		ll_opts.variant = 0;
+		ll_opts.variant = opt->priv->vmb_favor;
 	} else {
 		switch (opt->recursive_variant) {
 		case MERGE_VARIANT_OURS:
@@ -5218,6 +5221,17 @@ static void merge_ort_internal(struct merge_options *opt,
 		ancestor_name = "empty tree";
 	} else if (merge_bases) {
 		ancestor_name = "merged common ancestors";
+		/*
+		 * If there were more than two virtual merge bases, we just
+		 * fall back to our virtual merge base having conflict markers
+		 * between versions.  But if there are only two, then we can
+		 * resolve conflicts by taking the version from the merge
+		 * base of our merge bases.
+		 */
+		if (merge_bases->next)
+			opt->priv->vmb_favor = 0;
+		else
+			opt->priv->vmb_favor = XDL_MERGE_FAVOR_BASE;
 	} else if (opt->ancestor) {
 		ancestor_name = opt->ancestor;
 	} else {
