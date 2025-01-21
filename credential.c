@@ -285,9 +285,13 @@ static int credential_getpass(struct repository *r, struct credential *c)
 	if (!c->username)
 		c->username = credential_ask_one("Username", c,
 						 PROMPT_ASKPASS|PROMPT_ECHO);
-	if (!c->password)
+	if (!c->password) {
+		if (c->helpers.nr >= 1 && starts_with(c->helpers.items[0].string, "store"))
+			warning("git-credential-store saves passwords unencrypted on disk. For alternatives, see gitcredentials(7).");
+
 		c->password = credential_ask_one("Password", c,
 						 PROMPT_ASKPASS);
+	}
 	trace2_region_leave("credential", "interactive", r);
 
 	return 0;
