@@ -1744,6 +1744,7 @@ int wt_status_check_rebase(const struct worktree *wt,
 			   struct wt_status_state *state)
 {
 	struct stat st;
+	struct string_list have_done = STRING_LIST_INIT_DUP;
 
 	if (!stat(worktree_git_path(the_repository, wt, "rebase-apply"), &st)) {
 		if (!stat(worktree_git_path(the_repository, wt, "rebase-apply/applying"), &st)) {
@@ -1760,8 +1761,12 @@ int wt_status_check_rebase(const struct worktree *wt,
 			state->rebase_interactive_in_progress = 1;
 		else
 			state->rebase_in_progress = 1;
+		read_rebase_todolist("rebase-merge/done", &have_done);
+		if (have_done.nr > 0 && starts_with(have_done.items[have_done.nr - 1].string, "merge"))
+				state->merge_during_rebase_in_progress = 1;
 		state->branch = get_branch(wt, "rebase-merge/head-name");
 		state->onto = get_branch(wt, "rebase-merge/onto");
+		string_list_clear(&have_done, 0);
 	} else
 		return 0;
 	return 1;
@@ -1855,10 +1860,15 @@ static void wt_longstatus_print_state(struct wt_status *s)
 
 	if (state->merge_in_progress) {
 		if (state->rebase_interactive_in_progress) {
-			show_rebase_information(s, state_color);
-			fputs("\n", s->fp);
-		}
-		show_merge_in_progress(s, state_color);
+			if (state->merge_during_rebase_in_progress)
+				show_rebase_in_progress(s, state_color);
+			else {
+				show_rebase_information(s, state_color);
+				fputs("\n", s->fp);
+				show_merge_in_progress(s, state_color);
+			}
+		} else
+			show_merge_in_progress(s, state_color);
 	} else if (state->am_in_progress)
 		show_am_in_progress(s, state_color);
 	else if (state->rebase_in_progress || state->rebase_interactive_in_progress)
