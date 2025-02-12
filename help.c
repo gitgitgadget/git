@@ -552,6 +552,7 @@ struct help_unknown_cmd_config {
 	struct cmdnames aliases;
 };
 
+#define AUTOCORRECT_PROMPT_YES (-4)
 #define AUTOCORRECT_PROMPT (-3)
 #define AUTOCORRECT_NEVER (-2)
 #define AUTOCORRECT_IMMEDIATELY (-1)
@@ -572,6 +573,8 @@ static int git_unknown_cmd_config(const char *var, const char *value,
 			cfg->autocorrect = AUTOCORRECT_IMMEDIATELY;
 		} else if (!strcmp(value, "prompt")) {
 			cfg->autocorrect = AUTOCORRECT_PROMPT;
+		} else if (!strcmp(value, "prompt-yes")) {
+			cfg->autocorrect = AUTOCORRECT_PROMPT_YES;
 		} else {
 			int v = git_config_int(var, value, ctx->kvi);
 			cfg->autocorrect = (v < 0)
@@ -628,6 +631,9 @@ char *help_unknown_cmd(const char *cmd)
 	 */
 	if ((cfg.autocorrect == AUTOCORRECT_PROMPT) && (!isatty(0) || !isatty(2)))
 		cfg.autocorrect = AUTOCORRECT_NEVER;
+
+	if ((cfg.autocorrect == AUTOCORRECT_PROMPT_YES) && (!isatty(0) || !isatty(2)))
+		cfg.autocorrect = AUTOCORRECT_IMMEDIATELY;
 
 	if (cfg.autocorrect == AUTOCORRECT_NEVER) {
 		fprintf_ln(stderr, _("git: '%s' is not a git command. See 'git --help'."), cmd);
@@ -715,6 +721,15 @@ char *help_unknown_cmd(const char *cmd)
 			strbuf_release(&msg);
 			if (!(starts_with(answer, "y") ||
 			      starts_with(answer, "Y")))
+				exit(1);
+		} else if (cfg.autocorrect == AUTOCORRECT_PROMPT_YES) {
+			char *answer;
+			struct strbuf msg = STRBUF_INIT;
+			strbuf_addf(&msg, _("Run '%s' instead [Y/n]? "), assumed);
+			answer = git_prompt(msg.buf, PROMPT_ECHO);
+			strbuf_release(&msg);
+			if (starts_with(answer, "n") ||
+			      starts_with(answer, "N"))
 				exit(1);
 		} else {
 			fprintf_ln(stderr,
