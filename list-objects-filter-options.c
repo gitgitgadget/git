@@ -28,6 +28,8 @@ const char *list_object_filter_config_name(enum list_objects_filter_choice c)
 		return "tree";
 	case LOFC_SPARSE_OID:
 		return "sparse:oid";
+	case LOFC_SPARSE_BUFFER:
+		return "sparse:buffer";
 	case LOFC_OBJECT_TYPE:
 		return "object:type";
 	case LOFC_COMBINE:
@@ -82,6 +84,11 @@ int gently_parse_list_objects_filter(
 				_("sparse:path filters support has been dropped"));
 		}
 		return 1;
+
+	} else if (skip_prefix(arg, "sparse:buffer=", &v0)) {
+		filter_options->spec_buffer = xstrdup(v0);
+		filter_options->choice = LOFC_SPARSE_BUFFER;
+		return 0;
 
 	} else if (skip_prefix(arg, "object:type=", &v0)) {
 		int type = type_from_string_gently(v0, strlen(v0), 1);
@@ -322,6 +329,7 @@ void list_objects_filter_release(
 		return;
 	strbuf_release(&filter_options->filter_spec);
 	free(filter_options->sparse_oid_name);
+	free(filter_options->spec_buffer);
 	for (sub = 0; sub < filter_options->sub_nr; sub++)
 		list_objects_filter_release(&filter_options->sub[sub]);
 	free(filter_options->sub);

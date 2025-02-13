@@ -436,6 +436,9 @@ test_expect_success 'setup src repo for sparse filter' '
 	git -C sparse-src config --local uploadpack.allowanysha1inwant 1 &&
 	test_commit -C sparse-src one &&
 	test_commit -C sparse-src two &&
+	mkdir sparse-src/three &&
+	test_commit -C sparse-src/three four &&
+	test_commit -C sparse-src/three five &&
 	echo /one.t >sparse-src/only-one &&
 	git -C sparse-src add . &&
 	git -C sparse-src commit -m "add sparse checkout files"
@@ -464,6 +467,86 @@ test_expect_success 'partial clone with unresolvable sparse filter fails cleanly
 				 --filter=sparse:oid=main \
 				 sparse-src dst.git 2>err &&
 	test_grep "unable to parse sparse filter data in" err
+'
+
+test_expect_success 'partial clone with sparse:buffer filter with single file succeeds' '
+	rm -rf dst.git &&
+	git clone --no-local --bare \
+		  --filter=sparse:buffer=one.t \
+		  sparse-src dst.git &&
+	(
+		cd dst.git &&
+		git rev-list --objects --missing=print HEAD >out &&
+		grep "^$(git rev-parse HEAD:one.t)" out &&
+		grep "^?$(git rev-parse HEAD:two.t)" out &&
+		grep "^?$(git rev-parse HEAD:three/four.t)" out &&
+		grep "^?$(git rev-parse HEAD:three/five.t)" out
+	)
+'
+
+test_expect_success 'partial clone with sparse:buffer filter with single dir succeeds' '
+	rm -rf dst.git &&
+	git clone --no-local --bare \
+		  --filter=sparse:buffer=three \
+		  sparse-src dst.git &&
+	(
+		cd dst.git &&
+		git rev-list --objects --missing=print HEAD >out &&
+		grep "^?$(git rev-parse HEAD:one.t)" out &&
+		grep "^?$(git rev-parse HEAD:two.t)" out &&
+		grep "^$(git rev-parse HEAD:three/four.t)" out &&
+		grep "^$(git rev-parse HEAD:three/five.t)" out
+	)
+'
+
+test_expect_success 'partial clone with sparse:buffer filter with filterspec file succeeds' '
+	test_write_lines one.t three > filterspec &&
+	rm -rf dst.git &&
+	git clone --no-local --bare \
+		  --filter="sparse:buffer=`cat filterspec`" \
+		  sparse-src dst.git &&
+	(
+		cd dst.git &&
+		git rev-list --objects --missing=print HEAD >out &&
+		grep "^$(git rev-parse HEAD:one.t)" out &&
+		grep "^?$(git rev-parse HEAD:two.t)" out &&
+		grep "^$(git rev-parse HEAD:three/four.t)" out &&
+		grep "^$(git rev-parse HEAD:three/five.t)" out
+	)
+'
+
+test_expect_success 'partial clone with sparse:buffer filter with filterspec file and special character' '
+	cat >filterspec <<-EOF &&
+	three
+	!three/four.t
+	EOF
+	rm -rf dst.git &&
+	git clone --no-local --bare \
+		  --filter="sparse:buffer=`cat filterspec`" \
+		  sparse-src dst.git &&
+	(
+		cd dst.git &&
+		git rev-list --objects --missing=print HEAD >out &&
+		grep "^?$(git rev-parse HEAD:one.t)" out &&
+		grep "^?$(git rev-parse HEAD:two.t)" out &&
+		grep "^?$(git rev-parse HEAD:three/four.t)" out &&
+		grep "^$(git rev-parse HEAD:three/five.t)" out
+	)
+'
+
+test_expect_success 'partial clone with sparse:buffer filter with unknown filterspec' '
+	rm -rf dst.git &&
+	git clone --no-local --bare \
+		  --filter=sparse:buffer=unknown \
+		  sparse-src dst.git &&
+	(
+		cd dst.git &&
+		git rev-list --objects --missing=print HEAD >out &&
+		grep "^?$(git rev-parse HEAD:one.t)" out &&
+		grep "^?$(git rev-parse HEAD:two.t)" out &&
+		grep "^?$(git rev-parse HEAD:three/four.t)" out &&
+		grep "^?$(git rev-parse HEAD:three/five.t)" out
+	)
 '
 
 setup_triangle () {
