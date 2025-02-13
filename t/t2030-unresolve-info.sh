@@ -32,6 +32,31 @@ check_resolve_undo () {
 	test_cmp "$msg.expect" "$msg.actual"
 }
 
+check_resolve_undo_object_only() {
+	msg=$1
+	shift
+	while case $# in
+	0)	break ;;
+	1|2|3)	BUG "wrong arguments" ;;
+	esac
+	do
+		path=$1
+		shift
+		for stage in 1 2 3
+		do
+			sha1=$1
+			shift
+			case "$sha1" in
+			'') continue ;;
+			esac
+			sha1=$(git rev-parse --verify "$sha1") &&
+			printf "%s\n" $sha1
+		done
+	done >"$msg.expect" &&
+	git ls-files --resolve-undo --object-only >"$msg.actual" &&
+	test_cmp "$msg.expect" "$msg.actual"
+}
+
 prime_resolve_undo () {
 	git reset --hard &&
 	git checkout second^0 &&
@@ -300,6 +325,14 @@ test_expect_success 'resolve-undo keeps blobs from gc' '
 	test_must_fail git cat-file -e $B1 &&
 	test_must_fail git cat-file -e $B2 &&
 	test_must_fail git cat-file -e $B3
+'
+
+test_expect_success '--resolve-undo with --object-only' '
+	prime_resolve_undo &&
+	check_resolve_undo_object_only kept fi/le initial:fi/le second:fi/le third:fi/le &&
+	git checkout second^0 &&
+	echo switching clears &&
+	check_resolve_undo cleared
 '
 
 test_done
