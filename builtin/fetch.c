@@ -84,7 +84,7 @@ static int prune_tags = -1; /* unspecified */
 
 static int append, dry_run, force, keep, update_head_ok;
 static int write_fetch_head = 1;
-static int verbosity, deepen_relative, set_upstream, refetch;
+static int verbosity, deepen_relative, set_upstream, refetch, must_filter;
 static int progress = -1;
 static int tags = TAGS_DEFAULT, update_shallow, deepen;
 static int atomic_fetch;
@@ -1508,6 +1508,9 @@ static struct transport *prepare_transport(struct remote *remote, int deepen)
 	transport = transport_get(remote, NULL);
 	transport_set_verbosity(transport, verbosity, progress);
 	transport->family = family;
+	if (transport->smart_options) {
+		transport->smart_options->must_filter = must_filter;
+	}
 	if (upload_pack)
 		set_option(transport, TRANS_OPT_UPLOADPACK, upload_pack);
 	if (keep)
@@ -2322,6 +2325,8 @@ int cmd_fetch(int argc,
 			 N_("append to .git/FETCH_HEAD instead of overwriting")),
 		OPT_BOOL(0, "atomic", &atomic_fetch,
 			 N_("use atomic transaction to update references")),
+		OPT_BOOL(0, "must-filter", &must_filter,
+			 N_("error on filter not supported by server")),
 		OPT_STRING(0, "upload-pack", &upload_pack, N_("path"),
 			   N_("path to upload pack on remote end")),
 		OPT__FORCE(&force, N_("force overwrite of local reference"), 0),
