@@ -700,7 +700,7 @@ enum commit_msg_cleanup_mode get_cleanup_mode(const char *cleanup_arg,
 		return use_editor ? COMMIT_MSG_CLEANUP_SCISSORS :
 				    COMMIT_MSG_CLEANUP_SPACE;
 	else
-		die(_("Invalid cleanup mode %s"), cleanup_arg);
+		die(_("invalid cleanup mode %s"), cleanup_arg);
 }
 
 /*
@@ -4662,17 +4662,17 @@ static void create_autostash_internal(struct repository *r,
 		stash.no_stdin = 1;
 		strbuf_reset(&buf);
 		if (capture_command(&stash, &buf, GIT_MAX_HEXSZ))
-			die(_("Cannot autostash"));
+			die(_("cannot autostash"));
 		strbuf_trim_trailing_newline(&buf);
 		if (repo_get_oid(r, buf.buf, &oid))
-			die(_("Unexpected stash response: '%s'"),
+			die(_("unexpected stash response: '%s'"),
 			    buf.buf);
 		strbuf_reset(&buf);
 		strbuf_add_unique_abbrev(&buf, &oid, DEFAULT_ABBREV);
 
 		if (path) {
 			if (safe_create_leading_directories_const(path))
-				die(_("Could not create directory for '%s'"),
+				die(_("could not create directory for '%s'"),
 				    path);
 			write_file(path, "%s", oid_to_hex(&oid));
 		} else {

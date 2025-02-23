@@ -132,7 +132,7 @@ const char *write_idx_file(const struct git_hash_algo *hash_algo,
 		hashwrite(f, obj->oid.hash, hash_algo->rawsz);
 		if ((opts->flags & WRITE_IDX_STRICT) &&
 		    (i && oideq(&list[-2]->oid, &obj->oid)))
-			die("The same object %s appears twice in the pack",
+			die("the same object %s appears twice in the pack",
 			    oid_to_hex(&obj->oid));
 	}
 
@@ -404,15 +404,15 @@ void fixup_pack_header_footer(const struct git_hash_algo *hash_algo,
 	hash_algo->init_fn(&new_hash_ctx);
 
 	if (lseek(pack_fd, 0, SEEK_SET) != 0)
-		die_errno("Failed seeking to start of '%s'", pack_name);
+		die_errno("failed seeking to start of '%s'", pack_name);
 	read_result = read_in_full(pack_fd, &hdr, sizeof(hdr));
 	if (read_result < 0)
-		die_errno("Unable to reread header of '%s'", pack_name);
+		die_errno("unable to reread header of '%s'", pack_name);
 	else if (read_result != sizeof(hdr))
-		die_errno("Unexpected short read for header of '%s'",
+		die_errno("unexpected short read for header of '%s'",
 			  pack_name);
 	if (lseek(pack_fd, 0, SEEK_SET) != 0)
-		die_errno("Failed seeking to start of '%s'", pack_name);
+		die_errno("failed seeking to start of '%s'", pack_name);
 	git_hash_update(&old_hash_ctx, &hdr, sizeof(hdr));
 	hdr.hdr_entries = htonl(object_count);
 	git_hash_update(&new_hash_ctx, &hdr, sizeof(hdr));
@@ -429,7 +429,7 @@ void fixup_pack_header_footer(const struct git_hash_algo *hash_algo,
 		if (!n)
 			break;
 		if (n < 0)
-			die_errno("Failed to checksum '%s'", pack_name);
+			die_errno("failed to checksum '%s'", pack_name);
 		git_hash_update(&new_hash_ctx, buf, n);
 
 		aligned_sz -= n;
@@ -446,7 +446,7 @@ void fixup_pack_header_footer(const struct git_hash_algo *hash_algo,
 			git_hash_final(hash, &old_hash_ctx);
 			if (!hasheq(hash, partial_pack_hash,
 				    hash_algo))
-				die("Unexpected checksum for %s "
+				die("unexpected checksum for %s "
 				    "(disk corruption?)", pack_name);
 			/*
 			 * Now let's compute the SHA1 of the remainder of the

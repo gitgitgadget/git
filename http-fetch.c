@@ -83,7 +83,7 @@ static void fetch_single_packfile(struct object_id *packfile_hash,
 			}
 		}
 	} else {
-		die("Unable to start request");
+		die("unable to start request");
 	}
 
 	if ((ret = finish_http_pack_request(preq)))

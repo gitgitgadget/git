@@ -1389,7 +1389,7 @@ static int read_rebase_todolist(const char *fname, struct string_list *lines)
 	if (!f) {
 		if (errno == ENOENT)
 			return -1;
-		die_errno("Could not open file %s for reading",
+		die_errno("could not open file %s for reading",
 			  git_path("%s", fname));
 	}
 	while (!strbuf_getline_lf(&line, f)) {

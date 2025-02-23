@@ -1260,7 +1260,7 @@ off_t get_delta_base(struct packed_git *p,
 		base_offset = find_pack_entry_one(&oid, p);
 		*curpos += p->repo->hash_algo->rawsz;
 	} else
-		die("I am totally screwed");
+		die("i am totally screwed");
 	return base_offset;
 }
 

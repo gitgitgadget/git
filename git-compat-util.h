@@ -1291,7 +1291,7 @@ static inline char *xstrdup_or_null(const char *str)
 static inline size_t xsize_t(off_t len)
 {
 	if (len < 0 || (uintmax_t) len > SIZE_MAX)
-		die("Cannot handle files this big");
+		die("cannot handle files this big");
 	return (size_t) len;
 }
 

@@ -158,7 +158,7 @@ void bitmap_writer_build_type_index(struct bitmap_writer *writer,
 			break;
 
 		default:
-			die("Missing type information for %s (%d/%d)",
+			die("missing type information for %s (%d/%d)",
 			    oid_to_hex(&entry->idx.oid), real_type,
 			    oe_type(entry));
 		}
@@ -765,7 +765,7 @@ static int hashwrite_ewah_helper(void *f, const void *buf, size_t len)
 static inline void dump_bitmap(struct hashfile *f, struct ewah_bitmap *bitmap)
 {
 	if (ewah_serialize_to(bitmap, hashwrite_ewah_helper, f) < 0)
-		die("Failed to write bitmap index");
+		die("failed to write bitmap index");
 }
 
 static const struct object_id *oid_access(size_t pos, const void *table)

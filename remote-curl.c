@@ -523,7 +523,7 @@ static struct discovery *discover_refs(const char *service, int for_push)
 		    transport_anonymize_url(url.buf));
 	case HTTP_NOAUTH:
 		show_http_message(&type, &charset, &buffer);
-		die(_("Authentication failed for '%s'"),
+		die(_("authentication failed for '%s'"),
 		    transport_anonymize_url(url.buf));
 	case HTTP_NOMATCHPUBLICKEY:
 		show_http_message(&type, &charset, &buffer);

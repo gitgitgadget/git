@@ -889,7 +889,7 @@ static char *cram(const char *challenge_64 UNUSED,
 		  const char *user UNUSED,
 		  const char *pass UNUSED)
 {
-	die("If you want to use CRAM-MD5 authenticate method, "
+	die("if you want to use CRAM-MD5 authenticate method, "
 	    "you have to build git-imap-send with OpenSSL library.");
 }
 

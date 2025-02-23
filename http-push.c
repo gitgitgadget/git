@@ -1561,7 +1561,7 @@ static void fetch_symref(const char *path, char **symref, struct object_id *oid)
 	const char *name;
 
 	if (http_get_strbuf(url, &buffer, NULL) != HTTP_OK)
-		die("Couldn't get %s for remote symref\n%s", url,
+		die("couldn't get %s for remote symref\n%s", url,
 		    curl_errorstr);
 	free(url);
 
@@ -1779,7 +1779,7 @@ int cmd_main(int argc, const char **argv)
 		usage(http_push_usage);
 
 	if (delete_branch && rs.nr != 1)
-		die("You must specify only one branch name when deleting a remote branch");
+		die("you must specify only one branch name when deleting a remote branch");
 
 	setup_git_directory();
 

@@ -1214,7 +1214,7 @@ static CURL *get_curl_handle(void)
 		}
 
 		if (!proxy_auth.host)
-			die("Invalid proxy URL '%s'", curl_http_proxy);
+			die("invalid proxy URL '%s'", curl_http_proxy);
 
 		strbuf_addstr(&proxy, proxy_auth.host);
 		if (proxy_auth.path) {
@@ -1224,11 +1224,11 @@ static CURL *get_curl_handle(void)
 				die("libcurl 7.84 or later is required to support paths in proxy URLs");
 
 			if (!starts_with(proxy_auth.protocol, "socks"))
-				die("Invalid proxy URL '%s': only SOCKS proxies support paths",
+				die("invalid proxy URL '%s': only SOCKS proxies support paths",
 				    curl_http_proxy);
 
 			if (strcasecmp(proxy_auth.host, "localhost"))
-				die("Invalid proxy URL '%s': host must be localhost if a path is present",
+				die("invalid proxy URL '%s': host must be localhost if a path is present",
 				    curl_http_proxy);
 
 			strbuf_addch(&proxy, '/');
@@ -1291,11 +1291,11 @@ void http_init(struct remote *remote, const char *url, int proactive_auth)
 				strbuf_addf(&buf, "\n\t%s", backends[i]->name);
 			die("%s", buf.buf);
 		case CURLSSLSET_NO_BACKENDS:
-			die(_("Could not set SSL backend to '%s': "
+			die(_("could not set SSL backend to '%s': "
 			      "cURL was built without SSL backends"),
 			    http_ssl_backend);
 		case CURLSSLSET_TOO_LATE:
-			die(_("Could not set SSL backend to '%s': already set"),
+			die(_("could not set SSL backend to '%s': already set"),
 			    http_ssl_backend);
 		case CURLSSLSET_OK:
 			break; /* Okay! */

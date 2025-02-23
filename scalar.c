@@ -60,7 +60,7 @@ static void setup_enlistment_directory(int argc, const char **argv,
 	setup_git_directory();
 
 	if (!the_repository->worktree)
-		die(_("Scalar enlistments require a worktree"));
+		die(_("scalar enlistments require a worktree"));
 
 	if (enlistment_root) {
 		if (enlistment_is_repo_parent)
@@ -222,7 +222,7 @@ static int add_or_remove_enlistment(int add)
 	int res;
 
 	if (!the_repository->worktree)
-		die(_("Scalar enlistments require a worktree"));
+		die(_("scalar enlistments require a worktree"));
 
 	res = run_git("config", "--global", "--get", "--fixed-value",
 		      "scalar.repo", the_repository->worktree, NULL);

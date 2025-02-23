@@ -1058,11 +1058,11 @@ struct commit *get_fork_point(const char *refname, struct commit *commit)
 	switch (repo_dwim_ref(the_repository, refname, strlen(refname), &oid,
 			      &full_refname, 0)) {
 	case 0:
-		die("No such ref: '%s'", refname);
+		die("no such ref: '%s'", refname);
 	case 1:
 		break; /* good */
 	default:
-		die("Ambiguous refname: '%s'", refname);
+		die("ambiguous refname: '%s'", refname);
 	}
 
 	memset(&revs, 0, sizeof(revs));
@@ -1343,14 +1343,14 @@ void verify_merge_signature(struct commit *commit, int verbosity,
 	switch (signature_check.result) {
 	case 'G':
 		if (ret || (check_trust && signature_check.trust_level < TRUST_MARGINAL))
-			die(_("Commit %s has an untrusted GPG signature, "
+			die(_("commit %s has an untrusted GPG signature, "
 			      "allegedly by %s."), hex, signature_check.signer);
 		break;
 	case 'B':
-		die(_("Commit %s has a bad GPG signature "
+		die(_("commit %s has a bad GPG signature "
 		      "allegedly by %s."), hex, signature_check.signer);
 	default: /* 'N' */
-		die(_("Commit %s does not have a GPG signature."), hex);
+		die(_("commit %s does not have a GPG signature."), hex);
 	}
 	if (verbosity >= 0 && signature_check.result == 'G')
 		printf(_("Commit %s has a good GPG signature by %s\n"),
