@@ -88,7 +88,7 @@ void oidset_parse_file_carefully(struct oidset *set, const char *path,
 		oidset_insert(set, &oid);
 	}
 	if (ferror(fp))
-		die_errno("Could not read '%s'", path);
+		die_errno("could not read '%s'", path);
 	fclose(fp);
 	strbuf_release(&sb);
 }

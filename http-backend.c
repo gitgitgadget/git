@@ -193,7 +193,7 @@ static void send_local_file(struct strbuf *hdr, const char *the_type,
 	if (fd < 0)
 		not_found(hdr, "Cannot open '%s': %s", p, strerror(errno));
 	if (fstat(fd, &sb) < 0)
-		die_errno("Cannot stat '%s'", p);
+		die_errno("cannot stat '%s'", p);
 
 	hdr_int(hdr, content_length, sb.st_size);
 	hdr_str(hdr, content_type, the_type);
@@ -203,7 +203,7 @@ static void send_local_file(struct strbuf *hdr, const char *the_type,
 	for (;;) {
 		ssize_t n = xread(fd, buf, buf_alloc);
 		if (n < 0)
-			die_errno("Cannot read '%s'", p);
+			die_errno("cannot read '%s'", p);
 		if (!n)
 			break;
 		write_or_die(1, buf, n);
@@ -459,7 +459,7 @@ static void pipe_fixed_length(const char *prog_name, int out, size_t req_len)
 		size_t chunk_length = remaining_len > sizeof(buf) ? sizeof(buf) : remaining_len;
 		ssize_t n = xread(0, buf, chunk_length);
 		if (n < 0)
-			die_errno("Reading request failed");
+			die_errno("reading request failed");
 		write_to_child(out, buf, n, prog_name);
 		remaining_len -= n;
 	}
@@ -713,7 +713,7 @@ static char* getdir(void)
 	} else if (path && *path) {
 		return xstrdup(path);
 	} else
-		die("No GIT_PROJECT_ROOT or PATH_TRANSLATED from server");
+		die("no GIT_PROJECT_ROOT or PATH_TRANSLATED from server");
 	return NULL;
 }
 
@@ -768,7 +768,7 @@ int cmd_main(int argc UNUSED, const char **argv UNUSED)
 	set_die_is_recursing_routine(die_webcgi_recursing);
 
 	if (!method)
-		die("No REQUEST_METHOD from server");
+		die("no REQUEST_METHOD from server");
 	if (!strcmp(method, "HEAD"))
 		method = "GET";
 	dir = getdir();
@@ -780,7 +780,7 @@ int cmd_main(int argc UNUSED, const char **argv UNUSED)
 		int ret;
 
 		if (regcomp(&re, c->pattern, REG_EXTENDED))
-			die("Bogus regex in service table: %s", c->pattern);
+			die("bogus regex in service table: %s", c->pattern);
 		ret = regexec(&re, dir, 1, out, 0);
 		regfree(&re);
 

@@ -1748,7 +1748,7 @@ const char *setup_git_directory_gently(int *nongit_ok)
 		*nongit_ok = 0;
 
 	if (strbuf_getcwd(&cwd))
-		die_errno(_("Unable to read current working directory"));
+		die_errno(_("unable to read current working directory"));
 	strbuf_addbuf(&dir, &cwd);
 
 	switch (setup_git_directory_gently_1(&dir, &gitdir, &report, 1)) {

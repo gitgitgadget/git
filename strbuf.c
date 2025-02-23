@@ -662,7 +662,7 @@ int strbuf_getwholeline(struct strbuf *sb, FILE *fp, int term)
 	 * enough to hold a single line of input, anyway.
 	 */
 	if (errno == ENOMEM)
-		die("Out of memory, getdelim failed");
+		die("out of memory, getdelim failed");
 
 	/*
 	 * Restore strbuf invariants; if getdelim left us with a NULL pointer,

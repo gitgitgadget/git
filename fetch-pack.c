@@ -125,7 +125,7 @@ static void for_each_cached_alternate(struct fetch_negotiator *negotiator,
 
 static void die_in_commit_graph_only(const struct object_id *oid)
 {
-	die(_("You are attempting to fetch %s, which is in the commit graph file but not in the object database.\n"
+	die(_("you are attempting to fetch %s, which is in the commit graph file but not in the object database.\n"
 	      "This is probably due to repo corruption.\n"
 	      "If you are attempting to repair this repo corruption by refetching the missing object, use 'git fetch --refetch' with the missing object."),
 	      oid_to_hex(oid));
@@ -1128,7 +1128,7 @@ static struct ref *do_fetch_pack(struct fetch_pack_args *args,
 	if (server_supports("shallow"))
 		print_verbose(args, _("Server supports %s"), "shallow");
 	else if (args->depth > 0 || is_repository_shallow(r))
-		die(_("Server does not support shallow clients"));
+		die(_("server does not support shallow clients"));
 	if (args->depth > 0 || args->deepen_since || args->deepen_not)
 		args->deepen = 1;
 	if (server_supports("multi_ack_detailed")) {
@@ -1188,18 +1188,18 @@ static struct ref *do_fetch_pack(struct fetch_pack_args *args,
 		print_verbose(args, _("Server supports %s"), "deepen-since");
 		deepen_since_ok = 1;
 	} else if (args->deepen_since)
-		die(_("Server does not support --shallow-since"));
+		die(_("server does not support --shallow-since"));
 	if (server_supports("deepen-not")) {
 		print_verbose(args, _("Server supports %s"), "deepen-not");
 		deepen_not_ok = 1;
 	} else if (args->deepen_not)
-		die(_("Server does not support --shallow-exclude"));
+		die(_("server does not support --shallow-exclude"));
 	if (server_supports("deepen-relative"))
 		print_verbose(args, _("Server supports %s"), "deepen-relative");
 	else if (args->deepen_relative)
-		die(_("Server does not support --deepen"));
+		die(_("server does not support --deepen"));
 	if (!server_supports_hash(the_hash_algo->name, NULL))
-		die(_("Server does not support this repository's object format"));
+		die(_("server does not support this repository's object format"));
 
 	mark_complete_and_common_ref(negotiator, args, &ref);
 	filter_refs(args, &ref, sought, nr_sought);
@@ -1378,7 +1378,7 @@ static int send_fetch_request(struct fetch_negotiator *negotiator, int fd_out,
 	if (server_supports_feature("fetch", "shallow", 0))
 		add_shallow_requests(&req_buf, args);
 	else if (is_repository_shallow(the_repository) || args->deepen)
-		die(_("Server does not support shallow requests"));
+		die(_("server does not support shallow requests"));
 
 	/* Add filter */
 	send_filter(args, &req_buf,
