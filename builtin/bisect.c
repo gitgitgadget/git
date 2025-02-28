@@ -1,5 +1,5 @@
 #define USE_THE_REPOSITORY_VARIABLE
-#define DISABLE_SIGN_COMPARE_WARNINGS
+
 
 #include "builtin.h"
 #include "copy.h"
@@ -694,9 +694,10 @@ static enum bisect_error bisect_auto_next(struct bisect_terms *terms, const char
 static enum bisect_error bisect_start(struct bisect_terms *terms, int argc,
 				      const char **argv)
 {
+	int i;
 	int no_checkout = 0;
 	int first_parent_only = 0;
-	int i, has_double_dash = 0, must_write_terms = 0, bad_seen = 0;
+	int has_double_dash = 0, must_write_terms = 0, bad_seen = 0;
 	int flags, pathspec_pos;
 	enum bisect_error res = BISECT_OK;
 	struct string_list revs = STRING_LIST_INIT_DUP;
@@ -775,7 +776,7 @@ static enum bisect_error bisect_start(struct bisect_terms *terms, int argc,
 	 */
 	if (revs.nr)
 		must_write_terms = 1;
-	for (i = 0; i < revs.nr; i++) {
+	for (i = 0; i < (int)revs.nr; i++) {
 		if (bad_seen) {
 			string_list_append(&states, terms->term_good);
 		} else {
@@ -858,7 +859,7 @@ static enum bisect_error bisect_start(struct bisect_terms *terms, int argc,
 		sq_quote_argv(&bisect_names, argv + pathspec_pos);
 	write_file(git_path_bisect_names(), "%s\n", bisect_names.buf);
 
-	for (i = 0; i < states.nr; i++)
+	for (i = 0; i < (int)states.nr; i++)
 		if (bisect_write(states.items[i].string,
 				 revs.items[i].string, terms, 1)) {
 			res = BISECT_FAILED;
@@ -924,8 +925,9 @@ static int bisect_autostart(struct bisect_terms *terms)
 static enum bisect_error bisect_state(struct bisect_terms *terms, int argc,
 				      const char **argv)
 {
+	int i;
 	const char *state;
-	int i, verify_expected = 1;
+	int verify_expected = 1;
 	struct object_id oid, expected;
 	struct oid_array revs = OID_ARRAY_INIT;
 
@@ -984,7 +986,7 @@ static enum bisect_error bisect_state(struct bisect_terms *terms, int argc,
 	if (refs_read_ref(get_main_ref_store(the_repository), "BISECT_EXPECTED_REV", &expected))
 		verify_expected = 0; /* Ignore invalid file contents */
 
-	for (i = 0; i < revs.nr; i++) {
+	for (i = 0; i < (int)revs.nr; i++) {
 		if (bisect_write(state, oid_to_hex(&revs.oid[i]), terms, 0)) {
 			oid_array_clear(&revs);
 			return BISECT_FAILED;
