@@ -5004,7 +5004,7 @@ int parse_long_opt(const char *opt, const char **argv,
 		return 0;
 	/* separate form: --option value */
 	if (!argv[1])
-		die("Option '--%s' requires a value", opt);
+		die("option '--%s' requires a value", opt);
 	*optarg = argv[1];
 	return 2;
 }
@@ -5066,7 +5066,7 @@ static int parse_dirstat_opt(struct diff_options *options, const char *params)
 {
 	struct strbuf errmsg = STRBUF_INIT;
 	if (parse_dirstat_params(options, params, &errmsg))
-		die(_("Failed to parse --dirstat/-X option parameter:\n%s"),
+		die(_("failed to parse --dirstat/-X option parameter:\n%s"),
 		    errmsg.buf);
 	strbuf_release(&errmsg);
 	/*

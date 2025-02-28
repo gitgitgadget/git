@@ -254,7 +254,7 @@ struct tempfile *xmks_tempfile_m(const char *filename_template, int mode)
 	strbuf_add_absolute_path(&full_template, filename_template);
 	tempfile = mks_tempfile_m(full_template.buf, mode);
 	if (!tempfile)
-		die_errno("Unable to create temporary file '%s'",
+		die_errno("unable to create temporary file '%s'",
 			  full_template.buf);
 
 	strbuf_release(&full_template);

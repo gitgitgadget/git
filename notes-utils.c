@@ -21,7 +21,7 @@ void create_notes_commit(struct repository *r,
 	assert(t->initialized);
 
 	if (write_notes_tree(t, &tree_oid))
-		die("Failed to write notes tree to database");
+		die("failed to write notes tree to database");
 
 	if (!parents) {
 		/* Deduce parent commit from t->ref */
@@ -29,7 +29,7 @@ void create_notes_commit(struct repository *r,
 		if (!refs_read_ref(get_main_ref_store(the_repository), t->ref, &parent_oid)) {
 			struct commit *parent = lookup_commit(r, &parent_oid);
 			if (repo_parse_commit(r, parent))
-				die("Failed to find/parse commit %s", t->ref);
+				die("failed to find/parse commit %s", t->ref);
 			commit_list_insert(parent, &parents_to_free);
 			parents = parents_to_free;
 		}
@@ -38,7 +38,7 @@ void create_notes_commit(struct repository *r,
 
 	if (commit_tree(msg, msg_len, &tree_oid, parents, result_oid, NULL,
 			NULL))
-		die("Failed to commit notes tree to database");
+		die("failed to commit notes tree to database");
 
 	free_commit_list(parents_to_free);
 }
@@ -51,7 +51,7 @@ void commit_notes(struct repository *r, struct notes_tree *t, const char *msg)
 	if (!t)
 		t = &default_notes_tree;
 	if (!t->initialized || !t->update_ref || !*t->update_ref)
-		die(_("Cannot commit uninitialized/unreferenced notes tree"));
+		die(_("cannot commit uninitialized/unreferenced notes tree"));
 	if (!t->dirty)
 		return; /* don't have to commit an unchanged tree */
 

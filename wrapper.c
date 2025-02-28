@@ -57,7 +57,7 @@ static void *do_xmalloc(size_t size, int gentle)
 		ret = malloc(1);
 	if (!ret) {
 		if (!gentle)
-			die("Out of memory, malloc failed (tried to allocate %lu bytes)",
+			die("out of memory, malloc failed (tried to allocate %lu bytes)",
 			    (unsigned long)size);
 		else {
 			error("Out of memory, malloc failed (tried to allocate %lu bytes)",
@@ -84,7 +84,7 @@ static void *do_xmallocz(size_t size, int gentle)
 			error("Data too large to fit into virtual memory space.");
 			return NULL;
 		} else
-			die("Data too large to fit into virtual memory space.");
+			die("data too large to fit into virtual memory space.");
 	}
 	ret = do_xmalloc(size + 1, gentle);
 	if (ret)
@@ -139,7 +139,7 @@ void *xrealloc(void *ptr, size_t size)
 	memory_limit_check(size, 0);
 	ret = realloc(ptr, size);
 	if (!ret)
-		die("Out of memory, realloc failed");
+		die("out of memory, realloc failed");
 	return ret;
 }
 
@@ -155,7 +155,7 @@ void *xcalloc(size_t nmemb, size_t size)
 	if (!ret && (!nmemb || !size))
 		ret = calloc(1, 1);
 	if (!ret)
-		die("Out of memory, calloc failed");
+		die("out of memory, calloc failed");
 	return ret;
 }
 
@@ -376,7 +376,7 @@ FILE *xfdopen(int fd, const char *mode)
 {
 	FILE *stream = fdopen(fd, mode);
 	if (!stream)
-		die_errno("Out of memory? fdopen failed");
+		die_errno("out of memory? fdopen failed");
 	return stream;
 }
 
@@ -435,7 +435,7 @@ int xmkstemp(char *filename_template)
 
 		nonrelative_template = absolute_path(filename_template);
 		errno = saved_errno;
-		die_errno("Unable to create temporary file '%s'",
+		die_errno("unable to create temporary file '%s'",
 			nonrelative_template);
 	}
 	return fd;
@@ -525,7 +525,7 @@ int xmkstemp_mode(char *filename_template, int mode)
 
 		nonrelative_template = absolute_path(filename_template);
 		errno = saved_errno;
-		die_errno("Unable to create temporary file '%s'",
+		die_errno("unable to create temporary file '%s'",
 			nonrelative_template);
 	}
 	return fd;

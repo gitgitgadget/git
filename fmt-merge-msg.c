@@ -668,7 +668,7 @@ int fmt_merge_msg(struct strbuf *in, struct strbuf *out,
 				    "HEAD", RESOLVE_REF_READING, &head_oid,
 				    NULL);
 	if (!current_branch)
-		die("No current branch");
+		die("no current branch");
 
 	if (opts->into_name)
 		current_branch = opts->into_name;

@@ -487,9 +487,9 @@ static struct commit *check_single_commit(struct rev_info *revs)
 			continue;
 		obj = deref_tag(revs->repo, obj, NULL, 0);
 		if (!obj || obj->type != OBJ_COMMIT)
-			die("Non commit %s?", revs->pending.objects[i].name);
+			die("non commit %s?", revs->pending.objects[i].name);
 		if (commit)
-			die("More than one commit to dig from: %s and %s?",
+			die("more than one commit to dig from: %s and %s?",
 			    revs->pending.objects[i].name,
 			    revs->pending.objects[found].name);
 		commit = obj;
@@ -497,7 +497,7 @@ static struct commit *check_single_commit(struct rev_info *revs)
 	}
 
 	if (!commit)
-		die("No commit specified?");
+		die("no commit specified?");
 
 	return (struct commit *) commit;
 }
@@ -509,7 +509,7 @@ static void fill_blob_sha1(struct repository *r, struct commit *commit,
 	struct object_id oid;
 
 	if (get_tree_entry(r, &commit->object.oid, spec->path, &oid, &mode))
-		die("There is no path %s in the commit", spec->path);
+		die("there is no path %s in the commit", spec->path);
 	fill_filespec(spec, &oid, 1, mode);
 
 	return;
@@ -526,7 +526,7 @@ static void fill_line_ends(struct repository *r,
 	char *data = NULL;
 
 	if (diff_populate_filespec(r, spec, NULL))
-		die("Cannot read blob %s", oid_to_hex(&spec->oid));
+		die("cannot read blob %s", oid_to_hex(&spec->oid));
 
 	ALLOC_ARRAY(ends, size);
 	ends[cur++] = 0;
