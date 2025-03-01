@@ -283,6 +283,10 @@ elif docs_backend == 'asciidoctor'
   ]
 endif
 
+if not get_option('breaking_changes')
+   asciidoc_common_options += ['--attribute', 'without-breaking-changes']
+endif
+
 git = find_program('git', required: false)
 xmlto = find_program('xmlto')
 
