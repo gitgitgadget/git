@@ -609,21 +609,12 @@ static int allow_hidden_refs(enum allow_uor allow_uor)
 static void for_each_namespaced_ref_1(each_ref_fn fn,
 				      struct upload_pack_data *data)
 {
-	const char **excludes = NULL;
 	/*
-	 * If `data->allow_uor` allows fetching hidden refs, we need to
-	 * mark all references (including hidden ones), to check in
-	 * `is_our_ref()` below.
-	 *
-	 * Otherwise, we only care about whether each reference's object
-	 * has the OUR_REF bit set or not, so do not need to visit
-	 * hidden references.
+	 * config transfer.hideRefs of upload-pack is diffient from arg exclude of for-each-ref,
+	 * We should not set exclude_patterns here
 	 */
-	if (allow_hidden_refs(data->allow_uor))
-		excludes = hidden_refs_to_excludes(&data->hidden_refs);
-
 	refs_for_each_namespaced_ref(get_main_ref_store(the_repository),
-				     excludes, fn, data);
+				     NULL, fn, data);
 }
 
 
