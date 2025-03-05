@@ -887,6 +887,7 @@ int cmd_clone(int argc,
 	enum ref_storage_format ref_storage_format = REF_STORAGE_FORMAT_UNKNOWN;
 	const int do_not_override_repo_unix_permissions = -1;
 	int option_reject_shallow = -1; /* unspecified */
+	int must_filter = 0;
 	int deepen = 0;
 	char *option_template = NULL, *option_depth = NULL, *option_since = NULL;
 	char *option_origin = NULL;
@@ -915,6 +916,8 @@ int cmd_clone(int argc,
 			 N_("force progress reporting")),
 		OPT_BOOL(0, "reject-shallow", &option_reject_shallow,
 			 N_("don't clone shallow repository")),
+		OPT_BOOL(0, "must-filter", &must_filter,
+			 N_("error on filter not supported by server")),
 		OPT_BOOL('n', "no-checkout", &option_no_checkout,
 			 N_("don't create a checkout")),
 		OPT_BOOL(0, "bare", &option_bare, N_("create a bare repository")),
@@ -1333,6 +1336,9 @@ int cmd_clone(int argc,
 	transport_set_verbosity(transport, option_verbosity, option_progress);
 	transport->family = family;
 	transport->cloning = 1;
+	if (transport->smart_options) {
+		transport->smart_options->must_filter = must_filter;
+	}
 
 	if (is_bundle) {
 		struct bundle_header header = BUNDLE_HEADER_INIT;
