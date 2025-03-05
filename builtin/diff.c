@@ -9,6 +9,7 @@
 
 #include "builtin.h"
 #include "config.h"
+#include "environment.h"
 #include "ewah/ewok.h"
 #include "lockfile.h"
 #include "color.h"
@@ -238,6 +239,9 @@ static void refresh_index_quietly(void)
 {
 	struct lock_file lock_file = LOCK_INIT;
 	int fd;
+
+	if (!use_optional_locks())
+		return;
 
 	fd = repo_hold_locked_index(the_repository, &lock_file, 0);
 	if (fd < 0)

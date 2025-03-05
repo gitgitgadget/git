@@ -749,4 +749,12 @@ test_expect_success 'do not be fooled by invalid describe format ' '
 	test_must_fail git cat-file -t "refs/tags/super-invalid/./../...../ ~^:/?*[////\\\\\\&}/busted.lock-42-g"$(cat out)
 '
 
+test_expect_success '--no-optional-locks prevents index update' '
+	test_set_magic_mtime .git/index &&
+	git --no-optional-locks describe --dirty &&
+	test_is_magic_mtime .git/index &&
+	git describe --dirty &&
+	! test_is_magic_mtime .git/index
+'
+
 test_done
