@@ -1247,7 +1247,9 @@ test_expect_success 'remote set-branches' '
 	+refs/heads/next:refs/remotes/scratch/next
 	+refs/heads/seen:refs/remotes/scratch/seen
 	EOF
-
+	cat  <<-\EOF >expect.replace-missing &&
+	+refs/heads/topic:refs/remotes/scratch/topic
+	EOF
 	git clone .git/ setbranches &&
 	(
 		cd setbranches &&
@@ -1277,14 +1279,20 @@ test_expect_success 'remote set-branches' '
 
 		git remote set-branches --add scratch seen &&
 		git config --get-all remote.scratch.fetch >config-result &&
-		sort <config-result >../actual.respect-ffonly
+		sort <config-result >../actual.respect-ffonly &&
+
+		git config --unset-all remote.scratch.fetch &&
+		git remote set-branches scratch topic &&
+		git config --get-all remote.scratch.fetch \
+					>../actual.replace-missing
 	) &&
 	test_cmp expect.initial actual.initial &&
 	test_cmp expect.add actual.add &&
 	test_cmp expect.replace actual.replace &&
 	test_cmp expect.add-two actual.add-two &&
 	test_cmp expect.setup-ffonly actual.setup-ffonly &&
-	test_cmp expect.respect-ffonly actual.respect-ffonly
+	test_cmp expect.respect-ffonly actual.respect-ffonly &&
+	test_cmp expect.replace-missing actual.replace-missing
 '
 
 test_expect_success 'remote set-branches with --mirror' '
@@ -1301,6 +1309,34 @@ test_expect_success 'remote set-branches with --mirror' '
 	) &&
 	test_cmp expect.initial actual.initial &&
 	test_cmp expect.replace actual.replace
+'
+
+test_expect_success 'remote set-branches rejects invalid branch name' '
+	git remote add test https://git.example.com/repo &&
+	test_when_finished "git config --unset-all remote.test.fetch; \
+			    git config --unset remote.test.url" &&
+	test_must_fail git remote set-branches test "topic/*" in..valid \
+				feature "b a d" 2>err &&
+	cat >expect <<-EOF &&
+	error: invalid branch name ${SQ}in..valid${SQ}
+	error: invalid branch name ${SQ}b a d${SQ}
+	EOF
+	test_cmp expect err &&
+	git config --get-all remote.test.fetch >actual &&
+	echo "+refs/heads/*:refs/remotes/test/*" >expect &&
+	test_cmp expect actual
+'
+
+test_expect_success 'remote add -t rejects invalid branch name' '
+	test_must_fail git remote add test -t .bad -t "topic/*" -t in:valid \
+				 https://git.example.com/repo 2>err &&
+	cat >expect <<-EOF &&
+	error: invalid branch name ${SQ}.bad${SQ}
+	error: invalid branch name ${SQ}in:valid${SQ}
+	EOF
+	test_cmp expect err &&
+	test_expect_code 1 git config --get-regexp ^remote\\.test\\. >actual &&
+	test_must_be_empty actual
 '
 
 test_expect_success 'new remote' '
