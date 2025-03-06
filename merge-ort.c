@@ -799,6 +799,8 @@ static void path_msg(struct merge_options *opt,
 		return; /* Do not record mere hints in headers */
 	if (opt->priv->call_depth && opt->verbosity < 5)
 		return; /* Ignore messages from inner merges */
+	if (!opt->verbosity)
+		return;
 
 	/* Ensure path_conflicts (ptr to array of logical_conflict) allocated */
 	path_conflicts = strmap_get(&opt->priv->conflicts, primary_path);
