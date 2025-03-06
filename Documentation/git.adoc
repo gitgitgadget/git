@@ -190,7 +190,8 @@ If you just want to run git as if it was started in `<path>` then use
 --no-optional-locks::
 	Do not perform optional operations that require locks. This is
 	equivalent to setting the `GIT_OPTIONAL_LOCKS` to `0`. This
-	functionality is implemented for `git status` and `git describe`.
+	functionality is implemented for `git status`, `git describe`,
+	and `git diff`.
 
 --no-advice::
 	Disable all advice hints from being printed.

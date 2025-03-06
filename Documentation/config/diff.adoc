@@ -6,7 +6,9 @@
 	contents in the work tree match the contents in the
 	index.  This option defaults to `true`.  Note that this
 	affects only `git diff` Porcelain, and not lower level
-	`diff` commands such as `git diff-files`.
+	`diff` commands such as `git diff-files`. If
+	`--no-optional-locks` is set (see linkgit:git[1] for
+	details), the index file is not updated.
 
 `diff.dirstat`::
 ifdef::git-diff[]
