@@ -198,6 +198,18 @@ selected and output.  Here fewest commits different is defined as
 the number of commits which would be shown by `git log tag..input`
 will be the smallest number of commits possible.
 
+BACKGROUND REFRESH
+------------------
+
+By default, `git describe --dirty` will automatically refresh the index,
+similar to the background refresh functionality of
+linkgit:git-status[1]. Writing out the updated index is an optimization
+that isn't strictly necessary. When `describe` is run in the background,
+the lock held during the write may conflict with other simultaneous
+processes, causing them to fail. Scripts running `describe` in the
+background should consider using `git --no-optional-locks status` (see
+linkgit:git[1] for details).
+
 BUGS
 ----
 
