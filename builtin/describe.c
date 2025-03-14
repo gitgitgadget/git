@@ -704,7 +704,6 @@ int cmd_describe(int argc,
 		} else if (dirty) {
 			struct lock_file index_lock = LOCK_INIT;
 			struct rev_info revs;
-			int fd;
 
 			setup_work_tree();
 			prepare_repo_settings(the_repository);
@@ -712,10 +711,13 @@ int cmd_describe(int argc,
 			repo_read_index(the_repository);
 			refresh_index(the_repository->index, REFRESH_QUIET|REFRESH_UNMERGED,
 				      NULL, NULL, NULL);
-			fd = repo_hold_locked_index(the_repository,
-						    &index_lock, 0);
-			if (0 <= fd)
-				repo_update_index_if_able(the_repository, &index_lock);
+			if (use_optional_locks()) {
+				int fd = repo_hold_locked_index(the_repository,
+								&index_lock, 0);
+				if (0 <= fd)
+					repo_update_index_if_able(the_repository,
+								  &index_lock);
+			}
 
 			repo_init_revisions(the_repository, &revs, prefix);
 
