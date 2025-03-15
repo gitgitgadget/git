@@ -13,8 +13,8 @@ print_config_list () {
 	cat <<EOF
 static const char *config_name_list[] = {
 EOF
-	grep -h '^[a-zA-Z].*\..*::$' "$SOURCE_DIR"/Documentation/*config.adoc "$SOURCE_DIR"/Documentation/config/*.adoc |
-	sed '/deprecated/d; s/::$//; s/,  */\n/g' |
+	grep -h '^`\?[a-zA-Z].*\..*`\?::$' "$SOURCE_DIR"/Documentation/*config.adoc "$SOURCE_DIR"/Documentation/config/*.adoc |
+	sed '/deprecated/d; s/::$//; s/`//g; s/,  */\n/g' |
 	sort |
 	sed 's/^.*$/	"&",/'
 	cat <<EOF
