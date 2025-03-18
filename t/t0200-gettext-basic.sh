@@ -31,12 +31,12 @@ test_expect_success 'xgettext sanity: Comment extraction with --add-comments sto
 '
 
 test_expect_success GETTEXT 'sanity: $TEXTDOMAINDIR exists without NO_GETTEXT=YesPlease' '
-    test -d "$TEXTDOMAINDIR" &&
+    test_path_is_dir "$TEXTDOMAINDIR" &&
     test "$TEXTDOMAINDIR" = "$GIT_TEXTDOMAINDIR"
 '
 
 test_expect_success GETTEXT 'sanity: Icelandic locale was compiled' '
-    test -f "$TEXTDOMAINDIR/is/LC_MESSAGES/git.mo"
+    test_path_is_file "$TEXTDOMAINDIR/is/LC_MESSAGES/git.mo"
 '
 
 # TODO: When we have more locales, generalize this to test them

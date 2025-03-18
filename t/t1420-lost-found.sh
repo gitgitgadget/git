@@ -29,8 +29,8 @@ test_expect_success 'lost and found something' '
 	git reset --hard HEAD^ &&
 	git fsck --lost-found &&
 	test 2 = $(ls .git/lost-found/*/* | wc -l) &&
-	test -f .git/lost-found/commit/$(cat lost-commit) &&
-	test -f .git/lost-found/other/$(cat lost-other)
+	test_path_is_file .git/lost-found/commit/$(cat lost-commit) &&
+	test_path_is_file .git/lost-found/other/$(cat lost-other)
 '
 
 test_done

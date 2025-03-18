@@ -1236,11 +1236,11 @@ test_expect_success SYMLINKS 'symlinked configuration' '
 	ln -s notyet myconfig &&
 	git config --file=myconfig test.frotz nitfol &&
 	test -h myconfig &&
-	test -f notyet &&
+	test_path_is_file notyet &&
 	test "z$(git config --file=notyet test.frotz)" = znitfol &&
 	git config --file=myconfig test.xyzzy rezrov &&
 	test -h myconfig &&
-	test -f notyet &&
+	test_path_is_file notyet &&
 	cat >expect <<-\EOF &&
 	nitfol
 	rezrov

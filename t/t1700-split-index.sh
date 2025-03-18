@@ -460,7 +460,7 @@ test_expect_success POSIXPERM,SANITY 'graceful handling when splitting index is 
 		cd ro &&
 		test_commit initial &&
 		git update-index --split-index &&
-		test -f .git/sharedindex.*
+		test_path_is_file .git/sharedindex.*
 	) &&
 	cp ro/.git/index new-index &&
 	test_when_finished "chmod u+w ro/.git" &&
