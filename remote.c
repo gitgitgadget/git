@@ -1841,6 +1841,23 @@ static const char *tracking_for_push_dest(struct remote *remote,
 	return ret;
 }
 
+static const char *default_missing_upstream(struct remote *remote,
+				    struct branch *branch,
+				    struct strbuf *err)
+{
+	int autosetupremote = 0;
+
+	if (branch && (!branch->merge || !branch->merge[0])) {
+		repo_config_get_bool(the_repository,
+				     "push.autosetupremote",
+				     &autosetupremote);
+		if (autosetupremote)
+			return tracking_for_push_dest(remote, branch->refname, err);
+	}
+
+	return NULL;
+}
+
 static const char *branch_get_push_1(struct remote_state *remote_state,
 				     struct branch *branch, struct strbuf *err)
 {
@@ -1881,12 +1898,21 @@ static const char *branch_get_push_1(struct remote_state *remote_state,
 		return tracking_for_push_dest(remote, branch->refname, err);
 
 	case PUSH_DEFAULT_UPSTREAM:
-		return branch_get_upstream(branch, err);
-
+		{
+			const char *up;
+			up = default_missing_upstream(remote, branch, err);
+			if (up)
+				return up;
+			return branch_get_upstream(branch, err);
+		}
 	case PUSH_DEFAULT_UNSPECIFIED:
 	case PUSH_DEFAULT_SIMPLE:
 		{
 			const char *up, *cur;
+
+			up = default_missing_upstream(remote, branch, err);
+			if (up)
+				return up;
 
 			up = branch_get_upstream(branch, err);
 			if (!up)
