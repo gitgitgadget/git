@@ -58,7 +58,7 @@ static void get_root_part(struct strbuf *resolved, struct strbuf *remaining)
 	strbuf_reset(resolved);
 	strbuf_add(resolved, remaining->buf, offset);
 #ifdef GIT_WINDOWS_NATIVE
-	convert_slashes(resolved->buf);
+	change_path_separators(resolved->buf);
 #endif
 	strbuf_remove(remaining, 0, offset);
 }
@@ -278,7 +278,7 @@ char *prefix_filename(const char *pfx, const char *arg)
 
 	strbuf_addstr(&path, arg);
 #ifdef GIT_WINDOWS_NATIVE
-	convert_slashes(path.buf + pfx_len);
+	change_path_separators(path.buf + pfx_len);
 #endif
 	return strbuf_detach(&path, NULL);
 }

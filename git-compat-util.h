@@ -1366,6 +1366,13 @@ static inline int strtol_i(char const *s, int base, int *result)
 	return 0;
 }
 
+static inline void change_path_separators(char *path)
+{
+	for (; *path; path++)
+		if (*path == '\\')
+			*path = '/';
+}
+
 void git_stable_qsort(void *base, size_t nmemb, size_t size,
 		      int(*compar)(const void *, const void *));
 #ifdef INTERNAL_QSORT

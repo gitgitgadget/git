@@ -721,7 +721,7 @@ char *interpolate_path(const char *path, int real_home)
 			else
 				strbuf_addstr(&user_path, home);
 #ifdef GIT_WINDOWS_NATIVE
-			convert_slashes(user_path.buf);
+			change_path_separators(user_path.buf);
 #endif
 		} else {
 			struct passwd *pw = getpw_str(username, username_len);

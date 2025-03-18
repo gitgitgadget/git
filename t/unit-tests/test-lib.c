@@ -56,9 +56,7 @@ static const char *make_relative(const char *location)
 		prefix_len = len - needle_len;
 		if (prefix[prefix_len + 1] == '/') {
 			/* Oh, we're not Windows */
-			for (size_t i = 0; i < needle_len; i++)
-				if (needle[i] == '\\')
-					needle[i] = '/';
+			change_path_separators(&needle[0]);
 			need_bs_to_fs = 0;
 		} else {
 			need_bs_to_fs = 1;
@@ -92,9 +90,8 @@ static const char *make_relative(const char *location)
 
 	/* convert backslashes to forward slashes */
 	strlcpy(buf, location + prefix_len, sizeof(buf));
-	for (p = buf; *p; p++)
-		if (*p == '\\')
-			*p = '/';
+	p = buf;
+	change_path_separators(p);
 	return buf;
 }
 
