@@ -1468,6 +1468,39 @@ proc commitonrow {row} {
     return $id
 }
 
+# Get commits ID of the row that is selected in the GUI
+proc selected_line_id {} {
+    global selectedline
+    return [commitonrow $selectedline]
+}
+
+# Gets all branche names on the commit that is selected in the GUI, or the
+# empty list if there is no branches on that commit.
+proc selected_line_heads {} {
+    global idheads
+    set id [selected_line_id]
+    if {[info exists idheads($id)]} {
+        return $idheads($id)
+    } else {
+        return {}
+    }
+}
+
+# If any branch is associated with the argument ID then return that. Otherwise
+# return the ID itself. Useful for displaying the best name of a commit.
+proc commit_name {id should_shorten_id} {
+    global idheads idtags
+    if {[info exists idheads($id)]} {
+        return [lindex $idheads($id) 0]
+    } elseif {[info exists idtags($id)]} {
+        return [lindex $idtags($id) 0]
+    } elseif {$should_shorten_id} {
+        return [string range $id 0 7]
+    } else {
+        return $id
+    }
+}
+
 proc closevarcs {v} {
     global varctok varccommits varcid parents children
     global cmitlisted commitidx vtokmod curview numcommits
@@ -2054,6 +2087,47 @@ proc make_transient {window origin} {
     if {[tk windowingsystem] eq {win32}} {
         after idle [list tk::PlaceWindow $window widget $origin]
     }
+}
+
+# Opens a dialog with a list which lets the user selection one of the string
+# in $items. Returns "" if user cancels.
+proc list_selection_dialog {title label items} {
+    global confirm_ok sel_ix NS
+
+    set confirm_ok 0
+    set nr_items [llength $items]
+
+    set w ".selectitem"
+    ttk_toplevel $w
+    make_transient $w .
+    wm title $w [mc $title]
+    ${NS}::label $w.m -text [mc $label]
+    pack $w.m -side top -fill x -padx 20 -pady 20
+    ${NS}::frame $w.f
+
+    set sel_ix 0
+    for {set i 0} {$i < $nr_items} {incr i} {
+        ${NS}::radiobutton $w.f.id_$i -value $i -variable sel_ix \
+            -text [lindex $items $i]
+        bind $w.f.id_$i <Key-Up> "set sel_ix [expr ($i - 1) % $nr_items]"
+        bind $w.f.id_$i <Key-Down> "set sel_ix [expr ($i + 1) % $nr_items]"
+        grid $w.f.id_$i -sticky w -padx 20
+    }
+
+    pack $w.f -side top -fill x -padx 4
+    ${NS}::button $w.ok -text [mc OK] -command "set confirm_ok 1; destroy $w"
+    bind $w <Key-Return> "set confirm_ok 1; destroy $w"
+    pack $w.ok -side left -fill x -padx 20 -pady 20
+    ${NS}::button $w.cancel -text [mc Cancel] -command "destroy $w"
+    bind $w <Key-Escape> [list destroy $w]
+    pack $w.cancel -side right -fill x -padx 20 -pady 20
+    bind $w <Visibility> "grab $w; focus $w.f.id_$sel_ix"
+
+    tkwait window $w
+
+    if {!$confirm_ok} return ""
+
+    return [lindex $items $sel_ix]
 }
 
 proc show_error {w top msg} {
@@ -2801,6 +2875,11 @@ proc makewindow {} {
     bind $ctext $ctxbut {pop_diff_menu %W %X %Y %x %y}
     bind $ctext <Button-1> {focus %W}
     bind $ctext <<Selection>> rehighlight_search_results
+    bind . <$M1B-p> {cherrypick [selected_line_id]}
+    bind . <$M1B-t> {resethead [selected_line_id]}
+    bind . <$M1B-o> {checkout [selected_line_heads] [selected_line_id]}
+    bind . <$M1B-b> {mkbranch [selected_line_id]}
+    bind . <$M1B-m> {rmbranch [selected_line_heads] [selected_line_id] 1}
     for {set i 1} {$i < 10} {incr i} {
         bind . <$M1B-Key-$i> [list go_to_parent $i]
     }
@@ -2817,9 +2896,9 @@ proc makewindow {} {
         {mc "Create tag" command mktag}
         {mc "Copy commit reference" command copyreference}
         {mc "Write commit to file" command writecommit}
-        {mc "Create new branch" command mkbranch}
-        {mc "Cherry-pick this commit" command cherrypick}
-        {mc "Reset HEAD branch to here" command resethead}
+        {mc "Create new branch" command {mkbranch $rowmenuid}}
+        {mc "Cherry-pick this commit" command {cherrypick $rowmenuid}}
+        {mc "Reset current branch to here" command {resethead $rowmenuid}}
         {mc "Mark this commit" command markhere}
         {mc "Return to mark" command gotomark}
         {mc "Find descendant of this and mark" command find_common_desc}
@@ -2842,9 +2921,9 @@ proc makewindow {} {
 
     set headctxmenu .headctxmenu
     makemenu $headctxmenu {
-        {mc "Check out this branch" command cobranch}
+        {mc "Check out this branch" command {checkout [list $headmenuhead] $headmenuid}}
         {mc "Rename this branch" command mvbranch}
-        {mc "Remove this branch" command rmbranch}
+        {mc "Remove this branch" command {rmbranch [list $headmenuhead] $headmenuid 0}}
         {mc "Copy branch name" command {clipboard clear; clipboard append $headmenuhead}}
     }
     $headctxmenu configure -tearoff 0
@@ -3292,6 +3371,11 @@ proc keys {} {
 [mc "<%s-KP->	Decrease font size" $M1T]
 [mc "<%s-minus>	Decrease font size" $M1T]
 [mc "<F5>		Update"]
+[mc "<%s-T>		Reset current branch to selected commit" $M1T]
+[mc "<%s-P>		Cherry-pick selected commit to current branch" $M1T]
+[mc "<%s-O>		Check out selected commit" $M1T]
+[mc "<%s-B>		Create branch on selected commit" $M1T]
+[mc "<%s-M>		Remove selected branch" $M1T]
 " \
             -justify left -bg $bgcolor -border 2 -relief groove
     pack $w.m -side top -fill both -padx 2 -pady 2
@@ -9688,13 +9772,13 @@ proc wrcomcan {} {
     unset wrcomtop
 }
 
-proc mkbranch {} {
-    global NS rowmenuid
+proc mkbranch {id} {
+    global NS
 
     set top .branchdialog
 
     set val(name) ""
-    set val(id) $rowmenuid
+    set val(id) $id
     set val(command) [list mkbrgo $top]
 
     set ui(title) [mc "Create branch"]
@@ -9866,24 +9950,24 @@ proc exec_citool {tool_args {baseid {}}} {
     array set env $save_env
 }
 
-proc cherrypick {} {
-    global rowmenuid curview
+proc cherrypick {id} {
+    global curview headids
     global mainhead mainheadid
     global gitdir
 
     set oldhead [exec git rev-parse HEAD]
-    set dheads [descheads $rowmenuid]
+    set dheads [descheads $id]
     if {$dheads ne {} && [lsearch -exact $dheads $oldhead] >= 0} {
         set ok [confirm_popup [mc "Commit %s is already\
                 included in branch %s -- really re-apply it?" \
-                                   [string range $rowmenuid 0 7] $mainhead]]
+                                   [string range $id 0 7] $mainhead]]
         if {!$ok} return
     }
     nowbusy cherrypick [mc "Cherry-picking"]
     update
     # Unfortunately git-cherry-pick writes stuff to stderr even when
     # no error occurs, and exec takes that as an indication of error...
-    if {[catch {exec sh -c "git cherry-pick -r $rowmenuid 2>&1"} err]} {
+    if {[catch {exec sh -c "git cherry-pick -r $id 2>&1"} err]} {
         notbusy cherrypick
         if {[regexp -line \
                  {Entry '(.*)' (would be overwritten by merge|not uptodate)} \
@@ -9899,7 +9983,7 @@ proc cherrypick {} {
                         resolve it?"]]} {
                 # Force citool to read MERGE_MSG
                 file delete [file join $gitdir "GITGUI_MSG"]
-                exec_citool {} $rowmenuid
+                exec_citool {} $id
             }
         } else {
             error_popup $err
@@ -9990,45 +10074,63 @@ proc revert {} {
     notbusy revert
 }
 
-proc resethead {} {
-    global mainhead rowmenuid confirm_ok resettype NS
+proc resethead {reset_target_id} {
+    global headids mainhead confirm_ok resettype NS
+
+    if {! [info exists headids($mainhead)]} {
+        error_popup [mc "Cannot reset a detached head"]
+        return
+    }
 
     set confirm_ok 0
     set w ".confirmreset"
     ttk_toplevel $w
     make_transient $w .
     wm title $w [mc "Confirm reset"]
+
     ${NS}::label $w.m -text \
-        [mc "Reset branch %s to %s?" $mainhead [string range $rowmenuid 0 7]]
+        [mc "Reset branch %s to %s?" $mainhead [commit_name $reset_target_id 1]]
     pack $w.m -side top -fill x -padx 20 -pady 20
     ${NS}::labelframe $w.f -text [mc "Reset type:"]
+
     set resettype mixed
+
     ${NS}::radiobutton $w.f.soft -value soft -variable resettype \
         -text [mc "Soft: Leave working tree and index untouched"]
+    bind $w.f.soft <Key-Up> "set resettype hard"
+    bind $w.f.soft <Key-Down> "set resettype mixed"
     grid $w.f.soft -sticky w
+
     ${NS}::radiobutton $w.f.mixed -value mixed -variable resettype \
         -text [mc "Mixed: Leave working tree untouched, reset index"]
+    bind $w.f.mixed <Key-Up> "set resettype soft"
+    bind $w.f.mixed <Key-Down> "set resettype hard"
     grid $w.f.mixed -sticky w
+
     ${NS}::radiobutton $w.f.hard -value hard -variable resettype \
         -text [mc "Hard: Reset working tree and index\n(discard ALL local changes)"]
+    bind $w.f.hard <Key-Up> "set resettype mixed"
+    bind $w.f.hard <Key-Down> "set resettype soft"
     grid $w.f.hard -sticky w
     pack $w.f -side top -fill x -padx 4
+
     ${NS}::button $w.ok -text [mc OK] -command "set confirm_ok 1; destroy $w"
+    bind $w <Key-Return> "set confirm_ok 1; destroy $w"
     pack $w.ok -side left -fill x -padx 20 -pady 20
     ${NS}::button $w.cancel -text [mc Cancel] -command "destroy $w"
     bind $w <Key-Escape> [list destroy $w]
     pack $w.cancel -side right -fill x -padx 20 -pady 20
-    bind $w <Visibility> "grab $w; focus $w"
+    bind $w <Visibility> "grab $w; focus $w.f.mixed"
     tkwait window $w
     if {!$confirm_ok} return
     if {[catch {set fd [open \
-            [list | git reset --$resettype $rowmenuid 2>@1] r]} err]} {
+            [list | git reset --$resettype $reset_target_id 2>@1] r]} err]} {
         error_popup $err
     } else {
         dohidelocalchanges
         filerun $fd [list readresetstat $fd]
         nowbusy reset [mc "Resetting"]
-        selbyid $rowmenuid
+        selbyid $reset_target_id
     }
 }
 
@@ -10072,10 +10174,6 @@ proc headmenu {x y id head} {
     set headmenuhead $head
     array set state {0 normal 1 normal 2 normal}
     if {[string match "remotes/*" $head]} {
-        set localhead [string range $head [expr [string last / $head] + 1] end]
-        if {[info exists headids($localhead)]} {
-            set state(0) disabled
-        }
         array set state {1 disabled 2 disabled}
     }
     if {$head eq $mainhead} {
@@ -10087,25 +10185,71 @@ proc headmenu {x y id head} {
     tk_popup $headctxmenu $x $y
 }
 
-proc cobranch {} {
-    global headmenuid headmenuhead headids
+proc checkout {heads_on_commit id_to_checkout} {
+    global headids mainhead
     global showlocalchanges
 
     # check the tree is clean first??
-    set newhead $headmenuhead
-    set command [list | git checkout]
-    if {[string match "remotes/*" $newhead]} {
-        set remote $newhead
-        set newhead [string range $newhead [expr [string last / $newhead] + 1] end]
-        # The following check is redundant - the menu option should
-        # be disabled to begin with...
-        if {[info exists headids($newhead)]} {
-            error_popup [mc "A local branch named %s exists already" $newhead]
-            return
+
+    # Filter out remote branches if local branch is also present
+    foreach remote_ix [lsearch -all $heads_on_commit "remotes/*"] {
+        set remote_head [lindex $heads_on_commit $remote_ix]
+        set local_head [string range $remote_head [expr [string last / $remote_head] + 1] end]
+        if {$local_head in $heads_on_commit} {
+            set heads_on_commit [lreplace $heads_on_commit $remote_ix $remote_ix]
         }
-        lappend command -b $newhead --track $remote
+    }
+
+    if {[llength $heads_on_commit] == 1 && [lindex $heads_on_commit 0] eq $mainhead} {
+        # Only the currently active branch
+        return
+    }
+
+    # Filter out mainhead
+    set mainhead_ix [lsearch $heads_on_commit $mainhead]
+    if {$mainhead_ix != -1} {
+        set heads_on_commit [lreplace $heads_on_commit $mainhead_ix $mainhead_ix]
+    }
+    set nr_heads_on_commit [llength $heads_on_commit]
+
+    # The number of heads on the commit determines how to select what to checkout
+    if {$nr_heads_on_commit == 0} {
+        set head_to_checkout ""
+        set ref_to_checkout $id_to_checkout
+    } elseif {$nr_heads_on_commit == 1} {
+        set head_to_checkout [lindex $heads_on_commit 0]
+        set ref_to_checkout $head_to_checkout
     } else {
-        lappend command $newhead
+        # Branch selection dialog
+        set head_to_checkout [list_selection_dialog "Checkout branch" "Which branch to check out?" $heads_on_commit]
+        set ref_to_checkout $head_to_checkout
+        if {$head_to_checkout eq ""} return
+    }
+
+    set command [list | git checkout]
+    if {[string match "remotes/*" $head_to_checkout]} {
+        # Handle remote branches
+        set remote_head $head_to_checkout
+        set head_to_checkout [string range $head_to_checkout [expr [string last / $head_to_checkout] + 1] end]
+        if {[info exists headids($head_to_checkout)]} {
+            # The local branch exists
+            set id_to_checkout $headids($remote_head)
+            if {$headids($head_to_checkout) eq $id_to_checkout} {
+                # Remote and local are at the same commit
+                set ref_to_checkout $head_to_checkout
+            } else {
+                # Check out the detached head of the remote branch
+                set head_to_checkout ""
+                set ref_to_checkout $id_to_checkout
+            }
+            lappend command $ref_to_checkout
+        } else {
+            # Create local branch and checkout
+            set ref_to_checkout $head_to_checkout
+            lappend command -b $ref_to_checkout --track $remote_head
+        }
+    } else {
+        lappend command $ref_to_checkout
     }
     lappend command 2>@1
     nowbusy checkout [mc "Checking out"]
@@ -10120,11 +10264,11 @@ proc cobranch {} {
             dodiffindex
         }
     } else {
-        filerun $fd [list readcheckoutstat $fd $newhead $headmenuid]
+        filerun $fd [list readcheckoutstat $fd $head_to_checkout $ref_to_checkout $id_to_checkout]
     }
 }
 
-proc readcheckoutstat {fd newhead newheadid} {
+proc readcheckoutstat {fd head_to_checkout ref_to_checkout id_to_checkout} {
     global mainhead mainheadid headids idheads showlocalchanges progresscoords
     global viewmainheadid curview
 
@@ -10142,49 +10286,88 @@ proc readcheckoutstat {fd newhead newheadid} {
         error_popup $err
         return
     }
-    set oldmainid $mainheadid
-    if {! [info exists headids($newhead)]} {
-        set headids($newhead) $newheadid
-        lappend idheads($newheadid) $newhead
-        addedhead $newheadid $newhead
+    set old_main_id $mainheadid
+
+    if {$head_to_checkout ne "" && ! [info exists headids($head_to_checkout)]} {
+        set headids($head_to_checkout) $id_to_checkout
+        lappend idheads($id_to_checkout) $head_to_checkout
+        addedhead $id_to_checkout $head_to_checkout
     }
-    set mainhead $newhead
-    set mainheadid $newheadid
-    set viewmainheadid($curview) $newheadid
-    redrawtags $oldmainid
-    redrawtags $newheadid
-    selbyid $newheadid
+    set mainhead $ref_to_checkout
+    set mainheadid $id_to_checkout
+    set viewmainheadid($curview) $id_to_checkout
+    redrawtags $old_main_id
+    redrawtags $id_to_checkout
+    selbyid $id_to_checkout
     if {$showlocalchanges} {
         dodiffindex
     }
 }
 
-proc rmbranch {} {
-    global headmenuid headmenuhead mainhead
+proc rmbranch {heads_on_commit id shouldComfirm} {
+    global mainhead
     global idheads
 
-    set head $headmenuhead
-    set id $headmenuid
-    # this check shouldn't be needed any more...
-    if {$head eq $mainhead} {
+    if {[llength $heads_on_commit] == 0} {
+        error_popup [mc "Cannot delete a detached head"]
+        return
+    }
+
+    if {[llength $heads_on_commit] == 1 && [lindex $heads_on_commit 0] eq $mainhead} {
         error_popup [mc "Cannot delete the currently checked-out branch"]
         return
     }
-    set dheads [descheads $id]
-    if {[llength $dheads] == 1 && $idheads($dheads) eq $head} {
-        # the stuff on this branch isn't on any other branch
-        if {![confirm_popup [mc "The commits on branch %s aren't on any other\
-                        branch.\nReally delete branch %s?" $head $head]]} return
+
+    # Filter out mainhead
+    set mainhead_ix [lsearch $heads_on_commit $mainhead]
+    if {$mainhead_ix != -1} {
+        set heads_on_commit [lreplace $heads_on_commit $mainhead_ix $mainhead_ix]
     }
+
+    # Filter out remote branches
+    foreach head_ix [lsearch -all $heads_on_commit "remotes/*"] {
+        set heads_on_commit [lreplace $heads_on_commit $head_ix $head_ix]
+    }
+
+    if {[llength $heads_on_commit] == 0} {
+        # Probably only current branch and its remote branch on commit
+        error_popup [mc "Cannot delete branch"]
+        return
+    }
+
+    set nr_heads_on_commit [llength $heads_on_commit]
+    set first_head [lindex $heads_on_commit 0]
+
+    if {$nr_heads_on_commit == 1} {
+        # Only a single head, simple comfirm dialogs
+
+        set head_to_remove $first_head
+        set dheads [descheads $id]
+
+        if {[llength $dheads] == 1 && $idheads($dheads) eq $head_to_remove} {
+            # the stuff on this branch isn't on any other branch
+            if {![confirm_popup [mc "The commits on branch %s aren't on any other\
+                            branch.\nReally delete branch %s?" $head_to_remove $head_to_remove]]} return
+        } elseif {$shouldComfirm} {
+            if {![confirm_popup [mc "Really delete branch %s?" $head_to_remove]]} return
+        }
+    } else {
+        # Branch selection dialog
+        set head_to_remove [list_selection_dialog "Delete branch" "Which branch to delete?" $heads_on_commit]
+        if {$head_to_remove eq ""} return
+    }
+
+    # Perform the command
+
     nowbusy rmbranch
     update
-    if {[catch {exec git branch -D $head} err]} {
+    if {[catch {exec git branch -D $head_to_remove} err]} {
         notbusy rmbranch
         error_popup $err
         return
     }
-    removehead $id $head
-    removedhead $id $head
+    removehead $id $head_to_remove
+    removedhead $id $head_to_remove
     redrawtags $id
     notbusy rmbranch
     dispneartags 0
