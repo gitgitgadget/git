@@ -123,6 +123,7 @@ int cmd_archive(int argc, const char **argv, const char *prefix, struct reposito
 int cmd_backfill(int argc, const char **argv, const char *prefix, struct repository *repo);
 int cmd_bisect(int argc, const char **argv, const char *prefix, struct repository *repo);
 int cmd_blame(int argc, const char **argv, const char *prefix, struct repository *repo);
+int cmd_blame_tree(int argc, const char **argv, const char *prefix, struct repository *repo);
 int cmd_branch(int argc, const char **argv, const char *prefix, struct repository *repo);
 int cmd_bugreport(int argc, const char **argv, const char *prefix, struct repository *repo);
 int cmd_bundle(int argc, const char **argv, const char *prefix, struct repository *repo);

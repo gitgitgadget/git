@@ -22,6 +22,7 @@
 /git-backfill
 /git-bisect
 /git-blame
+/git-blame-tree
 /git-branch
 /git-bugreport
 /git-bundle
