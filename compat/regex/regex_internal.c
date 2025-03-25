@@ -1231,9 +1231,10 @@ re_node_set_merge (re_node_set *dest, const re_node_set *src)
   for (sbase = dest->nelem + 2 * src->nelem,
        is = src->nelem - 1, id = dest->nelem - 1; is >= 0 && id >= 0; )
     {
-      if (dest->elems[id] == src->elems[is])
-	is--, id--;
-      else if (dest->elems[id] < src->elems[is])
+      if (dest->elems[id] == src->elems[is]) {
+	is--;
+	id--;
+      } else if (dest->elems[id] < src->elems[is])
 	dest->elems[--sbase] = src->elems[is--];
       else /* if (dest->elems[id] > src->elems[is]) */
 	--id;
