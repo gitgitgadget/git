@@ -1460,6 +1460,8 @@ extern int bug_called_must_BUG;
 __attribute__((format (printf, 3, 4))) NORETURN
 void BUG_fl(const char *file, int line, const char *fmt, ...);
 #define BUG(...) BUG_fl(__FILE__, __LINE__, __VA_ARGS__)
+/* ASSERT: like assert(), but won't be compiled out with NDEBUG */
+#define ASSERT(a) if (!(a)) BUG("Assertion `" #a "' failed.")
 __attribute__((format (printf, 3, 4)))
 void bug_fl(const char *file, int line, const char *fmt, ...);
 #define bug(...) bug_fl(__FILE__, __LINE__, __VA_ARGS__)
@@ -1582,5 +1584,11 @@ static inline void *container_of_or_null_offset(void *ptr, size_t offset)
 #define OFFSETOF_VAR(ptr, member) \
 	((uintptr_t)&(ptr)->member - (uintptr_t)(ptr))
 #endif /* !__GNUC__ */
+
+#ifdef CHECK_ASSERTION_SIDE_EFFECTS
+#undef assert
+extern int not_supposed_to_survive;
+#define assert(expr) ((void)(not_supposed_to_survive || (expr)))
+#endif /* CHECK_ASSERTION_SIDE_EFFECTS */
 
 #endif
