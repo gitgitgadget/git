@@ -213,7 +213,7 @@ void exclude_cmds(struct cmdnames *cmds, struct cmdnames *excludes)
 		else if (cmp == 0) {
 			ei++;
 			free(cmds->names[ci++]);
-		} else if (cmp > 0)
+		} else
 			ei++;
 	}
 
