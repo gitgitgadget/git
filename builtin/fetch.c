@@ -1740,10 +1740,10 @@ static int do_fetch(struct transport *transport,
 	} else {
 		struct branch *branch = branch_get(NULL);
 
-		if (transport->remote->fetch.nr)
+		if (branch && transport->remote->fetch.nr)
 			refspec_ref_prefixes(&transport->remote->fetch,
 					     &transport_ls_refs_options.ref_prefixes);
-		if (branch_has_merge_config(branch) &&
+		if (branch && branch_has_merge_config(branch) &&
 		    !strcmp(branch->remote_name, transport->remote->name)) {
 			int i;
 			for (i = 0; i < branch->merge_nr; i++) {
@@ -2562,6 +2562,7 @@ int cmd_fetch(int argc,
 		if (server_options.nr)
 			gtransport->server_options = &server_options;
 		result = transport_fetch_refs(gtransport, NULL);
+		gtransport->smart_options->acked_commits = NULL;
 
 		oidset_iter_init(&acked_commits, &iter);
 		while ((oid = oidset_iter_next(&iter)))
