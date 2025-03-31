@@ -632,6 +632,47 @@ test_expect_success 'stash create - no changes' '
 	test_must_be_empty actual
 '
 
+test_expect_success 'stash create with --include-untracked' '
+    git init repo &&
+    cd repo &&
+    echo committed >file1 &&
+    git add file1 &&
+    git commit -m "initial commit" &&
+    echo staged >file2 &&
+    git add file2 &&
+    echo unstaged >file3 &&
+    echo untracked >untracked_file &&
+    STASH_ID=$(git stash create --include-untracked "test message") &&
+    git cat-file -p $STASH_ID >stash_commit &&
+    grep "test message" stash_commit &&
+    grep "parent" stash_commit | wc -l >parent_count &&
+    echo 3 >expect &&
+    test_cmp expect parent_count &&
+    UNTRACKED_TREE=$(git rev-parse $STASH_ID^3^{tree}) &&
+    git ls-tree $UNTRACKED_TREE >files &&
+    grep untracked_file files &&
+    test_path_is_file untracked_file
+'
+
+test_expect_success 'stash create without --include-untracked does not include untracked files' '
+    git init repo2 &&
+    cd repo2 &&
+    echo committed >file1 &&
+    git add file1 &&
+    git commit -m "initial commit" &&
+    echo staged >file2 &&
+    git add file2 &&
+    echo unstaged >file3 &&
+    echo untracked >untracked_file &&
+    STASH_ID=$(git stash create "test message") &&
+    git cat-file -p $STASH_ID >stash_commit &&
+    grep "test message" stash_commit &&
+    grep "parent" stash_commit | wc -l >parent_count &&
+    echo 2 >expect &&
+    test_cmp expect parent_count &&
+    test_path_is_file untracked_file
+'
+
 test_expect_success 'stash branch - no stashes on stack, stash-like argument' '
 	git stash clear &&
 	test_when_finished "git reset --hard HEAD" &&
