@@ -48,4 +48,38 @@ test_expect_success 'core.hooksPath=/dev/null' '
 	{ test /dev/null = "$value" || test nul = "$value"; }
 '
 
+test_expect_success '--no-hooks' '
+	rm -f actual &&
+	test_might_fail git config --unset core.hooksPath &&
+
+	write_script .git/hooks/pre-commit <<-\EOF &&
+	echo HOOK >>actual
+	EOF
+
+	echo HOOK >expect &&
+
+	git commit --allow-empty -m "A" &&
+	test_cmp expect actual &&
+
+	git --no-hooks commit --allow-empty -m "B" &&
+	test_cmp expect actual
+'
+
+test_expect_success 'GIT_HOOKS' '
+	rm -f actual &&
+	test_might_fail git config --unset core.hooksPath &&
+
+	write_script .git/hooks/pre-commit <<-\EOF &&
+	echo HOOK >>actual
+	EOF
+
+	echo HOOK >expect &&
+
+	GIT_HOOKS=1 git commit --allow-empty -m "A" &&
+	test_cmp expect actual &&
+
+	GIT_HOOKS=0 git commit --allow-empty -m "B" &&
+	test_cmp expect actual
+'
+
 test_done

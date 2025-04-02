@@ -51,6 +51,12 @@
 #define GIT_ADVICE_ENVIRONMENT "GIT_ADVICE"
 
 /*
+ * Environment variable used to propagate the --no-hooks global option to
+ * the hooks layer and to any child processes.
+ */
+#define GIT_HOOKS "GIT_HOOKS"
+
+/*
  * Environment variable used in handshaking the wire protocol.
  * Contains a colon ':' separated list of keys with optional values
  * 'key[=value]'.  Presence of unknown keys and values must be

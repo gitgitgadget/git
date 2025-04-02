@@ -14,7 +14,7 @@ SYNOPSIS
     [-p | --paginate | -P | --no-pager] [--no-replace-objects] [--no-lazy-fetch]
     [--no-optional-locks] [--no-advice] [--bare] [--git-dir=<path>]
     [--work-tree=<path>] [--namespace=<name>] [--config-env=<name>=<envvar>]
-    <command> [<args>]
+    [--no-hooks] <command> [<args>]
 
 DESCRIPTION
 -----------
@@ -229,6 +229,12 @@ If you just want to run git as if it was started in `<path>` then use
 	Read gitattributes from <tree-ish> instead of the worktree. See
 	linkgit:gitattributes[5]. This is equivalent to setting the
 	`GIT_ATTR_SOURCE` environment variable.
+
+--no-hooks::
+	Skip running local Git hooks, even if configured locally. Hooks
+	are an opt-in feature, so be sure that you know the impact of
+	ignoring hooks when running with this option. This is equivalent
+	to setting `GIT_HOOKS=0` environment variable.
 
 GIT COMMANDS
 ------------
@@ -770,6 +776,11 @@ for further details.
 	using completely buffered I/O.   If this environment variable is
 	not set, Git will choose buffered or record-oriented flushing
 	based on whether stdout appears to be redirected to a file or not.
+
+`GIT_HOOKS`::
+	If this Boolean environment variable is set to false, then commands
+	will ignore any configured hooks as if the `--no-hooks` option was
+	provided.
 
 `GIT_TRACE`::
 	Enables general trace messages, e.g. alias expansion, built-in
