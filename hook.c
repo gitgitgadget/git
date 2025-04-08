@@ -144,6 +144,13 @@ int run_hooks_opt(struct repository *r, const char *hook_name,
 
 		.data = &cb_data,
 	};
+	static int do_run_hooks = -1;
+
+	if (do_run_hooks < 0)
+		do_run_hooks = git_env_bool(GIT_HOOKS, 1);
+
+	if (!do_run_hooks)
+		goto cleanup;
 
 	if (!options)
 		BUG("a struct run_hooks_opt must be provided to run_hooks");
