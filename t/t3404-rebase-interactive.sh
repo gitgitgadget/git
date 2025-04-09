@@ -2297,6 +2297,54 @@ test_expect_success 'non-merge commands reject merge commits' '
 	test_cmp expect actual
 '
 
+test_expect_success 'unconflicted pick copies extra commit headers' '
+	tree="$(git rev-parse C^{tree})" &&
+	parent="$(git rev-parse C^{commit})" &&
+	for i in 1 2 3 4 5 6 7
+	do
+		cat >commit <<-EOF &&
+		tree $tree
+		parent $parent
+		author $GIT_AUTHOR_NAME <$GIT_AUTHOR_EMAIL> $GIT_AUTHOR_DATE
+		committer $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL> $GIT_COMMITTER_DATE
+		x-extra-header value $i
+
+		An empty commit with an extra header $i
+		EOF
+
+		parent="$(git hash-object -t commit -w commit)" &&
+		eval "oid$i=\$parent" &&
+		test_tick || return 1
+	done &&
+
+	cat >todo <<-EOF &&
+	pick $oid1
+	pick $oid2
+	fixup $oid3
+	reword $oid4
+	edit $oid5
+	pick $oid6
+	squash $oid7
+	EOF
+
+	(
+		set_replace_editor todo &&
+		FAKE_COMMIT_AMEND=EDITED git rebase -i --onto A $oid1^ $oid5
+	) &&
+	echo changed >file2 &&
+	git add file2 &&
+	FAKE_COMMIT_AMEND=EDITED git rebase --continue &&
+	j=4 &&
+	for i in 1 2 4 5 6
+	do
+		git cat-file commit HEAD~$j >actual &&
+		sed -n -e /^\$/q -e /^x-extra/p actual >actual.extra-header &&
+		echo "x-extra-header value $i" >expect &&
+		test_cmp expect actual.extra-header &&
+		j=$((j-1)) || return 1
+	done
+'
+
 # This must be the last test in this file
 test_expect_success '$EDITOR and friends are unchanged' '
 	test_editor_unchanged
