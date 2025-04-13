@@ -135,6 +135,19 @@ static void add_branch(const char *key, const char *branchname,
 	git_config_set_multivar(key, tmp->buf, "^$", 0);
 }
 
+static int check_branch_names(const char **branches)
+{
+	int ret = 0;
+
+	for (const char **b = branches; *b; b++) {
+		if (check_refname_format(*b, REFNAME_ALLOW_ONELEVEL |
+						REFNAME_REFSPEC_PATTERN))
+			ret = error(_("invalid branch name '%s'"), *b);
+	}
+
+	return ret;
+}
+
 static const char mirror_advice[] =
 N_("--mirror is dangerous and deprecated; please\n"
    "\t use --mirror=fetch or --mirror=push instead");
@@ -162,7 +175,7 @@ static int add(int argc, const char **argv, const char *prefix,
 {
 	int fetch = 0, fetch_tags = TAGS_DEFAULT;
 	unsigned mirror = MIRROR_NONE;
-	struct string_list track = STRING_LIST_INIT_NODUP;
+	struct strvec track = STRVEC_INIT;
 	const char *master = NULL;
 	struct remote *remote;
 	struct strbuf buf = STRBUF_INIT, buf2 = STRBUF_INIT;
@@ -176,8 +189,8 @@ static int add(int argc, const char **argv, const char *prefix,
 			    N_("import all tags and associated objects when fetching\n"
 			       "or do not fetch any tag at all (--no-tags)"),
 			    TAGS_SET),
-		OPT_STRING_LIST('t', "track", &track, N_("branch"),
-				N_("branch(es) to track")),
+		OPT_STRVEC('t', "track", &track, N_("branch"),
+			   N_("branch(es) to track")),
 		OPT_STRING('m', "master", &master, N_("branch"), N_("master branch")),
 		OPT_CALLBACK_F(0, "mirror", &mirror, "(push|fetch)",
 			N_("set up remote as a mirror to push to or fetch from"),
@@ -208,6 +221,9 @@ static int add(int argc, const char **argv, const char *prefix,
 	if (!valid_remote_name(name))
 		die(_("'%s' is not a valid remote name"), name);
 
+	if (check_branch_names(track.v))
+		exit(128);
+
 	strbuf_addf(&buf, "remote.%s.url", name);
 	git_config_set(buf.buf, url);
 
@@ -215,10 +231,9 @@ static int add(int argc, const char **argv, const char *prefix,
 		strbuf_reset(&buf);
 		strbuf_addf(&buf, "remote.%s.fetch", name);
 		if (track.nr == 0)
-			string_list_append(&track, "*");
+			strvec_push(&track, "*");
 		for (i = 0; i < track.nr; i++) {
-			add_branch(buf.buf, track.items[i].string,
-				   name, mirror, &buf2);
+			add_branch(buf.buf, track.v[i], name, mirror, &buf2);
 		}
 	}
 
@@ -254,7 +269,7 @@ static int add(int argc, const char **argv, const char *prefix,
 out:
 	strbuf_release(&buf);
 	strbuf_release(&buf2);
-	string_list_clear(&track, 0);
+	strvec_clear(&track);
 
 	return result;
 }
@@ -1635,8 +1650,12 @@ static int update(int argc, const char **argv, const char *prefix,
 
 static int remove_all_fetch_refspecs(const char *key)
 {
-	return git_config_set_multivar_gently(key, NULL, NULL,
-					      CONFIG_FLAGS_MULTI_REPLACE);
+	int res = git_config_set_multivar_gently(key, NULL, NULL,
+						 CONFIG_FLAGS_MULTI_REPLACE);
+	if (res == CONFIG_NOTHING_SET)
+		res = 0;
+
+	return res;
 }
 
 static void add_branches(struct remote *remote, const char **branches,
@@ -1666,7 +1685,11 @@ static int set_remote_branches(const char *remotename, const char **branches,
 		exit(2);
 	}
 
+	if (check_branch_names(branches))
+		exit(128);
+
 	if (!add_mode && remove_all_fetch_refspecs(key.buf)) {
+		error(_("could not remove existing fetch refspec"));
 		strbuf_release(&key);
 		return 1;
 	}
