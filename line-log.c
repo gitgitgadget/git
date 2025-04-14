@@ -72,7 +72,13 @@ void range_set_append_unsafe(struct range_set *rs, long a, long b)
 
 void range_set_append(struct range_set *rs, long a, long b)
 {
-	assert(rs->nr == 0 || rs->ranges[rs->nr-1].end <= a);
+	if (rs->nr > 0 && rs->ranges[rs->nr-1].end + 1 == a) {
+		rs->ranges[rs->nr-1].end = b;
+		return;
+	}
+	if (rs->nr > 0 && rs->ranges[rs->nr-1].end > a)
+		BUG("append %ld-%ld, after %ld-%ld?!?", a, b,
+		    rs->ranges[rs->nr-1].start, rs->ranges[rs->nr-1].end);
 	range_set_append_unsafe(rs, a, b);
 }
 
@@ -433,7 +439,7 @@ static void range_set_shift_diff(struct range_set *out,
 				 struct diff_ranges *diff)
 {
 	unsigned int i, j = 0;
-	long offset = 0;
+	long offset = 0, start_offset;
 	struct range *src = rs->ranges;
 	struct range *target = diff->target.ranges;
 	struct range *parent = diff->parent.ranges;
@@ -444,7 +450,13 @@ static void range_set_shift_diff(struct range_set *out,
 				- (target[j].end-target[j].start);
 			j++;
 		}
-		range_set_append(out, src[i].start+offset, src[i].end+offset);
+		start_offset = offset;
+		while (j < diff->target.nr && src[i].end > target[j].end) {
+			offset += (parent[j].end-parent[j].start)
+				- (target[j].end-target[j].start);
+			j++;
+		}
+		range_set_append(out, src[i].start+start_offset, src[i].end+offset);
 	}
 }
 
