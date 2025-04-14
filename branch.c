@@ -839,9 +839,14 @@ void remove_merge_branch_state(struct repository *r)
 
 void remove_branch_state(struct repository *r, int verbose)
 {
+	remove_branch_state_except_merge(r, verbose);
+	remove_merge_branch_state(r);
+}
+
+void remove_branch_state_except_merge(struct repository *r, int verbose)
+{
 	sequencer_post_commit_cleanup(r, verbose);
 	unlink(git_path_squash_msg(r));
-	remove_merge_branch_state(r);
 }
 
 void die_if_checked_out(const char *branch, int ignore_current_worktree)
