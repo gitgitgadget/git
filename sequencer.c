@@ -1518,6 +1518,9 @@ static int parse_head(struct repository *r, struct commit **head)
 	return 0;
 }
 
+/* Headers to exclude when copying extra commit headers */
+static const char *exclude_gpgsig[] = { "gpgsig", "gpgsig-sha256", NULL };
+
 /*
  * Try to commit without forking 'git commit'. In some cases we need
  * to run 'git commit' to display an error message
@@ -1529,6 +1532,7 @@ static int parse_head(struct repository *r, struct commit **head)
  */
 static int try_to_commit(struct repository *r,
 			 struct strbuf *msg, const char *author,
+			 struct commit_extra_header *extra_header,
 			 struct replay_opts *opts, unsigned int flags,
 			 struct object_id *oid)
 {
@@ -1536,7 +1540,7 @@ static int try_to_commit(struct repository *r,
 	struct object_id tree;
 	struct commit *current_head = NULL;
 	struct commit_list *parents = NULL;
-	struct commit_extra_header *extra = NULL;
+	struct commit_extra_header *extra = extra_header;
 	struct strbuf err = STRBUF_INIT;
 	struct strbuf commit_msg = STRBUF_INIT;
 	char *amend_author = NULL;
@@ -1552,7 +1556,6 @@ static int try_to_commit(struct repository *r,
 		return -1;
 
 	if (flags & AMEND_MSG) {
-		const char *exclude_gpgsig[] = { "gpgsig", "gpgsig-sha256", NULL };
 		const char *out_enc = get_commit_output_encoding();
 		const char *message = repo_logmsg_reencode(r, current_head,
 							   NULL, out_enc);
@@ -1705,7 +1708,8 @@ static int try_to_commit(struct repository *r,
 		commit_post_rewrite(r, current_head, oid);
 
 out:
-	free_commit_extra_headers(extra);
+	if (extra != extra_header)
+		free_commit_extra_headers(extra);
 	free_commit_list(parents);
 	strbuf_release(&err);
 	strbuf_release(&commit_msg);
@@ -1725,6 +1729,7 @@ static int write_rebase_head(struct object_id *oid)
 
 static int do_commit(struct repository *r,
 		     const char *msg_file, const char *author,
+		     struct commit_extra_header *extra_header,
 		     struct replay_opts *opts, unsigned int flags,
 		     struct object_id *oid)
 {
@@ -1740,7 +1745,7 @@ static int do_commit(struct repository *r,
 					   msg_file);
 
 		res = try_to_commit(r, msg_file ? &sb : NULL,
-				    author, opts, flags, &oid);
+				    author, extra_header, opts, flags, &oid);
 		strbuf_release(&sb);
 		if (!res) {
 			refs_delete_ref(get_main_ref_store(r), "",
@@ -2242,6 +2247,7 @@ static int do_pick_commit(struct repository *r,
 	int res, unborn = 0, reword = 0, allow, drop_commit;
 	enum todo_command command = item->command;
 	struct commit *commit = item->commit;
+	struct commit_extra_header *extra_header = NULL;
 
 	if (opts->no_commit) {
 		/*
@@ -2382,8 +2388,12 @@ static int do_pick_commit(struct repository *r,
 			strbuf_addstr(&ctx->message, oid_to_hex(&commit->object.oid));
 			strbuf_addstr(&ctx->message, ")\n");
 		}
-		if (!is_fixup(command))
+		if (!is_fixup(command)) {
 			author = get_author(msg.message);
+			if (is_rebase_i(opts))
+				extra_header = read_commit_extra_headers(commit,
+								exclude_gpgsig);
+		}
 	}
 	ctx->have_message = 1;
 
@@ -2494,8 +2504,8 @@ static int do_pick_commit(struct repository *r,
 	} /* else allow == 0 and there's nothing special to do */
 	if (!opts->no_commit && !drop_commit) {
 		if (author || command == TODO_REVERT || (flags & AMEND_MSG))
-			res = do_commit(r, msg_file, author, opts, flags,
-					commit? &commit->object.oid : NULL);
+			res = do_commit(r, msg_file, author, extra_header, opts,
+					flags, commit? &commit->object.oid : NULL);
 		else
 			res = error(_("unable to parse commit author"));
 		*check_todo = !!(flags & EDIT_MSG);
@@ -2526,6 +2536,7 @@ fast_forward_edit:
 leave:
 	free_message(commit, &msg);
 	free(author);
+	free_commit_extra_headers(extra_header);
 	update_abort_safety_file();
 
 	return res;
