@@ -617,7 +617,7 @@ proc delete_helper {path_list path_index deletion_errors batch_size \
 
 		set path [lindex $path_list $path_index]
 
-		set deletion_failed [catch {file delete -- $path} deletion_error]
+		set deletion_failed [catch {file delete -- ./$path} deletion_error]
 
 		if {$deletion_failed} {
 			lappend deletion_errors [list "$deletion_error"]
