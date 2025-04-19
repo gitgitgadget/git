@@ -319,9 +319,13 @@ static void send_filter(struct fetch_pack_args *args,
 			trace2_data_string("fetch", the_repository,
 					   "filter/effective", spec);
 		} else {
-			warning("filtering not recognized by server, ignoring");
-			trace2_data_string("fetch", the_repository,
+			if (args->must_filter) {
+				die("filtering not recognized by server");
+			} else {
+				warning("filtering not recognized by server, ignoring");
+				trace2_data_string("fetch", the_repository,
 					   "filter/unsupported", spec);
+			}
 		}
 	} else {
 		trace2_data_string("fetch", the_repository,
