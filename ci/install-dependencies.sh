@@ -74,8 +74,8 @@ ubuntu-*|i386/ubuntu-*|debian-*)
 			-C "$CUSTOM_PATH" --strip-components=1 "git-lfs-$LINUX_GIT_LFS_VERSION/git-lfs"
 		rm "git-lfs-linux-amd64-$LINUX_GIT_LFS_VERSION.tar.gz"
 
-		wget --quiet "$JGITWHENCE" --output-document="$CUSTOM_PATH/jgit"
-		chmod a+x "$CUSTOM_PATH/jgit"
+		: wget --quiet "$JGITWHENCE" --output-document="$CUSTOM_PATH/jgit"
+		: chmod a+x "$CUSTOM_PATH/jgit"
 		;;
 	esac
 	;;
