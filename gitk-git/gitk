@@ -11991,6 +11991,12 @@ proc setselbg {c} {
 # radiobuttons look bad.  This chooses white for selectColor if the
 # background color is light, or black if it is dark.
 proc setui {c} {
+    global use_ttk
+
+    if {$use_ttk} {
+        return
+    }
+
     if {[tk windowingsystem] eq "win32"} { return }
     set bg [winfo rgb . $c]
     set selc black
