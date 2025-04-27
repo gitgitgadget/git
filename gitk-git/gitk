@@ -2133,7 +2133,31 @@ proc setoptions {} {
     option add *Listbox.font mainfont startupFile
 }
 
+proc createttkimages {} {
+    global uicolor
+
+    image create bitmap img:myVerticalSash -foreground $uicolor -data {
+        #define xbm_width 5
+        #define xbm_height 47
+        static unsigned char xbm_bits[] = {
+        0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04,
+        0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x00, 0x00, 0x0e, 0x00, 0x00, 0x0e,
+        0x00, 0x00, 0x0e, 0x00, 0x00, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04,
+        0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04 };
+    }
+
+    image create bitmap img:myHorizontalSash -foreground $uicolor -data {
+        #define xbm_width 47
+        #define xbm_height 5
+        static unsigned char xbm_bits[] = {
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x90, 0x04, 0x00, 0x00,
+        0xff, 0xff, 0x93, 0xe4, 0xff, 0x7f, 0x00, 0x00, 0x90, 0x04, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+    }
+}
+
 proc setttkstyle {} {
+
     eval font configure TkDefaultFont [fontflags mainfont]
     eval font configure TkTextFont [fontflags textfont]
     eval font configure TkHeadingFont [fontflags mainfont]
@@ -2143,6 +2167,16 @@ proc setttkstyle {} {
     eval font configure TkIconFont    [fontflags uifont]
     eval font configure TkMenuFont    [fontflags uifont]
     eval font configure TkSmallCaptionFont [fontflags uifont]
+
+    createttkimages
+
+    ttk::style element create myVerticalSash image img:myVerticalSash -sticky ew
+
+    ttk::style element create myHorizontalSash image img:myHorizontalSash -sticky ns
+
+    ttk::style layout Vertical.Sash { myVerticalSash }
+
+    ttk::style layout Horizontal.Sash { myHorizontalSash }
 }
 
 # Make a menu and submenus.
@@ -11825,7 +11859,7 @@ proc prefspage_colors {notebook} {
     grid $page.cdisp - -sticky w -pady 10
     label $page.ui -padx 40 -relief sunk -background $uicolor
     ${NS}::button $page.uibut -text [mc "Interface"] \
-       -command [list choosecolor uicolor {} $page.ui [mc "interface"] setui]
+       -command [list choosecolor uicolor {} $page.ui [mc "interface"] setui_dialog]
     grid x $page.uibut $page.ui -sticky w
     label $page.bg -padx 40 -relief sunk -background $bgcolor
     ${NS}::button $page.bgbut -text [mc "Background"] \
@@ -12004,6 +12038,14 @@ proc setui {c} {
         set selc white
     }
     tk_setPalette background $c selectColor $selc
+}
+
+proc setui_dialog {c} {
+    global uicolor
+
+    setui $c
+
+    createttkimages
 }
 
 proc setbg {c} {
@@ -12706,8 +12748,6 @@ eval font create textfontbold [fontflags textfont 1]
 parsefont uifont $uifont
 eval font create uifont [fontflags uifont]
 
-setui $uicolor
-
 setoptions
 
 # check that we can find a .git directory somewhere...
@@ -12787,6 +12827,8 @@ if {![info exists have_ttk]} {
 }
 set use_ttk [expr {$have_ttk && $want_ttk}]
 set NS [expr {$use_ttk ? "ttk" : ""}]
+
+setui $uicolor
 
 if {$use_ttk} {
     setttkstyle
