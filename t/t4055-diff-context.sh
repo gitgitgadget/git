@@ -49,7 +49,53 @@ test_expect_success 'diff.context honored by "log"' '
 	! grep firstline output &&
 	git config diff.context 8 &&
 	git log -1 -p >output &&
-	grep "^ firstline" output
+	grep "^ firstline" output &&
+	git config --unset diff.context
+'
+
+test_expect_success 'diff.context honored by "add"' '
+	git add -p >output &&
+	! grep firstline output &&
+	git config diff.context 8 &&
+	git add -p >output &&
+	grep "^ firstline" output &&
+	git config --unset diff.context
+'
+
+test_expect_success 'diff.context honored by "commit"' '
+	! git commit -p >output &&
+	! grep firstline output &&
+	git config diff.context 8 &&
+	! git commit -p >output &&
+	grep "^ firstline" output &&
+	git config --unset diff.context
+'
+
+test_expect_success 'diff.context honored by "checkout"' '
+	git checkout -p >output &&
+	! grep firstline output &&
+	git config diff.context 8 &&
+	git checkout -p >output &&
+	grep "^ firstline" output &&
+	git config --unset diff.context
+'
+
+test_expect_success 'diff.context honored by "stash"' '
+	! git stash -p >output &&
+	! grep firstline output &&
+	git config diff.context 8 &&
+	! git stash -p >output &&
+	grep "^ firstline" output &&
+	git config --unset diff.context
+'
+
+test_expect_success 'diff.context honored by "restore"' '
+	git restore -p >output &&
+	! grep firstline output &&
+	git config diff.context 8 &&
+	git restore -p >output &&
+	grep "^ firstline" output &&
+	git config --unset diff.context
 '
 
 test_expect_success 'The -U option overrides diff.context' '
