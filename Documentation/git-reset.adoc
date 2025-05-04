@@ -125,6 +125,17 @@ OPTIONS
 	separated with _NUL_ character and all other characters are taken
 	literally (including newlines and quotes).
 
+`-U<n>`::
+`--unified=<n>`::
+	Generate diffs with _<n>_ lines of context. Defaults to `diff.context`
+	or 3 if the config option is unset. Implies `--patch`.
+
+`--inter-hunk-context=<n>`::
+	Show the context between diff hunks, up to the specified _<number>_
+	of lines, thereby fusing hunks that are close to each other.
+	Defaults to `diff.interHunkContext` or 0 if the config option
+	is unset. Implies `--patch`.
+
 `--`::
 	Do not interpret any more arguments as options.
 

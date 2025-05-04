@@ -104,6 +104,17 @@ This effectively runs `add --interactive`, but bypasses the
 initial command menu and directly jumps to the `patch` subcommand.
 See ``Interactive mode'' for details.
 
+`-U<n>`::
+`--unified=<n>`::
+	Generate diffs with _<n>_ lines of context. Defaults to `diff.context`
+	or 3 if the config option is unset. Implies `--interactive/--patch`.
+
+`--inter-hunk-context=<n>`::
+	Show the context between diff hunks, up to the specified _<number>_
+	of lines, thereby fusing hunks that are close to each other.
+	Defaults to `diff.interHunkContext` or 0 if the config option
+	is unset. Implies `--interactive/--patch`.
+
 `-e`::
 `--edit`::
 	Open the diff vs. the index in an editor and let the user
