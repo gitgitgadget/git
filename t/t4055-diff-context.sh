@@ -52,6 +52,46 @@ test_expect_success 'diff.context honored by "log"' '
 	test_grep "^ firstline" output
 '
 
+test_expect_success 'diff.context honored by "add"' '
+	git add -p >output &&
+	test_grep ! firstline output &&
+	test_config diff.context 8 &&
+	git log -1 -p >output &&
+	test_grep "^ firstline" output
+'
+
+test_expect_success 'diff.context honored by "commit"' '
+	! git commit -p >output &&
+	test_grep ! firstline output &&
+	test_config diff.context 8 &&
+	! git commit -p >output &&
+	test_grep "^ firstline" output
+'
+
+test_expect_success 'diff.context honored by "checkout"' '
+	git checkout -p >output &&
+	test_grep ! firstline output &&
+	test_config diff.context 8 &&
+	git checkout -p >output &&
+	test_grep "^ firstline" output
+'
+
+test_expect_success 'diff.context honored by "stash"' '
+	! git stash -p >output &&
+	test_grep ! firstline output &&
+	test_config diff.context 8 &&
+	! git stash -p >output &&
+	test_grep "^ firstline" output
+'
+
+test_expect_success 'diff.context honored by "restore"' '
+	git restore -p >output &&
+	test_grep ! firstline output &&
+	test_config diff.context 8 &&
+	git restore -p >output &&
+	test_grep "^ firstline" output
+'
+
 test_expect_success 'The -U option overrides diff.context' '
 	test_config diff.context 8 &&
 	git log -U4 -1 >output &&
@@ -80,6 +120,36 @@ test_expect_success 'negative integer config parsing' '
 	test_config diff.context -1 &&
 	test_must_fail git diff 2>output &&
 	test_grep "bad config variable" output
+'
+
+test_expect_success 'negative integer config parsing by "add"' '
+	test_config diff.context -1 &&
+	test_must_fail git add -p 2>output &&
+	test_grep "diff.context cannot be negative" output
+'
+
+test_expect_success 'negative integer config parsing by "commit"' '
+	test_config diff.context -1 &&
+	test_must_fail git commit -p 2>output &&
+	test_grep "bad config variable" output
+'
+
+test_expect_success 'negative integer config parsing by "checkout"' '
+	test_config diff.context -1 &&
+	test_must_fail git checkout -p 2>output &&
+	test_grep "diff.context cannot be negative" output
+'
+
+test_expect_success 'negative integer config parsing by "stash"' '
+	test_config diff.context -1 &&
+	test_must_fail git stash -p 2>output &&
+	test_grep "diff.context cannot be negative" output
+'
+
+test_expect_success 'negative integer config parsing by "restore"' '
+	test_config diff.context -1 &&
+	test_must_fail git restore -p 2>output &&
+	test_grep "diff.context cannot be negative" output
 '
 
 test_expect_success '-U0 is valid, so is diff.context=0' '
