@@ -758,16 +758,19 @@ test_expect_success 'colors can be overridden' '
 
 	<RED>*** Commands ***<RESET>
 	  1: <YELLOW>s<RESET>tatus	  2: <YELLOW>u<RESET>pdate	  3: <YELLOW>r<RESET>evert	  4: <YELLOW>a<RESET>dd untracked
-	  5: <YELLOW>p<RESET>atch	  6: <YELLOW>d<RESET>iff	  7: <YELLOW>q<RESET>uit	  8: <YELLOW>h<RESET>elp
+	  5: <YELLOW>p<RESET>atch	  6: <YELLOW>d<RESET>iff	  7: <YELLOW>c<RESET>ontext	  8: <YELLOW>q<RESET>uit
+	  9: <YELLOW>h<RESET>elp
 	<YELLOW>What now<RESET>> <GREEN>status        - show paths with changes<RESET>
 	<GREEN>update        - add working tree state to the staged set of changes<RESET>
 	<GREEN>revert        - revert staged set of changes back to the HEAD version<RESET>
 	<GREEN>patch         - pick hunks and update selectively<RESET>
 	<GREEN>diff          - view diff between HEAD and index<RESET>
+	<GREEN>context       - change how many context lines diffs are generated with<RESET>
 	<GREEN>add untracked - add contents of untracked files to the staged set of changes<RESET>
 	<RED>*** Commands ***<RESET>
 	  1: <YELLOW>s<RESET>tatus	  2: <YELLOW>u<RESET>pdate	  3: <YELLOW>r<RESET>evert	  4: <YELLOW>a<RESET>dd untracked
-	  5: <YELLOW>p<RESET>atch	  6: <YELLOW>d<RESET>iff	  7: <YELLOW>q<RESET>uit	  8: <YELLOW>h<RESET>elp
+	  5: <YELLOW>p<RESET>atch	  6: <YELLOW>d<RESET>iff	  7: <YELLOW>c<RESET>ontext	  8: <YELLOW>q<RESET>uit
+	  9: <YELLOW>h<RESET>elp
 	<YELLOW>What now<RESET>> Bye.
 	EOF
 	test_cmp expect actual &&
@@ -831,7 +834,8 @@ test_expect_success 'brackets appear without color' '
 	|
 	|*** Commands ***
 	|  1: [s]tatus	  2: [u]pdate	  3: [r]evert	  4: [a]dd untracked
-	|  5: [p]atch	  6: [d]iff	  7: [q]uit	  8: [h]elp
+	|  5: [p]atch	  6: [d]iff	  7: [c]ontext	  8: [q]uit
+	|  9: [h]elp
 	|What now> Bye.
 	EOF
 
@@ -1172,16 +1176,19 @@ test_expect_success 'show help from add--helper' '
 
 	<BOLD>*** Commands ***<RESET>
 	  1: <BOLD;BLUE>s<RESET>tatus	  2: <BOLD;BLUE>u<RESET>pdate	  3: <BOLD;BLUE>r<RESET>evert	  4: <BOLD;BLUE>a<RESET>dd untracked
-	  5: <BOLD;BLUE>p<RESET>atch	  6: <BOLD;BLUE>d<RESET>iff	  7: <BOLD;BLUE>q<RESET>uit	  8: <BOLD;BLUE>h<RESET>elp
+	  5: <BOLD;BLUE>p<RESET>atch	  6: <BOLD;BLUE>d<RESET>iff	  7: <BOLD;BLUE>c<RESET>ontext	  8: <BOLD;BLUE>q<RESET>uit
+	  9: <BOLD;BLUE>h<RESET>elp
 	<BOLD;BLUE>What now<RESET>> <BOLD;RED>status        - show paths with changes<RESET>
 	<BOLD;RED>update        - add working tree state to the staged set of changes<RESET>
 	<BOLD;RED>revert        - revert staged set of changes back to the HEAD version<RESET>
 	<BOLD;RED>patch         - pick hunks and update selectively<RESET>
 	<BOLD;RED>diff          - view diff between HEAD and index<RESET>
+	<BOLD;RED>context       - change how many context lines diffs are generated with<RESET>
 	<BOLD;RED>add untracked - add contents of untracked files to the staged set of changes<RESET>
 	<BOLD>*** Commands ***<RESET>
 	  1: <BOLD;BLUE>s<RESET>tatus	  2: <BOLD;BLUE>u<RESET>pdate	  3: <BOLD;BLUE>r<RESET>evert	  4: <BOLD;BLUE>a<RESET>dd untracked
-	  5: <BOLD;BLUE>p<RESET>atch	  6: <BOLD;BLUE>d<RESET>iff	  7: <BOLD;BLUE>q<RESET>uit	  8: <BOLD;BLUE>h<RESET>elp
+	  5: <BOLD;BLUE>p<RESET>atch	  6: <BOLD;BLUE>d<RESET>iff	  7: <BOLD;BLUE>c<RESET>ontext	  8: <BOLD;BLUE>q<RESET>uit
+	  9: <BOLD;BLUE>h<RESET>elp
 	<BOLD;BLUE>What now<RESET>>$SP
 	Bye.
 	EOF
@@ -1228,6 +1235,25 @@ test_expect_success 'hunk splitting works with diff.suppressBlankEmpty' '
 	git cat-file blob :file >actual &&
 	test_write_lines a b "" c D "" e G "" >expect &&
 	test_cmp expect actual
+'
+
+test_expect_success 'change context works' '
+	git reset --hard &&
+	cat >template <<-\EOF &&
+	firstline
+	preline
+	TARGET
+	postline
+	lastline
+	EOF
+	sed "/TARGET/d" >x <template &&
+	git update-index --add x &&
+	git commit -m initial &&
+	sed "s/TARGET/ADDED/" >x <template &&
+	test_write_lines p 1 | git add -i >output &&
+	grep firstline output &&
+	test_write_lines c 0 p 1 | git add -i >output &&
+	! grep firstline output
 '
 
 test_done

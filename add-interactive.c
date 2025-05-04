@@ -20,6 +20,8 @@
 #include "prompt.h"
 #include "tree.h"
 
+static void choose_prompt_help_context(struct add_i_state *s);
+
 static void init_color(struct repository *r, struct add_i_state *s,
 		       const char *section_and_slot, char *dst,
 		       const char *default_color)
@@ -259,7 +261,8 @@ static void list(struct add_i_state *s, struct string_list *list, int *selected,
 		opts->print_item(i, selected ? selected[i] : 0, list->items + i,
 				 opts->print_item_data);
 
-		if ((opts->columns) && ((i + 1) % (opts->columns))) {
+		if (i < list->nr - 1 &&
+		    (opts->columns) && ((i + 1) % (opts->columns))) {
 			putchar('\t');
 			last_lf = 0;
 		}
@@ -1047,6 +1050,60 @@ static int run_diff(struct add_i_state *s, const struct pathspec *ps,
 	return res;
 }
 
+static int run_context(struct add_i_state *s, const struct pathspec *ps UNUSED,
+		       struct prefix_item_list *files UNUSED,
+		       struct list_and_choose_options *opts UNUSED)
+{
+	struct diff_options diffopts;
+	struct strbuf input = STRBUF_INIT;
+	int res = 0;
+
+	repo_diff_setup(s->r, &diffopts);
+
+	for (;;) {
+		int new_context;
+		char *endp;
+
+		strbuf_reset(&input);
+
+		color_fprintf(stdout, s->header_color, "  %s:", N_("Current"));
+		fprintf(stdout, " %i\n", s->context == -1 ?
+			diffopts.context : s->context);
+
+		color_fprintf(stdout, s->prompt_color, "%s", N_("Change context"));
+		fputs("> ", stdout);
+		fflush(stdout);
+
+		if (git_read_line_interactively(&input) == EOF) {
+			putchar('\n');
+			break;
+		}
+
+		if (!input.len)
+			break;
+
+		if (!strcmp(input.buf, "?")) {
+			choose_prompt_help_context(s);
+			continue;
+		}
+
+		new_context = strtol(input.buf, &endp, 10);
+		if (*endp) {
+			color_fprintf_ln(stderr, s->error_color,
+				_("Context must be a numerical value"));
+			continue;
+		}
+
+		s->context = new_context;
+
+		break;
+	}
+
+	strbuf_release(&input);
+	putchar('\n');
+	return res;
+}
+
 static int run_help(struct add_i_state *s, const struct pathspec *ps UNUSED,
 		    struct prefix_item_list *files UNUSED,
 		    struct list_and_choose_options *opts UNUSED)
@@ -1061,6 +1118,8 @@ static int run_help(struct add_i_state *s, const struct pathspec *ps UNUSED,
 			 _("pick hunks and update selectively"));
 	color_fprintf_ln(stdout, s->help_color, "diff          - %s",
 			 _("view diff between HEAD and index"));
+	color_fprintf_ln(stdout, s->help_color, "context       - %s",
+			 _("change how many context lines diffs are generated with"));
 	color_fprintf_ln(stdout, s->help_color, "add untracked - %s",
 			 _("add contents of untracked files to the staged set of changes"));
 
@@ -1083,6 +1142,16 @@ static void choose_prompt_help(struct add_i_state *s)
 			 _("unselect specified items"));
 	color_fprintf_ln(stdout, s->help_color, "*          - %s",
 			 _("choose all items"));
+	color_fprintf_ln(stdout, s->help_color, "           - %s",
+			 _("(empty) finish selecting"));
+}
+
+static void choose_prompt_help_context(struct add_i_state *s)
+{
+	color_fprintf_ln(stdout, s->help_color, "%s",
+			 _("Prompt help:"));
+	color_fprintf_ln(stdout, s->help_color, "<n>        - %s",
+			 _("specify new context lines amount"));
 	color_fprintf_ln(stdout, s->help_color, "           - %s",
 			 _("(empty) finish selecting"));
 }
@@ -1147,6 +1216,7 @@ int run_add_i(struct repository *r, const struct pathspec *ps,
 		{ "add untracked", run_add_untracked },
 		{ "patch", run_patch },
 		{ "diff", run_diff },
+		{ "context", run_context },
 		{ "quit", NULL },
 		{ "help", run_help },
 	};
