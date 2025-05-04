@@ -58,6 +58,36 @@ test_expect_success 'The -U option overrides diff.context' '
 	test_grep ! "^ firstline" output
 '
 
+test_expect_success 'The -U option overrides diff.context for "add"' '
+	test_config diff.context 8 &&
+	git add -U4 -p >output &&
+	test_grep ! "^ firstline" output
+'
+
+test_expect_success 'The -U option overrides diff.context for "commit"' '
+	test_config diff.context 8 &&
+	! git commit -U4 -p >output &&
+	test_grep ! "^ firstline" output
+'
+
+test_expect_success 'The -U option overrides diff.context for "checkout"' '
+	test_config diff.context 8 &&
+	git checkout -U4 -p >output &&
+	test_grep ! "^ firstline" output
+'
+
+test_expect_success 'The -U option overrides diff.context for "stash"' '
+	test_config diff.context 8 &&
+	! git stash -U4 -p >output &&
+	test_grep ! "^ firstline" output
+'
+
+test_expect_success 'The -U option overrides diff.context for "restore"' '
+	test_config diff.context 8 &&
+	git restore -U4 -p >output &&
+	test_grep ! "^ firstline" output
+'
+
 test_expect_success 'diff.context honored by "diff"' '
 	test_config diff.context 8 &&
 	git diff >output &&
