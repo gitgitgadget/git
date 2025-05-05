@@ -354,7 +354,7 @@ static int calc_maxwidth(struct ref_array *refs, int remote_bonus)
 	for (i = 0; i < refs->nr; i++) {
 		struct ref_array_item *it = refs->items[i];
 		const char *desc = it->refname;
-		int w;
+		size_t w;
 
 		skip_prefix(it->refname, "refs/heads/", &desc);
 		skip_prefix(it->refname, "refs/remotes/", &desc);

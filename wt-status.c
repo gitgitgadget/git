@@ -331,7 +331,7 @@ static int maxwidth(const char *(*label)(int), int minval, int maxval)
 
 	for (i = minval; i <= maxval; i++) {
 		const char *s = label(i);
-		int len = s ? utf8_strwidth(s) : 0;
+		size_t len = s ? utf8_strwidth(s) : 0;
 		if (len > result)
 			result = len;
 	}
@@ -347,7 +347,7 @@ static void wt_longstatus_print_unmerged_data(struct wt_status *s,
 	static char *padding;
 	static int label_width;
 	const char *one, *how;
-	int len;
+	size_t len;
 
 	if (!padding) {
 		label_width = maxwidth(wt_status_unmerged_status_string, 1, 7);
