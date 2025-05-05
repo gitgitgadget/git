@@ -1463,7 +1463,7 @@ class LargeFileSystem(object):
         self.largeFiles = set()
         self.writeToGitStream = writeToGitStream
 
-    def generatePointer(self, cloneDestination, contentFile):
+    def generatePointer(self, contentFile):
         """Return the content of a pointer file that is stored in Git instead
            of the actual content.
            """
@@ -1517,20 +1517,14 @@ class LargeFileSystem(object):
     def isLargeFile(self, relPath):
         return relPath in self.largeFiles
 
-    def processContent(self, git_mode, relPath, contents):
+    def processContent(self, relPath, contents):
         """Processes the content of git fast import. This method decides if a
            file is stored in the large file system and handles all necessary
            steps.
            """
-        # symlinks aren't processed by smudge/clean filters
-        if git_mode == "120000":
-            return (git_mode, contents)
-
         if self.exceedsLargeFileThreshold(relPath, contents) or self.hasLargeFileExtension(relPath):
             contentTempFile = self.generateTempFile(contents)
-            pointer_git_mode, contents, localLargeFile = self.generatePointer(contentTempFile)
-            if pointer_git_mode:
-                git_mode = pointer_git_mode
+            contents, localLargeFile = self.generatePointer(contentTempFile)
             if localLargeFile:
                 # Move temp file to final location in large file system
                 largeFileDir = os.path.dirname(localLargeFile)
@@ -1542,7 +1536,7 @@ class LargeFileSystem(object):
                     self.pushFile(localLargeFile)
                 if verbose:
                     sys.stderr.write("%s moved to large file system (%s)\n" % (relPath, localLargeFile))
-        return (git_mode, contents)
+        return contents
 
 
 class MockLFS(LargeFileSystem):
@@ -1555,10 +1549,9 @@ class MockLFS(LargeFileSystem):
            """
         with open(contentFile, 'r') as f:
             content = next(f)
-            gitMode = '100644'
             pointerContents = 'pointer-' + content
             localLargeFile = os.path.join(os.getcwd(), '.git', 'mock-storage', 'local', content[:-1])
-            return (gitMode, pointerContents, localLargeFile)
+            return (pointerContents, localLargeFile)
 
     def pushFile(self, localLargeFile):
         """The remote filename of the large file storage is the same as the
@@ -1586,7 +1579,7 @@ class GitLFS(LargeFileSystem):
            content.
            """
         if os.path.getsize(contentFile) == 0:
-            return (None, '', None)
+            return ('', None)
 
         pointerProcess = subprocess.Popen(
             ['git', 'lfs', 'pointer', '--file=' + contentFile],
@@ -1616,9 +1609,7 @@ class GitLFS(LargeFileSystem):
             'objects', oid[:2], oid[2:4],
             oid,
         )
-        # LFS Spec states that pointer files should not have the executable bit set.
-        gitMode = '100644'
-        return (gitMode, pointerFile, localLargeFile)
+        return (pointerFile, localLargeFile)
 
     def pushFile(self, localLargeFile):
         uploadProcess = subprocess.Popen(
@@ -1652,12 +1643,12 @@ class GitLFS(LargeFileSystem):
         LargeFileSystem.removeLargeFile(self, relPath)
         self.writeToGitStream('100644', '.gitattributes', self.generateGitAttributes())
 
-    def processContent(self, git_mode, relPath, contents):
+    def processContent(self, relPath, contents):
         if relPath == '.gitattributes':
             self.baseGitAttributes = contents
-            return (git_mode, self.generateGitAttributes())
+            return self.generateGitAttributes()
         else:
-            return LargeFileSystem.processContent(self, git_mode, relPath, contents)
+            return LargeFileSystem.processContent(self, relPath, contents)
 
 
 class Command:
@@ -3217,8 +3208,9 @@ class P4Sync(Command, P4UserMap):
         if regexp:
             contents = [regexp.sub(br'$\1$', c) for c in contents]
 
-        if self.largeFileSystem:
-            git_mode, contents = self.largeFileSystem.processContent(git_mode, relPath, contents)
+        # symlinks aren't processed by smudge/clean filters
+        if git_mode != '120000' and self.largeFileSystem:
+            contents = self.largeFileSystem.processContent(relPath, contents)
 
         self.writeToGitStream(git_mode, relPath, contents)
 
