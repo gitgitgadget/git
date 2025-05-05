@@ -21,7 +21,10 @@ test_expect_success 'setup' '
 	git push origin HEAD &&
 	git branch --set-upstream-to=origin/main main &&
 	git branch --track topic origin/main &&
+	git branch --no-track indie_topic origin/main &&
+	git branch --no-track new_topic origin/main &&
 	git push origin topic &&
+	git push origin indie_topic &&
 	git push other topic
 '
 
@@ -71,6 +74,23 @@ test_expect_success 'resolving @{push} fails with a detached HEAD' '
 	git checkout HEAD^0 &&
 	test_when_finished "git checkout -" &&
 	test_must_fail git rev-parse @{push}
+'
+
+test_expect_success '@{push} with default=simple without tracking' '
+	test_config push.default simple &&
+	test_must_fail git rev-parse indie_topic@{push}
+'
+
+test_expect_success '@{push} with default=simple with autosetupremote' '
+	test_config push.default simple &&
+	test_config push.autosetupremote true &&
+	resolve indie_topic@{push} refs/remotes/origin/indie_topic
+'
+
+test_expect_success '@{push} with default=simple with autosetupremote, new branch' '
+	test_config push.default simple &&
+	test_config push.autosetupremote true &&
+	test_must_fail git rev-parse new_topic@{push}
 '
 
 test_done
