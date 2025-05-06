@@ -391,11 +391,12 @@ static char *parse_options_noop_ignored_value MAYBE_UNUSED;
 }
 #define OPT_SUBCOMMAND(l, v, fn)    OPT_SUBCOMMAND_F((l), (v), (fn), 0)
 
-#define OPT_UNKNOWN(v, fn) { \
-	.type = OPTION_END, \
-	.value = (v), \
-	.strdup_fn = (fn), \
-}
+#define OPT_UNKNOWN(v, fn)          \
+	{                           \
+		.type = OPTION_END, \
+		.value = (v),       \
+		.strdup_fn = (fn),  \
+	}
 
 /*
  * parse_options() will filter out the processed options and leave the
@@ -505,7 +506,6 @@ struct parse_opt_ctx_t {
 	const char *prefix;
 	const char **alias_groups; /* must be in groups of 3 elements! */
 	struct parse_opt_cmdmode_list *cmdmode_list;
-
 	void *unknown_opts;
 	parse_opt_strdup_fn *strdup_fn;
 };

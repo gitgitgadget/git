@@ -638,7 +638,9 @@ static int has_subcommands(const struct option *options)
 	return 0;
 }
 
-static void set_strdup_fn(struct parse_opt_ctx_t *ctx, const struct option *options) {
+static void set_strdup_fn(struct parse_opt_ctx_t *ctx,
+			  const struct option *options)
+{
 	for (; options->type != OPTION_END; options++)
 		;
 	if (options->value && options->strdup_fn) {
@@ -993,9 +995,13 @@ enum parse_opt_result parse_options_step(struct parse_opt_ctx_t *ctx,
 					 * This is leaky, too bad.
 					 */
 					if (ctx->unknown_opts && ctx->strdup_fn) {
-						ctx->argv[0] = ctx->strdup_fn(ctx->unknown_opts, ctx->opt - 1);
+						ctx->argv[0] =
+							ctx->strdup_fn(ctx->unknown_opts,
+								       ctx->opt -
+									       1);
 					} else {
-						ctx->argv[0] = xstrdup(ctx->opt - 1);
+						ctx->argv[0] =
+							xstrdup(ctx->opt - 1);
 					}
 					*(char *)ctx->argv[0] = '-';
 					goto unknown;
