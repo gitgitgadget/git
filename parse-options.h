@@ -77,6 +77,8 @@ typedef enum parse_opt_result parse_opt_ll_cb(struct parse_opt_ctx_t *ctx,
 typedef int parse_opt_subcommand_fn(int argc, const char **argv,
 				    const char *prefix, struct repository *repo);
 
+typedef char *parse_opt_strdup_fn(void *value, const char *s);
+
 /*
  * `type`::
  *   holds the type of the option, you must have an OPTION_END last in your
@@ -165,6 +167,7 @@ struct option {
 	parse_opt_ll_cb *ll_callback;
 	intptr_t extra;
 	parse_opt_subcommand_fn *subcommand_fn;
+	parse_opt_strdup_fn *strdup_fn;
 };
 
 #define OPT_BIT_F(s, l, v, h, b, f) { \
@@ -388,6 +391,13 @@ static char *parse_options_noop_ignored_value MAYBE_UNUSED;
 }
 #define OPT_SUBCOMMAND(l, v, fn)    OPT_SUBCOMMAND_F((l), (v), (fn), 0)
 
+#define OPT_UNKNOWN(v, fn)          \
+	{                           \
+		.type = OPTION_END, \
+		.value = (v),       \
+		.strdup_fn = (fn),  \
+	}
+
 /*
  * parse_options() will filter out the processed options and leave the
  * non-option arguments in argv[]. argv0 is assumed program name and
@@ -496,6 +506,8 @@ struct parse_opt_ctx_t {
 	const char *prefix;
 	const char **alias_groups; /* must be in groups of 3 elements! */
 	struct parse_opt_cmdmode_list *cmdmode_list;
+	void *unknown_opts;
+	parse_opt_strdup_fn *strdup_fn;
 };
 
 void parse_options_start(struct parse_opt_ctx_t *ctx,

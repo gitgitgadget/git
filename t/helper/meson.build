@@ -39,6 +39,7 @@ test_tool_sources = [
   'test-pack-mtimes.c',
   'test-parse-options.c',
   'test-parse-pathspec-file.c',
+  'test-free-unknown-options.c',
   'test-partial-clone.c',
   'test-path-utils.c',
   'test-path-walk.c',
