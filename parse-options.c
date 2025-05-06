@@ -638,6 +638,16 @@ static int has_subcommands(const struct option *options)
 	return 0;
 }
 
+static void set_strdup_fn(struct parse_opt_ctx_t *ctx, const struct option *options) {
+	for (; options->type != OPTION_END; options++)
+		;
+	if (options->value && options->strdup_fn) {
+		ctx->unknown_opts = options->value;
+		ctx->strdup_fn = options->strdup_fn;
+		return;
+	}
+}
+
 static void parse_options_start_1(struct parse_opt_ctx_t *ctx,
 				  int argc, const char **argv, const char *prefix,
 				  const struct option *options,
@@ -655,6 +665,7 @@ static void parse_options_start_1(struct parse_opt_ctx_t *ctx,
 	ctx->cpidx = ((flags & PARSE_OPT_KEEP_ARGV0) != 0);
 	ctx->flags = flags;
 	ctx->has_subcommands = has_subcommands(options);
+	set_strdup_fn(ctx, options);
 	if (!ctx->has_subcommands && (flags & PARSE_OPT_SUBCOMMAND_OPTIONAL))
 		BUG("Using PARSE_OPT_SUBCOMMAND_OPTIONAL without subcommands");
 	if (ctx->has_subcommands) {
@@ -981,7 +992,11 @@ enum parse_opt_result parse_options_step(struct parse_opt_ctx_t *ctx,
 					 *
 					 * This is leaky, too bad.
 					 */
-					ctx->argv[0] = xstrdup(ctx->opt - 1);
+					if (ctx->unknown_opts && ctx->strdup_fn) {
+						ctx->argv[0] = ctx->strdup_fn(ctx->unknown_opts, ctx->opt - 1);
+					} else {
+						ctx->argv[0] = xstrdup(ctx->opt - 1);
+					}
 					*(char *)ctx->argv[0] = '-';
 					goto unknown;
 				case PARSE_OPT_NON_OPTION:

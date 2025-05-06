@@ -822,4 +822,18 @@ test_expect_success 'u16 limits range' '
 	test_grep "value 65536 for option .u16. not in range \[0,65535\]" err
 '
 
+cat >expect <<\EOF
+a = true
+b = true
+free unknown option: -c
+free unknown option: -d
+EOF
+
+test_expect_success 'free unknown options' '
+	test-tool free-unknown-options -ac -bd \
+	>output 2>output.err &&
+	test_cmp expect output &&
+	test_must_be_empty output.err
+'
+
 test_done

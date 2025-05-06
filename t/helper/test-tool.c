@@ -51,6 +51,7 @@ static struct test_cmd cmds[] = {
 	{ "parse-options-flags", cmd__parse_options_flags },
 	{ "parse-pathspec-file", cmd__parse_pathspec_file },
 	{ "parse-subcommand", cmd__parse_subcommand },
+	{ "free-unknown-options", cmd__free_unknown_options},
 	{ "partial-clone", cmd__partial_clone },
 	{ "path-utils", cmd__path_utils },
 	{ "path-walk", cmd__path_walk },
