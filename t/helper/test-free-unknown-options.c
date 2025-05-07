@@ -8,6 +8,12 @@ static const char *const free_unknown_options_usage[] = {
 	"test-tool free-unknown-options", NULL
 };
 
+static char *strvec_push_wrapper(void *value, const char *str)
+{
+	struct strvec *sv = value;
+	return (char *)strvec_push(sv, str);
+}
+
 int cmd__free_unknown_options(int argc, const char **argv)
 {
 	struct strvec *unknown_opts = xmalloc(sizeof(struct strvec));
@@ -17,7 +23,7 @@ int cmd__free_unknown_options(int argc, const char **argv)
 	struct option options[] = {
 		OPT_BOOL('a', "test-a", &a, N_("option a, only for test use")),
 		OPT_BOOL('b', "test-b", &b, N_("option b, only for test use")),
-		OPT_UNKNOWN(unknown_opts, (parse_opt_strdup_fn *)&strvec_push),
+		OPT_UNKNOWN(unknown_opts, strvec_push_wrapper),
 	};
 
 	strvec_init(unknown_opts);
