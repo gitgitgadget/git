@@ -200,14 +200,26 @@ static inline int reftable_alloc_size(size_t nelem, size_t elsize, size_t *out)
 		} \
 	} while (0)
 #define REFTABLE_CALLOC_ARRAY(x, alloc) (x) = reftable_calloc((alloc), sizeof(*(x)))
-#define REFTABLE_REALLOC_ARRAY(x, alloc) do { \
-		size_t alloc_size; \
-		if (reftable_alloc_size(sizeof(*(x)), (alloc), &alloc_size) < 0) { \
-			errno = ENOMEM; \
-			(x) = NULL; \
-		} else { \
-			(x) = reftable_realloc((x), alloc_size); \
-		} \
+#define REFTABLE_REALLOC_ARRAY(x, alloc)                                      \
+	do {                                                                  \
+		size_t alloc_size;                                            \
+		void *new_p;                                                  \
+		if (reftable_alloc_size(sizeof(*(x)), (alloc), &alloc_size) < \
+		    0) {                                                      \
+			goto cleanup;                                         \
+		} else {                                                      \
+			new_p = reftable_realloc((x), alloc_size);            \
+			if (!new_p) {                                         \
+				goto cleanup;                                 \
+			}                                                     \
+			(x) = new_p;                                          \
+		}                                                             \
+		break;                                                        \
+	cleanup:                                                              \
+		if (x)                                                        \
+			free(x);                                              \
+		errno = ENOMEM;                                               \
+		(x) = NULL;                                                   \
 	} while (0)
 
 static inline void *reftable_alloc_grow(void *p, size_t nelem, size_t elsize,
