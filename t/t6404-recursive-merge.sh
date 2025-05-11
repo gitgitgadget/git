@@ -91,7 +91,7 @@ test_expect_success 'virtual trees were processed' '
 	git ls-files --stage >out &&
 
 	cat >expect <<-EOF &&
-	100644 $(git rev-parse main:a1) 1	a1
+	100644 $(test_oid idxstage1) 1	a1
 	100644 $(git rev-parse F:a1) 2	a1
 	100644 $(git rev-parse G:a1) 3	a1
 	EOF

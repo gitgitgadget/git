@@ -5229,7 +5229,7 @@ static void merge_ort_internal(struct merge_options *opt,
 		 * base of our merge bases.
 		 */
 		if (merge_bases->next)
-			opt->priv->vmb_favor = 0;
+			opt->priv->vmb_favor = XDL_MERGE_FAVOR_BASE;
 		else
 			opt->priv->vmb_favor = XDL_MERGE_FAVOR_BASE;
 	} else if (opt->ancestor) {
