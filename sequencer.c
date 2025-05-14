@@ -2139,7 +2139,7 @@ static int update_squash_messages(struct repository *r,
 		strbuf_add_commented_lines(&buf, body, strlen(body),
 					   comment_line_str);
 	} else
-		return error(_("unknown command: %d"), command);
+		BUG(_("unknown command: %d"), command);
 	repo_unuse_commit_buffer(r, commit, message);
 
 	if (!res)
