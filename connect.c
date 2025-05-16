@@ -827,8 +827,11 @@ static int git_tcp_connect_sock(char *host, int flags)
 	else if (flags & CONNECT_IPV6)
 		hints.ai_family = AF_INET6;
 	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_protocol = IPPROTO_TCP;
-
+#ifdef IPPROTO_MPTCP
+        hints.ai_protocol = IPPROTO_MPTCP;
+#else
+        hints.ai_protocol = IPPROTO_TCP;
+#endif
 	if (flags & CONNECT_VERBOSE)
 		fprintf(stderr, _("Looking up %s ... "), host);
 
