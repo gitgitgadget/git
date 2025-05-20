@@ -26,6 +26,18 @@ has_any () {
 	grep -Ff "$1" "$2"
 }
 
+skip_ewah_bitmap() {
+	local bitmap="$1" &&
+	local offset="$2" &&
+	local size= &&
+
+	offset=$(($offset + 4)) &&
+	size=0x$(od -An -v -t x1 -j $offset -N 4 $bitmap | tr -d ' \n') &&
+	size=$(($size * 8)) &&
+	offset=$(($offset + 4 + $size + 4)) &&
+	echo $offset
+}
+
 # Since name-hash values are stored in the .bitmap files, add a test
 # that checks that the name-hash calculations are stable across versions.
 # Not exhaustive, but these hashing algorithms would be hard to change
@@ -484,6 +496,44 @@ test_bitmap_cases () {
 			GIT_TRACE2_EVENT=$(pwd)/trace2.txt git rev-list --use-bitmap-index HEAD &&
 			grep "opened bitmap" trace2.txt &&
 			grep "ignoring extra bitmap" trace2.txt
+		)
+	'
+
+	# A `.bitmap` file has the following structure:
+	# | Header | Commits | Trees | Blobs | Tags | Entries... |
+	#
+	# - The header is 32 bytes long when using SHA-1.
+	# - Commits, Trees, Blobs, and Tags are all stored as EWAH bitmaps.
+	#
+	# This test intentionally corrupts the `xor_offset` field of the first entry
+	# to verify robustness against malformed bitmap data.
+	test_expect_success 'load corrupt bitmap' '
+		rm -fr repo &&
+		git init repo &&
+		test_when_finished "rm -fr repo" &&
+		(
+			cd repo &&
+			git config pack.writeBitmapLookupTable '"$writeLookupTable"' &&
+
+			test_commit base &&
+
+			git repack -adb &&
+			bitmap="$(ls .git/objects/pack/pack-*.bitmap)" &&
+			chmod +w "$bitmap" &&
+
+			hdr_sz=$((12 + $(test_oid rawsz))) &&
+			offset=$(skip_ewah_bitmap $bitmap $hdr_sz) &&
+			offset=$(skip_ewah_bitmap $bitmap $offset) &&
+			offset=$(skip_ewah_bitmap $bitmap $offset) &&
+			offset=$(skip_ewah_bitmap $bitmap $offset) &&
+			offset=$((offset + 4)) &&
+
+			printf '\161' |
+				dd of=$bitmap count=1 bs=1 conv=notrunc seek=$offset &&
+
+			git rev-list --count HEAD > expect &&
+			git rev-list --use-bitmap-index --count HEAD > actual &&
+			test_cmp expect actual
 		)
 	'
 }
