@@ -546,4 +546,14 @@ test_expect_success '--convert-graft-file' '
 	test_grep "$EMPTY_BLOB $EMPTY_TREE" .git/info/grafts
 '
 
+test_expect_success 'replace ref in a nested path' '
+	git cat-file commit $HASH2 >actual &&
+	R=$(sed -e "s/A U/O/" actual | git hash-object -t commit --stdin -w) &&
+	git update-ref refs/replace/abc1/$HASH2 $R &&
+	git show $HASH2 >actual &&
+	test_grep "O Thor" actual &&
+	git --no-replace-objects show $HASH2 >actual &&
+	test_grep "A U Thor" actual
+'
+
 test_done
