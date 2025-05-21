@@ -212,13 +212,12 @@ test_expect_success 'git detects differently handled merges conflict' '
 		git cat-file -p C:new_a >ours &&
 		git cat-file -p C:a >theirs &&
 		>empty &&
-		test_must_fail git merge-file \
+		git merge-file --base \
 			-L "Temporary merge branch 1" \
 			-L "" \
 			-L "Temporary merge branch 2" \
 			ours empty theirs &&
-		sed -e "s/^\([<=>]\)/\1\1\1/" ours >ours-tweaked &&
-		git hash-object ours-tweaked >expect &&
+		git hash-object ours >expect &&
 		git rev-parse >>expect      \
 				  D:new_a  E:new_a &&
 		git rev-parse   >actual     \
@@ -274,13 +273,12 @@ test_expect_success 'git detects differently handled merges conflict, swapped' '
 		git cat-file -p C:a >ours &&
 		git cat-file -p C:new_a >theirs &&
 		>empty &&
-		test_must_fail git merge-file \
+		git merge-file --base \
 			-L "Temporary merge branch 1" \
 			-L "" \
 			-L "Temporary merge branch 2" \
 			ours empty theirs &&
-		sed -e "s/^\([<=>]\)/\1\1\1/" ours >ours-tweaked &&
-		git hash-object ours-tweaked >expect &&
+		git hash-object ours >expect &&
 		git rev-parse >>expect      \
 				  D:new_a  E:new_a &&
 		git rev-parse   >actual     \
@@ -1480,11 +1478,13 @@ test_expect_failure 'check conflicting modes for regular file' '
 #     - R2 renames 'a' to 'm'
 #
 #   In the end, in file 'm' we have four different conflicting files (from
-#   two versions of 'b' and two of 'a').  In addition, if
-#   merge.conflictstyle is diff3, then the base version also has
-#   conflict markers of its own, leading to a total of three levels of
-#   conflict markers.  This is a pretty weird corner case, but we just want
-#   to ensure that we handle it as well as practical.
+#   two versions of 'b' and two of 'a').  In addition, if we didn't use
+#   XDL_MERGE_FAVOR_BASE and merge.conflictstyle is diff3, then the base
+#   version would also have conflict markers of its own, leading to a total of
+#   three levels of conflict markers.  However, we do use XDL_MERGE_FAVOR_BASE
+#   for recursive merges, so this should keep conflict nestings to two.  This
+#   is a pretty weird corner case, but we just want to ensure that we handle
+#   it as well as practical.
 
 test_expect_success 'setup nested conflicts' '
 	git init nested_conflicts &&
@@ -1562,7 +1562,7 @@ test_expect_success 'setup nested conflicts' '
 	)
 '
 
-test_expect_success 'check nested conflicts' '
+test_expect_success 'check nested merges without nested conflicts' '
 	(
 		cd nested_conflicts &&
 
@@ -1586,26 +1586,28 @@ test_expect_success 'check nested conflicts' '
 		git cat-file -p main:a >base &&
 		git cat-file -p L1:a >ours &&
 		git cat-file -p R1:a >theirs &&
-		test_must_fail git merge-file --diff3 \
+		git merge-file --base \
 			-L "Temporary merge branch 1" \
 			-L "$MAIN"  \
 			-L "Temporary merge branch 2" \
 			ours  \
 			base  \
 			theirs &&
-		sed -e "s/^\([<|=>]\)/\1\1/" ours >vmb_a &&
+		mv ours vmb_a &&
+		test_cmp base vmb_a &&
 
 		git cat-file -p main:b >base &&
 		git cat-file -p L1:b >ours &&
 		git cat-file -p R1:b >theirs &&
-		test_must_fail git merge-file --diff3 \
+		git merge-file --base \
 			-L "Temporary merge branch 1" \
 			-L "$MAIN"  \
 			-L "Temporary merge branch 2" \
 			ours  \
 			base  \
 			theirs &&
-		sed -e "s/^\([<|=>]\)/\1\1/" ours >vmb_b &&
+		mv ours vmb_b &&
+		test_cmp base vmb_b &&
 
 		# Compare :2:m to expected values
 		git cat-file -p L2:m >ours &&
@@ -1665,14 +1667,15 @@ test_expect_success 'check nested conflicts' '
 #   L<n> and R<n> resolve the conflicts differently.
 #
 #   X<n> is an auto-generated merge-base used when merging L<n+1> and R<n+1>.
-#   By construction, X1 has conflict markers due to conflicting versions.
-#   X2, due to using merge.conflictstyle=3, has nested conflict markers.
+#   By construction, X1 has two handle conflicting versions.   X2 is both
+#   based on a merge base that had to ahndle conflicting versions, and is
+#   trying to resolve conflicting versions between L2 and R2.
 #
-#   So, merging R3 into L3 using merge.conflictstyle=3 should show the
-#   nested conflict markers from X2 in the base version -- that means we
-#   have three levels of conflict markers.  Can we distinguish all three?
+#   So, merging R3 into L3 using merge.conflictstyle=3 has a merge base where
+#   conflicts had to dealth with multiple levels back.  Do we get a reasonable
+#   diff3 output for it?
 
-test_expect_success 'setup virtual merge base with nested conflicts' '
+test_expect_success 'setup virtual merge base where multiple levels back had conflicts' '
 	git init virtual_merge_base_has_nested_conflicts &&
 	(
 		cd virtual_merge_base_has_nested_conflicts &&
@@ -1731,7 +1734,7 @@ test_expect_success 'setup virtual merge base with nested conflicts' '
 	)
 '
 
-test_expect_success 'check virtual merge base with nested conflicts' '
+test_expect_success 'check virtual merge base where multiple levels back had conflicts' '
 	(
 		cd virtual_merge_base_has_nested_conflicts &&
 
@@ -1755,34 +1758,30 @@ test_expect_success 'check virtual merge base with nested conflicts' '
 		git rev-parse :2:content :3:content >actual &&
 		test_cmp expect actual &&
 
-		# Imitate X1 merge base, except without long enough conflict
-		# markers because a subsequent sed will modify them.  Put
-		# result into vmb.
+		# Imitate X1 merge base, Put result into vmb.
 		git cat-file -p main:content >base &&
 		git cat-file -p L:content >left &&
 		git cat-file -p R:content >right &&
 		cp left merged-once &&
-		test_must_fail git merge-file --diff3 \
+		git merge-file --base \
 			-L "Temporary merge branch 1" \
 			-L "$MAIN"  \
 			-L "Temporary merge branch 2" \
 			merged-once \
 			base        \
 			right       &&
-		sed -e "s/^\([<|=>]\)/\1\1\1/" merged-once >vmb &&
+		mv merged-once vmb &&
 
-		# Imitate X2 merge base, overwriting vmb.  Note that we
-		# extend both sets of conflict markers to make them longer
-		# with the sed command.
+		# Imitate X2 merge base, overwriting vmb.
 		cp left merged-twice &&
-		test_must_fail git merge-file --diff3 \
+		git merge-file --base \
 			-L "Temporary merge branch 1" \
 			-L "merged common ancestors"  \
 			-L "Temporary merge branch 2" \
 			merged-twice \
 			vmb          \
 			right        &&
-		sed -e "s/^\([<|=>]\)/\1\1\1/" merged-twice >vmb &&
+		mv merged-twice vmb &&
 
 		# Compare :1:content to expected value
 		git cat-file -p :1:content >actual &&

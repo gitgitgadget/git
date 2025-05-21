@@ -61,9 +61,9 @@ struct ll_merge_options {
 	 * Resolve local conflicts automatically in favor of one side or the other
 	 * (as in 'git merge-file' `--ours`/`--theirs`/`--union`).  Can be `0`,
 	 * `XDL_MERGE_FAVOR_OURS`, `XDL_MERGE_FAVOR_THEIRS`,
-	 * or `XDL_MERGE_FAVOR_UNION`.
+	 * or `XDL_MERGE_FAVOR_UNION`, `XDL_MERGE_FAVOR_BASE`.
 	 */
-	unsigned variant : 2;
+	unsigned variant : 3;
 
 	/**
 	 * Resmudge and clean the "base", "theirs" and "ours" files before merging.
