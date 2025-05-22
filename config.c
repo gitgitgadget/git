@@ -1651,9 +1651,13 @@ int config_with_options(config_fn_t fn, void *data,
 	if (config_source && config_source->use_stdin) {
 		ret = git_config_from_stdin(fn, data, config_source->scope);
 	} else if (config_source && config_source->file) {
-		ret = git_config_from_file_with_options(fn, config_source->file,
-							data, config_source->scope,
-							NULL);
+		if (config_source->scope == CONFIG_SCOPE_GLOBAL) {
+			ret = do_git_config_sequence(opts, repo, fn, data, 1);
+		} else {
+			ret = git_config_from_file_with_options(fn, config_source->file,
+								data, config_source->scope,
+								NULL);
+		}
 	} else if (config_source && config_source->blob) {
 		ret = git_config_from_blob_ref(fn, repo, config_source->blob,
 					       data, config_source->scope);
