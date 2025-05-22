@@ -834,6 +834,22 @@ static void display_options_init(struct config_display_options *opts)
 	}
 }
 
+static void handle_nonzero_config_with_options(const struct config_location_options
+						       *location_opts)
+{
+	// todo(delilahwu): Either un-refactor this back to its original state from
+	// `master` or clean it up.
+	const char *err_file = location_opts->source.file; /* ?
+				       location_opts->source.file :
+			       location_opts->source.user_config ?
+				       location_opts->source.user_config :
+				       NULL; */
+	if (err_file)
+		die_errno(_("unable to read config file '%s'"), err_file);
+	else
+		die(_("error processing config file(s)"));
+}
+
 static int cmd_config_list(int argc, const char **argv, const char *prefix,
 			   struct repository *repo UNUSED)
 {
@@ -859,11 +875,7 @@ static int cmd_config_list(int argc, const char **argv, const char *prefix,
 	if (config_with_options(show_all_config, &display_opts,
 				&location_opts.source, the_repository,
 				&location_opts.options) < 0) {
-		if (location_opts.source.file)
-			die_errno(_("unable to read config file '%s'"),
-				  location_opts.source.file);
-		else
-			die(_("error processing config file(s)"));
+		handle_nonzero_config_with_options(&location_opts);
 	}
 
 	location_options_release(&location_opts);
@@ -1285,11 +1297,7 @@ static int cmd_config_actions(int argc, const char **argv, const char *prefix)
 		if (config_with_options(show_all_config, &display_opts,
 					&location_opts.source, the_repository,
 					&location_opts.options) < 0) {
-			if (location_opts.source.file)
-				die_errno(_("unable to read config file '%s'"),
-					  location_opts.source.file);
-			else
-				die(_("error processing config file(s)"));
+			handle_nonzero_config_with_options(&location_opts);
 		}
 	}
 	else if (actions == ACTION_EDIT) {
