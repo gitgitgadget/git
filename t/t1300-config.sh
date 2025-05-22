@@ -2367,6 +2367,76 @@ test_expect_success '--show-scope with --default' '
 	test_cmp expect actual
 '
 
+test_expect_success 'list with nonexistent global config' '
+	rm -rf "$HOME"/.config/git/config &&
+	rm -f .git/config &&
+	git config ${mode_prefix}list --show-scope
+'
+
+test_expect_success 'list --global with nonexistent global config' '
+	rm -rf "$HOME"/.config/git/config &&
+	rm -f .git/config &&
+	test_must_fail git config ${mode_prefix}list --global --show-scope
+'
+
+test_expect_success 'list --global with only home' '
+	rm -rf "$HOME"/.config/git/config &&
+	rm -f .git/config &&
+
+	test_when_finished rm -f \"\$HOME\"/.gitconfig &&
+	cat >"$HOME"/.gitconfig <<-EOF &&
+	[home]
+		config = true
+	EOF
+
+	cat >expect <<-EOF &&
+	global	home.config=true
+	EOF
+	git config ${mode_prefix}list --global --show-scope >output &&
+	test_cmp expect output
+'
+
+test_expect_success 'list --global with only xdg' '
+	rm -f "$HOME"/.gitconfig .git/config &&
+
+	test_when_finished rm -rf \"\$HOME\"/.config/git &&
+	mkdir -p "$HOME"/.config/git &&
+	cat >"$HOME"/.config/git/config <<-EOF &&
+	[xdg]
+		config = true
+	EOF
+
+	cat >expect <<-EOF &&
+	global	xdg.config=true
+	EOF
+	git config ${mode_prefix}list --global --show-scope >output &&
+	test_cmp expect output
+'
+
+test_expect_success 'list --global with both home and xdg' '
+	rm -f .git/config &&
+
+	test_when_finished rm -f \"\$HOME\"/.gitconfig &&
+	cat >"$HOME"/.gitconfig <<-EOF &&
+	[home]
+		config = true
+	EOF
+
+	test_when_finished rm -rf \"\$HOME\"/.config/git &&
+	mkdir -p "$HOME"/.config/git &&
+	cat >"$HOME"/.config/git/config <<-EOF &&
+	[xdg]
+		config = true
+	EOF
+
+	cat >expect <<-EOF &&
+	global	xdg.config=true
+	global	home.config=true
+	EOF
+	git config ${mode_prefix}list --global --show-scope >output &&
+	test_cmp expect output
+'
+
 test_expect_success 'override global and system config' '
 	test_when_finished rm -f \"\$HOME\"/.gitconfig &&
 	cat >"$HOME"/.gitconfig <<-EOF &&
