@@ -87,6 +87,8 @@ typedef int (*config_parser_event_fn_t)(enum config_event_t type,
 
 struct config_options {
 	unsigned int respect_includes : 1;
+	unsigned int ignore_system : 1; // From /etc/gitconfig
+	unsigned int ignore_global : 1; // From a combination of `~/.gitconfig` and `XDG_CONFIG_HOME/git/config`
 	unsigned int ignore_repo : 1;
 	unsigned int ignore_worktree : 1;
 	unsigned int ignore_cmdline : 1;

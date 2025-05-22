@@ -769,7 +769,16 @@ static void location_options_init(struct config_location_options *opts,
 	}
 
 	if (opts->use_global_config) {
+		// Used for reading config:
+		opts->options.ignore_repo = 1;
+		opts->options.ignore_cmdline= 1;
+		opts->options.ignore_worktree = 1;
+		opts->options.ignore_system = 1;
+		opts->source.scope = CONFIG_SCOPE_GLOBAL;
+
+		// Used for writing config:
 		opts->source.file = opts->file_to_free = git_global_config();
+		// todo(delilahwu): Do we need to move this error handling somewhere else?
 		if (!opts->source.file)
 			/*
 			 * It is unknown if HOME/.gitconfig exists, so
