@@ -2106,8 +2106,6 @@ static int do_git_config_sequence(const struct config_options *opts,
 	free(system_config);
 	free(repo_config);
 	free(worktree_config);
-
-	trace2_printf("do_git_config_sequence=%d\n", ret);
 	return ret;
 }
 
@@ -2128,10 +2126,6 @@ int config_with_options(config_fn_t fn, void *data,
 		fn = git_config_include;
 		data = &inc;
 	}
-
-	trace2_printf("config_source->file=%s, config_source->blob=%s\n",
-	       config_source ? config_source->file : NULL,
-	       config_source ? config_source->blob : NULL);
 
 	/*
 	 * If we have a specific filename, use it. Otherwise, follow the

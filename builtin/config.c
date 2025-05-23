@@ -14,7 +14,6 @@
 #include "setup.h"
 #include "strbuf.h"
 #include "worktree.h"
-#include "../trace2.h" // todo(delilahwu): Clean up traces
 
 static const char *const builtin_config_usage[] = {
 	N_("git config list [<file-option>] [<display-option>] [--includes]"),
@@ -982,8 +981,6 @@ static int cmd_config_set(int argc, const char **argv, const char *prefix,
 
 	comment = git_config_prepare_comment_string(comment_arg);
 
-	trace2_printf("config", "set", "key=%s, value=%s, comment=%s\n",
-		      argv[0], argv[1], comment);
 	location_options_init(&location_opts, prefix);
 	check_write(&location_opts.source);
 
@@ -1313,8 +1310,6 @@ static int cmd_config_actions(int argc, const char **argv, const char *prefix)
 		ret = show_editor(&location_opts);
 	}
 	else if (actions == ACTION_SET) {
-		trace2_printf("action set key=%s, value=%s, comment=%s\n",
-			      argv[0], argv[1], comment);
 		check_write(&location_opts.source);
 		check_argc(argc, 2, 2);
 		value = normalize_value(argv[0], argv[1], display_opts.type, &default_kvi);
