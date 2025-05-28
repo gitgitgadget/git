@@ -21,7 +21,7 @@ SYNOPSIS
 'git stash' save [-p | --patch] [-S | --staged] [-k | --[no-]keep-index] [-q | --quiet]
 	     [-u | --include-untracked] [-a | --all] [<message>]
 'git stash' clear
-'git stash' create [<message>]
+'git stash' create [-u | --include-untracked] [<message>]
 'git stash' store [(-m | --message) <message>] [-q | --quiet] <commit>
 
 DESCRIPTION
@@ -139,11 +139,13 @@ drop [-q|--quiet] [<stash>]::
 
 	Remove a single stash entry from the list of stash entries.
 
-create::
+create [-u | --include-untracked] [<message>]::
 
 	Create a stash entry (which is a regular commit object) and
 	return its object name, without storing it anywhere in the ref
 	namespace.
+	If the `--include-untracked` option is used, all untracked files are
+	also included in the stash entry.
 	This is intended to be useful for scripts.  It is probably not
 	the command you want to use; see "push" above.
 
@@ -169,6 +171,9 @@ up with `git clean`.
 	When used with the `push` and `save` commands,
 	all untracked files are also stashed and then cleaned up with
 	`git clean`.
++
+When used with the `create` command, all untracked files are also included
+in the stash entry.
 +
 When used with the `show` command, show the untracked files in the stash
 entry as part of the diff.
