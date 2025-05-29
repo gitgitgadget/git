@@ -698,26 +698,35 @@ proc sq {value} {
 proc load_current_branch {} {
 	global current_branch is_detached
 
-	set fd [open [gitdir HEAD] r]
-	fconfigure $fd -translation binary -encoding utf-8
-	if {[gets $fd ref] < 1} {
-		set ref {}
-	}
-	close $fd
-
-	set pfx {ref: refs/heads/}
-	set len [string length $pfx]
-	if {[string equal -length $len $pfx $ref]} {
-		# We're on a branch.  It might not exist.  But
-		# HEAD looks good enough to be a branch.
-		#
-		set current_branch [string range $ref $len end]
+	if {![catch {file link [gitdir HEAD]}]} {
+		# HEAD is a symbolic link. Since it is a symbolic link, it
+		# cannot be detached.
+		set current_branch [file link [gitdir HEAD]]
+		set len [string length {refs/heads/}]
+		set current_branch [string range $current_branch $len end]
 		set is_detached 0
 	} else {
-		# Assume this is a detached head.
-		#
-		set current_branch HEAD
-		set is_detached 1
+		set fd [open [gitdir HEAD] r]
+		fconfigure $fd -translation binary -encoding utf-8
+		if {[gets $fd ref] < 1} {
+			set ref {}
+		}
+		close $fd
+
+		set pfx {ref: refs/heads/}
+		set len [string length $pfx]
+		if {[string equal -length $len $pfx $ref]} {
+			# We're on a branch.  It might not exist.  But
+			# HEAD looks good enough to be a branch.
+			#
+			set current_branch [string range $ref $len end]
+			set is_detached 0
+		} else {
+			# Assume this is a detached head.
+			#
+			set current_branch HEAD
+			set is_detached 1
+		}
 	}
 }
 
