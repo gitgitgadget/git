@@ -145,6 +145,7 @@ proc do_options {} {
 		{b merge.diffstat {mc "Show Diffstat After Merge"}}
 		{t merge.tool {mc "Use Merge Tool"}}
 
+		{b gui.autorescan  {mc "Auto-Rescan On Activate"}}
 		{b gui.trustmtime  {mc "Trust File Modification Timestamps"}}
 		{b gui.pruneduringfetch {mc "Prune Tracking Branches During Fetch"}}
 		{b gui.matchtrackingbranch {mc "Match Tracking Branches"}}
