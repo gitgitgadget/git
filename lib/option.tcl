@@ -345,6 +345,7 @@ proc do_save_config {w} {
 	if {[catch {save_config} err]} {
 		error_popup [strcat [mc "Failed to completely save options:"] "\n\n$err"]
 	}
+	load_config 1
 	reshow_diff
 	destroy $w
 }
