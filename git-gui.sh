@@ -3275,13 +3275,13 @@ ${NS}::panedwindow .vpane.files -orient vertical
 if {$use_ttk} {
 	.vpane add .vpane.files
 } else {
-	.vpane add .vpane.files -sticky nsew -height 100 -width 200
+	.vpane add .vpane.files -sticky nsew -height 600 -width 400
 }
 pack .vpane -anchor n -side top -fill both -expand 1
 
 # -- Working Directory File List
 
-textframe .vpane.files.workdir -height 100 -width 200
+textframe .vpane.files.workdir -height 300 -width 400
 tlabel .vpane.files.workdir.title -text [mc "Unstaged Changes"] \
 	-background lightsalmon -foreground black
 ttext $ui_workdir \
@@ -3302,7 +3302,7 @@ pack $ui_workdir -side left -fill both -expand 1
 
 # -- Index File List
 #
-textframe .vpane.files.index -height 100 -width 200
+textframe .vpane.files.index -height 300 -width 400
 tlabel .vpane.files.index.title \
 	-text [mc "Staged Changes (Will Commit)"] \
 	-background lightgreen -foreground black
@@ -3365,7 +3365,7 @@ if {$have_tk85} {
 		.vpane.lower paneconfigure .vpane.lower.commarea -stretch never
 	}
 } else {
-	frame .vpane.lower -height 300 -width 400
+	frame .vpane.lower -height 600 -width 400
 	frame .vpane.lower.commarea
 	frame .vpane.lower.diff -relief sunken -borderwidth 1
 	pack .vpane.lower.diff -fill both -expand 1
