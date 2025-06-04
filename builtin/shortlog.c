@@ -186,8 +186,10 @@ static void insert_records_from_trailers(struct shortlog *log,
 	commit_buffer = repo_logmsg_reencode(the_repository, commit, NULL,
 					     ctx->output_encoding);
 	body = strstr(commit_buffer, "\n\n");
-	if (!body)
+	if (!body) {
+		repo_unuse_commit_buffer(the_repository, commit, commit_buffer);
 		return;
+	}
 
 	trailer_iterator_init(&iter, body);
 	while (trailer_iterator_advance(&iter)) {
