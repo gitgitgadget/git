@@ -56,4 +56,9 @@ test_expect_success 'no multiple parameters in definition list items' '
 	test_must_be_empty out
 '
 
+test_expect_success 'no synopsis style option names in definition list items' '
+(cd $GIT_BUILD_DIR && git grep -Er '\''^`?--\[no-\][a-z0-9-]+`?(\:\:|;;)$'\'' -- '\''Documentation/**.adoc'\'' || true) > out &&
+	test_must_be_empty out
+'
+
 test_done
