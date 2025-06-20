@@ -917,9 +917,7 @@ static void child_handler(int signo UNUSED)
 	/*
 	 * Otherwise empty handler because systemcalls will get interrupted
 	 * upon signal receipt
-	 * SysV needs the handler to be rearmed
 	 */
-	signal(SIGCHLD, child_handler);
 }
 
 static int set_reuse_addr(int sockfd)
@@ -1121,6 +1119,7 @@ static void socksetup(struct string_list *listen_addr, int listen_port, struct s
 static int service_loop(struct socketlist *socklist)
 {
 	struct pollfd *pfd;
+	struct sigaction sa;
 
 	CALLOC_ARRAY(pfd, socklist->nr);
 
@@ -1129,7 +1128,10 @@ static int service_loop(struct socketlist *socklist)
 		pfd[i].events = POLLIN;
 	}
 
-	signal(SIGCHLD, child_handler);
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = SA_NOCLDSTOP | SA_RESTART;
+	sa.sa_handler = child_handler;
+	sigaction(SIGCHLD, &sa, NULL);
 
 	for (;;) {
 		check_dead_children();
