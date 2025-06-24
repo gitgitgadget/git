@@ -1192,6 +1192,11 @@ GIT_CHECK_FUNC(getdelim,
 [HAVE_GETDELIM=])
 GIT_CONF_SUBST([HAVE_GETDELIM])
 #
+# Define NO_SIGINTERRUPT if you don't have siginterrupt.
+GIT_CHECK_FUNC(siginterrupt,
+[NO_SIGINTERRUPT=],
+[NO_SIGINTERRUPT=YesPlease])
+GIT_CONF_SUBST([NO_SIGINTERRUPT])
 #
 # Define NO_MMAP if you want to avoid mmap.
 #

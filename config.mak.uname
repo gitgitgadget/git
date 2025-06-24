@@ -486,6 +486,7 @@ ifeq ($(uname_S),Windows)
 	NO_STRTOUMAX = YesPlease
 	NO_MKDTEMP = YesPlease
 	NO_INTTYPES_H = YesPlease
+	NO_SIGINTERRUPT = YesPlease
 	CSPRNG_METHOD = rtlgenrandom
 	# VS2015 with UCRT claims that snprintf and friends are C99 compliant,
 	# so we don't need this:
@@ -661,6 +662,7 @@ ifeq ($(uname_S),NONSTOP_KERNEL)
 	NO_PREAD = YesPlease
 	NO_MMAP = YesPlease
 	NO_POLL = YesPlease
+	NO_SIGINTERRUPT = UnfortunatelyYes
 	NO_INTPTR_T = UnfortunatelyYes
 	CSPRNG_METHOD = openssl
 	SANE_TOOL_PATH = /usr/coreutils/bin:/usr/local/bin
@@ -697,6 +699,7 @@ ifeq ($(uname_S),MINGW)
 	NEEDS_LIBICONV = YesPlease
 	NO_STRTOUMAX = YesPlease
 	NO_MKDTEMP = YesPlease
+	NO_SIGINTERRUPT = YesPlease
 	NO_SVN_TESTS = YesPlease
 
 	# The builtin FSMonitor requires Named Pipes and Threads on Windows.
@@ -791,4 +794,5 @@ ifeq ($(uname_S),QNX)
 	NO_PTHREADS = YesPlease
 	NO_STRCASESTR = YesPlease
 	NO_STRLCPY = YesPlease
+	NO_SIGINTERRUPT = UnfortunatelyYes
 endif

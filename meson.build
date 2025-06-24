@@ -1361,6 +1361,7 @@ checkfuncs = {
   'setenv' : ['setenv.c'],
   'mkdtemp' : ['mkdtemp.c'],
   'initgroups' : [],
+  'siginterrupt' : [],
   'strtoumax' : ['strtoumax.c', 'strtoimax.c'],
   'pread' : ['pread.c'],
 }

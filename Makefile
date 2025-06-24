@@ -144,6 +144,9 @@ include shared.mak
 # Define NO_PREAD if you have a problem with pread() system call (e.g.
 # cygwin1.dll before v1.5.22).
 #
+# Define NO_SIGINTERRUPT if you don't have siginterrupt() or SA_RESTART
+# or if your signal(SIGCHLD) implementation doesn't set SA_RESTART.
+#
 # Define NO_SETITIMER if you don't have setitimer()
 #
 # Define NO_STRUCT_ITIMERVAL if you don't have struct itimerval
@@ -1901,6 +1904,9 @@ endif
 ifdef NO_PREAD
 	COMPAT_CFLAGS += -DNO_PREAD
 	COMPAT_OBJS += compat/pread.o
+endif
+ifdef NO_SIGINTERRUPT
+	COMPAT_CFLAGS += -DNO_SIGINTERRUPT
 endif
 ifdef NO_FAST_WORKING_DIRECTORY
 	BASIC_CFLAGS += -DNO_FAST_WORKING_DIRECTORY

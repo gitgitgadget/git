@@ -912,12 +912,16 @@ static void handle(int incoming, struct sockaddr *addr, socklen_t addrlen)
 		add_child(&cld, addr, addrlen);
 }
 
-static void child_handler(int signo UNUSED)
+static void child_handler(int signo)
 {
 	/*
-	 * Otherwise empty handler because systemcalls will get interrupted
-	 * upon signal receipt
+	 * Empty handler because systemcalls should get interrupted
+	 * upon signal receipt.
 	 */
+#ifdef NO_SIGINTERRUPT
+	/* SysV needs the handler to be rearmed */
+	signal(signo, child_handler);
+#endif
 }
 
 static int set_reuse_addr(int sockfd)
@@ -1118,8 +1122,10 @@ static void socksetup(struct string_list *listen_addr, int listen_port, struct s
 
 static int service_loop(struct socketlist *socklist)
 {
-	struct pollfd *pfd;
+#ifndef NO_SIGINTERRUPT
 	struct sigaction sa;
+#endif
+	struct pollfd *pfd;
 
 	CALLOC_ARRAY(pfd, socklist->nr);
 
@@ -1128,14 +1134,22 @@ static int service_loop(struct socketlist *socklist)
 		pfd[i].events = POLLIN;
 	}
 
+#ifdef NO_SIGINTERRUPT
+	signal(SIGCHLD, child_handler);
+#else
 	sigemptyset(&sa.sa_mask);
 	sa.sa_flags = SA_NOCLDSTOP | SA_RESTART;
 	sa.sa_handler = child_handler;
 	sigaction(SIGCHLD, &sa, NULL);
+#endif
 
 	for (;;) {
 		check_dead_children();
 
+#ifndef NO_SIGINTERRUPT
+		sa.sa_flags &= ~SA_RESTART;
+		sigaction(SIGCHLD, &sa, NULL);
+#endif
 		if (poll(pfd, socklist->nr, -1) < 0) {
 			if (errno != EINTR) {
 				logerror("Poll failed, resuming: %s",
@@ -1144,6 +1158,10 @@ static int service_loop(struct socketlist *socklist)
 			}
 			continue;
 		}
+#ifndef NO_SIGINTERRUPT
+		sa.sa_flags |= SA_RESTART;
+		sigaction(SIGCHLD, &sa, NULL);
+#endif
 
 		for (size_t i = 0; i < socklist->nr; i++) {
 			if (pfd[i].revents & POLLIN) {
