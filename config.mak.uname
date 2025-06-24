@@ -654,8 +654,6 @@ ifeq ($(uname_S),NONSTOP_KERNEL)
 	FREAD_READS_DIRECTORIES = UnfortunatelyYes
 
 	# Not detected (nor checked for) by './configure'.
-	# We don't have SA_RESTART on NonStop, unfortunalety.
-	COMPAT_CFLAGS += -DSA_RESTART=0
 	# Apparently needed in compat/fnmatch/fnmatch.c.
 	COMPAT_CFLAGS += -DHAVE_STRING_H=1
 	NO_ST_BLOCKS_IN_STRUCT_STAT = YesPlease
@@ -782,7 +780,6 @@ ifeq ($(uname_S),MINGW)
         endif
 endif
 ifeq ($(uname_S),QNX)
-	COMPAT_CFLAGS += -DSA_RESTART=0
 	EXPAT_NEEDS_XMLPARSE_H = YesPlease
 	HAVE_STRINGS_H = YesPlease
 	NEEDS_SOCKET = YesPlease
