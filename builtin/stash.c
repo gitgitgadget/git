@@ -55,7 +55,7 @@
 	N_("git stash save [-p | --patch] [-S | --staged] [-k | --[no-]keep-index] [-q | --quiet]\n" \
 	   "          [-u | --include-untracked] [-a | --all] [<message>]")
 #define BUILTIN_STASH_CREATE_USAGE \
-	N_("git stash create [<message>]")
+	N_("git stash create [-u | --include-untracked] [<message>]")
 #define BUILTIN_STASH_CLEAR_USAGE \
 	"git stash clear"
 
@@ -106,6 +106,11 @@ static const char * const git_stash_branch_usage[] = {
 
 static const char * const git_stash_clear_usage[] = {
 	BUILTIN_STASH_CLEAR_USAGE,
+	NULL
+};
+
+static const char * const git_stash_create_usage[] = {
+	BUILTIN_STASH_CREATE_USAGE,
 	NULL
 };
 
@@ -1504,22 +1509,30 @@ done:
 	return ret;
 }
 
-static int create_stash(int argc, const char **argv, const char *prefix UNUSED,
+static int create_stash(int argc, const char **argv, const char *prefix,
 			struct repository *repo UNUSED)
 {
 	int ret;
+	int include_untracked = 0;
+	struct option options[] = {
+		OPT_BOOL('u', "include-untracked", &include_untracked,
+			N_("include untracked files")),
+		OPT_END()
+	};
+
 	struct strbuf stash_msg_buf = STRBUF_INIT;
 	struct stash_info info = STASH_INFO_INIT;
 	struct pathspec ps;
 
-	/* Starting with argv[1], since argv[0] is "create" */
-	strbuf_join_argv(&stash_msg_buf, argc - 1, ++argv, ' ');
+	argc = parse_options(argc, argv, prefix, options, git_stash_create_usage, 0);
+
+	strbuf_join_argv(&stash_msg_buf, argc, argv, ' ');
 
 	memset(&ps, 0, sizeof(ps));
 	if (!check_changes_tracked_files(&ps))
 		return 0;
 
-	ret = do_create_stash(&ps, &stash_msg_buf, 0, 0, 0, &info,
+	ret = do_create_stash(&ps, &stash_msg_buf, include_untracked, 0, 0, &info,
 			      NULL, 0);
 	if (!ret)
 		printf_ln("%s", oid_to_hex(&info.w_commit));
