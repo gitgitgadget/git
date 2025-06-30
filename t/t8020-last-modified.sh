@@ -113,6 +113,8 @@ test_expect_success 'limit last-modified traversal by commit' '
 	EOF
 '
 
+# TODO test exact at boundary
+
 test_expect_success 'only last-modified files in the current tree' '
 	git rm -rf a &&
 	git commit -m "remove a" &&

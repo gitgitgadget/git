@@ -1,5 +1,7 @@
 #include "git-compat-util.h"
+#include "bloom.h"
 #include "builtin.h"
+#include "commit-graph.h"
 #include "commit.h"
 #include "config.h"
 #include "diff.h"
@@ -17,6 +19,7 @@
 struct last_modified_entry {
 	struct hashmap_entry hashent;
 	struct object_id oid;
+	struct bloom_key key;
 	const char path[FLEX_ARRAY];
 };
 
@@ -41,6 +44,12 @@ struct last_modified {
 
 static void last_modified_release(struct last_modified *lm)
 {
+	struct hashmap_iter iter;
+	struct last_modified_entry *ent;
+
+	hashmap_for_each_entry(&lm->paths, &iter, ent, hashent)
+		bloom_key_clear(&ent->key);
+
 	hashmap_clear_and_free(&lm->paths, struct last_modified_entry, hashent);
 	release_revisions(&lm->rev);
 }
@@ -62,6 +71,9 @@ static void add_path_from_diff(struct diff_queue_struct *q,
 
 		FLEX_ALLOC_STR(ent, path, path);
 		oidcpy(&ent->oid, &p->two->oid);
+		if (lm->rev.bloom_filter_settings)
+			bloom_key_fill(&ent->key, path, strlen(path),
+				       lm->rev.bloom_filter_settings);
 		hashmap_entry_init(&ent->hashent, strhash(ent->path));
 		hashmap_add(&lm->paths, &ent->hashent);
 	}
@@ -138,6 +150,7 @@ static void mark_path(const char *path, const struct object_id *oid,
 	last_modified_emit(data->lm, path, data->commit);
 
 	hashmap_remove(&data->lm->paths, &ent->hashent, path);
+	bloom_key_clear(&ent->key);
 	free(ent);
 }
 
@@ -181,6 +194,27 @@ static void last_modified_diff(struct diff_queue_struct *q,
 	}
 }
 
+static bool maybe_changed_path(struct last_modified *lm, struct commit *origin)
+{
+	struct bloom_filter *filter;
+	struct last_modified_entry *ent;
+	struct hashmap_iter iter;
+
+	if (!lm->rev.bloom_filter_settings)
+		return true;
+
+	filter = get_bloom_filter(lm->rev.repo, origin);
+	if (!filter)
+		return true;
+
+	hashmap_for_each_entry(&lm->paths, &iter, ent, hashent) {
+		if (bloom_filter_contains(filter, &ent->key,
+					  lm->rev.bloom_filter_settings))
+			return true;
+	}
+	return false;
+}
+
 static int last_modified_run(struct last_modified *lm)
 {
 	struct last_modified_callback_data data = { .lm = lm };
@@ -196,14 +230,22 @@ static int last_modified_run(struct last_modified *lm)
 		if (!data.commit)
 			BUG("paths remaining beyond boundary in last-modified");
 
+		// TODO distinguish when boundary is the one touching paths and
+		// beyond it
+
 		if (data.commit->object.flags & BOUNDARY) {
 			diff_tree_oid(lm->rev.repo->hash_algo->empty_tree,
 				      &data.commit->object.oid, "",
 				      &lm->rev.diffopt);
 			diff_flush(&lm->rev.diffopt);
-		} else {
-			log_tree_commit(&lm->rev, data.commit);
+
+			//break;
 		}
+
+		if (!maybe_changed_path(lm, data.commit))
+			continue;
+
+		log_tree_commit(&lm->rev, data.commit);
 	}
 
 	return 0;
@@ -229,6 +271,8 @@ static int last_modified_init(struct last_modified *lm, struct repository *r,
 		error(_("unknown last-modified argument: %s"), argv[1]);
 		return argc;
 	}
+
+	lm->rev.bloom_filter_settings = get_bloom_filter_settings(lm->rev.repo);
 
 	if (populate_paths_from_revs(lm) < 0)
 		return error(_("unable to setup last-modified"));
