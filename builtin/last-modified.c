@@ -1,5 +1,7 @@
 #include "git-compat-util.h"
+#include "bloom.h"
 #include "builtin.h"
+#include "commit-graph.h"
 #include "commit.h"
 #include "config.h"
 #include "diff.h"
@@ -17,6 +19,7 @@
 struct last_modified_entry {
 	struct hashmap_entry hashent;
 	struct object_id oid;
+	struct bloom_key key;
 	const char path[FLEX_ARRAY];
 };
 
@@ -40,6 +43,12 @@ struct last_modified {
 
 static void last_modified_release(struct last_modified *lm)
 {
+	struct hashmap_iter iter;
+	struct last_modified_entry *ent;
+
+	hashmap_for_each_entry(&lm->paths, &iter, ent, hashent)
+		clear_bloom_key(&ent->key);
+
 	hashmap_clear_and_free(&lm->paths, struct last_modified_entry, hashent);
 	release_revisions(&lm->rev);
 }
@@ -67,6 +76,9 @@ static void add_path_from_diff(struct diff_queue_struct *q,
 
 		FLEX_ALLOC_STR(ent, path, path);
 		oidcpy(&ent->oid, &p->two->oid);
+		if (lm->rev.bloom_filter_settings)
+			fill_bloom_key(path, strlen(path), &ent->key,
+				       lm->rev.bloom_filter_settings);
 		hashmap_entry_init(&ent->hashent, strhash(ent->path));
 		hashmap_add(&lm->paths, &ent->hashent);
 	}
@@ -126,6 +138,7 @@ static void mark_path(const char *path, const struct object_id *oid,
 		data->callback(path, data->commit, data->callback_data);
 
 	hashmap_remove(data->paths, &ent->hashent, path);
+	clear_bloom_key(&ent->key);
 	free(ent);
 }
 
@@ -169,6 +182,28 @@ static void last_modified_diff(struct diff_queue_struct *q,
 	}
 }
 
+
+static int maybe_changed_path(struct last_modified *lm, struct commit *origin)
+{
+	struct bloom_filter *filter;
+	struct last_modified_entry *ent;
+	struct hashmap_iter iter;
+
+	if (!lm->rev.bloom_filter_settings)
+		return 1;
+
+	filter = get_bloom_filter(lm->rev.repo, origin);
+	if (!filter)
+		return 1;
+
+	hashmap_for_each_entry(&lm->paths, &iter, ent, hashent) {
+		if (bloom_filter_contains(filter, &ent->key,
+					  lm->rev.bloom_filter_settings))
+			return 1;
+	}
+	return 0;
+}
+
 static int last_modified_run(struct last_modified *lm,
 			     last_modified_callback cb, void *cbdata)
 {
@@ -188,6 +223,9 @@ static int last_modified_run(struct last_modified *lm,
 		data.commit = get_revision(&lm->rev);
 		if (!data.commit)
 			break;
+
+		if (!maybe_changed_path(lm, data.commit))
+			continue;
 
 		if (data.commit->object.flags & BOUNDARY) {
 			diff_tree_oid(lm->rev.repo->hash_algo->empty_tree,
@@ -237,6 +275,13 @@ static int last_modified_init(struct last_modified *lm, struct repository *r,
 		error(_("unknown last-modified argument: %s"), argv[1]);
 		return argc;
 	}
+
+	/*
+	 * We're not interested in generation numbers here,
+	 * but calling this function to prepare the commit-graph.
+	 */
+	(void)generation_numbers_enabled(lm->rev.repo);
+	lm->rev.bloom_filter_settings = get_bloom_filter_settings(lm->rev.repo);
 
 	if (populate_paths_from_revs(lm) < 0)
 		return error(_("unable to setup last-modified"));
