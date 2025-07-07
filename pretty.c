@@ -1795,7 +1795,7 @@ static size_t format_and_pad_commit(struct strbuf *sb, /* in UTF-8 */
 
 	if (padding < 0) {
 		const char *start = strrchr(sb->buf, '\n');
-		int occupied;
+		size_t occupied;
 		if (!start)
 			start = sb->buf;
 		occupied = utf8_strnwidth(start, strlen(start), 1);
@@ -1816,7 +1816,7 @@ static size_t format_and_pad_commit(struct strbuf *sb, /* in UTF-8 */
 		placeholder++;
 		total_consumed++;
 	}
-	len = utf8_strnwidth(local_sb.buf, local_sb.len, 1);
+	len = cast_size_t_to_int(utf8_strnwidth(local_sb.buf, local_sb.len, 1));
 
 	if (c->flush_type == flush_left_and_steal) {
 		const char *ch = sb->buf + sb->len - 1;
