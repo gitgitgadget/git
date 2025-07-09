@@ -118,6 +118,11 @@ Cf. <2f5de416-04ba-c23d-1e0b-83bb655829a7@zombino.com>,
 <20170223155046.e7nxivfwqqoprsqj@LykOS.localdomain>,
 <CA+EOSBncr=4a4d8n9xS4FNehyebpmX8JiUwCsXD47EQDE+DiUQ@mail.gmail.com>.
 
+* The behavior of "git add -p" has been changed so that splitting a
+  hunk that has already been marked as selected or unselected will now
+  prompt the user to select each of the new hunks created by the
+  split instead of them inheriting their state from the original hunk.
+
 === Removals
 
 * Support for grafting commits has long been superseded by git-replace(1).
