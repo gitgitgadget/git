@@ -69,6 +69,18 @@ int is_valid_win32_path(const char *path, int allow_literal_nul);
 #define is_valid_path(path) is_valid_win32_path(path, 0)
 
 /**
+ * Verifies that the given path is a ends with special characters (`.` or ` `).
+ *
+ * Returns 1 upon ends with special characters, otherwise 0.
+ */
+int is_path_ends_with_special_character(const char *path);
+
+/**
+ * Convert to absolute path for special path.
+ */
+int convert_to_abs_path_for_special_path(wchar_t *abspath, wchar_t *path, int len);
+
+/**
  * Converts UTF-8 encoded string to UTF-16LE.
  *
  * To support repositories with legacy-encoded file names, invalid UTF-8 bytes
