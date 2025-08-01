@@ -768,6 +768,18 @@ static void location_options_init(struct config_location_options *opts,
 	}
 
 	if (opts->use_global_config) {
+		/*
+		 * Reading config is handled by `config.c#do_git_config_sequence()`
+		 * because the global config can be sourced from multiple files.
+		 * Writing config should point to a single destination as set in
+		 * `opts->source.file` below.
+		 */
+		opts->options.ignore_repo = 1;
+		opts->options.ignore_cmdline= 1;
+		opts->options.ignore_worktree = 1;
+		opts->options.ignore_system = 1;
+		opts->source.scope = CONFIG_SCOPE_GLOBAL;
+
 		opts->source.file = opts->file_to_free = git_global_config();
 		if (!opts->source.file)
 			/*
