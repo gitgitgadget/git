@@ -1,0 +1,32 @@
+git-psuh(1)
+============
+
+NAME
+----
+git-psuh - Delight users' typo with a shy horse
+
+SYNOPSIS
+--------
+[verse]
+'git psuh [<arg>...]'
+
+DESCRIPTION
+-----------
+A user-friendly command that delights users who accidentally type `git psuh`
+instead of `git push`. This command provides a friendly message and some
+useful information about the repository.
+
+OPTIONS
+-------
+None currently.
+
+EXAMPLES
+--------
+----
+$ git psuh
+Pony saying hello goes here.
+----
+
+GIT
+----
+Part of the linkgit:git[1] suite
