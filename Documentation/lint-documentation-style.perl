@@ -21,6 +21,12 @@ while (my $line = <>) {
 	if ($line =~ /^`?--\[no-\][a-z0-9-]+.*(::|;;)$/) {
 		report($line, "definition list item with a `--[no-]` parameter");
 	}
+	if ($line =~ /^\[synopsis\]$/) {
+		$synopsis_style = 1;
+	}
+	if (($line =~ /^-[-a-z].*(::|;;)$/) && ($synopsis_style)) {
+			report($line, "synopsis style and definition list item not backquoted");
+	}
 }
 
 
