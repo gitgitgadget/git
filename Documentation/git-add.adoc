@@ -26,13 +26,13 @@ You can also add only part of your changes to a file with `git add -p`.
 Please see linkgit:git-commit[1] for alternative ways to add content to
 a commit.
 
-This command can be performed multiple times before a commit.  It only
-adds the content of the specified file(s) at the time the add command is
-run; if you want subsequent changes included in the next commit, then
-you must run `git add` again to add the new content to the index.
+`git add` only adds the changes at the time that you run it. If you edit
+`file.c` after adding it, you need to run `git add file.c` again before
+committing.
 
-The `git status` command can be used to obtain a summary of which
-files have changes that are staged for the next commit.
+If you want to check which changes have been added, you can run
+`git status` to print out a summary of the changes that will be committed
+or run `git diff --staged` to see the full diff.
 
 `git add` will not add ignored files by default. You can use the
 `--force` option to add ignored files. If you explicitly specify the
@@ -443,6 +443,7 @@ linkgit:git-rm[1]
 linkgit:git-reset[1]
 linkgit:git-mv[1]
 linkgit:git-commit[1]
+linkgit:git-diff[1]
 linkgit:git-update-index[1]
 
 GIT
