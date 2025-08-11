@@ -40,6 +40,13 @@ exact filename of an ignored file (e.g. `git add ignored.txt`), `git
 add` will fail with a list of ignored files. Otherwise it will silently
 ignore the file.
 
+TERMINOLOGY NOTE
+----------------
+
+Git uses the terms "staging area", "index" and "cache" interchangeably
+for historical reasons. Many commands have flags like `--staged`,
+`--index`, or `--cached`, and they all refer to the index.
+
 OPTIONS
 -------
 `<pathspec>...`::
