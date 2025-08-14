@@ -91,6 +91,17 @@
 extern const char git_usage_string[];
 extern const char git_more_info_string[];
 
+/**
+ * If a built-in has DELAY_PAGER_CONFIG set, the built-in should call this early
+ * when it wishes to respect the `pager.foo`-config. The `cmd` is the name of
+ * the built-in, e.g., "foo". If a paging-choice has already been setup, this
+ * does nothing. The default in `def` should be 0 for "pager off", 1 for "pager
+ * on" or -1 for "punt".
+ *
+ * You should most likely use a default of 0 or 1. "Punt" (-1) could be useful
+ * to be able to fall back to some historical compatibility name.
+ */
+
 void setup_auto_pager(const char *cmd, int def);
 
 int is_builtin(const char *s);
