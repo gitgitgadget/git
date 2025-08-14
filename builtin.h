@@ -15,14 +15,14 @@
  * Git:
  *
  * . Define the implementation of the built-in command `foo` with
- *   signature:
+ * signature:
  *
  *	int cmd_foo(int argc, const char **argv, const char *prefix);
  *
- * . Add the external declaration for the function to ``.
+ * . Add the external declaration for the function to `builtin.h`.
  *
  * . Add the command to the `commands[]` table defined in `git.c`.
- *   The entry should look like:
+ * The entry should look like:
  *
  *	{ "foo", cmd_foo, <options> },
  *
