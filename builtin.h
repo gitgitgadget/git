@@ -21,7 +21,7 @@
  *
  * . Add the external declaration for the function to `builtin.h`.
  *
- * . Add the command to the `commands[]` table defined in `git.c`.
+ * . Add the command to the `commands[]` table defined in `git.c`
  * The entry should look like:
  *
  *	{ "foo", cmd_foo, <options> },
