@@ -105,7 +105,11 @@ extern const char git_more_info_string[];
 void setup_auto_pager(const char *cmd, int def);
 
 int is_builtin(const char *s);
-
+/*
+ * Builtins which do not use RUN_SETUP should never see
+ * a prefix that is not empty; use this to protect downstream
+ * code which is not prepared to call prefix_filename(), etc.
+ */
 
 #define BUG_ON_NON_EMPTY_PREFIX(prefix) do { \
 	if ((prefix)) \
