@@ -54,7 +54,7 @@ static const char *const annotate_opt_usage[] = {
 };
 
 static int longest_file;
-static int longest_author;
+static size_t longest_author;
 static int max_orig_digits;
 static int max_digits;
 static int max_score_digits;
@@ -544,7 +544,7 @@ static void emit_other(struct blame_scoreboard *sb, struct blame_entry *ent, int
 					name = ci.author_mail.buf;
 				else
 					name = ci.author.buf;
-				pad = longest_author - utf8_strwidth(name);
+				pad = cast_size_t_to_int(longest_author - utf8_strwidth(name));
 				printf(" (%s%*s %10s",
 				       name, pad, "",
 				       format_time(ci.author_time,
@@ -646,7 +646,7 @@ static void find_alignment(struct blame_scoreboard *sb, int *option)
 
 	for (e = sb->ent; e; e = e->next) {
 		struct blame_origin *suspect = e->suspect;
-		int num;
+		size_t num;
 
 		if (compute_auto_abbrev)
 			auto_abbrev = update_auto_abbrev(auto_abbrev, suspect);

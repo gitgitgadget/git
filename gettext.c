@@ -129,7 +129,7 @@ void git_setup_gettext(void)
 }
 
 /* return the number of columns of string 's' in current locale */
-int gettext_width(const char *s)
+size_t gettext_width(const char *s)
 {
 	static int is_utf8 = -1;
 	if (is_utf8 == -1)
