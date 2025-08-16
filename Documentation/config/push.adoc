@@ -15,7 +15,7 @@ push.default::
 	Different values are well-suited for
 	specific workflows; for instance, in a purely central workflow
 	(i.e. the fetch source is equal to the push destination),
-	`upstream` is probably what you want.  Possible values are:
+	`simple` is probably what you want.  Possible values are:
 +
 --
 
@@ -23,8 +23,8 @@ push.default::
   given. This is primarily meant for people who want to
   avoid mistakes by always being explicit.
 
-* `current` - push the current branch to update a branch with the same
-  name on the receiving end.  Works in both central and non-central
+* `current` - push the current branch to update the branch with the same
+  name on the remote.  Works in both central and non-central
   workflows.
 
 * `upstream` - push the current branch back to the branch whose
@@ -35,11 +35,13 @@ push.default::
 
 * `tracking` - This is a deprecated synonym for `upstream`.
 
-* `simple` - push the current branch with the same name on the remote.
+* `simple` - push the current branch to its upstream tracking branch,
+  but only if the upstream tracking branch has the same name as the
+  current branch. (`simple` will fail with an error if the upstream
+  tracking branch's name doesn't match the current branch's name.)
 +
-If you are working on a centralized workflow (pushing to the same repository you
-pull from, which is typically `origin`), then you need to configure an upstream
-branch with the same name.
+`simple` will also fail if the current branch doesn't have an upstream
+tracking branch configured, unless `push.autoSetupRemote` is enabled.
 +
 This mode is the default since Git 2.0, and is the safest option suited for
 beginners.
