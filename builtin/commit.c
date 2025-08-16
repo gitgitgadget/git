@@ -1755,7 +1755,7 @@ int cmd_commit(int argc,
 			    STATUS_FORMAT_LONG),
 		OPT_BOOL('z', "null", &s.null_termination,
 			 N_("terminate entries with NUL")),
-		OPT_BOOL(0, "amend", &amend, N_("amend previous commit")),
+		OPT_BOOL('M', "amend", &amend, N_("amend previous commit")),
 		OPT_BOOL(0, "no-post-rewrite", &no_post_rewrite, N_("bypass post-rewrite hook")),
 		{
 			.type = OPTION_STRING,
