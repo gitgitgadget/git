@@ -302,13 +302,13 @@ $op = 'U' if ($op eq 'R'
 
 RULE:
 	foreach (@$rules) {
-		while (/\${user\.([a-z][a-zA-Z0-9]+)}/) {
+		while (/\$\{user\.([a-z][a-zA-Z0-9]+)}/) {
 			my $k = lc $1;
 			my $v = $data{"user.$k"};
 			next RULE unless defined $v;
 			next RULE if @$v != 1;
 			next RULE unless defined $v->[0];
-			s/\${user\.$k}/$v->[0]/g;
+			s/\$\{user\.$k}/$v->[0]/g;
 		}
 
 		if (/^([AMD ]+)\s+of\s+([^\s]+)\s+for\s+([^\s]+)\s+diff\s+([^\s]+)$/) {
