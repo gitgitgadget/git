@@ -131,4 +131,21 @@ ${c_tag}tag: ${c_reset}${c_tag}A${c_reset}${c_commit})${c_reset} A
 	cmp_filtered_decorations
 '
 
+test_expect_success 'test replace decoration for nested replace path' '
+	test_when_finished remove_replace_refs &&
+
+	CURRENT_HASH=$(git rev-parse --verify HEAD) &&
+	git replace --graft HEAD HEAD~2 &&
+	git update-ref refs/tmp/tmpref refs/replace/$CURRENT_HASH &&
+	git update-ref -d refs/replace/$CURRENT_HASH &&
+	git update-ref refs/replace/nested-path/abc/$CURRENT_HASH refs/tmp/tmpref &&
+
+	git log --decorate -1 HEAD >actual &&
+	test_grep "replaced" actual &&
+
+	git --no-replace-objects log --decorate -1 HEAD >actual &&
+	test_grep ! "replaced" actual
+
+'
+
 test_done
