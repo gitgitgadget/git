@@ -12,12 +12,13 @@
  * The parameter `cost` is the cost matrix: the cost to assign column j to row
  * i is `cost[j + column_count * i].
  */
-void compute_assignment(int column_count, int row_count, int *cost,
+void compute_assignment(size_t column_count, size_t row_count, int *cost,
 			int *column2row, int *row2column)
 {
 	int *v, *d;
 	int *free_row, free_count = 0, saved_free_count, *pred, *col;
-	int i, j, phase;
+	size_t i, j;
+	int phase;
 
 	if (column_count < 2) {
 		memset(column2row, 0, sizeof(int) * column_count);
@@ -30,8 +31,8 @@ void compute_assignment(int column_count, int row_count, int *cost,
 	ALLOC_ARRAY(v, column_count);
 
 	/* column reduction */
-	for (j = column_count - 1; j >= 0; j--) {
-		int i1 = 0;
+	for (j = column_count; j-- > 0; ) {
+		size_t i1 = 0;
 
 		for (i = 1; i < row_count; i++)
 			if (COST(j, i1) > COST(j, i))
@@ -132,6 +133,7 @@ void compute_assignment(int column_count, int row_count, int *cost,
 	for (free_count = 0; free_count < saved_free_count; free_count++) {
 		int i1 = free_row[free_count], low = 0, up = 0, last, k;
 		int min, c, u1;
+		int j;
 
 		for (j = 0; j < column_count; j++) {
 			d[j] = COST(j, i1) - v[j];

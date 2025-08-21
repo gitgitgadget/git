@@ -327,9 +327,9 @@ static int diffsize(const char *a, const char *b)
 static void get_correspondences(struct string_list *a, struct string_list *b,
 				int creation_factor)
 {
-	int n = a->nr + b->nr;
+	size_t n = a->nr + b->nr;
 	int *cost, c, *a2b, *b2a;
-	int i, j;
+	size_t i, j;
 
 	ALLOC_ARRAY(cost, st_mult(n, n));
 	ALLOC_ARRAY(a2b, n);
