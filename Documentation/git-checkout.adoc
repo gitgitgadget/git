@@ -82,20 +82,21 @@ Omitting _<branch>_ detaches `HEAD` at the tip of the current branch.
 `git checkout [-f|--ours|--theirs|-m|--conflict=<style>] [<tree-ish>] [--] <pathspec>...`::
 `git checkout [-f|--ours|--theirs|-m|--conflict=<style>] [<tree-ish>] --pathspec-from-file=<file> [--pathspec-file-nul]`::
 
-	Overwrite the contents of the files that match the pathspec.
-	When the _<tree-ish>_ (most often a commit) is not given,
-	overwrite working tree with the contents in the index.
-	When the _<tree-ish>_ is given, overwrite both the index and
-	the working tree with the contents at the _<tree-ish>_.
+	Restore another version of the file(s) that match the pathspec.
 +
-The index may contain unmerged entries because of a previous failed merge.
-By default, if you try to check out such an entry from the index, the
-checkout operation will fail and nothing will be checked out.
-Using `-f` will ignore these unmerged entries.  The contents from a
+If you specify a commit or tree to restore from (for example `git
+checkout main file.txt`), this will restore the version of the file(s)
+from that commit or tree. This overwrites the file in the working
+directory and stages the file's contents.
++
+If you do not specify where to restore from (for example `git checkout
+file.txt`), this will replace the file(s) with the version from the index.
+If you check out a file with an unresolved merge
+conflict, the checkout operation will fail and no changes will be made.
+Using `-f` will ignore the merge conflict.  The contents from a
 specific side of the merge can be checked out of the index by
 using `--ours` or `--theirs`.  With `-m`, changes made to the working tree
 file can be discarded to re-create the original conflicted merge result.
-
 `git checkout (-p|--patch) [<tree-ish>] [--] [<pathspec>...]`::
 	This is similar to the previous mode, but lets you use the
 	interactive interface to show the "diff" output and choose which
