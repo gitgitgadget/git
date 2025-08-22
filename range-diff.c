@@ -21,6 +21,7 @@
 #include "apply.h"
 #include "revision.h"
 
+
 struct patch_util {
 	/* For the search for an exact match */
 	struct hashmap_entry e;
@@ -287,8 +288,8 @@ static void find_exact_matches(struct string_list *a, struct string_list *b)
 }
 
 static int diffsize_consume(void *data,
-			     char *line UNUSED,
-			     unsigned long len UNUSED)
+			    char *line UNUSED,
+			    unsigned long len UNUSED)
 {
 	(*(int *)data)++;
 	return 0;
@@ -325,13 +326,24 @@ static int diffsize(const char *a, const char *b)
 }
 
 static void get_correspondences(struct string_list *a, struct string_list *b,
-				int creation_factor)
+				int creation_factor, size_t max_memory)
 {
 	int n = a->nr + b->nr;
 	int *cost, c, *a2b, *b2a;
 	int i, j;
-
-	ALLOC_ARRAY(cost, st_mult(n, n));
+	size_t cost_size = st_mult(n, n);
+	size_t cost_bytes = st_mult(sizeof(int), cost_size);
+	if (cost_bytes >= max_memory) {
+		struct strbuf cost_str = STRBUF_INIT;
+		struct strbuf max_str = STRBUF_INIT;
+		strbuf_humanise_bytes(&cost_str, cost_bytes);
+		strbuf_humanise_bytes(&max_str, max_memory);
+		die(_("range-diff: unable to compute the range-diff, since it "
+		      "exceeds the maximum memory for the cost matrix: %s "
+		      "(%"PRIuMAX" bytes) needed, %s (%"PRIuMAX" bytes) available"),
+		    cost_str.buf, (uintmax_t)cost_bytes, max_str.buf, (uintmax_t)max_memory);
+	}
+	ALLOC_ARRAY(cost, cost_size);
 	ALLOC_ARRAY(a2b, n);
 	ALLOC_ARRAY(b2a, n);
 
@@ -351,7 +363,8 @@ static void get_correspondences(struct string_list *a, struct string_list *b,
 		}
 
 		c = a_util->matching < 0 ?
-			a_util->diffsize * creation_factor / 100 : COST_MAX;
+			    a_util->diffsize * creation_factor / 100 :
+			    COST_MAX;
 		for (j = b->nr; j < n; j++)
 			cost[i + n * j] = c;
 	}
@@ -360,7 +373,8 @@ static void get_correspondences(struct string_list *a, struct string_list *b,
 		struct patch_util *util = b->items[j].util;
 
 		c = util->matching < 0 ?
-			util->diffsize * creation_factor / 100 : COST_MAX;
+			    util->diffsize * creation_factor / 100 :
+			    COST_MAX;
 		for (i = a->nr; i < n; i++)
 			cost[i + n * j] = c;
 	}
@@ -539,7 +553,7 @@ static void output(struct string_list *a, struct string_list *b,
 		if (i < a->nr && a_util->matching < 0) {
 			if (!range_diff_opts->right_only)
 				output_pair_header(&opts, patch_no_width,
-					   &buf, &dashes, a_util, NULL);
+						   &buf, &dashes, a_util, NULL);
 			i++;
 			continue;
 		}
@@ -548,7 +562,7 @@ static void output(struct string_list *a, struct string_list *b,
 		while (j < b->nr && b_util->matching < 0) {
 			if (!range_diff_opts->left_only)
 				output_pair_header(&opts, patch_no_width,
-					   &buf, &dashes, NULL, b_util);
+						   &buf, &dashes, NULL, b_util);
 			b_util = ++j < b->nr ? b->items[j].util : NULL;
 		}
 
@@ -591,7 +605,8 @@ int show_range_diff(const char *range1, const char *range2,
 	if (!res) {
 		find_exact_matches(&branch1, &branch2);
 		get_correspondences(&branch1, &branch2,
-				    range_diff_opts->creation_factor);
+				    range_diff_opts->creation_factor,
+				    range_diff_opts->max_memory);
 		output(&branch1, &branch2, range_diff_opts);
 	}
 
