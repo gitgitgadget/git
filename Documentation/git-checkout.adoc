@@ -54,18 +54,17 @@ to print out the tracking information for the current branch.
 	`--track` without `-b` implies branch creation; see the
 	description of `--track` below.
 +
-If `-B` is given, _<new-branch>_ is created if it doesn't exist; otherwise, it
-is reset. This is the transactional equivalent of
+If `-B` is given, _<new-branch>_ is created if it doesn't exist;
+otherwise `<new-branch>` is forced to point at the commit. This is the
+transactional equivalent of
 +
 ------------
 $ git branch -f <branch> [<start-point>]
 $ git checkout <branch>
 ------------
 +
-that is to say, the branch is not reset/created unless "git checkout" is
-successful (e.g., when the branch is in use in another worktree, not
-just the current branch stays the same, but the branch is not reset to
-the start-point, either).
+that is, the branch will not be created or modified unless
+`git checkout` is successful.
 
 `git checkout --detach [<branch>]`::
 `git checkout [--detach] <commit>`::
