@@ -28,11 +28,11 @@ DESCRIPTION
 See ARGUMENT DISAMBIGUATION below for how Git decides which one to do.
 
 `git checkout [<branch>]`::
-	To prepare for working on _<branch>_, switch to it by updating
-	the index and the files in the working tree, and by pointing
-	`HEAD` at the branch. Local modifications to the files in the
-	working tree are kept, so that they can be committed to the
-	_<branch>_.
+	Switch to _<branch>_. This sets the current branch to <branch> and
+	updates the files in your working directory. Local changes to
+	the files in the working tree are kept, so that they can be committed
+	to the _<branch>_. If the local changes can't be cleanly merged into
+	the _<branch>_, no changes will be made and the checkout operation will fail.
 +
 If _<branch>_ is not found but there does exist a tracking branch in
 exactly one remote (call it _<remote>_) with a matching name and
@@ -42,10 +42,8 @@ exactly one remote (call it _<remote>_) with a matching name and
 $ git checkout -b <branch> --track <remote>/<branch>
 ------------
 +
-You could omit _<branch>_, in which case the command degenerates to
-"check out the current branch", which is a glorified no-op with
-rather expensive side-effects to show only the tracking information,
-if it exists, for the current branch.
+Running `git checkout` without specifying a branch has no effect except
+to print out the tracking information for the current branch.
 
 `git checkout (-b|-B) <new-branch> [<start-point>]`::
 
