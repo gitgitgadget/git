@@ -50,6 +50,11 @@ struct progress {
 	int split;
 };
 
+/*
+ * 0: no progress to report
+ * 1: potential update for progress to report
+ * 2: no more progress to report
+ */
 static volatile sig_atomic_t progress_update;
 
 /*
@@ -66,8 +71,10 @@ void progress_test_force_update(void)
 
 static void progress_interval(int signum UNUSED)
 {
-	progress_update = 1;
-	alarm(1);
+	if (progress_update != 2) {
+		alarm(1);
+		progress_update = 1;
+	}
 }
 
 static void set_progress_signal(void)
@@ -93,6 +100,7 @@ static void clear_progress_signal(void)
 	if (progress_testing)
 		return;
 
+	progress_update = 2;
 	alarm(0);
 	signal(SIGALRM, SIG_IGN);
 	progress_update = 0;
@@ -111,14 +119,14 @@ static void display(struct progress *progress, uint64_t n, const char *done)
 	int show_update = 0;
 	int last_count_len = counters_sb->len;
 
-	if (progress->delay && (!progress_update || --progress->delay))
+	if (progress->delay && (!(progress_update & 1) || --progress->delay))
 		return;
 
 	progress->last_value = n;
 	tp = (progress->throughput) ? progress->throughput->display.buf : "";
 	if (progress->total) {
 		unsigned percent = n * 100 / progress->total;
-		if (percent != progress->last_percent || progress_update) {
+		if (percent != progress->last_percent || (progress_update & 1)) {
 			progress->last_percent = percent;
 
 			strbuf_reset(counters_sb);
@@ -128,7 +136,7 @@ static void display(struct progress *progress, uint64_t n, const char *done)
 				    tp);
 			show_update = 1;
 		}
-	} else if (progress_update) {
+	} else if (progress_update & 1) {
 		strbuf_reset(counters_sb);
 		strbuf_addf(counters_sb, "%"PRIuMAX"%s", (uintmax_t)n, tp);
 		show_update = 1;
@@ -239,7 +247,7 @@ void display_throughput(struct progress *progress, uint64_t total)
 	tp->idx = (tp->idx + 1) % TP_IDX_MAX;
 
 	throughput_string(&tp->display, total, rate);
-	if (progress->last_value != -1 && progress_update)
+	if (progress->last_value != -1 && (progress_update & 1))
 		display(progress, progress->last_value, NULL);
 }
 
