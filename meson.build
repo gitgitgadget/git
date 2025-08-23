@@ -1348,22 +1348,6 @@ else
     error('Native regex support requested but not found')
 endif
 
-# setitimer and friends are provided by compat/mingw.c.
-if host_machine.system() != 'windows'
-  if not compiler.compiles('''
-    #include <sys/time.h>
-    void func(void)
-    {
-      struct itimerval value;
-    }
-  ''', name: 'struct itimerval')
-    libgit_c_args += '-DNO_STRUCT_ITIMERVAL'
-    libgit_c_args += '-DNO_SETITIMER'
-  elif not compiler.has_function('setitimer')
-    libgit_c_args += '-DNO_SETITIMER'
-  endif
-endif
-
 if compiler.has_member('struct stat', 'st_mtimespec.tv_nsec', prefix: '#include <sys/stat.h>')
   libgit_c_args += '-DUSE_ST_TIMESPEC'
 elif not compiler.has_member('struct stat', 'st_mtim.tv_nsec', prefix: '#include <sys/stat.h>')

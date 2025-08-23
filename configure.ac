@@ -873,13 +873,6 @@ esac
 GIT_CONF_SUBST([SOCKLEN_T])
 
 #
-# Define NO_STRUCT_ITIMERVAL if you don't have struct itimerval.
-AC_CHECK_TYPES([struct itimerval],
-[NO_STRUCT_ITIMERVAL=],
-[NO_STRUCT_ITIMERVAL=UnfortunatelyYes],
-[#include <sys/time.h>])
-GIT_CONF_SUBST([NO_STRUCT_ITIMERVAL])
-#
 # Define USE_ST_TIMESPEC=YesPlease when stat.st_mtimespec.tv_nsec exists.
 # Define NO_NSEC=YesPlease when neither stat.st_mtim.tv_nsec nor
 # stat.st_mtimespec.tv_nsec exists.
@@ -1097,12 +1090,6 @@ GIT_CHECK_FUNC(sync_file_range,
 	[HAVE_SYNC_FILE_RANGE=])
 GIT_CONF_SUBST([HAVE_SYNC_FILE_RANGE])
 
-#
-# Define NO_SETITIMER if you don't have setitimer.
-GIT_CHECK_FUNC(setitimer,
-[NO_SETITIMER=],
-[NO_SETITIMER=YesPlease])
-GIT_CONF_SUBST([NO_SETITIMER])
 #
 # Define NO_STRCASESTR if you don't have strcasestr.
 GIT_CHECK_FUNC(strcasestr,

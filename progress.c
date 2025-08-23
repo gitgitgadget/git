@@ -67,12 +67,12 @@ void progress_test_force_update(void)
 static void progress_interval(int signum UNUSED)
 {
 	progress_update = 1;
+	alarm(1);
 }
 
 static void set_progress_signal(void)
 {
 	struct sigaction sa;
-	struct itimerval v;
 
 	if (progress_testing)
 		return;
@@ -85,20 +85,15 @@ static void set_progress_signal(void)
 	sa.sa_flags = SA_RESTART;
 	sigaction(SIGALRM, &sa, NULL);
 
-	v.it_interval.tv_sec = 1;
-	v.it_interval.tv_usec = 0;
-	v.it_value = v.it_interval;
-	setitimer(ITIMER_REAL, &v, NULL);
+	alarm(1);
 }
 
 static void clear_progress_signal(void)
 {
-	struct itimerval v = {{0,},};
-
 	if (progress_testing)
 		return;
 
-	setitimer(ITIMER_REAL, &v, NULL);
+	alarm(0);
 	signal(SIGALRM, SIG_IGN);
 	progress_update = 0;
 }

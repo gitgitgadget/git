@@ -2432,15 +2432,17 @@ static sig_handler_t timer_fn = SIG_DFL, sigint_fn = SIG_DFL;
  * the thread to terminate by setting the timer_event to the signalled
  * state.
  * But ticktack() interrupts the wait state after the timer's interval
- * length to call the signal handler.
+ * length to call the signal handler if it still set.
  */
 
 static unsigned __stdcall ticktack(void *dummy UNUSED)
 {
+	sig_handler_t fn = timer_fn;
+
 	while (WaitForSingleObject(timer_event, timer_interval) == WAIT_TIMEOUT) {
-		mingw_raise(SIGALRM);
-		if (one_shot)
+		if (one_shot || timer_fn != fn)
 			break;
+		mingw_raise(SIGALRM);
 	}
 	return 0;
 }
@@ -2478,37 +2480,23 @@ static void stop_timer_thread(void)
 	timer_thread = NULL;
 }
 
-static inline int is_timeval_eq(const struct timeval *i1, const struct timeval *i2)
+unsigned alarm(unsigned seconds)
 {
-	return i1->tv_sec == i2->tv_sec && i1->tv_usec == i2->tv_usec;
-}
+	static bool atexit_done;
 
-int setitimer(int type UNUSED, struct itimerval *in, struct itimerval *out)
-{
-	static const struct timeval zero;
-	static int atexit_done;
-
-	if (out)
-		return errno = EINVAL,
-			error("setitimer param 3 != NULL not implemented");
-	if (!is_timeval_eq(&in->it_interval, &zero) &&
-	    !is_timeval_eq(&in->it_interval, &in->it_value))
-		return errno = EINVAL,
-			error("setitimer: it_interval must be zero or eq it_value");
-
-	if (timer_thread)
-		stop_timer_thread();
-
-	if (is_timeval_eq(&in->it_value, &zero) &&
-	    is_timeval_eq(&in->it_interval, &zero))
-		return 0;
-
-	timer_interval = in->it_value.tv_sec * 1000 + in->it_value.tv_usec / 1000;
-	one_shot = is_timeval_eq(&in->it_interval, &zero);
 	if (!atexit_done) {
 		atexit(stop_timer_thread);
-		atexit_done = 1;
+		atexit_done = true;
 	}
+
+	timer_interval = seconds * 1000;
+	one_shot = !seconds;
+	if (timer_thread) {
+		if (!seconds)
+			stop_timer_thread();
+		return 0;
+	}
+
 	return start_timer_thread();
 }
 

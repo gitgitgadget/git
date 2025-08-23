@@ -98,11 +98,6 @@ struct sigaction {
 #define SA_RESTART 0
 #define SA_NOCLDSTOP 1
 
-struct itimerval {
-	struct timeval it_value, it_interval;
-};
-#define ITIMER_REAL 0
-
 struct utsname {
 	char sysname[16];
 	char nodename[1];
@@ -131,8 +126,6 @@ static inline int fchmod(int fildes UNUSED, mode_t mode UNUSED)
 static inline pid_t fork(void)
 { errno = ENOSYS; return -1; }
 #endif
-static inline unsigned int alarm(unsigned int seconds UNUSED)
-{ return 0; }
 static inline int fsync(int fd)
 { return _commit(fd); }
 static inline void sync(void)
@@ -183,6 +176,7 @@ char *mingw_locate_in_PATH(const char *cmd);
  * implementations of missing functions
  */
 
+unsigned alarm(unsigned seconds);
 int pipe(int filedes[2]);
 unsigned int sleep (unsigned int seconds);
 int mkstemp(char *template);
@@ -193,7 +187,6 @@ struct tm *localtime_r(const time_t *timep, struct tm *result);
 #endif
 int getpagesize(void);	/* defined in MinGW's libgcc.a */
 struct passwd *getpwuid(uid_t uid);
-int setitimer(int type, struct itimerval *in, struct itimerval *out);
 int sigaction(int sig, struct sigaction *in, struct sigaction *out);
 int link(const char *oldpath, const char *newpath);
 int uname(struct utsname *buf);
