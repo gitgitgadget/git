@@ -27,18 +27,21 @@ argument (for example `git push dev`), then if that's not specified the
 `branch.*.remote` configuration for the current branch, and then defaults
 to `origin`.
 
-When the command line does not specify what to push with `<refspec>...`
-arguments or `--all`, `--mirror`, `--tags` options, the command finds
-the default `<refspec>` by consulting `remote.*.push` configuration,
-and if it is not found, honors `push.default` configuration to decide
-what to push (See linkgit:git-config[1] for the meaning of `push.default`).
+To decide which branches, tags, or other refs to push, Git uses
+(in order of precedence):
+
+1. The <refspec> argument(s) (for example `main` in `git push origin main`)
+   or the `--all`, `--mirror`, or `--tags` options
+2. The `remote.*.push` configuration for the current branch
+3. The `push.default` configuration (See linkgit:git-config[1] for
+   the meaning of `push.default`).
 
 When neither the command-line nor the configuration specifies what to
-push, the default behavior is used, which corresponds to the `simple`
-value for `push.default`: the current branch is pushed to the
-corresponding upstream branch, but as a safety measure, the push is
-aborted if the upstream branch does not have the same name as the
-local one.
+push, the current branch is pushed to the branch with the same name
+on the remote. The current branch must have a configured upstream with
+the same name, so this will fail when pushing a new branch.
+You can run `git push -u <repository> <current-branch>`
+to configure the upstream.
 
 You can make interesting things happen to a repository
 every time you push into it, by setting up 'hooks' there.  See
