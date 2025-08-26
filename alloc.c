@@ -49,6 +49,9 @@ void clear_alloc_state(struct alloc_state *s)
 	}
 
 	FREE_AND_NULL(s->slabs);
+	s->slab_alloc = 0;
+	s->nr = 0;
+	s->p = NULL;
 }
 
 static inline void *alloc_node(struct alloc_state *s, size_t node_size)
