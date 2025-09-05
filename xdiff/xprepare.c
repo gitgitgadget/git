@@ -29,6 +29,9 @@
 #define XDL_GUESS_NLINES1 256
 #define XDL_GUESS_NLINES2 20
 
+#define NONE 0
+#define SOME 1
+#define TOO_MANY 2
 
 typedef struct s_xdlclass {
 	struct s_xdlclass *next;
@@ -190,12 +193,12 @@ void xdl_free_env(xdfenv_t *xe) {
 }
 
 
-static int xdl_clean_mmatch(char const *dis, long i, long s, long e) {
+static bool xdl_clean_mmatch(uint8_t const *matches, long i, long s, long e) {
 	long r, rdis0, rpdis0, rdis1, rpdis1;
 
 	/*
-	 * Limits the window the is examined during the similar-lines
-	 * scan. The loops below stops when dis[i - r] == 1 (line that
+	 * Limits the window that is examined during the similar-lines
+	 * scan. The loops below stops when matches[i - r] == SOME (line that
 	 * has no match), but there are corner cases where the loop
 	 * proceed all the way to the extremities by causing huge
 	 * performance penalties in case of big files.
@@ -207,40 +210,44 @@ static int xdl_clean_mmatch(char const *dis, long i, long s, long e) {
 
 	/*
 	 * Scans the lines before 'i' to find a run of lines that either
-	 * have no match (dis[j] == 0) or have multiple matches (dis[j] > 1).
-	 * Note that we always call this function with dis[i] > 1, so the
+	 * have no match (matches[j] == NONE) or have multiple matches (matches[j] == TOO_MANY).
+	 * Note that we always call this function with matches[i] == TOO_MANY, so the
 	 * current line (i) is already a multimatch line.
 	 */
 	for (r = 1, rdis0 = 0, rpdis0 = 1; (i - r) >= s; r++) {
-		if (!dis[i - r])
+		if (matches[i - r] == NONE)
 			rdis0++;
-		else if (dis[i - r] == 2)
+		else if (matches[i - r] == TOO_MANY)
 			rpdis0++;
-		else
+		else if (matches[i - r] == SOME)
 			break;
+		else
+			BUG("Illegal value for matches[i - r]");
 	}
 	/*
 	 * If the run before the line 'i' found only multimatch lines, we
-	 * return 0 and hence we don't make the current line (i) discarded.
+	 * return false and hence we don't make the current line (i) discarded.
 	 * We want to discard multimatch lines only when they appear in the
-	 * middle of runs with nomatch lines (dis[j] == 0).
+	 * middle of runs with nomatch lines (matches[j] == NONE).
 	 */
 	if (rdis0 == 0)
 		return 0;
 	for (r = 1, rdis1 = 0, rpdis1 = 1; (i + r) <= e; r++) {
-		if (!dis[i + r])
+		if (matches[i + r] == NONE)
 			rdis1++;
-		else if (dis[i + r] == 2)
+		else if (matches[i + r] == TOO_MANY)
 			rpdis1++;
-		else
+		else if (matches[i + r] == SOME)
 			break;
+		else
+			BUG("Illegal value for matches[i + r]");
 	}
 	/*
 	 * If the run after the line 'i' found only multimatch lines, we
-	 * return 0 and hence we don't make the current line (i) discarded.
+	 * return false and hence we don't make the current line (i) discarded.
 	 */
 	if (rdis1 == 0)
-		return 0;
+		return false;
 	rdis1 += rdis0;
 	rpdis1 += rpdis0;
 
@@ -251,26 +258,41 @@ static int xdl_clean_mmatch(char const *dis, long i, long s, long e) {
 /*
  * Try to reduce the problem complexity, discard records that have no
  * matches on the other file. Also, lines that have multiple matches
- * might be potentially discarded if they happear in a run of discardable.
+ * might be potentially discarded if they appear in a run of discardable.
  */
 static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xdf2) {
 	long i, nm, nreff, mlim;
 	xrecord_t *recs;
 	xdlclass_t *rcrec;
-	char *dis, *dis1, *dis2;
-	int need_min = !!(cf->flags & XDF_NEED_MINIMAL);
+	uint8_t *matches1, *matches2;
+	int status = 0;
+	bool need_min = !!(cf->flags & XDF_NEED_MINIMAL);
 
-	if (!XDL_CALLOC_ARRAY(dis, xdf1->nrec + xdf2->nrec + 2))
-		return -1;
-	dis1 = dis;
-	dis2 = dis1 + xdf1->nrec + 1;
+	matches1 = NULL;
+	matches2 = NULL;
 
+	/*
+	 * Create temporary arrays that will help us decide if
+	 * changed[i] should remain 0 or become 1.
+	 */
+	if (!XDL_CALLOC_ARRAY(matches1, xdf1->nrec + 1)) {
+		status = -1;
+		goto cleanup;
+	}
+	if (!XDL_CALLOC_ARRAY(matches2, xdf2->nrec + 1)) {
+		status = -1;
+		goto cleanup;
+	}
+
+	/*
+	 * Initialize temporary arrays with NONE, SOME, or TOO_MANY.
+	 */
 	if ((mlim = xdl_bogosqrt(xdf1->nrec)) > XDL_MAX_EQLIMIT)
 		mlim = XDL_MAX_EQLIMIT;
 	for (i = xdf1->dstart, recs = &xdf1->recs[xdf1->dstart]; i <= xdf1->dend; i++, recs++) {
 		rcrec = cf->rcrecs[recs->ha];
 		nm = rcrec ? rcrec->len2 : 0;
-		dis1[i] = (nm == 0) ? 0: (nm >= mlim && !need_min) ? 2: 1;
+		matches1[i] = (nm == 0) ? NONE: (nm >= mlim && !need_min) ? TOO_MANY: SOME;
 	}
 
 	if ((mlim = xdl_bogosqrt(xdf2->nrec)) > XDL_MAX_EQLIMIT)
@@ -278,14 +300,19 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 	for (i = xdf2->dstart, recs = &xdf2->recs[xdf2->dstart]; i <= xdf2->dend; i++, recs++) {
 		rcrec = cf->rcrecs[recs->ha];
 		nm = rcrec ? rcrec->len1 : 0;
-		dis2[i] = (nm == 0) ? 0: (nm >= mlim && !need_min) ? 2: 1;
+		matches2[i] = (nm == 0) ? NONE: (nm >= mlim && !need_min) ? TOO_MANY: SOME;
 	}
 
+	/*
+	 * Use temporary arrays to decide if changed[i] should remain
+	 * 0 or become 1.
+	 */
 	for (nreff = 0, i = xdf1->dstart, recs = &xdf1->recs[xdf1->dstart];
 	     i <= xdf1->dend; i++, recs++) {
-		if (dis1[i] == 1 ||
-		    (dis1[i] == 2 && !xdl_clean_mmatch(dis1, i, xdf1->dstart, xdf1->dend))) {
+		if (matches1[i] == SOME ||
+		    (matches1[i] == TOO_MANY && !xdl_clean_mmatch(matches1, i, xdf1->dstart, xdf1->dend))) {
 			xdf1->rindex[nreff++] = i;
+			/* changed[i] remains 0 */
 		} else
 			xdf1->changed[i] = 1;
 	}
@@ -293,17 +320,20 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 
 	for (nreff = 0, i = xdf2->dstart, recs = &xdf2->recs[xdf2->dstart];
 	     i <= xdf2->dend; i++, recs++) {
-		if (dis2[i] == 1 ||
-		    (dis2[i] == 2 && !xdl_clean_mmatch(dis2, i, xdf2->dstart, xdf2->dend))) {
+		if (matches2[i] == SOME ||
+		    (matches2[i] == TOO_MANY && !xdl_clean_mmatch(matches2, i, xdf2->dstart, xdf2->dend))) {
 			xdf2->rindex[nreff++] = i;
+			/* changed[i] remains 0 */
 		} else
 			xdf2->changed[i] = 1;
 	}
 	xdf2->nreff = nreff;
 
-	xdl_free(dis);
+cleanup:
+	xdl_free(matches1);
+	xdl_free(matches2);
 
-	return 0;
+	return status;
 }
 
 
