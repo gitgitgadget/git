@@ -26,3 +26,7 @@ $(MAIN): $(OBJS)
 
 clean:
 	@$(RM) $(MAIN) $(OBJS)
+
+install: $(MAIN)
+	$(INSTALL) -d -m 755 $(DESTDIR)$(gitexecdir)
+	$(INSTALL) -m 755 $(MAIN) $(DESTDIR)$(gitexecdir)
