@@ -12,6 +12,9 @@ PKG_CONFIG = pkg-config
 -include ../../../config.mak.autogen
 -include ../../../config.mak
 
+prefix ?= /usr/local
+gitexecdir ?= $(prefix)/libexec/git-core
+
 INCS:=$(shell $(PKG_CONFIG) --cflags libsecret-1 glib-2.0)
 LIBS:=$(shell $(PKG_CONFIG) --libs libsecret-1 glib-2.0)
 
@@ -26,3 +29,7 @@ $(MAIN): $(OBJS)
 
 clean:
 	@$(RM) $(MAIN) $(OBJS)
+
+install: $(MAIN)
+	$(INSTALL) -d -m 755 $(DESTDIR)$(gitexecdir)
+	$(INSTALL) -m 755 $(MAIN) $(DESTDIR)$(gitexecdir)
