@@ -16,6 +16,7 @@ struct git_transport_options {
 	unsigned reject_shallow : 1;
 	unsigned deepen_relative : 1;
 	unsigned refetch : 1;
+	unsigned must_filter : 1;
 
 	/* see documentation of corresponding flag in fetch-pack.h */
 	unsigned from_promisor : 1;
