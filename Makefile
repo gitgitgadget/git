@@ -1390,6 +1390,30 @@ CLAR_TEST_OBJS += $(UNIT_TEST_DIR)/unit-test.o
 
 UNIT_TEST_OBJS += $(UNIT_TEST_DIR)/test-lib.o
 
+XDIFF_OBJS += xdiff/xdiffi.o
+XDIFF_OBJS += xdiff/xemit.o
+XDIFF_OBJS += xdiff/xhistogram.o
+XDIFF_OBJS += xdiff/xmerge.o
+XDIFF_OBJS += xdiff/xpatience.o
+XDIFF_OBJS += xdiff/xprepare.o
+XDIFF_OBJS += xdiff/xutils.o
+.PHONY: xdiff-objs
+xdiff-objs: $(XDIFF_OBJS)
+
+REFTABLE_OBJS += reftable/basics.o
+REFTABLE_OBJS += reftable/error.o
+REFTABLE_OBJS += reftable/block.o
+REFTABLE_OBJS += reftable/blocksource.o
+REFTABLE_OBJS += reftable/iter.o
+REFTABLE_OBJS += reftable/merged.o
+REFTABLE_OBJS += reftable/pq.o
+REFTABLE_OBJS += reftable/record.o
+REFTABLE_OBJS += reftable/stack.o
+REFTABLE_OBJS += reftable/system.o
+REFTABLE_OBJS += reftable/table.o
+REFTABLE_OBJS += reftable/tree.o
+REFTABLE_OBJS += reftable/writer.o
+
 # xdiff and reftable libs may in turn depend on what is in libgit.a
 GITLIBS = common-main.o $(LIB_FILE) $(XDIFF_LIB) $(REFTABLE_LIB) $(LIB_FILE)
 EXTLIBS =
@@ -2722,30 +2746,6 @@ reconfigure config.mak.autogen: config.status
 	$(QUIET_GEN)./config.status
 .PHONY: reconfigure # This is a convenience target.
 endif
-
-XDIFF_OBJS += xdiff/xdiffi.o
-XDIFF_OBJS += xdiff/xemit.o
-XDIFF_OBJS += xdiff/xhistogram.o
-XDIFF_OBJS += xdiff/xmerge.o
-XDIFF_OBJS += xdiff/xpatience.o
-XDIFF_OBJS += xdiff/xprepare.o
-XDIFF_OBJS += xdiff/xutils.o
-.PHONY: xdiff-objs
-xdiff-objs: $(XDIFF_OBJS)
-
-REFTABLE_OBJS += reftable/basics.o
-REFTABLE_OBJS += reftable/error.o
-REFTABLE_OBJS += reftable/block.o
-REFTABLE_OBJS += reftable/blocksource.o
-REFTABLE_OBJS += reftable/iter.o
-REFTABLE_OBJS += reftable/merged.o
-REFTABLE_OBJS += reftable/pq.o
-REFTABLE_OBJS += reftable/record.o
-REFTABLE_OBJS += reftable/stack.o
-REFTABLE_OBJS += reftable/system.o
-REFTABLE_OBJS += reftable/table.o
-REFTABLE_OBJS += reftable/tree.o
-REFTABLE_OBJS += reftable/writer.o
 
 TEST_OBJS := $(patsubst %$X,%.o,$(TEST_PROGRAMS)) $(patsubst %,t/helper/%,$(TEST_BUILTINS_OBJS))
 
