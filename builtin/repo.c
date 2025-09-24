@@ -14,13 +14,14 @@
 
 static const char *const repo_usage[] = {
 	"git repo info [--format=(keyvalue|nul)] [-z] [<key>...]",
-	"git repo stats",
+	"git repo stats [--format=(table|keyvalue|nul)]",
 	NULL
 };
 
 typedef int get_value_fn(struct repository *repo, struct strbuf *buf);
 
 enum output_format {
+	FORMAT_TABLE,
 	FORMAT_KEYVALUE,
 	FORMAT_NUL_TERMINATED,
 };
@@ -135,6 +136,8 @@ static int parse_format_cb(const struct option *opt,
 		*format = FORMAT_NUL_TERMINATED;
 	else if (!strcmp(arg, "keyvalue"))
 		*format = FORMAT_KEYVALUE;
+	else if (!strcmp(arg, "table"))
+		*format = FORMAT_TABLE;
 	else
 		die(_("invalid format '%s'"), arg);
 
@@ -157,6 +160,8 @@ static int cmd_repo_info(int argc, const char **argv, const char *prefix,
 	};
 
 	argc = parse_options(argc, argv, prefix, options, repo_usage, 0);
+	if (format != FORMAT_KEYVALUE && format != FORMAT_NUL_TERMINATED)
+		die(_("unsupported output format"));
 
 	return print_fields(argc, argv, repo, format);
 }
@@ -312,6 +317,33 @@ static void stats_table_clear(struct stats_table *table)
 	string_list_clear(&table->rows, 1);
 }
 
+static void stats_keyvalue_print(struct repo_stats *stats, char key_delim,
+				 char value_delim)
+{
+	struct strbuf buf = STRBUF_INIT;
+
+	strbuf_addf(&buf, "references.branches.count%c%" PRIuMAX "%c",
+		    key_delim, (uintmax_t)stats->refs.branches, value_delim);
+	strbuf_addf(&buf, "references.tags.count%c%" PRIuMAX "%c",
+		    key_delim, (uintmax_t)stats->refs.tags, value_delim);
+	strbuf_addf(&buf, "references.remotes.count%c%" PRIuMAX "%c",
+		    key_delim, (uintmax_t)stats->refs.remotes, value_delim);
+	strbuf_addf(&buf, "references.others.count%c%" PRIuMAX "%c",
+		    key_delim, (uintmax_t)stats->refs.others, value_delim);
+
+	strbuf_addf(&buf, "objects.commits.count%c%" PRIuMAX "%c",
+		    key_delim, (uintmax_t)stats->objects.commits, value_delim);
+	strbuf_addf(&buf, "objects.trees.count%c%" PRIuMAX "%c",
+		    key_delim, (uintmax_t)stats->objects.trees, value_delim);
+	strbuf_addf(&buf, "objects.blobs.count%c%" PRIuMAX "%c",
+		    key_delim, (uintmax_t)stats->objects.blobs, value_delim);
+	strbuf_addf(&buf, "objects.tags.count%c%" PRIuMAX "%c",
+		    key_delim, (uintmax_t)stats->objects.tags, value_delim);
+
+	fwrite(buf.buf, sizeof(char), buf.len, stdout);
+	strbuf_release(&buf);
+}
+
 static void stats_count_references(struct ref_stats *stats, struct ref_array *refs)
 {
 	for (int i = 0; i < refs->nr; i++) {
@@ -389,17 +421,25 @@ static void stats_count_objects(struct object_stats *stats,
 	path_walk_info_clear(&info);
 }
 
-static int cmd_repo_stats(int argc UNUSED, const char **argv UNUSED,
-			  const char *prefix, struct repository *repo)
+static int cmd_repo_stats(int argc, const char **argv, const char *prefix,
+			  struct repository *repo)
 {
 	struct ref_filter filter = REF_FILTER_INIT;
 	struct stats_table table = {
 		.rows = STRING_LIST_INIT_DUP,
 	};
+	enum output_format format = FORMAT_TABLE;
 	struct repo_stats stats = { 0 };
 	struct ref_array refs = { 0 };
 	struct rev_info revs;
+	struct option options[] = {
+		OPT_CALLBACK_F(0, "format", &format, N_("format"),
+			       N_("output format"),
+			       PARSE_OPT_NONEG, parse_format_cb),
+		OPT_END()
+	};
 
+	parse_options(argc, argv, prefix, options, repo_usage, 0);
 	repo_init_revisions(repo, &revs, prefix);
 	if (filter_refs(&refs, &filter, FILTER_REFS_REGULAR))
 		die(_("unable to filter refs"));
@@ -407,8 +447,20 @@ static int cmd_repo_stats(int argc UNUSED, const char **argv UNUSED,
 	stats_count_references(&stats.refs, &refs);
 	stats_count_objects(&stats.objects, &refs, &revs);
 
-	stats_table_setup(&table, &stats);
-	stats_table_print(&table);
+	switch (format) {
+	case FORMAT_TABLE:
+		stats_table_setup(&table, &stats);
+		stats_table_print(&table);
+		break;
+	case FORMAT_KEYVALUE:
+		stats_keyvalue_print(&stats, '=', '\n');
+		break;
+	case FORMAT_NUL_TERMINATED:
+		stats_keyvalue_print(&stats, '\n', '\0');
+		break;
+	default:
+		BUG("invalid output format");
+	}
 
 	stats_table_clear(&table);
 	release_revisions(&revs);
