@@ -10,14 +10,21 @@ test_expect_success 'empty repository' '
 	(
 		cd repo &&
 		cat >expect <<-\EOF &&
-		| Repository stats | Value |
-		| ---------------- | ----- |
-		| * References     |       |
-		|   * Count        |     0 |
-		|     * Branches   |     0 |
-		|     * Tags       |     0 |
-		|     * Remotes    |     0 |
-		|     * Others     |     0 |
+		| Repository stats    | Value |
+		| ------------------- | ----- |
+		| * References        |       |
+		|   * Count           |     0 |
+		|     * Branches      |     0 |
+		|     * Tags          |     0 |
+		|     * Remotes       |     0 |
+		|     * Others        |     0 |
+		|                     |       |
+		| * Reachable objects |       |
+		|   * Count           |     0 |
+		|     * Commits       |     0 |
+		|     * Trees         |     0 |
+		|     * Blobs         |     0 |
+		|     * Tags          |     0 |
 		EOF
 
 		git repo stats >out 2>err &&
@@ -27,28 +34,36 @@ test_expect_success 'empty repository' '
 	)
 '
 
-test_expect_success 'repository with references' '
+test_expect_success 'repository with references and objects' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
 		cd repo &&
-		git commit --allow-empty -m init &&
+		test_commit_bulk 42 &&
 		git tag -a foo -m bar &&
 
 		oid="$(git rev-parse HEAD)" &&
 		git update-ref refs/remotes/origin/foo "$oid" &&
 
+		# Also creates a commit, tree, and blob.
 		git notes add -m foo &&
 
 		cat >expect <<-\EOF &&
-		| Repository stats | Value |
-		| ---------------- | ----- |
-		| * References     |       |
-		|   * Count        |     4 |
-		|     * Branches   |     1 |
-		|     * Tags       |     1 |
-		|     * Remotes    |     1 |
-		|     * Others     |     1 |
+		| Repository stats    | Value |
+		| ------------------- | ----- |
+		| * References        |       |
+		|   * Count           |     4 |
+		|     * Branches      |     1 |
+		|     * Tags          |     1 |
+		|     * Remotes       |     1 |
+		|     * Others        |     1 |
+		|                     |       |
+		| * Reachable objects |       |
+		|   * Count           |   130 |
+		|     * Commits       |    43 |
+		|     * Trees         |    43 |
+		|     * Blobs         |    43 |
+		|     * Tags          |     1 |
 		EOF
 
 		git repo stats >out 2>err &&
