@@ -68,6 +68,26 @@ impl ConfigSet {
             Some(owned_str)
         }
     }
+
+    pub fn get_bool(&mut self, key: &str) -> Option<bool> {
+        let key = CString::new(key).expect("Couldn't convert key to CString");
+        let mut val: *mut c_char = std::ptr::null_mut();
+        unsafe {
+            if libgit_configset_get_string(self.0, key.as_ptr(), &mut val as *mut *mut c_char) != 0
+            {
+                return None;
+            }
+            let borrowed_str = CStr::from_ptr(val);
+            let owned_str =
+                String::from(borrowed_str.to_str().expect("Couldn't convert val to str"));
+            free(val as *mut c_void); // Free the xstrdup()ed pointer from the C side
+            match owned_str.to_lowercase().as_str() {
+                "true" | "yes" | "on" | "1" => Some(true),
+                "false" | "no" | "off" | "0" => Some(false),
+                _ => None,
+            }
+        }
+    }
 }
 
 impl Default for ConfigSet {
@@ -102,5 +122,9 @@ mod tests {
         assert_eq!(cs.get_int("trace2.eventNesting"), Some(3));
         // ConfigSet returns None for missing key
         assert_eq!(cs.get_string("foo.bar"), None);
+        // Test boolean parsing
+        assert_eq!(cs.get_bool("test.booleanValue"), Some(true));
+        // Test missing boolean key
+        assert_eq!(cs.get_bool("missing.boolean"), None);
     }
 }
