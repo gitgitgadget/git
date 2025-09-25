@@ -1,0 +1,9 @@
+[test]
+	boolTrue = true
+	boolFalse = false
+	boolYes = yes
+	boolNo = no
+	boolOne = 1
+	boolZero = 0
+	boolZeroZero = 00
+	boolHundred = 100

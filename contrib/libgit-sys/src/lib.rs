@@ -43,6 +43,12 @@ extern "C" {
         dest: *mut *mut c_char,
     ) -> c_int;
 
+    pub fn libgit_configset_get_bool(
+        cs: *mut libgit_config_set,
+        key: *const c_char,
+        dest: *mut c_int,
+    ) -> c_int;
+
 }
 
 #[cfg(test)]
