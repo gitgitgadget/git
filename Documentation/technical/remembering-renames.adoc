@@ -10,32 +10,32 @@ history as an optimization, assuming all merges are automatic and clean
 
 Outline:
 
-  0. Assumptions
+  0 Assumptions
 
-  1. How rebasing and cherry-picking work
+  1 How rebasing and cherry-picking work
 
-  2. Why the renames on MERGE_SIDE1 in any given pick are *always* a
-     superset of the renames on MERGE_SIDE1 for the next pick.
+  2 Why the renames on MERGE_SIDE1 in any given pick are *always* a
+    superset of the renames on MERGE_SIDE1 for the next pick.
 
-  3. Why any rename on MERGE_SIDE1 in any given pick is _almost_ always also
-     a rename on MERGE_SIDE1 for the next pick
+  3 Why any rename on MERGE_SIDE1 in any given pick is _almost_ always also
+    a rename on MERGE_SIDE1 for the next pick
 
-  4. A detailed description of the counter-examples to #3.
+  4 A detailed description of the counter-examples to #3.
 
-  5. Why the special cases in #4 are still fully reasonable to use to pair
-     up files for three-way content merging in the merge machinery, and why
-     they do not affect the correctness of the merge.
+  5 Why the special cases in #4 are still fully reasonable to use to pair
+    up files for three-way content merging in the merge machinery, and why
+    they do not affect the correctness of the merge.
 
-  6. Interaction with skipping of "irrelevant" renames
+  6 Interaction with skipping of "irrelevant" renames
 
-  7. Additional items that need to be cached
+  7 Additional items that need to be cached
 
-  8. How directory rename detection interacts with the above and why this
-     optimization is still safe even if merge.directoryRenames is set to
-     "true".
+  8 How directory rename detection interacts with the above and why this
+    optimization is still safe even if merge.directoryRenames is set to
+    "true".
 
 
-=== 0. Assumptions ===
+== 0. Assumptions ==
 
 There are two assumptions that will hold throughout this document:
 
@@ -91,7 +91,7 @@ this config setting, but we have to discuss a few more cases to show why;
 this discussion is deferred until section 8.
 
 
-=== 1. How rebasing and cherry-picking work ===
+== 1. How rebasing and cherry-picking work ==
 
 Consider the following setup (from the git-rebase manpage):
 
@@ -138,8 +138,7 @@ Conceptually the two statements above are the same as a three-way merge of
 B, B', and C, at least the parts before you decide to record a commit.
 
 
-=== 2. Why the renames on MERGE_SIDE1 in any given pick are always a ===
-===    superset of the renames on MERGE_SIDE1 for the next pick.     ===
+== 2. Why the renames on MERGE_SIDE1 in any given pick are always a superset of the renames on MERGE_SIDE1 for the next pick. ==
 
 The merge machinery uses the filenames it is fed from MERGE_BASE,
 MERGE_SIDE1, and MERGE_SIDE2.  It will only move content to a different
@@ -181,8 +180,7 @@ are a subset of those between E and G.  Equivalently, all renames between E
 and G are a superset of those between A and A'.
 
 
-=== 3. Why any rename on MERGE_SIDE1 in any given pick is _almost_   ===
-===    always also a rename on MERGE_SIDE1 for the next pick.        ===
+== 3. Why any rename on MERGE_SIDE1 in any given pick is _almost_ always also a rename on MERGE_SIDE1 for the next pick. ==
 
 Let's again look at the first two picks:
 
@@ -254,7 +252,7 @@ were detected as renames, A:oldfile and A':newfile should also be
 detectable as renames almost always.
 
 
-=== 4. A detailed description of the counter-examples to #3.         ===
+== 4. A detailed description of the counter-examples to #3. ==
 
 We already noted in section 3 that rename/rename(1to1) (i.e. both sides
 renaming a file the same way) was one counter-example.  The more
@@ -276,18 +274,21 @@ still somehow merge cleanly), then traditional rename detection would not
 detect A:oldfile and A':newfile as renames.
 
 Here's an example where that can happen:
+
   * E:oldfile had 20 lines
+
   * G:newfile added 10 new lines at the beginning of the file
+
   * A:oldfile kept the first 3 lines of the file, and deleted all the rest
+
 then
+
   => A':newfile would have 13 lines, 3 of which matches those in A:oldfile.
-E:oldfile -> G:newfile would be detected as a rename, but A:oldfile and
-A':newfile would not be.
+  E:oldfile -> G:newfile would be detected as a rename, but A:oldfile and
+  A':newfile would not be.
 
 
-=== 5. Why the special cases in #4 are still fully reasonable to use to    ===
-===    pair up files for three-way content merging in the merge machinery, ===
-===    and why they do not affect the correctness of the merge.            ===
+== 5. Why the special cases in #4 are still fully reasonable to use to pair up files for three-way content merging in the merge machinery, and why they do not affect the correctness of the merge. ==
 
 In the rename/rename(1to1) case, A:newfile and A':newfile are not renames
 since they use the *same* filename.  However, files with the same filename
@@ -394,7 +395,7 @@ cases 1 and 3 seem to provide as good or better behavior with the
 optimization than without.
 
 
-=== 6. Interaction with skipping of "irrelevant" renames ===
+== 6. Interaction with skipping of "irrelevant" renames ==
 
 Previous optimizations involved skipping rename detection for paths
 considered to be "irrelevant".  See for example the following commits:
@@ -421,7 +422,7 @@ detection -- though we can limit it to the paths for which we have not
 already detected renames.
 
 
-=== 7. Additional items that need to be cached ===
+== 7. Additional items that need to be cached ==
 
 It turns out we have to cache more than just renames; we also cache:
 
@@ -482,9 +483,7 @@ we store the trees to compare with what we are asked to merge next
 time.
 
 
-=== 8. How directory rename detection interacts with the above and   ===
-===    why this optimization is still safe even if                   ===
-===    merge.directoryRenames is set to "true".                      ===
+== 8. How directory rename detection interacts with the above and why this optimization is still safe even if merge.directoryRenames is set to "true". ==
 
 As noted in the assumptions section:
 

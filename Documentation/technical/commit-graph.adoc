@@ -1,5 +1,4 @@
-Git Commit-Graph Design Notes
-=============================
+= Git Commit-Graph Design Notes
 
 Git walks the commit graph for many reasons, including:
 
@@ -39,6 +38,7 @@ A consumer may load the following info for a commit from the graph:
 Values 1-4 satisfy the requirements of parse_commit_gently().
 
 There are two definitions of generation number:
+
 1. Corrected committer dates (generation number v2)
 2. Topological levels (generation number v1)
 
@@ -122,8 +122,7 @@ can be stored in the commit-graph file using the 30 bits available
 to topological levels. This presents another case where a commit can
 have generation number equal to that of a parent.
 
-Design Details
---------------
+== Design Details
 
 - The commit-graph file is stored in a file named 'commit-graph' in the
   .git/objects/info directory. This could be stored in the info directory
@@ -149,8 +148,7 @@ Design Details
   helpful for these clones, anyway. The commit-graph will not be read or
   written when shallow commits are present.
 
-Commit-Graphs Chains
---------------------
+== Commit-Graphs Chains
 
 Typically, repos grow with near-constant velocity (commits per day). Over time,
 the number of commits added by a fetch operation is much smaller than the
@@ -158,7 +156,7 @@ number of commits in the full history. By creating a "chain" of commit-graphs,
 we enable fast writes of new commit data without rewriting the entire commit
 history -- at least, most of the time.
 
-## File Layout
+=== File Layout
 
 A commit-graph chain uses multiple files, and we use a fixed naming convention
 to organize these files. Each commit-graph file has a name
@@ -170,11 +168,11 @@ hashes for the files in order from "lowest" to "highest".
 
 For example, if the `commit-graph-chain` file contains the lines
 
-```
+----
 	{hash0}
 	{hash1}
 	{hash2}
-```
+----
 
 then the commit-graph chain looks like the following diagram:
 
@@ -213,7 +211,7 @@ specifying the hashes of all files in the lower layers. In the above example,
 `graph-{hash1}.graph` contains `{hash0}` while `graph-{hash2}.graph` contains
 `{hash0}` and `{hash1}`.
 
-## Merging commit-graph files
+=== Merging commit-graph files
 
 If we only added a new commit-graph file on every write, we would run into a
 linear search problem through many commit-graph files.  Instead, we use a merge
@@ -257,14 +255,14 @@ lock-file.  When the file is flushed, we rename it to `graph-{hash3}`
 according to the computed `{hash3}`. Finally, we write the new chain data to
 `commit-graph-chain.lock`:
 
-```
+----
 	{hash3}
 	{hash0}
-```
+----
 
 We then close the lock-file.
 
-## Merge Strategy
+=== Merge Strategy
 
 When writing a set of commits that do not exist in the commit-graph stack of
 height N, we default to creating a new file at level N + 1. We then decide to
@@ -289,7 +287,7 @@ The merge strategy values (2 for the size multiple, 64,000 for the maximum
 number of commits) could be extracted into config settings for full
 flexibility.
 
-## Handling Mixed Generation Number Chains
+=== Handling Mixed Generation Number Chains
 
 With the introduction of generation number v2 and generation data chunk, the
 following scenario is possible:
@@ -318,7 +316,7 @@ have corrected commit dates when written by compatible versions of Git. Thus,
 rewriting split commit-graph as a single file (`--split=replace`) creates a
 single layer with corrected commit dates.
 
-## Deleting graph-{hash} files
+=== Deleting graph-\{hash\} files
 
 After a new tip file is written, some `graph-{hash}` files may no longer
 be part of a chain. It is important to remove these files from disk, eventually.
@@ -333,7 +331,7 @@ files whose modified times are older than a given expiry window. This window
 defaults to zero, but can be changed using command-line arguments or a config
 setting.
 
-## Chains across multiple object directories
+=== Chains across multiple object directories
 
 In a repo with alternates, we look for the `commit-graph-chain` file starting
 in the local object directory and then in each alternate. The first file that
@@ -369,8 +367,8 @@ their custom environment:
     access to the new chain until its chain is updated to reference those files.
     (This may change in the future [5].)
 
-Related Links
--------------
+== Related Links
+
 [0] https://bugs.chromium.org/p/git/issues/detail?id=8
     Chromium work item for: Serialized Commit Graph
 
