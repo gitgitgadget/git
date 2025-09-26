@@ -69,24 +69,18 @@ impl ConfigSet {
         }
     }
 
+    /// Load the value for the given key and attempt to parse it as a boolean. Dies with a fatal error
+    /// if the value cannot be parsed. Returns None if the key is not present.
     pub fn get_bool(&mut self, key: &str) -> Option<bool> {
-        let key = CString::new(key).expect("Couldn't convert key to CString");
-        let mut val: *mut c_char = std::ptr::null_mut();
+        let key = CString::new(key).expect("config key should be valid CString");
+        let mut val: c_int = 0;
         unsafe {
-            if libgit_configset_get_string(self.0, key.as_ptr(), &mut val as *mut *mut c_char) != 0
-            {
+            if libgit_configset_get_bool(self.0, key.as_ptr(), &mut val as *mut c_int) != 0 {
                 return None;
             }
-            let borrowed_str = CStr::from_ptr(val);
-            let owned_str =
-                String::from(borrowed_str.to_str().expect("Couldn't convert val to str"));
-            free(val as *mut c_void); // Free the xstrdup()ed pointer from the C side
-            match owned_str.to_lowercase().as_str() {
-                "true" | "yes" | "on" | "1" => Some(true),
-                "false" | "no" | "off" | "0" => Some(false),
-                _ => None,
-            }
         }
+
+        Some(val != 0)
     }
 }
 
@@ -115,6 +109,7 @@ mod tests {
             Path::new("testdata/config1"),
             Path::new("testdata/config2"),
             Path::new("testdata/config3"),
+            Path::new("testdata/config4"),
         ]);
         // ConfigSet retrieves correct value
         assert_eq!(cs.get_int("trace2.eventTarget"), Some(1));
@@ -122,8 +117,16 @@ mod tests {
         assert_eq!(cs.get_int("trace2.eventNesting"), Some(3));
         // ConfigSet returns None for missing key
         assert_eq!(cs.get_string("foo.bar"), None);
-        // Test boolean parsing
-        assert_eq!(cs.get_bool("test.booleanValue"), Some(true));
+        // Test boolean parsing - comprehensive tests
+        assert_eq!(cs.get_bool("test.boolTrue"), Some(true));
+        assert_eq!(cs.get_bool("test.boolFalse"), Some(false));
+        assert_eq!(cs.get_bool("test.boolYes"), Some(true));
+        assert_eq!(cs.get_bool("test.boolNo"), Some(false));
+        assert_eq!(cs.get_bool("test.boolOne"), Some(true));
+        assert_eq!(cs.get_bool("test.boolZero"), Some(false));
+        assert_eq!(cs.get_bool("test.boolZeroZero"), Some(false)); // "00" → false
+        assert_eq!(cs.get_bool("test.boolHundred"), Some(true)); // "100" → true
+        assert_eq!(cs.get_bool("test.boolSeven"), Some(true)); // "007" → true
         // Test missing boolean key
         assert_eq!(cs.get_bool("missing.boolean"), None);
     }

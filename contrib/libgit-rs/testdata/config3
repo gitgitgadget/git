@@ -1,4 +1,2 @@
 [trace2]
 	eventNesting = 3
-[test]
-	booleanValue = true
