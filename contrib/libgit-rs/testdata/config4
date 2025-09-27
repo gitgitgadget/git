@@ -7,3 +7,7 @@
 	boolZero = 0
 	boolZeroZero = 00
 	boolHundred = 100
+	ulongSmall = 42
+	ulongBig = 4294967296
+	pathRelative = ./some/path
+	pathAbsolute = /usr/bin/git

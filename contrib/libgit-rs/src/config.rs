@@ -1,8 +1,8 @@
 use std::ffi::{c_void, CStr, CString};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 #[cfg(has_std__ffi__c_char)]
-use std::ffi::{c_char, c_int};
+use std::ffi::{c_char, c_int, c_ulong};
 
 #[cfg(not(has_std__ffi__c_char))]
 #[allow(non_camel_case_types)]
@@ -11,6 +11,10 @@ type c_char = i8;
 #[cfg(not(has_std__ffi__c_char))]
 #[allow(non_camel_case_types)]
 type c_int = i32;
+
+#[cfg(not(has_std__ffi__c_char))]
+#[allow(non_camel_case_types)]
+type c_ulong = u64;
 
 use libgit_sys::*;
 
@@ -82,6 +86,41 @@ impl ConfigSet {
 
         Some(val != 0)
     }
+
+    /// Load the value for the given key and attempt to parse it as an unsigned long. Dies with a fatal error
+    /// if the value cannot be parsed. Returns None if the key is not present.
+    pub fn get_ulong(&mut self, key: &str) -> Option<u64> {
+        let key = CString::new(key).expect("config key should be valid CString");
+        let mut val: c_ulong = 0;
+        unsafe {
+            if libgit_configset_get_ulong(self.0, key.as_ptr(), &mut val as *mut c_ulong) != 0 {
+                return None;
+            }
+        }
+        Some(val as u64)
+    }
+
+    /// Load the value for the given key and attempt to parse it as a file path. Dies with a fatal error
+    /// if the value cannot be converted to a PathBuf. Returns None if the key is not present.
+    pub fn get_pathname(&mut self, key: &str) -> Option<PathBuf> {
+        let key = CString::new(key).expect("config key should be valid CString");
+        let mut val: *mut c_char = std::ptr::null_mut();
+        unsafe {
+            if libgit_configset_get_pathname(self.0, key.as_ptr(), &mut val as *mut *mut c_char)
+                != 0
+            {
+                return None;
+            }
+            let borrowed_str = CStr::from_ptr(val);
+            let owned_str = String::from(
+                borrowed_str
+                    .to_str()
+                    .expect("config path should be valid UTF-8"),
+            );
+            free(val as *mut c_void); // Free the xstrdup()ed pointer from the C side
+            Some(PathBuf::from(owned_str))
+        }
+    }
 }
 
 impl Default for ConfigSet {
@@ -128,5 +167,19 @@ mod tests {
         assert_eq!(cs.get_bool("test.boolHundred"), Some(true)); // "100" → true
         // Test missing boolean key
         assert_eq!(cs.get_bool("missing.boolean"), None);
+        // Test ulong parsing
+        assert_eq!(cs.get_ulong("test.ulongSmall"), Some(42));
+        assert_eq!(cs.get_ulong("test.ulongBig"), Some(4294967296)); // > 32-bit int
+        assert_eq!(cs.get_ulong("missing.ulong"), None);
+        // Test pathname parsing
+        assert_eq!(
+            cs.get_pathname("test.pathRelative"),
+            Some(PathBuf::from("./some/path"))
+        );
+        assert_eq!(
+            cs.get_pathname("test.pathAbsolute"),
+            Some(PathBuf::from("/usr/bin/git"))
+        );
+        assert_eq!(cs.get_pathname("missing.path"), None);
     }
 }
