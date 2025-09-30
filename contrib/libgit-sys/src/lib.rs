@@ -1,7 +1,7 @@
 use std::ffi::c_void;
 
 #[cfg(has_std__ffi__c_char)]
-use std::ffi::{c_char, c_int};
+use std::ffi::{c_char, c_int, c_ulong};
 
 #[cfg(not(has_std__ffi__c_char))]
 #[allow(non_camel_case_types)]
@@ -10,6 +10,10 @@ pub type c_char = i8;
 #[cfg(not(has_std__ffi__c_char))]
 #[allow(non_camel_case_types)]
 pub type c_int = i32;
+
+#[cfg(not(has_std__ffi__c_char))]
+#[allow(non_camel_case_types)]
+pub type c_ulong = u64;
 
 extern crate libz_sys;
 
@@ -38,6 +42,24 @@ extern "C" {
     ) -> c_int;
 
     pub fn libgit_configset_get_string(
+        cs: *mut libgit_config_set,
+        key: *const c_char,
+        dest: *mut *mut c_char,
+    ) -> c_int;
+
+    pub fn libgit_configset_get_bool(
+        cs: *mut libgit_config_set,
+        key: *const c_char,
+        dest: *mut c_int,
+    ) -> c_int;
+
+    pub fn libgit_configset_get_ulong(
+        cs: *mut libgit_config_set,
+        key: *const c_char,
+        dest: *mut c_ulong,
+    ) -> c_int;
+
+    pub fn libgit_configset_get_pathname(
         cs: *mut libgit_config_set,
         key: *const c_char,
         dest: *mut *mut c_char,

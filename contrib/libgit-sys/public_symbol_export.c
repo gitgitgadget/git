@@ -46,6 +46,24 @@ int libgit_configset_get_string(struct libgit_config_set *cs, const char *key,
 	return git_configset_get_string(&cs->cs, key, dest);
 }
 
+int libgit_configset_get_bool(struct libgit_config_set *cs, const char *key,
+			      int *dest)
+{
+	return git_configset_get_bool(&cs->cs, key, dest);
+}
+
+int libgit_configset_get_ulong(struct libgit_config_set *cs, const char *key,
+			       unsigned long *dest)
+{
+	return git_configset_get_ulong(&cs->cs, key, dest);
+}
+
+int libgit_configset_get_pathname(struct libgit_config_set *cs, const char *key,
+				  char **dest)
+{
+	return git_configset_get_pathname(&cs->cs, key, dest);
+}
+
 const char *libgit_user_agent(void)
 {
 	return git_user_agent();
