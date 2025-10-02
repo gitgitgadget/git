@@ -20,6 +20,8 @@
 #include "userdiff.h"
 #include "apply.h"
 #include "revision.h"
+#include "dir.h"
+#include "hex.h"
 
 struct patch_util {
 	/* For the search for an exact match */
@@ -33,6 +35,431 @@ struct patch_util {
 	int matching;
 	struct object_id oid;
 };
+
+static inline int strtost(char const *s, size_t *result, const char **end)
+{
+	unsigned long u;
+	char *p;
+
+	/* negative values would be accepted by strtoul */
+	if (!isdigit(*s))
+		return -1;
+	errno = 0;
+	u = strtoul(s, &p, 10);
+	if (errno || p == s)
+		return -1;
+	if (result)
+		*result = u;
+	*end = p;
+
+	return 0;
+}
+
+static int parse_line_range(const char *p,
+			     size_t *old_count, size_t *new_count,
+			     const char **end)
+{
+	size_t o = 1, n = 1;
+
+	if (!skip_prefix(p, "@@ -", &p) ||
+	    strtost(p, NULL, &p) ||
+	    /* The range is -<start>[,<count>], defaulting to count = 1 */
+	    !(*p == ' ' || (*p == ',' && !strtost(p + 1, &o, &p))) ||
+	    !skip_prefix(p, " +", &p) ||
+	    strtost(p, NULL, &p) ||
+	    /* The range is +<start>[,<count>], defaulting to count = 1 */
+	    !(*p == ' ' || (*p == ',' && !strtost(p + 1, &n, &p))) ||
+	    !skip_prefix(p, " @@", &p))
+		return -1;
+
+	*old_count = o;
+	*new_count = n;
+	*end = p;
+
+	return 0;
+}
+
+struct parser_state {
+	struct strbuf buf;
+	const char *line;
+	size_t next_line_offset;
+	enum {
+		MBOX_BEFORE_HEADER,
+		MBOX_IN_HEADER,
+		MBOX_AFTER_HEADERS,
+		MBOX_IN_COMMIT_MESSAGE,
+		MBOX_AFTER_TRIPLE_DASH,
+		MBOX_IN_DIFF
+	} state;
+};
+
+static inline int is_last_line(struct parser_state *s)
+{
+	return s->next_line_offset >= s->buf.len;
+}
+
+/*
+ * This function finds the end of the line, replaces the newline character with
+ * a NUL, and updates `line`.
+ */
+static inline int next_line(struct parser_state *s)
+{
+	char *p;
+
+	s->line = s->buf.buf + s->next_line_offset;
+
+	if (s->next_line_offset >= s->buf.len) {
+		s->line = NULL;
+		return 0;
+	}
+
+	for (p = s->buf.buf + s->next_line_offset; *p; p++)
+		if (*p == '\n') {
+			*p = '\0';
+			p++;
+			break;
+		}
+
+	s->next_line_offset = p - s->buf.buf;
+	return 1;
+}
+
+static void skip_whitespace(const char **p)
+{
+	while (isspace(**p))
+		(*p)++;
+}
+
+static void skip_patch_prefix(const char **p)
+{
+	const char *q;
+
+	if (skip_prefix(*p, "[PATCH", &q) && (q = strchr(q, ']'))) {
+		q++;
+		skip_whitespace(&q);
+		*p = q;
+	}
+}
+
+/*
+ * Parses a value of a mail header, starting at the `value_offset` of the
+ * current line.
+ *
+ * If the value is too long (i.e. if the next line starts with a space to
+ * indicate a continuation line), the `scratch` buffer is used to reconstruct
+ * the original, long value.
+ *
+ * This function can also be used to merely skip a header (for example, the
+ * in-body `Date:` header) by passing `NULL` values for the `scratch` and
+ * `value` parameters).
+ *
+ * Returns the number of consumed bytes (starting at `buf`).
+ */
+static void parse_header_value(struct parser_state *s, const char *value_start,
+			       struct strbuf *scratch, const char **value)
+{
+	if (s->next_line_offset >= s->buf.len ||
+	    s->buf.buf[s->next_line_offset] != ' ') {
+		if (value)
+			*value = value_start;
+		return;
+	}
+
+	/* handle long header */
+	if (value) {
+		strbuf_reset(scratch);
+		strbuf_addstr(scratch, value_start);
+	}
+	while (s->next_line_offset < s->buf.len &&
+	       s->buf.buf[s->next_line_offset] == ' ') {
+		next_line(s);
+		if (value)
+			strbuf_addstr(scratch, s->line + 1);
+	}
+
+	if (value)
+		*value = scratch->buf;
+}
+
+static int looks_like_a_header(const char *line)
+{
+	if (*line == ':')
+		return 0;
+	while (isalnum(*line) || *line == '-')
+		line++;
+	return *line == ':';
+}
+
+static void parse_headers(struct parser_state *s,
+			  struct strbuf *author_buf, const char **author,
+			  struct strbuf *subject_buf, const char **subject)
+{
+	const char *p;
+
+	do {
+		if (skip_prefix(s->line, "From: ", &p)) {
+			skip_whitespace(&p);
+			parse_header_value(s, p, author_buf, author);
+		} else if (skip_prefix(s->line, "Subject: ", &p)) {
+			skip_whitespace(&p);
+			skip_patch_prefix(&p);
+			parse_header_value(s, p, subject_buf, subject);
+		} else if (skip_prefix(s->line, "Date: ", &p)) {
+			/*
+			 * The Date: header is not used by `range-diff`, but it
+			 * is potentially part of the in-body headers and should
+			 * therefore be skipped.
+			 *
+			 * It _could_ be a long date string that is broken apart
+			 * across multiple lines, so we'll parse it even if we
+			 * do not use the parsed value.
+			 */
+			skip_whitespace(&p);
+			parse_header_value(s, p, NULL, NULL);
+		} else if (!*s->line || !looks_like_a_header(s->line))
+			break; /* empty line */
+	} while (next_line(s));
+}
+
+static int read_mbox(const char *path, struct string_list *list)
+{
+	struct parser_state s = {
+		.buf = STRBUF_INIT,
+		.state = MBOX_BEFORE_HEADER
+	};
+	struct strbuf scratch = STRBUF_INIT;
+	struct strbuf author_buf = STRBUF_INIT, subject_buf = STRBUF_INIT;
+	struct patch_util *util = NULL;
+	char *current_filename = NULL;
+	size_t old_count = 0, new_count = 0;
+	const char *author = NULL, *subject = NULL, *p;
+
+	if (!strcmp(path, "-")) {
+		if (strbuf_read(&s.buf, STDIN_FILENO, 0) < 0)
+			return error_errno(_("could not read stdin"));
+	} else if (strbuf_read_file(&s.buf, path, 0) < 0)
+		return error_errno(_("could not read '%s'"), path);
+
+	while (next_line(&s)) {
+		if (s.state == MBOX_BEFORE_HEADER) {
+			if (starts_with(s.line, "diff --git ")) {
+				/* This is a patch without commit message */
+				util = xcalloc(1, sizeof(*util));
+				oidcpy(&util->oid, null_oid());
+				util->matching = -1;
+				author = subject = "(none)";
+				goto process_diff;
+			}
+
+parse_from_delimiter:
+			if (!skip_prefix(s.line, "From ", &p))
+				continue;
+
+			if (util)
+				BUG("util already allocated");
+			util = xcalloc(1, sizeof(*util));
+			if (get_oid_hex(p, &util->oid) < 0)
+				oidcpy(&util->oid, null_oid(the_hash_algo));
+			util->matching = -1;
+			author = subject = NULL;
+
+			s.state = MBOX_IN_HEADER;
+			continue;
+		}
+
+process_diff:
+		if (starts_with(s.line, "diff --git ")) {
+			struct patch patch = { 0 };
+			struct strbuf root = STRBUF_INIT;
+			int linenr = 0, offset;
+			int orig_len;
+			unsigned int size;
+
+			if (s.next_line_offset >= s.buf.len) {
+				error(_("incomplete diff header: '%s'"),
+				      s.line);
+fail:
+				release_patch(&patch);
+				free(util);
+				free(current_filename);
+				string_list_clear(list, 1);
+				strbuf_release(&author_buf);
+				strbuf_release(&subject_buf);
+				strbuf_release(&scratch);
+				strbuf_release(&s.buf);
+				return -1;
+			}
+
+			orig_len = strlen(s.line);
+			if (s.line[orig_len - 1] == '\r') {
+				error(_("cannot handle diff headers with "
+					"CR/LF line endings"));
+				goto fail;
+			}
+
+			s.state = MBOX_IN_DIFF;
+			old_count = new_count = 0;
+			strbuf_addch(&scratch, '\n');
+			if (!util->diff_offset)
+				util->diff_offset = scratch.len;
+
+			/* `next_line()`'s replaced the LF with a NUL */
+			s.buf.buf[s.next_line_offset - 1] = '\n';
+			s.next_line_offset -= orig_len + 1;
+			size = s.buf.len - s.next_line_offset;
+			offset = parse_git_diff_header(&root, &linenr, 1,
+						       s.line, orig_len + 1,
+						       size, &patch);
+			if (offset < 0) {
+				error(_("could not parse git header '%.*s'"),
+				      orig_len, s.line);
+				goto fail;
+			}
+			s.next_line_offset += offset;
+
+			if (patch.old_name)
+				skip_prefix(patch.old_name, "a/",
+					    (const char **)&patch.old_name);
+			if (patch.new_name)
+				skip_prefix(patch.new_name, "b/",
+					    (const char **)&patch.new_name);
+
+			strbuf_addstr(&scratch, " ## ");
+			if (patch.is_new)
+				strbuf_addf(&scratch, "%s (new)", patch.new_name);
+			else if (patch.is_delete)
+				strbuf_addf(&scratch, "%s (deleted)", patch.old_name);
+			else if (patch.is_rename)
+				strbuf_addf(&scratch, "%s => %s", patch.old_name, patch.new_name);
+			else
+				strbuf_addstr(&scratch, patch.new_name);
+
+			free(current_filename);
+			if (patch.is_delete)
+				current_filename = xstrdup(patch.old_name);
+			else
+				current_filename = xstrdup(patch.new_name);
+
+			if (patch.new_mode && patch.old_mode &&
+			    patch.old_mode != patch.new_mode)
+				strbuf_addf(&scratch, " (mode change %06o => %06o)",
+					    patch.old_mode, patch.new_mode);
+
+			strbuf_addstr(&scratch, " ##\n");
+			util->diffsize++;
+			release_patch(&patch);
+		} else if (s.state == MBOX_IN_HEADER) {
+			parse_headers(&s,
+				      &author_buf, &author,
+				      &subject_buf, &subject);
+			if (!*s.line) {
+				/* parse in-body headers, if any */
+				if (!is_last_line(&s) &&
+				    (starts_with(s.line + 1, "From: ") ||
+				     starts_with(s.line + 1, "Subject: ") ||
+				     starts_with(s.line + 1, "Date: "))) {
+					next_line(&s);
+					parse_headers(&s,
+						      &author_buf, &author,
+						      &subject_buf, &subject);
+				}
+				s.state = MBOX_IN_COMMIT_MESSAGE;
+
+				strbuf_addstr(&scratch, " ## Metadata ##\n");
+				if (author)
+					strbuf_addf(&scratch, "Author: %s\n",
+						    author);
+				strbuf_addstr(&scratch,
+					      "\n ## Commit message ##\n");
+				if (subject)
+					strbuf_addf(&scratch, "    %s\n\n",
+						    subject);
+				if (*s.line)
+					goto in_commit_message;
+			}
+		} else if (s.state == MBOX_IN_COMMIT_MESSAGE) {
+in_commit_message:
+			if (!*s.line) {
+				strbuf_addch(&scratch, '\n');
+			} else if (strcmp(s.line, "---")) {
+				int tabs = 0;
+
+				/* simulate tab expansion */
+				while (s.line[tabs] == '\t')
+					tabs++;
+				strbuf_addf(&scratch, "%*s%s\n",
+					    4 + 8 * tabs, "", s.line + tabs);
+			} else {
+				/*
+				 * Trim the trailing newline that is added
+				 * by `format-patch`.
+				 */
+				// strbuf_trim_trailing_newline(&scratch);
+				s.state = MBOX_AFTER_TRIPLE_DASH;
+			}
+		} else if (s.state == MBOX_IN_DIFF) {
+			switch (s.line[0]) {
+			case '\0':
+				/* diff might be followed by empty lines */
+				if (old_count || new_count)
+					warning(_("diff ended %d/%d lines early"),
+						(int)old_count, (int)new_count);
+				break;
+			case '+':
+			case '-':
+			case ' ':
+				/* A `-- ` line indicates the end of a diff */
+				if (!old_count && !new_count)
+					break;
+				if (old_count && s.line[0] != '+')
+					old_count--;
+				if (new_count && s.line[0] != '-')
+					new_count--;
+				/* fallthrough */
+			case '\\':
+				strbuf_addstr(&scratch, s.line);
+				strbuf_addch(&scratch, '\n');
+				util->diffsize++;
+				continue;
+			case '@':
+				if (parse_line_range(s.line, &old_count,
+						      &new_count, &p))
+					break;
+
+				strbuf_addstr(&scratch, "@@");
+				if (current_filename && *p)
+					strbuf_addf(&scratch, " %s:",
+						    current_filename);
+				strbuf_addstr(&scratch, p);
+				strbuf_addch(&scratch, '\n');
+				util->diffsize++;
+				continue;
+			}
+
+			if (util) {
+				string_list_append(list, scratch.buf)->util = util;
+				util = NULL;
+				strbuf_reset(&scratch);
+			}
+			s.state = MBOX_BEFORE_HEADER;
+			goto parse_from_delimiter;
+		}
+	}
+	strbuf_release(&s.buf);
+
+	if (util) {
+		if (s.state == MBOX_IN_DIFF)
+			string_list_append(list, scratch.buf)->util = util;
+		else
+			free(util);
+	}
+	strbuf_release(&author_buf);
+	strbuf_release(&subject_buf);
+	strbuf_release(&scratch);
+	free(current_filename);
+
+	return 0;
+}
 
 /*
  * Reads the patches into a string list, with the `util` field being populated
@@ -50,6 +477,10 @@ static int read_patches(const char *range, struct string_list *list,
 	ssize_t len;
 	size_t size;
 	int ret = -1;
+	const char *path;
+
+	if (skip_prefix(range, "mbox:", &path))
+		return read_mbox(path, list);
 
 	strvec_pushl(&cp.args, "log", "--no-color", "-p",
 		     "--reverse", "--date-order", "--decorate=no",
@@ -461,6 +892,19 @@ static void output_pair_header(struct diff_options *diffopt,
 
 		strbuf_addch(buf, ' ');
 		pp_commit_easy(CMIT_FMT_ONELINE, commit, buf);
+	} else {
+		struct patch_util *util = b_util ? b_util : a_util;
+		const char *needle = "\n ## Commit message ##\n";
+		const char *p = !util || !util->patch ?
+			NULL : strstr(util->patch, needle);
+		if (p) {
+			if (status == '!')
+				strbuf_addf(buf, "%s%s", color_reset, color);
+
+			strbuf_addch(buf, ' ');
+			p += strlen(needle);
+			strbuf_add(buf, p, strchrnul(p, '\n') - p);
+		}
 	}
 	strbuf_addf(buf, "%s\n", color_reset);
 
@@ -594,6 +1038,9 @@ int show_range_diff(const char *range1, const char *range2,
 	if (range_diff_opts->left_only && range_diff_opts->right_only)
 		res = error(_("options '%s' and '%s' cannot be used together"), "--left-only", "--right-only");
 
+	if (!strcmp(range1, "mbox:-") && !strcmp(range2, "mbox:-"))
+		res = error(_("only one mbox can be read from stdin"));
+
 	if (!res && read_patches(range1, &branch1, range_diff_opts->other_arg, include_merges))
 		res = error(_("could not parse log for '%s'"), range1);
 	if (!res && read_patches(range2, &branch2, range_diff_opts->other_arg, include_merges))
@@ -616,9 +1063,17 @@ int show_range_diff(const char *range1, const char *range2,
 int is_range_diff_range(const char *arg)
 {
 	char *copy = xstrdup(arg); /* setup_revisions() modifies it */
-	const char *argv[] = { "", copy, "--", NULL };
+	const char *argv[] = { "", copy, "--", NULL }, *path;
 	int i, positive = 0, negative = 0;
 	struct rev_info revs;
+
+	if (skip_prefix(arg, "mbox:", &path)) {
+		free(copy);
+		if (!strcmp(path, "-") || file_exists(path))
+			return 1;
+		error_errno(_("not an mbox: '%s'"), path);
+		return 0;
+	}
 
 	repo_init_revisions(the_repository, &revs, NULL);
 	if (setup_revisions(3, argv, &revs, NULL) == 1) {
