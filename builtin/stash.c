@@ -705,6 +705,9 @@ restore_untracked:
 			     absolute_path(repo_get_work_tree(the_repository)));
 		strvec_pushf(&cp.env, GIT_DIR_ENVIRONMENT"=%s",
 			     absolute_path(repo_get_git_dir(the_repository)));
+		strvec_push(&cp.env, "GIT_CONFIG_COUNT=1");
+		strvec_push(&cp.env, "GIT_CONFIG_KEY_0=status.showStash");
+		strvec_push(&cp.env, "GIT_CONFIG_VALUE_0=false");
 		strvec_push(&cp.args, "status");
 		run_command(&cp);
 	}
