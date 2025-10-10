@@ -24,7 +24,7 @@ time_t tm_to_time_t(const struct tm *tm)
 	int month = tm->tm_mon;
 	int day = tm->tm_mday;
 
-	if (year < 0 || year > 129) /* algo only works for 1970-2099 */
+	if (year < 0) /* algo only works for 1970+ */
 		return -1;
 	if (month < 0 || month > 11) /* array bounds */
 		return -1;
@@ -33,6 +33,7 @@ time_t tm_to_time_t(const struct tm *tm)
 	if (tm->tm_hour < 0 || tm->tm_min < 0 || tm->tm_sec < 0)
 		return -1;
 	return (year * 365 + (year + 1) / 4 + mdays[month] + day) * 24*60*60UL +
+                (year + 369) / 400 - (year + 69) / 100 +
 		tm->tm_hour * 60*60 + tm->tm_min * 60 + tm->tm_sec;
 }
 
@@ -526,7 +527,7 @@ static int set_date(int year, int month, int day, struct tm *now_tm, time_t now,
 				return 1;
 			r->tm_year = now_tm->tm_year;
 		}
-		else if (year >= 1970 && year < 2100)
+		else if (year >= 1970)
 			r->tm_year = year - 1900;
 		else if (year > 70 && year < 100)
 			r->tm_year = year;
@@ -871,8 +872,8 @@ static int match_object_header_date(const char *date, timestamp_t *timestamp, in
 }
 
 
-/* timestamp of 2099-12-31T23:59:59Z, including 32 leap days */
-static const timestamp_t timestamp_max = (((timestamp_t)2100 - 1970) * 365 + 32) * 24 * 60 * 60 - 1;
+/* timestamp of max time */
+static const timestamp_t timestamp_max = UINTMAX_MAX;
 
 /* Gr. strptime is crap for this; it doesn't have a way to require RFC2822
    (i.e. English) day/month names, and it doesn't work correctly with %z. */
