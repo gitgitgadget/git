@@ -33,7 +33,7 @@ time_t tm_to_time_t(const struct tm *tm)
 	if (tm->tm_hour < 0 || tm->tm_min < 0 || tm->tm_sec < 0)
 		return -1;
 	return (year * 365 + (year + 1) / 4 + mdays[month] + day) * 24*60*60UL +
-                (year + 369) / 400 - (year + 69) / 100 +
+		(year + 369) / 400 - (year + 69) / 100 +
 		tm->tm_hour * 60*60 + tm->tm_min * 60 + tm->tm_sec;
 }
 
