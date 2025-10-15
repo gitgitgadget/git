@@ -48,6 +48,8 @@
 #include "csum-file.h"
 #include "promisor-remote.h"
 #include "hook.h"
+#include "submodule.h"
+#include "submodule-config.h"
 
 /* Mask for the name length in ce_flags in the on-disk index */
 
@@ -3955,16 +3957,16 @@ static void update_callback(struct diff_queue_struct *q,
 						}
 					}
 					if (pathspec_matches) {
-						if (data->include_ignored_submodules && data->include_ignored_submodules > 0) {
-							trace_printf("Add ignored=all submodule due to --include_ignored_submodules: %s\n", path);
+						if (data->ignored_too && data->ignored_too > 0) {
+							trace_printf("Add submodule due to --force: %s\n", path);
 						} else {
 							printf(_("Skipping submodule due to ignore=all: %s"), path);
-							printf(_("Use --include_ignored_submodules, if you really want to add them.") );
+							printf(_("Use --force, if you really want to add them.") );
 							continue;
 						}
 					} else {
 						/* No explicit pathspec match -> skip silently (or with trace). */
-						trace_printf("pathspec does not match %s\n", path);
+						trace_printf("Pathspec to submodule does not match explicitly: %s\n", path);
 						continue;
 					}
 				}
@@ -3975,6 +3977,7 @@ static void update_callback(struct diff_queue_struct *q,
 				data->add_errors++;
 			}
 			break;
+		}
 		case DIFF_STATUS_DELETED:
 			if (data->flags & ADD_CACHE_IGNORE_REMOVAL)
 				break;
