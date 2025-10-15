@@ -79,6 +79,11 @@ in linkgit:gitglossary[7].
 `--force`::
 	Allow adding otherwise ignored files.
 
+`--include_ignored_submodules`::
+	The option is also used when `submodule.<name>.ignore=all`
+	is set, but you want to stage an update of the submodule. The
+	`path` to the submodule must be explicitly specified.
+
 `--sparse`::
 	Allow updating index entries outside of the sparse-checkout cone.
 	Normally, `git add` refuses to update index entries whose paths do
