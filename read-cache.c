@@ -48,6 +48,8 @@
 #include "csum-file.h"
 #include "promisor-remote.h"
 #include "hook.h"
+#include "submodule.h"
+#include "submodule-config.h"
 
 /* Mask for the name length in ce_flags in the on-disk index */
 
@@ -3927,13 +3929,55 @@ static void update_callback(struct diff_queue_struct *q,
 		default:
 			die(_("unexpected diff status %c"), p->status);
 		case DIFF_STATUS_MODIFIED:
-		case DIFF_STATUS_TYPE_CHANGED:
+		case DIFF_STATUS_TYPE_CHANGED: {
+			struct stat st;
+			if (!lstat(path, &st) && S_ISDIR(st.st_mode)) { // only consider submodule if it is a directory
+				const struct submodule *sub = submodule_from_path(data->repo, null_oid(the_hash_algo), path);
+				if (sub && sub->name && sub->ignore && !strcmp(sub->ignore, "all")) {
+					int pathspec_matches = 0;
+					char *norm_pathspec = NULL;
+					int ps_i;
+					trace_printf("ignore=all %s\n", path);
+					trace_printf("pathspec %s\n",
+							(data->pathspec && data->pathspec->nr) ? "has pathspec" : "no pathspec");
+					/* Safely scan all pathspec items (q->nr may exceed pathspec->nr). */
+					if (data->pathspec) {
+						for (ps_i = 0; ps_i < data->pathspec->nr; ps_i++) {
+							const char *m = data->pathspec->items[ps_i].match;
+							if (!m)
+								continue;
+							norm_pathspec = xstrdup(m);
+							strip_dir_trailing_slashes(norm_pathspec);
+							if (!strcmp(path, norm_pathspec)) {
+								pathspec_matches = 1;
+								FREE_AND_NULL(norm_pathspec);
+								break;
+							}
+							FREE_AND_NULL(norm_pathspec);
+						}
+					}
+					if (pathspec_matches) {
+						if (data->ignored_too && data->ignored_too > 0) {
+							trace_printf("Forcing add of submodule ignored=all due to --force: %s\n", path);
+						} else {
+							printf(_("Skipping submodule due to ignore=all: %s"), path);
+							printf(_("Use -f if you really want to add them.") );
+							continue;
+						}
+					} else {
+						/* No explicit pathspec match -> skip silently (or with trace). */
+						trace_printf("pathspec does not match %s\n", path);
+						continue;
+					}
+				}
+			}
 			if (add_file_to_index(data->index, path, data->flags)) {
 				if (!(data->flags & ADD_CACHE_IGNORE_ERRORS))
 					die(_("updating files failed"));
 				data->add_errors++;
 			}
 			break;
+		}
 		case DIFF_STATUS_DELETED:
 			if (data->flags & ADD_CACHE_IGNORE_REMOVAL)
 				break;
