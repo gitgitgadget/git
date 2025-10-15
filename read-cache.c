@@ -3880,9 +3880,12 @@ void overlay_tree_on_index(struct index_state *istate,
 
 struct update_callback_data {
 	struct index_state *index;
+	struct repository *repo;
+	struct pathspec *pathspec;
 	int include_sparse;
 	int flags;
 	int add_errors;
+	int include_ignored_submodules;
 };
 
 static int fix_unmerged_status(struct diff_filepair *p,
@@ -3924,7 +3927,48 @@ static void update_callback(struct diff_queue_struct *q,
 		default:
 			die(_("unexpected diff status %c"), p->status);
 		case DIFF_STATUS_MODIFIED:
-		case DIFF_STATUS_TYPE_CHANGED:
+		case DIFF_STATUS_TYPE_CHANGED: {
+			struct stat st;
+			if (!lstat(path, &st) && S_ISDIR(st.st_mode)) { // only consider submodule if it is a directory
+				const struct submodule *sub = submodule_from_path(data->repo, null_oid(the_hash_algo), path);
+				if (sub && sub->name && sub->ignore && !strcmp(sub->ignore, "all")) {
+					int pathspec_matches = 0;
+					char *norm_pathspec = NULL;
+					int ps_i;
+					trace_printf("ignore=all %s\n", path);
+					trace_printf("pathspec %s\n",
+							(data->pathspec && data->pathspec->nr) ? "has pathspec" : "no pathspec");
+					/* Safely scan all pathspec items (q->nr may exceed pathspec->nr). */
+					if (data->pathspec) {
+						for (ps_i = 0; ps_i < data->pathspec->nr; ps_i++) {
+							const char *m = data->pathspec->items[ps_i].match;
+							if (!m)
+								continue;
+							norm_pathspec = xstrdup(m);
+							strip_dir_trailing_slashes(norm_pathspec);
+							if (!strcmp(path, norm_pathspec)) {
+								pathspec_matches = 1;
+								FREE_AND_NULL(norm_pathspec);
+								break;
+							}
+							FREE_AND_NULL(norm_pathspec);
+						}
+					}
+					if (pathspec_matches) {
+						if (data->include_ignored_submodules && data->include_ignored_submodules > 0) {
+							trace_printf("Add ignored=all submodule due to --include_ignored_submodules: %s\n", path);
+						} else {
+							printf(_("Skipping submodule due to ignore=all: %s"), path);
+							printf(_("Use --include_ignored_submodules, if you really want to add them.") );
+							continue;
+						}
+					} else {
+						/* No explicit pathspec match -> skip silently (or with trace). */
+						trace_printf("pathspec does not match %s\n", path);
+						continue;
+					}
+				}
+			}
 			if (add_file_to_index(data->index, path, data->flags)) {
 				if (!(data->flags & ADD_CACHE_IGNORE_ERRORS))
 					die(_("updating files failed"));
@@ -3945,7 +3989,7 @@ static void update_callback(struct diff_queue_struct *q,
 
 int add_files_to_cache(struct repository *repo, const char *prefix,
 		       const struct pathspec *pathspec, char *ps_matched,
-		       int include_sparse, int flags)
+		       int include_sparse, int flags, int include_ignored_submodules )
 {
 	struct update_callback_data data;
 	struct rev_info rev;
@@ -3954,6 +3998,9 @@ int add_files_to_cache(struct repository *repo, const char *prefix,
 	data.index = repo->index;
 	data.include_sparse = include_sparse;
 	data.flags = flags;
+	data.repo = repo;
+	data.include_ignored_submodules = include_ignored_submodules;
+	data.pathspec = (struct pathspec *)pathspec;
 
 	repo_init_revisions(repo, &rev, prefix);
 	setup_revisions(0, NULL, &rev, NULL);
