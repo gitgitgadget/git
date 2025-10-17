@@ -603,8 +603,7 @@ mark :2
 data 3
 hi
 
-reset refs/heads/main
-commit refs/heads/main
+commit main~1
 mark :3
 author A U Thor <author@example.com> 1112912713 -0700
 committer C O Mitter <committer@example.com> 1112912713 -0700
@@ -615,7 +614,7 @@ M 100644 :2 there
 
 EOF
 
-test_expect_failure 'no exact-ref revisions included' '
+test_expect_success 'no exact-ref revisions included' '
 	(
 		cd limit-by-paths &&
 		git fast-export main~2..main~1 > output &&

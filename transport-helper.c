@@ -499,8 +499,23 @@ static int get_exporter(struct transport *transport,
 	for (size_t i = 0; i < revlist_args->nr; i++)
 		strvec_push(&fastexport->args, revlist_args->items[i].string);
 
+	strvec_push(&fastexport->args, "--");
+
 	fastexport->git_cmd = 1;
 	return start_command(fastexport);
+}
+
+static void check_helper_status(struct helper_data *data)
+{
+	int pid, status;
+
+	pid = waitpid(data->helper->pid, &status, WNOHANG);
+	if (pid < 0)
+		die("Could not retrieve status of remote helper '%s'",
+		    data->name);
+	if (pid > 0 && WIFEXITED(status))
+		die("Remote helper '%s' died with %d",
+		    data->name, WEXITSTATUS(status));
 }
 
 static int fetch_with_import(struct transport *transport,
@@ -539,6 +554,7 @@ static int fetch_with_import(struct transport *transport,
 
 	if (finish_command(&fastimport))
 		die(_("error while running fast-import"));
+	check_helper_status(data);
 
 	/*
 	 * The fast-import stream of a remote helper that advertises
@@ -572,6 +588,7 @@ static int fetch_with_import(struct transport *transport,
 		}
 	}
 	strbuf_release(&buf);
+	run_auto_maintenance(transport->verbose < 0);
 	return 0;
 }
 
@@ -1158,6 +1175,7 @@ static int push_refs_with_export(struct transport *transport,
 
 	if (finish_command(&exporter))
 		die(_("error while running fast-export"));
+	check_helper_status(data);
 	if (push_update_refs_status(data, remote_refs, flags))
 		return 1;
 
