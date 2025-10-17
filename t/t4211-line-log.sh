@@ -367,4 +367,21 @@ test_expect_success 'show line-log with graph' '
 	test_cmp expect actual
 '
 
+q_to_lf () {
+	tr Q '\012'
+}
+
+test_expect_success 'close to overlapping ranges' '
+	test_seq 5 >a1.c &&
+	git add a1.c &&
+	git commit -m "5 lines" a1.c &&
+	sed s/3/3QaQb/ <a1.c | q_to_lf >tmp &&
+	mv tmp a1.c &&
+	git commit -m "2 more lines" a1.c &&
+	sed s/4/cQ4/ <a1.c | q_to_lf >tmp &&
+	mv tmp a1.c &&
+	git commit -m "1 more line" a1.c &&
+	git --no-pager log -L 1,3:a1.c -L 5,8:a1.c
+'
+
 test_done
