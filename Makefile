@@ -1654,6 +1654,7 @@ ifeq ($(uname_S),Darwin)
 		COMPAT_CFLAGS += -DAPPLE_COMMON_CRYPTO
         endif
 	PTHREAD_LIBS =
+	COMPAT_OBJS += compat/osxmmap.o
 endif
 
 ifdef NO_LIBGEN_H
