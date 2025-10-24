@@ -925,10 +925,10 @@ operate full-tree.
 This list used to be a lot longer (see e.g. [1,2,3,4,5,6,7,8,9]), but we've
 been working on it.
 
-0. Behavior A is not well supported in Git.  (Behavior B didn't used to
+1. Behavior A is not well supported in Git.  (Behavior B didn't used to
    be either, but was the easier of the two to implement.)
 
-1. am and apply:
+2. am and apply:
 
    apply, without `--index` or `--cached`, relies on files being present
    in the working copy, and also writes to them unconditionally.  As
@@ -948,7 +948,7 @@ been working on it.
    files and then complain that those vivified files would be
    overwritten by merge.
 
-2. reset --hard:
+3. reset --hard:
 
    reset --hard provides confusing error message (works correctly, but
    misleads the user into believing it didn't):
@@ -971,13 +971,13 @@ been working on it.
     `git reset --hard` DID remove addme from the index and the working tree, contrary
     to the error message, but in line with how reset --hard should behave.
 
-3. read-tree
+4. read-tree
 
    `read-tree` doesn't apply the 'SKIP_WORKTREE' bit to *any* of the
    entries it reads into the index, resulting in all your files suddenly
    appearing to be "deleted".
 
-4. Checkout, restore:
+5. Checkout, restore:
 
    These command do not handle path & revision arguments appropriately:
 
@@ -1030,7 +1030,7 @@ been working on it.
     S tracked
     H tracked-but-maybe-skipped
 
-5. checkout and restore --staged, continued:
+6. checkout and restore --staged, continued:
 
    These commands do not correctly scope operations to the sparse
    specification, and make it worse by not setting important SKIP_WORKTREE
@@ -1046,7 +1046,7 @@ been working on it.
    the sparse specification, but then it will be important to set the
    SKIP_WORKTREE bits appropriately.
 
-6. Performance issues; see:
+7. Performance issues; see:
     https://lore.kernel.org/git/CABPp-BEkJQoKZsQGCYioyga_uoDQ6iBeW+FKr8JhyuuTMK1RDw@mail.gmail.com/
 
 
