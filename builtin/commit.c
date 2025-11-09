@@ -49,7 +49,7 @@ static const char * const builtin_commit_usage[] = {
 	   "           [--dry-run] [(-c | -C | --squash) <commit> | --fixup [(amend|reword):]<commit>]\n"
 	   "           [-F <file> | -m <msg>] [--reset-author] [--allow-empty]\n"
 	   "           [--allow-empty-message] [--no-verify] [-e] [--author=<author>]\n"
-	   "           [--date=<date>] [--cleanup=<mode>] [--[no-]status]\n"
+	   "           [--committer=<committer>] [--date=<date>] [--cleanup=<mode>] [--[no-]status]\n"
 	   "           [-i | -o] [--pathspec-from-file=<file> [--pathspec-file-nul]]\n"
 	   "           [(--trailer <token>[(=|:)<value>])...] [-S[<keyid>]]\n"
 	   "           [--] [<pathspec>...]"),
@@ -112,6 +112,7 @@ static enum {
 } commit_style;
 
 static const char *force_author;
+static const char *force_committer;
 static char *logfile;
 static char *template_file;
 /*
@@ -630,46 +631,61 @@ static void set_ident_var(char **buf, char *val)
 	*buf = val;
 }
 
-static void determine_author_info(struct strbuf *author_ident)
+static void determine_identity(struct strbuf *ident_str, int is_author)
 {
 	char *name, *email, *date;
-	struct ident_split author;
+	struct ident_split ident;
+	const char *env_name = is_author ? "GIT_AUTHOR_NAME" : "GIT_COMMITTER_NAME";
+	const char *env_email = is_author ? "GIT_AUTHOR_EMAIL" : "GIT_COMMITTER_EMAIL";
+	const char *env_date = is_author ? "GIT_AUTHOR_DATE" : "GIT_COMMITTER_DATE";
+	const char *force_ident = is_author ? force_author : force_committer;
+	const char *param_name = is_author ? "--author" : "--committer";
+	int ident_flag = is_author ? WANT_AUTHOR_IDENT : WANT_COMMITTER_IDENT;
 
-	name = xstrdup_or_null(getenv("GIT_AUTHOR_NAME"));
-	email = xstrdup_or_null(getenv("GIT_AUTHOR_EMAIL"));
-	date = xstrdup_or_null(getenv("GIT_AUTHOR_DATE"));
+	name = xstrdup_or_null(getenv(env_name));
+	email = xstrdup_or_null(getenv(env_email));
+	date = xstrdup_or_null(getenv(env_date));
 
-	if (author_message) {
-		struct ident_split ident;
+	if (is_author && author_message) {
+		struct ident_split msg_ident;
 		size_t len;
 		const char *a;
 
 		a = find_commit_header(author_message_buffer, "author", &len);
 		if (!a)
 			die(_("commit '%s' lacks author header"), author_message);
-		if (split_ident_line(&ident, a, len) < 0)
+		if (split_ident_line(&msg_ident, a, len) < 0)
 			die(_("commit '%s' has malformed author line"), author_message);
 
-		set_ident_var(&name, xmemdupz(ident.name_begin, ident.name_end - ident.name_begin));
-		set_ident_var(&email, xmemdupz(ident.mail_begin, ident.mail_end - ident.mail_begin));
+		set_ident_var(&name, xmemdupz(msg_ident.name_begin, msg_ident.name_end - msg_ident.name_begin));
+		set_ident_var(&email, xmemdupz(msg_ident.mail_begin, msg_ident.mail_end - msg_ident.mail_begin));
 
-		if (ident.date_begin) {
+		if (msg_ident.date_begin) {
 			struct strbuf date_buf = STRBUF_INIT;
 			strbuf_addch(&date_buf, '@');
-			strbuf_add(&date_buf, ident.date_begin, ident.date_end - ident.date_begin);
+			strbuf_add(&date_buf, msg_ident.date_begin, msg_ident.date_end - msg_ident.date_begin);
 			strbuf_addch(&date_buf, ' ');
-			strbuf_add(&date_buf, ident.tz_begin, ident.tz_end - ident.tz_begin);
+			strbuf_add(&date_buf, msg_ident.tz_begin, msg_ident.tz_end - msg_ident.tz_begin);
 			set_ident_var(&date, strbuf_detach(&date_buf, NULL));
 		}
 	}
 
-	if (force_author) {
-		struct ident_split ident;
+	if (force_ident) {
+		struct ident_split force_ident_split;
 
-		if (split_ident_line(&ident, force_author, strlen(force_author)) < 0)
-			die(_("malformed --author parameter"));
-		set_ident_var(&name, xmemdupz(ident.name_begin, ident.name_end - ident.name_begin));
-		set_ident_var(&email, xmemdupz(ident.mail_begin, ident.mail_end - ident.mail_begin));
+		if (split_ident_line(&force_ident_split, force_ident, strlen(force_ident)) < 0)
+			die(_("malformed %s parameter"), param_name);
+		set_ident_var(&name, xmemdupz(force_ident_split.name_begin, force_ident_split.name_end - force_ident_split.name_begin));
+		set_ident_var(&email, xmemdupz(force_ident_split.mail_begin, force_ident_split.mail_end - force_ident_split.mail_begin));
+
+		if (!is_author && force_ident_split.date_begin) {
+			struct strbuf date_buf = STRBUF_INIT;
+			strbuf_addch(&date_buf, '@');
+			strbuf_add(&date_buf, force_ident_split.date_begin, force_ident_split.date_end - force_ident_split.date_begin);
+			strbuf_addch(&date_buf, ' ');
+			strbuf_add(&date_buf, force_ident_split.tz_begin, force_ident_split.tz_end - force_ident_split.tz_begin);
+			set_ident_var(&date, strbuf_detach(&date_buf, NULL));
+		}
 	}
 
 	if (force_date) {
@@ -679,15 +695,33 @@ static void determine_author_info(struct strbuf *author_ident)
 		set_ident_var(&date, strbuf_detach(&date_buf, NULL));
 	}
 
-	strbuf_addstr(author_ident, fmt_ident(name, email, WANT_AUTHOR_IDENT, date,
+	strbuf_addstr(ident_str, fmt_ident(name, email, ident_flag, date,
 				IDENT_STRICT));
-	assert_split_ident(&author, author_ident);
-	export_one("GIT_AUTHOR_NAME", author.name_begin, author.name_end, 0);
-	export_one("GIT_AUTHOR_EMAIL", author.mail_begin, author.mail_end, 0);
-	export_one("GIT_AUTHOR_DATE", author.date_begin, author.tz_end, '@');
+	assert_split_ident(&ident, ident_str);
+
+	if (is_author) {
+		export_one("GIT_AUTHOR_NAME", ident.name_begin, ident.name_end, 0);
+		export_one("GIT_AUTHOR_EMAIL", ident.mail_begin, ident.mail_end, 0);
+		export_one("GIT_AUTHOR_DATE", ident.date_begin, ident.tz_end, '@');
+	} else {
+		export_one("GIT_COMMITTER_NAME", ident.name_begin, ident.name_end, 0);
+		export_one("GIT_COMMITTER_EMAIL", ident.mail_begin, ident.mail_end, 0);
+		export_one("GIT_COMMITTER_DATE", ident.date_begin, ident.tz_end, '@');
+	}
+
 	free(name);
 	free(email);
 	free(date);
+}
+
+static void determine_author_info(struct strbuf *author_ident)
+{
+	determine_identity(author_ident, 1);
+}
+
+static void determine_committer_info(struct strbuf *committer_ident)
+{
+	determine_identity(committer_ident, 0);
 }
 
 static int author_date_is_interesting(void)
@@ -1137,16 +1171,18 @@ static int prepare_to_commit(const char *index_file, const char *prefix,
 	return 1;
 }
 
-static const char *find_author_by_nickname(const char *name)
+static const char *find_identity_by_nickname(const char *name, int is_author)
 {
 	struct rev_info revs;
 	struct commit *commit;
 	struct strbuf buf = STRBUF_INIT;
 	const char *av[20];
 	int ac = 0;
+	const char *field = is_author ? "author" : "committer";
+	const char *format = is_author ? "%aN <%aE>" : "%cN <%cE>";
 
 	repo_init_revisions(the_repository, &revs, NULL);
-	strbuf_addf(&buf, "--author=%s", name);
+	strbuf_addf(&buf, "--%s=%s", field, name);
 	av[++ac] = "--all";
 	av[++ac] = "-i";
 	av[++ac] = buf.buf;
@@ -1164,11 +1200,22 @@ static const char *find_author_by_nickname(const char *name)
 		ctx.date_mode.type = DATE_NORMAL;
 		strbuf_release(&buf);
 		repo_format_commit_message(the_repository, commit,
-					   "%aN <%aE>", &buf, &ctx);
+					   format, &buf, &ctx);
 		release_revisions(&revs);
 		return strbuf_detach(&buf, NULL);
 	}
-	die(_("--author '%s' is not 'Name <email>' and matches no existing author"), name);
+	die(_("--%s '%s' is not 'Name <email>' and matches no existing %s"),
+	    field, name, field);
+}
+
+static const char *find_author_by_nickname(const char *name)
+{
+	return find_identity_by_nickname(name, 1);
+}
+
+static const char *find_committer_by_nickname(const char *name)
+{
+	return find_identity_by_nickname(name, 0);
 }
 
 static void handle_ignored_arg(struct wt_status *s)
@@ -1320,6 +1367,9 @@ static int parse_and_validate_options(int argc, const char *argv[],
 
 	if (force_author && renew_authorship)
 		die(_("options '%s' and '%s' cannot be used together"), "--reset-author", "--author");
+
+	if (force_committer && !strchr(force_committer, '>'))
+		force_committer = find_committer_by_nickname(force_committer);
 
 	if (logfile || have_option_m || use_message)
 		use_editor = 0;
@@ -1709,6 +1759,7 @@ int cmd_commit(int argc,
 		OPT_FILENAME('F', "file", &logfile, N_("read message from file")),
 		OPT_STRING(0, "author", &force_author, N_("author"), N_("override author for commit")),
 		OPT_STRING(0, "date", &force_date, N_("date"), N_("override date for commit")),
+		OPT_STRING(0, "committer", &force_committer, N_("committer"), N_("override committer for commit")),
 		OPT_CALLBACK('m', "message", &message, N_("message"), N_("commit message"), opt_parse_m),
 		OPT_STRING('c', "reedit-message", &edit_message, N_("commit"), N_("reuse and edit message from specified commit")),
 		OPT_STRING('C', "reuse-message", &use_message, N_("commit"), N_("reuse message from specified commit")),
@@ -1785,6 +1836,7 @@ int cmd_commit(int argc,
 
 	struct strbuf sb = STRBUF_INIT;
 	struct strbuf author_ident = STRBUF_INIT;
+	struct strbuf committer_ident = STRBUF_INIT;
 	const char *index_file, *reflog_msg;
 	struct object_id oid;
 	struct commit_list *parents = NULL;
@@ -1930,8 +1982,12 @@ int cmd_commit(int argc,
 		append_merge_tag_headers(parents, &tail);
 	}
 
+	if (force_committer)
+		determine_committer_info(&committer_ident);
+
 	if (commit_tree_extended(sb.buf, sb.len, &the_repository->index->cache_tree->oid,
-				 parents, &oid, author_ident.buf, NULL,
+				 parents, &oid, author_ident.buf,
+				 force_committer ? committer_ident.buf : NULL,
 				 sign_commit, extra)) {
 		rollback_index_files();
 		die(_("failed to write commit object"));
@@ -1980,6 +2036,7 @@ cleanup:
 	free_commit_extra_headers(extra);
 	free_commit_list(parents);
 	strbuf_release(&author_ident);
+	strbuf_release(&committer_ident);
 	strbuf_release(&err);
 	strbuf_release(&sb);
 	free(logfile);
