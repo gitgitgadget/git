@@ -163,10 +163,11 @@ static int add_ref_decoration(const char *refname, const char *referent UNUSED, 
 
 	if (starts_with(refname, git_replace_ref_base)) {
 		struct object_id original_oid;
+		const char *slash = strrchr(refname, '/');
+		const char *hash = slash ? slash + 1 : refname;
 		if (!replace_refs_enabled(the_repository))
 			return 0;
-		if (get_oid_hex(refname + strlen(git_replace_ref_base),
-				&original_oid)) {
+		if (get_oid_hex(hash, &original_oid)) {
 			warning("invalid replace ref %s", refname);
 			return 0;
 		}
