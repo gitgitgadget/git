@@ -12,7 +12,7 @@ git commit [-a | --interactive | --patch] [-s] [-v] [-u[<mode>]] [--amend]
 	   [--dry-run] [(-c | -C | --squash) <commit> | --fixup [(amend|reword):]<commit>]
 	   [-F <file> | -m <msg>] [--reset-author] [--allow-empty]
 	   [--allow-empty-message] [--no-verify] [-e] [--author=<author>]
-	   [--date=<date>] [--cleanup=<mode>] [--[no-]status]
+	   [--date=<date>] [--committer=<committer>] [--cleanup=<mode>] [--[no-]status]
 	   [-i | -o] [--pathspec-from-file=<file> [--pathspec-file-nul]]
 	   [(--trailer <token>[(=|:)<value>])...] [-S[<keyid>]]
 	   [--] [<pathspec>...]
@@ -180,6 +180,13 @@ See linkgit:git-rebase[1] for details.
 
 `--date=<date>`::
 	Override the author date used in the commit.
+
+`--committer=<committer>`::
+	Override the committer for the commit. Specify an explicit committer using the
+	standard `A U Thor <committer@example.com>` format. Otherwise _<committer>_
+	is assumed to be a pattern and is used to search for an existing
+	commit by that author (i.e. `git rev-list --all -i --author=<committer>`);
+	the commit author is then copied from the first such commit found.
 
 `-m <msg>`::
 `--message=<msg>`::
