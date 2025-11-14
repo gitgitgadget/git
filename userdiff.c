@@ -249,6 +249,14 @@ PATTERNS("kotlin",
 	 "|[.][0-9][0-9_]*([Ee][-+]?[0-9]+)?[fFlLuU]?"
 	 /* unary and binary operators */
 	 "|[-+*/<>%&^|=!]==?|--|\\+\\+|<<=|>>=|&&|\\|\\||->|\\.\\*|!!|[?:.][.:]"),
+PATTERNS("lisp",
+	 /* Either an unindented left paren, or a slightly indented line
+	  * starting with "(def" */
+	 "^((\\(|:space:{1,2}\\(def).*)$",
+	 /* Common Lisp symbol syntax allows arbitrary strings between vertical bars */
+	 "\\|([^\\\\]|\\\\\\\\|\\\\\\|)*\\|"
+	 /* All other words are delimited by spaces or parentheses/brackets/braces */
+	 "|([^][(){} \t])+"),
 PATTERNS("markdown",
 	 "^ {0,3}#{1,6}[ \t].*",
 	 /* -- */
