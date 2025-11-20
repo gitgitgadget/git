@@ -978,8 +978,8 @@ static void show_worktree_porcelain(struct worktree *wt, int line_terminator)
 static void show_worktree(struct worktree *wt, int path_maxlen, int abbrev_len)
 {
 	struct strbuf sb = STRBUF_INIT;
-	int cur_path_len = strlen(wt->path);
-	int path_adj = cur_path_len - utf8_strwidth(wt->path);
+	size_t cur_path_len = strlen(wt->path);
+	int path_adj = cast_size_t_to_int(cur_path_len - utf8_strwidth(wt->path));
 	const char *reason;
 
 	strbuf_addf(&sb, "%-*s ", 1 + path_maxlen + path_adj, wt->path);

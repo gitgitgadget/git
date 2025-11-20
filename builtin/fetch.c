@@ -675,7 +675,7 @@ static int refcol_width(const struct ref *ref_map, int compact_format)
 		max = max * 2 / 3;
 
 	for (ref = ref_map; ref; ref = ref->next) {
-		int rlen, llen = 0, len;
+		size_t rlen, llen = 0, len;
 
 		if (ref->status == REF_STATUS_REJECT_SHALLOW ||
 		    !ref->peer_ref ||

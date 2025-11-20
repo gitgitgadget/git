@@ -2658,7 +2658,8 @@ void print_stat_summary(FILE *fp, int files,
 
 static void show_stats(struct diffstat_t *data, struct diff_options *options)
 {
-	int i, len, add, del, adds = 0, dels = 0;
+	int i, add, del, adds = 0, dels = 0;
+	size_t len = 0;
 	uintmax_t max_change = 0, max_len = 0;
 	int total_files = data->nr, count;
 	int width, name_width, graph_width, number_width = 0, bin_width = 0;
@@ -2809,7 +2810,8 @@ static void show_stats(struct diffstat_t *data, struct diff_options *options)
 		char *name = file->print_name;
 		uintmax_t added = file->added;
 		uintmax_t deleted = file->deleted;
-		int name_len, padding;
+		size_t name_len;
+		int padding;
 
 		if (!file->is_interesting && (added + deleted == 0))
 			continue;
@@ -2838,7 +2840,7 @@ static void show_stats(struct diffstat_t *data, struct diff_options *options)
 			if (slash)
 				name = slash;
 		}
-		padding = len - utf8_strwidth(name);
+		padding = cast_size_t_to_int(len - utf8_strwidth(name));
 		if (padding < 0)
 			padding = 0;
 
