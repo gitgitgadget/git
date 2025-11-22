@@ -1,0 +1,25 @@
+{
+  "name": "Git Dev Container",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "",
+    "args": {
+      "user_id": "1001",
+      "group_id": "1001"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash"
+      }
+    }
+  },
+  "remoteUser": "gituser",
+  "features": {},
+  "mounts": [
+    "source=${localWorkspaceFolder}/,target=/home/gitusers/git-src,type=bind,consistency=cached",
+    "source=${localWorkspaceFolder}/,target=/home/gitusers/git-test,type=bind,consistency=cached"
+  ],
+  "postCreateCommand": "echo"
+}
