@@ -127,8 +127,8 @@ endif::git-log[]
 
 `-U<n>`::
 `--unified=<n>`::
-	Generate diffs with _<n>_ lines of context instead of
-	the usual three.
+	Generate diffs with _<n>_ lines of context. Defaults to `diff.context`
+	or 3 if the config option is unset.
 ifndef::git-format-patch[]
 	Implies `--patch`.
 endif::git-format-patch[]
@@ -806,9 +806,9 @@ endif::git-format-patch[]
 	Ignore changes whose all lines match _<regex>_.  This option may
 	be specified more than once.
 
-`--inter-hunk-context=<number>`::
-	Show the context between diff hunks, up to the specified _<number>_
-	of lines, thereby fusing hunks that are close to each other.
+`--inter-hunk-context=<n>`::
+	Show the context between diff hunks, up to _<n>_
+	lines, thereby fusing hunks that are close to each other.
 	Defaults to `diff.interHunkContext` or 0 if the config option
 	is unset.
 
