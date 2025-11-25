@@ -371,6 +371,7 @@ static int show_http_message(struct strbuf *type, struct strbuf *charset,
 			     struct strbuf *msg)
 {
 	const char *p, *eol;
+	struct strbuf msgbuf = STRBUF_INIT;
 
 	/*
 	 * We only show text/plain parts, as other types are likely
@@ -378,19 +379,24 @@ static int show_http_message(struct strbuf *type, struct strbuf *charset,
 	 */
 	if (strcmp(type->buf, "text/plain"))
 		return -1;
+
+	strbuf_addbuf(&msgbuf, msg);
 	if (charset->len)
-		strbuf_reencode(msg, charset->buf, get_log_output_encoding());
+		strbuf_reencode(&msgbuf, charset->buf, get_log_output_encoding());
 
-	strbuf_trim(msg);
-	if (!msg->len)
+	strbuf_trim(&msgbuf);
+	if (!msgbuf.len) {
+		strbuf_release(&msgbuf);
 		return -1;
+	}
 
-	p = msg->buf;
+	p = msgbuf.buf;
 	do {
 		eol = strchrnul(p, '\n');
 		fprintf(stderr, "remote: %.*s\n", (int)(eol - p), p);
 		p = eol + 1;
 	} while(*eol);
+	strbuf_release(&msgbuf);
 	return 0;
 }
 
