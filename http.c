@@ -22,6 +22,7 @@
 #include "object-file.h"
 #include "odb.h"
 #include "tempfile.h"
+#include "date.h"
 
 static struct trace_key trace_curl = TRACE_KEY_INIT(CURL);
 static int trace_curl_data = 1;
@@ -149,6 +150,14 @@ static char *cached_accept_language;
 static char *http_ssl_backend;
 
 static int http_schannel_check_revoke = 1;
+
+/* Retry configuration */
+static long http_retry_after = -1; /* Default retry-after in seconds when header is missing (-1 means not set, exit with 128) */
+static long http_max_retries = 0; /* Maximum number of retry attempts (0 means retries are disabled) */
+static long http_max_retry_time = 300; /* Maximum time to wait for a single retry (default 5 minutes) */
+
+/* Store retry_after value from 429 responses for retry logic (-1 = not set, 0 = retry immediately, >0 = delay in seconds) */
+static long last_retry_after = -1;
 /*
  * With the backend being set to `schannel`, setting sslCAinfo would override
  * the Certificate Store in cURL v7.60.0 and later, which is not what we want
@@ -209,13 +218,14 @@ static inline int is_hdr_continuation(const char *ptr, const size_t size)
 	return size && (*ptr == ' ' || *ptr == '\t');
 }
 
-static size_t fwrite_wwwauth(char *ptr, size_t eltsize, size_t nmemb, void *p UNUSED)
+static size_t fwrite_wwwauth(char *ptr, size_t eltsize, size_t nmemb, void *p)
 {
 	size_t size = eltsize * nmemb;
 	struct strvec *values = &http_auth.wwwauth_headers;
 	struct strbuf buf = STRBUF_INIT;
 	const char *val;
 	size_t val_len;
+	struct active_request_slot *slot = (struct active_request_slot *)p;
 
 	/*
 	 * Header lines may not come NULL-terminated from libcurl so we must
@@ -253,6 +263,47 @@ static size_t fwrite_wwwauth(char *ptr, size_t eltsize, size_t nmemb, void *p UN
 		strbuf_trim(&buf);
 
 		strvec_push(values, buf.buf);
+		http_auth.header_is_last_match = 1;
+		goto exit;
+	}
+
+	/* Parse Retry-After header for rate limiting */
+	if (skip_iprefix_mem(ptr, size, "retry-after:", &val, &val_len)) {
+		strbuf_add(&buf, val, val_len);
+		strbuf_trim(&buf);
+
+		if (slot && slot->results) {
+			/* Parse the retry-after value (delay-seconds or HTTP-date) */
+			char *endptr;
+			long retry_after;
+
+			errno = 0;
+			retry_after = strtol(buf.buf, &endptr, 10);
+
+			/* Check if it's a valid integer (delay-seconds format) */
+			if (endptr != buf.buf && *endptr == '\0' &&
+			    errno != ERANGE && retry_after > 0) {
+				slot->results->retry_after = retry_after;
+			} else {
+				/* Try parsing as HTTP-date format */
+				timestamp_t timestamp;
+				int offset;
+				if (!parse_date_basic(buf.buf, &timestamp, &offset)) {
+					/* Successfully parsed as date, calculate delay from now */
+					timestamp_t now = time(NULL);
+					if (timestamp > now) {
+						slot->results->retry_after = (long)(timestamp - now);
+					} else {
+						/* Past date means retry immediately */
+						slot->results->retry_after = 0;
+					}
+				} else {
+					/* Failed to parse as either delay-seconds or HTTP-date */
+					warning(_("unable to parse Retry-After header value: '%s'"), buf.buf);
+				}
+			}
+		}
+
 		http_auth.header_is_last_match = 1;
 		goto exit;
 	}
@@ -572,6 +623,21 @@ static int http_options(const char *var, const char *value,
 	}
 	if (!strcmp("http.keepalivecount", var)) {
 		curl_tcp_keepcnt = git_config_int(var, value, ctx->kvi);
+		return 0;
+	}
+
+	if (!strcmp("http.retryafter", var)) {
+		http_retry_after = git_config_int(var, value, ctx->kvi);
+		return 0;
+	}
+
+	if (!strcmp("http.maxretries", var)) {
+		http_max_retries = git_config_int(var, value, ctx->kvi);
+		return 0;
+	}
+
+	if (!strcmp("http.maxretrytime", var)) {
+		http_max_retry_time = git_config_int(var, value, ctx->kvi);
 		return 0;
 	}
 
@@ -1422,6 +1488,10 @@ void http_init(struct remote *remote, const char *url, int proactive_auth)
 	set_long_from_env(&curl_tcp_keepintvl, "GIT_TCP_KEEPINTVL");
 	set_long_from_env(&curl_tcp_keepcnt, "GIT_TCP_KEEPCNT");
 
+	set_long_from_env(&http_retry_after, "GIT_HTTP_RETRY_AFTER");
+	set_long_from_env(&http_max_retries, "GIT_HTTP_MAX_RETRIES");
+	set_long_from_env(&http_max_retry_time, "GIT_HTTP_MAX_RETRY_TIME");
+
 	curl_default = get_curl_handle();
 }
 
@@ -1871,6 +1941,10 @@ static int handle_curl_result(struct slot_results *results)
 			}
 			return HTTP_REAUTH;
 		}
+	} else if (results->http_code == 429) {
+		/* Store the retry_after value for use in retry logic */
+		last_retry_after = results->retry_after;
+		return HTTP_RATE_LIMITED;
 	} else {
 		if (results->http_connectcode == 407)
 			credential_reject(the_repository, &proxy_auth);
@@ -1886,6 +1960,8 @@ int run_one_slot(struct active_request_slot *slot,
 		 struct slot_results *results)
 {
 	slot->results = results;
+	/* Initialize retry_after to -1 (not set) */
+	results->retry_after = -1;
 	if (!start_active_slot(slot)) {
 		xsnprintf(curl_errorstr, sizeof(curl_errorstr),
 			  "failed to start HTTP request");
@@ -2149,6 +2225,7 @@ static int http_request(const char *url,
 	}
 
 	curl_easy_setopt(slot->curl, CURLOPT_HEADERFUNCTION, fwrite_wwwauth);
+	curl_easy_setopt(slot->curl, CURLOPT_HEADERDATA, slot);
 
 	accept_language = http_get_accept_language_header();
 
@@ -2253,19 +2330,36 @@ static int update_url_from_redirect(struct strbuf *base,
 	return 1;
 }
 
+/*
+ * Sleep for the specified number of seconds before retrying.
+ */
+static void sleep_for_retry(long retry_after)
+{
+	if (retry_after > 0) {
+		unsigned int remaining;
+		warning(_("rate limited, waiting %ld seconds before retry"), retry_after);
+		remaining = sleep(retry_after);
+		while (remaining > 0) {
+			/* Sleep was interrupted, continue sleeping */
+			remaining = sleep(remaining);
+		}
+	}
+}
+
 static int http_request_reauth(const char *url,
 			       void *result, int target,
 			       struct http_get_options *options)
 {
 	int i = 3;
 	int ret;
+	int rate_limit_retries = http_max_retries;
 
 	if (always_auth_proactively())
 		credential_fill(the_repository, &http_auth, 1);
 
 	ret = http_request(url, result, target, options);
 
-	if (ret != HTTP_OK && ret != HTTP_REAUTH)
+	if (ret != HTTP_OK && ret != HTTP_REAUTH && ret != HTTP_RATE_LIMITED)
 		return ret;
 
 	if (options && options->effective_url && options->base_url) {
@@ -2276,7 +2370,7 @@ static int http_request_reauth(const char *url,
 		}
 	}
 
-	while (ret == HTTP_REAUTH && --i) {
+	while ((ret == HTTP_REAUTH || ret == HTTP_RATE_LIMITED) && --i) {
 		/*
 		 * The previous request may have put cruft into our output stream; we
 		 * should clear it out before making our next request.
@@ -2302,7 +2396,54 @@ static int http_request_reauth(const char *url,
 			BUG("Unknown http_request target");
 		}
 
-		credential_fill(the_repository, &http_auth, 1);
+		if (ret == HTTP_RATE_LIMITED) {
+			/* Handle rate limiting with retry logic */
+			int retry_attempt = http_max_retries - rate_limit_retries + 1;
+
+			if (rate_limit_retries <= 0) {
+				/* Retries are disabled or exhausted */
+				if (http_max_retries > 0) {
+					error(_("too many rate limit retries, giving up"));
+				}
+				return HTTP_ERROR;
+			}
+
+			/* Decrement retries counter */
+			rate_limit_retries--;
+
+			/* Use the stored retry_after value or configured default */
+			if (last_retry_after >= 0) {
+				/* Check if retry delay exceeds maximum allowed */
+				if (last_retry_after > http_max_retry_time) {
+					error(_("rate limited (HTTP 429) requested %ld second delay, "
+						"exceeds http.maxRetryTime of %ld seconds"),
+					      last_retry_after, http_max_retry_time);
+					last_retry_after = -1; /* Reset after use */
+					return HTTP_ERROR;
+				}
+				sleep_for_retry(last_retry_after);
+				last_retry_after = -1; /* Reset after use */
+			} else {
+				/* No Retry-After header provided */
+				if (http_retry_after < 0) {
+					/* Not configured - exit with error */
+					error(_("rate limited (HTTP 429) and no Retry-After header provided. "
+						"Configure http.retryAfter or set GIT_HTTP_RETRY_AFTER."));
+					return HTTP_ERROR;
+				}
+				/* Check if configured default exceeds maximum allowed */
+				if (http_retry_after > http_max_retry_time) {
+					error(_("configured http.retryAfter (%ld seconds) exceeds "
+						"http.maxRetryTime (%ld seconds)"),
+					      http_retry_after, http_max_retry_time);
+					return HTTP_ERROR;
+				}
+				/* Use configured default retry-after value */
+				sleep_for_retry(http_retry_after);
+			}
+		} else if (ret == HTTP_REAUTH) {
+			credential_fill(the_repository, &http_auth, 1);
+		}
 
 		ret = http_request(url, result, target, options);
 	}
