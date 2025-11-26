@@ -566,7 +566,8 @@ static int write_message(const void *buf, size_t len, const char *filename,
 {
 	struct lock_file msg_file = LOCK_INIT;
 
-	int msg_fd = hold_lock_file_for_update(&msg_file, filename, 0);
+	int msg_fd = hold_lock_file_for_update(&msg_file, filename, 0,
+					       LOCKFILE_PID_OTHER);
 	if (msg_fd < 0)
 		return error_errno(_("could not lock '%s'"), filename);
 	if (write_in_full(msg_fd, buf, len) < 0) {
@@ -3605,7 +3606,8 @@ static int save_todo(struct todo_list *todo_list, struct replay_opts *opts,
 	if (is_rebase_i(opts) && !reschedule)
 		next++;
 
-	fd = hold_lock_file_for_update(&todo_lock, todo_path, 0);
+	fd = hold_lock_file_for_update(&todo_lock, todo_path, 0,
+				       LOCKFILE_PID_OTHER);
 	if (fd < 0)
 		return error_errno(_("could not lock '%s'"), todo_path);
 	offset = get_item_line_offset(todo_list, next);
@@ -3877,7 +3879,8 @@ static int safe_append(const char *filename, const char *fmt, ...)
 	va_list ap;
 	struct lock_file lock = LOCK_INIT;
 	int fd = hold_lock_file_for_update(&lock, filename,
-					   LOCK_REPORT_ON_ERROR);
+					   LOCK_REPORT_ON_ERROR,
+					   LOCKFILE_PID_OTHER);
 	struct strbuf buf = STRBUF_INIT;
 
 	if (fd < 0)
@@ -4400,7 +4403,7 @@ static int write_update_refs_state(struct string_list *refs_to_oids)
 		goto cleanup;
 	}
 
-	if (hold_lock_file_for_update(&lock, path, 0) < 0) {
+	if (hold_lock_file_for_update(&lock, path, 0, LOCKFILE_PID_OTHER) < 0) {
 		result = error(_("another 'rebase' process appears to be running; "
 				 "'%s.lock' already exists"),
 			       path);

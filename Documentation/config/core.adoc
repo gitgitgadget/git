@@ -348,6 +348,32 @@ confusion unless you know what you are doing (e.g. you are creating a
 read-only snapshot of the same index to a location different from the
 repository's usual working tree).
 
+core.lockfilePid::
+	A comma-separated list of components for which Git should create
+	a PID file alongside the lock file. When a lock acquisition fails
+	and a PID file exists, Git can provide additional diagnostic
+	information about the process holding the lock, including whether
+	it is still running.
++
+This feature is disabled by default. You can enable it for specific
+components or use `all` to enable for all components.
++
+* `none` disables PID file creation for all components.
+* `index` creates PID files for index lock operations.
+* `config` creates PID files for config file lock operations.
+* `refs` creates PID files for reference lock operations.
+* `commit-graph` creates PID files for commit-graph lock operations.
+* `midx` creates PID files for multi-pack-index lock operations.
+* `shallow` creates PID files for shallow file lock operations.
+* `gc` creates PID files for garbage collection lock operations.
+* `other` creates PID files for other miscellaneous lock operations.
+* `all` enables PID file creation for all components.
++
+The PID file is named by inserting `.pid` before the `.lock` suffix.
+For example, if the lock file is `index.lock`, the PID file will be
+`index.pid.lock`. The file contains `pid <value>` on a single line,
+following the same key-value format used by Git object headers.
+
 core.logAllRefUpdates::
 	Enable the reflog. Updates to a ref <ref> is logged to the file
 	"`$GIT_DIR/logs/<ref>`", by appending the new and old

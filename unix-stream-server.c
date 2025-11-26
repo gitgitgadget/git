@@ -47,7 +47,8 @@ int unix_ss_create(const char *path,
 	/*
 	 * Create a lock at "<path>.lock" if we can.
 	 */
-	if (hold_lock_file_for_update_timeout(&lock, path, 0, timeout_ms) < 0)
+	if (hold_lock_file_for_update_timeout(&lock, path, 0, timeout_ms,
+					      LOCKFILE_PID_OTHER) < 0)
 		return -1;
 
 	/*

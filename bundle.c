@@ -520,7 +520,8 @@ int create_bundle(struct repository *r, const char *path,
 		bundle_fd = 1;
 	else
 		bundle_fd = hold_lock_file_for_update(&lock, path,
-						      LOCK_DIE_ON_ERROR);
+						      LOCK_DIE_ON_ERROR,
+						      LOCKFILE_PID_OTHER);
 
 	if (version == -1)
 		version = min_version;

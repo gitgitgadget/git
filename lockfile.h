@@ -119,6 +119,7 @@
 
 struct lock_file {
 	struct tempfile *tempfile;
+	struct tempfile *pid_tempfile;
 };
 
 #define LOCK_INIT { 0 }
@@ -127,6 +128,42 @@ struct lock_file {
 #define LOCK_SUFFIX ".lock"
 #define LOCK_SUFFIX_LEN 5
 
+/*
+ * PID file naming: for a lock file "foo.lock", the PID file is "foo.pid.lock".
+ */
+#define LOCK_PID_INFIX ".pid"
+#define LOCK_PID_INFIX_LEN 4
+
+/* Maximum length for PID file content */
+#define LOCK_PID_MAXLEN 32
+
+/*
+ * Per-component lock PID file configuration, following core.fsync pattern.
+ * Each component can be individually enabled via core.lockfilePid config.
+ */
+enum lockfile_pid_component {
+	LOCKFILE_PID_NONE = 0,
+	LOCKFILE_PID_INDEX = 1 << 0, /* .git/index.lock */
+	LOCKFILE_PID_CONFIG = 1 << 1, /* .git/config.lock */
+	LOCKFILE_PID_REFS = 1 << 2, /* refs locks */
+	LOCKFILE_PID_COMMIT_GRAPH = 1 << 3, /* commit-graph.lock */
+	LOCKFILE_PID_MIDX = 1 << 4, /* multi-pack-index.lock */
+	LOCKFILE_PID_SHALLOW = 1 << 5, /* shallow file */
+	LOCKFILE_PID_GC = 1 << 6, /* gc locks */
+	LOCKFILE_PID_OTHER = 1 << 7, /* other locks */
+};
+
+#define LOCKFILE_PID_ALL (LOCKFILE_PID_INDEX | LOCKFILE_PID_CONFIG |      \
+			  LOCKFILE_PID_REFS | LOCKFILE_PID_COMMIT_GRAPH | \
+			  LOCKFILE_PID_MIDX | LOCKFILE_PID_SHALLOW |      \
+			  LOCKFILE_PID_GC | LOCKFILE_PID_OTHER)
+#define LOCKFILE_PID_DEFAULT LOCKFILE_PID_NONE
+
+/*
+ * Bitmask indicating which components should create PID files.
+ * Configured via core.lockfilePid.
+ */
+extern enum lockfile_pid_component lockfile_pid_components;
 
 /*
  * Flags
@@ -167,17 +204,23 @@ struct lock_file {
  * timeout_ms milliseconds. If timeout_ms is 0, try exactly once; if
  * timeout_ms is -1, retry indefinitely. The flags argument, error
  * handling, and mode are described above.
+ *
+ * The `component` argument specifies which lock PID component this lock
+ * belongs to, for selective PID file creation via core.lockfilePid config.
  */
 int hold_lock_file_for_update_timeout_mode(
-		struct lock_file *lk, const char *path,
-		int flags, long timeout_ms, int mode);
+	struct lock_file *lk, const char *path,
+	int flags, long timeout_ms, int mode,
+	enum lockfile_pid_component component);
 
 static inline int hold_lock_file_for_update_timeout(
-		struct lock_file *lk, const char *path,
-		int flags, long timeout_ms)
+	struct lock_file *lk, const char *path,
+	int flags, long timeout_ms,
+	enum lockfile_pid_component component)
 {
 	return hold_lock_file_for_update_timeout_mode(lk, path, flags,
-						      timeout_ms, 0666);
+						      timeout_ms, 0666,
+						      component);
 }
 
 /*
@@ -186,17 +229,18 @@ static inline int hold_lock_file_for_update_timeout(
  * argument and error handling are described above.
  */
 static inline int hold_lock_file_for_update(
-		struct lock_file *lk, const char *path,
-		int flags)
+	struct lock_file *lk, const char *path,
+	int flags, enum lockfile_pid_component component)
 {
-	return hold_lock_file_for_update_timeout(lk, path, flags, 0);
+	return hold_lock_file_for_update_timeout(lk, path, flags, 0, component);
 }
 
 static inline int hold_lock_file_for_update_mode(
-		struct lock_file *lk, const char *path,
-		int flags, int mode)
+	struct lock_file *lk, const char *path,
+	int flags, int mode, enum lockfile_pid_component component)
 {
-	return hold_lock_file_for_update_timeout_mode(lk, path, flags, 0, mode);
+	return hold_lock_file_for_update_timeout_mode(lk, path, flags, 0, mode,
+						      component);
 }
 
 /*
@@ -319,13 +363,10 @@ static inline int commit_lock_file_to(struct lock_file *lk, const char *path)
 
 /*
  * Roll back `lk`: close the file descriptor and/or file pointer and
- * remove the lockfile. It is a NOOP to call `rollback_lock_file()`
- * for a `lock_file` object that has already been committed or rolled
- * back. No error will be returned in this case.
+ * remove the lockfile and any associated PID file. It is a NOOP to
+ * call `rollback_lock_file()` for a `lock_file` object that has already
+ * been committed or rolled back. No error will be returned in this case.
  */
-static inline int rollback_lock_file(struct lock_file *lk)
-{
-	return delete_tempfile(&lk->tempfile);
-}
+int rollback_lock_file(struct lock_file *lk);
 
 #endif /* LOCKFILE_H */
