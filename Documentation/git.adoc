@@ -1010,6 +1010,16 @@ be in the future).
 	the background which do not want to cause lock contention with
 	other operations on the repository.  Defaults to `1`.
 
+`GIT_LOCK_PID_INFO`::
+	If this Boolean environment variable is set to `1`, Git will create
+	a `.lock.pid` file alongside each lock file containing the PID of the
+	process that created the lock. This information is displayed in error
+	messages when a lock conflict occurs, making it easier to identify
+	stale locks or debug locking issues. The PID files are automatically
+	cleaned up via signal and atexit handlers; however, if a process is
+	terminated abnormally (e.g., SIGKILL), the file may remain as a stale
+	indicator. Disabled by default.
+
 `GIT_REDIRECT_STDIN`::
 `GIT_REDIRECT_STDOUT`::
 `GIT_REDIRECT_STDERR`::

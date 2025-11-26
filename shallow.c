@@ -392,7 +392,8 @@ void setup_alternate_shallow(struct shallow_lock *shallow_lock,
 
 	fd = hold_lock_file_for_update(&shallow_lock->lock,
 				       git_path_shallow(the_repository),
-				       LOCK_DIE_ON_ERROR);
+				       LOCK_DIE_ON_ERROR,
+				       LOCKFILE_PID_SHALLOW);
 	check_shallow_file_for_update(the_repository);
 	if (write_shallow_commits(&sb, 0, extra)) {
 		if (write_in_full(fd, sb.buf, sb.len) < 0)
@@ -447,7 +448,8 @@ void prune_shallow(unsigned options)
 	}
 	fd = hold_lock_file_for_update(&shallow_lock.lock,
 				       git_path_shallow(the_repository),
-				       LOCK_DIE_ON_ERROR);
+				       LOCK_DIE_ON_ERROR,
+				       LOCKFILE_PID_SHALLOW);
 	check_shallow_file_for_update(the_repository);
 	if (write_shallow_commits_1(&sb, 0, NULL, flags)) {
 		if (write_in_full(fd, sb.buf, sb.len) < 0)
