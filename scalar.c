@@ -19,6 +19,7 @@
 #include "help.h"
 #include "setup.h"
 #include "trace2.h"
+#include "path.h"
 
 static void setup_enlistment_directory(int argc, const char **argv,
 				       const char * const *usagestr,
@@ -99,16 +100,20 @@ static int set_scalar_config(const struct scalar_config *config, int reconfigure
 {
 	char *value = NULL;
 	int res;
+	char *file = repo_git_path(the_repository, "config");
 
 	if ((reconfigure && config->overwrite_on_reconfigure) ||
 	    repo_config_get_string(the_repository, config->key, &value)) {
 		trace2_data_string("scalar", the_repository, config->key, "created");
-		res = repo_config_set_gently(the_repository, config->key, config->value);
+		res = repo_config_set_multivar_in_file_gently(the_repository, file, config->key,
+							      config->value, NULL,
+							      " # set by scalar", 0);
 	} else {
 		trace2_data_string("scalar", the_repository, config->key, "exists");
 		res = 0;
 	}
 
+	free(file);
 	free(value);
 	return res;
 }
@@ -195,13 +200,18 @@ static int set_recommended_config(int reconfigure)
 	 * for multiple values.
 	 */
 	if (repo_config_get_string(the_repository, "log.excludeDecoration", &value)) {
+		char *file = repo_git_path(the_repository, "config");
 		trace2_data_string("scalar", the_repository,
 				   "log.excludeDecoration", "created");
-		if (repo_config_set_multivar_gently(the_repository, "log.excludeDecoration",
+		if (repo_config_set_multivar_in_file_gently(the_repository, file,
+						    "log.excludeDecoration",
 						    "refs/prefetch/*",
-						    CONFIG_REGEX_NONE, 0))
+						    CONFIG_REGEX_NONE,
+						    " # set by scalar",
+						    0))
 			return error(_("could not configure "
 				       "log.excludeDecoration"));
+		free(file);
 	} else {
 		trace2_data_string("scalar", the_repository,
 				   "log.excludeDecoration", "exists");
