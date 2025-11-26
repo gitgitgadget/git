@@ -246,6 +246,11 @@ test_expect_success 'scalar reconfigure --all with includeIf.onbranch' '
 '
 
 test_expect_success 'scalar reconfigure --all with detached HEADs' '
+	# This test demonstrates an issue with index.skipHash=true and
+	# this test variable for the split index. Disable the test variable.
+	GIT_TEST_SPLIT_INDEX= &&
+	export GIT_TEST_SPLIT_INDEX &&
+
 	repos="two three four" &&
 	for num in $repos
 	do
