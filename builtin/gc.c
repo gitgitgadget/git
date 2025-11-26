@@ -749,7 +749,7 @@ static const char *lock_repo_for_gc(int force, pid_t* ret_pid)
 
 	pidfile_path = repo_git_path(the_repository, "gc.pid");
 	fd = hold_lock_file_for_update(&lock, pidfile_path,
-				       LOCK_DIE_ON_ERROR);
+				       LOCK_DIE_ON_ERROR, LOCKFILE_PID_GC);
 	if (!force) {
 		static char locking_host[HOST_NAME_MAX + 1];
 		static char *scan_fmt;
@@ -1017,7 +1017,7 @@ int cmd_gc(int argc,
 	if (daemonized) {
 		char *path = repo_git_path(the_repository, "gc.log");
 		hold_lock_file_for_update(&log_lock, path,
-					  LOCK_DIE_ON_ERROR);
+					  LOCK_DIE_ON_ERROR, LOCKFILE_PID_GC);
 		dup2(get_lock_file_fd(&log_lock), 2);
 		atexit(process_log_file_at_exit);
 		free(path);
@@ -1797,7 +1797,8 @@ static int maintenance_run_tasks(struct maintenance_run_opts *opts,
 	struct repository *r = the_repository;
 	char *lock_path = xstrfmt("%s/maintenance", r->objects->sources->path);
 
-	if (hold_lock_file_for_update(&lk, lock_path, LOCK_NO_DEREF) < 0) {
+	if (hold_lock_file_for_update(&lk, lock_path, LOCK_NO_DEREF,
+				      LOCKFILE_PID_GC) < 0) {
 		/*
 		 * Another maintenance command is running.
 		 *
@@ -2561,7 +2562,8 @@ static int launchctl_schedule_plist(const char *exec_path, enum schedule_priorit
 		lock_file_timeout_ms = 150;
 
 	fd = hold_lock_file_for_update_timeout(&lk, filename, LOCK_DIE_ON_ERROR,
-					       lock_file_timeout_ms);
+					       lock_file_timeout_ms,
+					       LOCKFILE_PID_GC);
 
 	/*
 	 * Does this file already exist? With the intended contents? Is it
@@ -3372,7 +3374,8 @@ static int update_background_schedule(const struct maintenance_start_opts *opts,
 	struct lock_file lk;
 	char *lock_path = xstrfmt("%s/schedule", the_repository->objects->sources->path);
 
-	if (hold_lock_file_for_update(&lk, lock_path, LOCK_NO_DEREF) < 0) {
+	if (hold_lock_file_for_update(&lk, lock_path, LOCK_NO_DEREF,
+				      LOCKFILE_PID_GC) < 0) {
 		if (errno == EEXIST)
 			error(_("unable to create '%s.lock': %s.\n\n"
 			    "Another scheduled git-maintenance(1) process seems to be running in this\n"

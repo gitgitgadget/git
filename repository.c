@@ -449,5 +449,6 @@ int repo_hold_locked_index(struct repository *repo,
 {
 	if (!repo->index_file)
 		BUG("the repo hasn't been setup");
-	return hold_lock_file_for_update(lf, repo->index_file, flags);
+	return hold_lock_file_for_update(lf, repo->index_file, flags,
+					 LOCKFILE_PID_INDEX);
 }

@@ -67,7 +67,7 @@ int flock_acquire(struct reftable_flock *l, const char *target_path,
 		return REFTABLE_OUT_OF_MEMORY_ERROR;
 
 	err = hold_lock_file_for_update_timeout(lockfile, target_path, LOCK_NO_DEREF,
-						timeout_ms);
+						timeout_ms, LOCKFILE_PID_REFS);
 	if (err < 0) {
 		reftable_free(lockfile);
 		if (errno == EEXIST)

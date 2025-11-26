@@ -754,7 +754,8 @@ int write_index_as_tree(struct object_id *oid, struct index_state *index_state, 
 	struct lock_file lock_file = LOCK_INIT;
 	int ret;
 
-	hold_lock_file_for_update(&lock_file, index_path, LOCK_DIE_ON_ERROR);
+	hold_lock_file_for_update(&lock_file, index_path, LOCK_DIE_ON_ERROR,
+				  LOCKFILE_PID_INDEX);
 
 	entries = read_index_from(index_state, index_path,
 				  repo_get_git_dir(the_repository));
