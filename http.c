@@ -22,6 +22,7 @@
 #include "object-file.h"
 #include "odb.h"
 #include "tempfile.h"
+#include "date.h"
 
 static struct trace_key trace_curl = TRACE_KEY_INIT(CURL);
 static int trace_curl_data = 1;
@@ -149,6 +150,11 @@ static char *cached_accept_language;
 static char *http_ssl_backend;
 
 static int http_schannel_check_revoke = 1;
+
+static long http_retry_after = -1;
+static long http_max_retries = 0;
+static long http_max_retry_time = 300;
+
 /*
  * With the backend being set to `schannel`, setting sslCAinfo would override
  * the Certificate Store in cURL v7.60.0 and later, which is not what we want
@@ -209,13 +215,14 @@ static inline int is_hdr_continuation(const char *ptr, const size_t size)
 	return size && (*ptr == ' ' || *ptr == '\t');
 }
 
-static size_t fwrite_wwwauth(char *ptr, size_t eltsize, size_t nmemb, void *p UNUSED)
+static size_t fwrite_headers(char *ptr, size_t eltsize, size_t nmemb, void *p)
 {
 	size_t size = eltsize * nmemb;
 	struct strvec *values = &http_auth.wwwauth_headers;
 	struct strbuf buf = STRBUF_INIT;
 	const char *val;
 	size_t val_len;
+	struct active_request_slot *slot = (struct active_request_slot *)p;
 
 	/*
 	 * Header lines may not come NULL-terminated from libcurl so we must
@@ -253,6 +260,47 @@ static size_t fwrite_wwwauth(char *ptr, size_t eltsize, size_t nmemb, void *p UN
 		strbuf_trim(&buf);
 
 		strvec_push(values, buf.buf);
+		http_auth.header_is_last_match = 1;
+		goto exit;
+	}
+
+	/* Parse Retry-After header for rate limiting */
+	if (skip_iprefix_mem(ptr, size, "retry-after:", &val, &val_len)) {
+		strbuf_add(&buf, val, val_len);
+		strbuf_trim(&buf);
+
+		if (slot && slot->results) {
+			/* Parse the retry-after value (delay-seconds or HTTP-date) */
+			char *endptr;
+			long retry_after;
+
+			errno = 0;
+			retry_after = strtol(buf.buf, &endptr, 10);
+
+			/* Check if it's a valid integer (delay-seconds format) */
+			if (endptr != buf.buf && *endptr == '\0' &&
+			    errno != ERANGE && retry_after > 0) {
+				slot->results->retry_after = retry_after;
+			} else {
+				/* Try parsing as HTTP-date format */
+				timestamp_t timestamp;
+				int offset;
+				if (!parse_date_basic(buf.buf, &timestamp, &offset)) {
+					/* Successfully parsed as date, calculate delay from now */
+					timestamp_t now = time(NULL);
+					if (timestamp > now) {
+						slot->results->retry_after = (long)(timestamp - now);
+					} else {
+						/* Past date means retry immediately */
+						slot->results->retry_after = 0;
+					}
+				} else {
+					/* Failed to parse as either delay-seconds or HTTP-date */
+					warning(_("unable to parse Retry-After header value: '%s'"), buf.buf);
+				}
+			}
+		}
+
 		http_auth.header_is_last_match = 1;
 		goto exit;
 	}
@@ -572,6 +620,21 @@ static int http_options(const char *var, const char *value,
 	}
 	if (!strcmp("http.keepalivecount", var)) {
 		curl_tcp_keepcnt = git_config_int(var, value, ctx->kvi);
+		return 0;
+	}
+
+	if (!strcmp("http.retryafter", var)) {
+		http_retry_after = git_config_int(var, value, ctx->kvi);
+		return 0;
+	}
+
+	if (!strcmp("http.maxretries", var)) {
+		http_max_retries = git_config_int(var, value, ctx->kvi);
+		return 0;
+	}
+
+	if (!strcmp("http.maxretrytime", var)) {
+		http_max_retry_time = git_config_int(var, value, ctx->kvi);
 		return 0;
 	}
 
@@ -1422,6 +1485,10 @@ void http_init(struct remote *remote, const char *url, int proactive_auth)
 	set_long_from_env(&curl_tcp_keepintvl, "GIT_TCP_KEEPINTVL");
 	set_long_from_env(&curl_tcp_keepcnt, "GIT_TCP_KEEPCNT");
 
+	set_long_from_env(&http_retry_after, "GIT_HTTP_RETRY_AFTER");
+	set_long_from_env(&http_max_retries, "GIT_HTTP_MAX_RETRIES");
+	set_long_from_env(&http_max_retry_time, "GIT_HTTP_MAX_RETRY_TIME");
+
 	curl_default = get_curl_handle();
 }
 
@@ -1529,6 +1596,8 @@ struct active_request_slot *get_active_slot(void)
 	slot->finished = NULL;
 	slot->callback_data = NULL;
 	slot->callback_func = NULL;
+	slot->retry_delay_seconds = -1;
+	memset(&slot->retry_delay_start, 0, sizeof(slot->retry_delay_start));
 
 	if (curl_cookie_file && !strcmp(curl_cookie_file, "-")) {
 		warning(_("refusing to read cookies from http.cookiefile '-'"));
@@ -1660,44 +1729,98 @@ void run_active_slot(struct active_request_slot *slot)
 	fd_set excfds;
 	int max_fd;
 	struct timeval select_timeout;
+	long curl_timeout;
+	struct timeval start_time = {0}, current_time, elapsed_time = {0};
+	long remaining_seconds;
 	int finished = 0;
+	int slot_not_started = (slot->finished == NULL);
+	int waiting_for_delay = (slot->retry_delay_seconds > 0);
+
+	if (waiting_for_delay) {
+		warning(_("rate limited, waiting %ld seconds before retry"), slot->retry_delay_seconds);
+		start_time = slot->retry_delay_start;
+	}
 
 	slot->finished = &finished;
-	while (!finished) {
+	while (waiting_for_delay || !finished) {
+		if (waiting_for_delay) {
+			gettimeofday(&current_time, NULL);
+			elapsed_time.tv_sec = current_time.tv_sec - start_time.tv_sec;
+			elapsed_time.tv_usec = current_time.tv_usec - start_time.tv_usec;
+			if (elapsed_time.tv_usec < 0) {
+				elapsed_time.tv_sec--;
+				elapsed_time.tv_usec += 1000000;
+			}
+
+			if (elapsed_time.tv_sec >= slot->retry_delay_seconds) {
+				slot->retry_delay_seconds = -1;
+				waiting_for_delay = 0;
+
+				if (slot_not_started)
+					return;
+			}
+		}
+
 		step_active_slots();
 
-		if (slot->in_use) {
-			long curl_timeout;
-			curl_multi_timeout(curlm, &curl_timeout);
-			if (curl_timeout == 0) {
+		if (!waiting_for_delay && !slot->in_use)
+			continue;
+
+		curl_multi_timeout(curlm, &curl_timeout);
+		if (curl_timeout == 0) {
+			if (!waiting_for_delay)
 				continue;
-			} else if (curl_timeout == -1) {
-				select_timeout.tv_sec  = 0;
-				select_timeout.tv_usec = 50000;
+			select_timeout.tv_sec = 0;
+			select_timeout.tv_usec = 50000; /* 50ms */
+		} else if (curl_timeout == -1) {
+			select_timeout.tv_sec = 0;
+			select_timeout.tv_usec = 50000;
+		} else {
+			long curl_timeout_sec = curl_timeout / 1000;
+			long curl_timeout_usec = (curl_timeout % 1000) * 1000;
+
+			if (waiting_for_delay) {
+				remaining_seconds = slot->retry_delay_seconds - elapsed_time.tv_sec;
+				if (curl_timeout_sec < remaining_seconds) {
+					select_timeout.tv_sec = curl_timeout_sec;
+					select_timeout.tv_usec = curl_timeout_usec;
+				} else {
+					select_timeout.tv_sec = remaining_seconds;
+					select_timeout.tv_usec = 0;
+				}
 			} else {
-				select_timeout.tv_sec  =  curl_timeout / 1000;
-				select_timeout.tv_usec = (curl_timeout % 1000) * 1000;
+				select_timeout.tv_sec = curl_timeout_sec;
+				select_timeout.tv_usec = curl_timeout_usec;
 			}
+		}
 
-			max_fd = -1;
-			FD_ZERO(&readfds);
-			FD_ZERO(&writefds);
-			FD_ZERO(&excfds);
-			curl_multi_fdset(curlm, &readfds, &writefds, &excfds, &max_fd);
+		max_fd = -1;
+		FD_ZERO(&readfds);
+		FD_ZERO(&writefds);
+		FD_ZERO(&excfds);
+		curl_multi_fdset(curlm, &readfds, &writefds, &excfds, &max_fd);
 
-			/*
-			 * It can happen that curl_multi_timeout returns a pathologically
-			 * long timeout when curl_multi_fdset returns no file descriptors
-			 * to read.  See commit message for more details.
-			 */
-			if (max_fd < 0 &&
-			    (select_timeout.tv_sec > 0 ||
-			     select_timeout.tv_usec > 50000)) {
-				select_timeout.tv_sec  = 0;
-				select_timeout.tv_usec = 50000;
-			}
+		/*
+		 * It can happen that curl_multi_timeout returns a pathologically
+		 * long timeout when curl_multi_fdset returns no file descriptors
+		 * to read.  See commit message for more details.
+		 */
+		if (max_fd < 0 &&
+		    (select_timeout.tv_sec > 0 ||
+		     select_timeout.tv_usec > 50000)) {
+			select_timeout.tv_sec = 0;
+			select_timeout.tv_usec = 50000;
+		}
 
-			select(max_fd+1, &readfds, &writefds, &excfds, &select_timeout);
+		/*
+		 * If curl_multi_fdset returns no file descriptors but we have
+		 * a timeout, still use select() to wait for the timeout period.
+		 */
+		if (max_fd < 0) {
+			/* No file descriptors, just wait for timeout */
+			select(0, NULL, NULL, NULL, &select_timeout);
+		} else {
+			select(max_fd + 1, &readfds, &writefds, &excfds, &select_timeout);
 		}
 	}
 
@@ -1871,6 +1994,8 @@ static int handle_curl_result(struct slot_results *results)
 			}
 			return HTTP_REAUTH;
 		}
+	} else if (results->http_code == 429) {
+		return HTTP_RATE_LIMITED;
 	} else {
 		if (results->http_connectcode == 407)
 			credential_reject(the_repository, &proxy_auth);
@@ -1886,6 +2011,14 @@ int run_one_slot(struct active_request_slot *slot,
 		 struct slot_results *results)
 {
 	slot->results = results;
+	/* Initialize retry_after to -1 (not set) */
+	results->retry_after = -1;
+
+	/* If there's a retry delay, wait for it before starting the slot */
+	if (slot->retry_delay_seconds > 0) {
+		run_active_slot(slot);
+	}
+
 	if (!start_active_slot(slot)) {
 		xsnprintf(curl_errorstr, sizeof(curl_errorstr),
 			  "failed to start HTTP request");
@@ -2117,9 +2250,13 @@ static void http_opt_request_remainder(CURL *curl, off_t pos)
 #define HTTP_REQUEST_STRBUF	0
 #define HTTP_REQUEST_FILE	1
 
+static void sleep_for_retry(struct active_request_slot *slot, long retry_after);
+
 static int http_request(const char *url,
 			void *result, int target,
-			const struct http_get_options *options)
+			const struct http_get_options *options,
+			long *retry_after_out,
+			long retry_delay)
 {
 	struct active_request_slot *slot;
 	struct slot_results results;
@@ -2129,6 +2266,10 @@ static int http_request(const char *url,
 	int ret;
 
 	slot = get_active_slot();
+	/* Mark slot for delay if retry delay is provided */
+	if (retry_delay > 0) {
+		sleep_for_retry(slot, retry_delay);
+	}
 	curl_easy_setopt(slot->curl, CURLOPT_HTTPGET, 1L);
 
 	if (!result) {
@@ -2148,7 +2289,8 @@ static int http_request(const char *url,
 					 fwrite_buffer);
 	}
 
-	curl_easy_setopt(slot->curl, CURLOPT_HEADERFUNCTION, fwrite_wwwauth);
+	curl_easy_setopt(slot->curl, CURLOPT_HEADERFUNCTION, fwrite_headers);
+	curl_easy_setopt(slot->curl, CURLOPT_HEADERDATA, slot);
 
 	accept_language = http_get_accept_language_header();
 
@@ -2182,6 +2324,10 @@ static int http_request(const char *url,
 	curl_easy_setopt(slot->curl, CURLOPT_FAILONERROR, 0L);
 
 	ret = run_one_slot(slot, &results);
+
+	/* Store retry_after from slot results if output parameter provided */
+	if (retry_after_out)
+		*retry_after_out = results.retry_after;
 
 	if (options && options->content_type) {
 		struct strbuf raw = STRBUF_INIT;
@@ -2253,20 +2399,89 @@ static int update_url_from_redirect(struct strbuf *base,
 	return 1;
 }
 
-static int http_request_reauth(const char *url,
+/*
+ * Mark slot to be delayed for retry. The actual delay will be handled
+ * in run_active_slot when the slot is executed.
+ */
+static void sleep_for_retry(struct active_request_slot *slot, long retry_after)
+{
+	if (retry_after > 0 && slot) {
+		warning(_("rate limited, waiting %ld seconds before retry"), retry_after);
+		slot->retry_delay_seconds = retry_after;
+		gettimeofday(&slot->retry_delay_start, NULL);
+	}
+}
+
+/*
+ * Handle rate limiting retry logic for HTTP 429 responses.
+ * Uses slot-specific retry_after value to support concurrent slots.
+ * Returns a negative value if retries are exhausted or configuration is invalid,
+ * otherwise returns the delay value (>= 0) to indicate the retry should proceed.
+ */
+static long handle_rate_limit_retry(int *rate_limit_retries, long slot_retry_after)
+{
+	int retry_attempt = http_max_retries - *rate_limit_retries + 1;
+	if (*rate_limit_retries <= 0) {
+		/* Retries are disabled or exhausted */
+		if (http_max_retries > 0) {
+			error(_("too many rate limit retries, giving up"));
+		}
+		return -1;
+	}
+
+	/* Decrement retries counter */
+	(*rate_limit_retries)--;
+
+	/* Use the slot-specific retry_after value or configured default */
+	if (slot_retry_after >= 0) {
+		/* Check if retry delay exceeds maximum allowed */
+		if (slot_retry_after > http_max_retry_time) {
+			error(_("rate limited (HTTP 429) requested %ld second delay, "
+				"exceeds http.maxRetryTime of %ld seconds"),
+			      slot_retry_after, http_max_retry_time);
+			return -1;
+		}
+		return slot_retry_after;
+	} else {
+		/* No Retry-After header provided */
+		if (http_retry_after < 0) {
+			/* Not configured - exit with error */
+			error(_("rate limited (HTTP 429) and no Retry-After header provided. "
+				"Configure http.retryAfter or set GIT_HTTP_RETRY_AFTER."));
+			return -1;
+		}
+		/* Check if configured default exceeds maximum allowed */
+		if (http_retry_after > http_max_retry_time) {
+			error(_("configured http.retryAfter (%ld seconds) exceeds "
+				"http.maxRetryTime (%ld seconds)"),
+			      http_retry_after, http_max_retry_time);
+			return -1;
+		}
+
+		return http_retry_after;
+	}
+}
+
+static int http_request_recoverable(const char *url,
 			       void *result, int target,
 			       struct http_get_options *options)
 {
 	int i = 3;
 	int ret;
+	int rate_limit_retries = http_max_retries;
+	long slot_retry_after = -1; /* Per-slot retry_after value */
 
 	if (always_auth_proactively())
 		credential_fill(the_repository, &http_auth, 1);
 
-	ret = http_request(url, result, target, options);
+	ret = http_request(url, result, target, options, &slot_retry_after, -1);
 
-	if (ret != HTTP_OK && ret != HTTP_REAUTH)
+	if (ret != HTTP_OK && ret != HTTP_REAUTH && ret != HTTP_RATE_LIMITED)
 		return ret;
+
+	/* If retries are disabled and we got a 429, fail immediately */
+	if (ret == HTTP_RATE_LIMITED && http_max_retries == 0)
+		return HTTP_ERROR;
 
 	if (options && options->effective_url && options->base_url) {
 		if (update_url_from_redirect(options->base_url,
@@ -2276,7 +2491,8 @@ static int http_request_reauth(const char *url,
 		}
 	}
 
-	while (ret == HTTP_REAUTH && --i) {
+	while ((ret == HTTP_REAUTH || ret == HTTP_RATE_LIMITED) && --i) {
+		long retry_delay = -1;
 		/*
 		 * The previous request may have put cruft into our output stream; we
 		 * should clear it out before making our next request.
@@ -2301,10 +2517,16 @@ static int http_request_reauth(const char *url,
 		default:
 			BUG("Unknown http_request target");
 		}
+		if (ret == HTTP_RATE_LIMITED) {
+			retry_delay = handle_rate_limit_retry(&rate_limit_retries, slot_retry_after);
+			if (retry_delay < 0)
+				return HTTP_ERROR;
+			slot_retry_after = -1; /* Reset after use */
+		} else if (ret == HTTP_REAUTH) {
+			credential_fill(the_repository, &http_auth, 1);
+		}
 
-		credential_fill(the_repository, &http_auth, 1);
-
-		ret = http_request(url, result, target, options);
+		ret = http_request(url, result, target, options, &slot_retry_after, retry_delay);
 	}
 	return ret;
 }
@@ -2313,7 +2535,7 @@ int http_get_strbuf(const char *url,
 		    struct strbuf *result,
 		    struct http_get_options *options)
 {
-	return http_request_reauth(url, result, HTTP_REQUEST_STRBUF, options);
+	return http_request_recoverable(url, result, HTTP_REQUEST_STRBUF, options);
 }
 
 /*
@@ -2337,7 +2559,7 @@ int http_get_file(const char *url, const char *filename,
 		goto cleanup;
 	}
 
-	ret = http_request_reauth(url, result, HTTP_REQUEST_FILE, options);
+	ret = http_request_recoverable(url, result, HTTP_REQUEST_FILE, options);
 	fclose(result);
 
 	if (ret == HTTP_OK && finalize_object_file(the_repository, tmpfile.buf, filename))
