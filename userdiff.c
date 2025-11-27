@@ -249,14 +249,6 @@ PATTERNS("kotlin",
 	 "|[.][0-9][0-9_]*([Ee][-+]?[0-9]+)?[fFlLuU]?"
 	 /* unary and binary operators */
 	 "|[-+*/<>%&^|=!]==?|--|\\+\\+|<<=|>>=|&&|\\|\\||->|\\.\\*|!!|[?:.][.:]"),
-PATTERNS("lisp",
-	 /* Either an unindented left paren, or a slightly indented line
-	  * starting with "(def" */
-	 "^((\\(|:space:{1,2}\\(def).*)$",
-	 /* Common Lisp symbol syntax allows arbitrary strings between vertical bars */
-	 "\\|([^\\\\]|\\\\\\\\|\\\\\\|)*\\|"
-	 /* All other words are delimited by spaces or parentheses/brackets/braces */
-	 "|([^][(){} \t])+"),
 PATTERNS("markdown",
 	 "^ {0,3}#{1,6}[ \t].*",
 	 /* -- */
@@ -352,14 +344,21 @@ PATTERNS("rust",
 	 "|[0-9][0-9_a-fA-Fiosuxz]*(\\.([0-9]*[eE][+-]?)?[0-9_fF]*)?"
 	 "|[-+*\\/<>%&^|=!:]=|<<=?|>>=?|&&|\\|\\||->|=>|\\.{2}=|\\.{3}|::"),
 PATTERNS("scheme",
-	 "^[\t ]*(\\(((define|def(struct|syntax|class|method|rules|record|proto|alias)?)[-*/ \t]|(library|module|struct|class)[*+ \t]).*)$",
+	 /* A possibly indented left paren followed by a Scheme keyword. */
+	 "^[\t ]*(\\(((define|def(struct|syntax|class|method|rules|record|proto|alias)?)[-*/ \t]|(library|module|struct|class)[*+ \t]).*)$\n"
 	 /*
-	  * R7RS valid identifiers include any sequence enclosed
-	  * within vertical lines having no backslashes
+	  * For other Lisp dialects: either an unindented left paren, or a
+	  * slightly indented line starting with "(def".
 	  */
-	 "\\|([^\\\\]*)\\|"
+	 "^((\\(| {1,2}\\([Dd][Ee][Ff]).*)$",
+	 /*
+	  * The union of R7RS and Common Lisp symbol syntax: allows arbitrary
+	  * strings between vertical bars, including escaped backslashes and
+	  * vertical bars.
+	  */
+	 "\\|([^\\\\]|\\\\\\\\|\\\\\\|)*\\|"
 	 /* All other words should be delimited by spaces or parentheses */
-	 "|([^][)(}{[ \t])+"),
+	 "|([^][)(}{ \t])+"),
 PATTERNS("tex", "^(\\\\((sub)*section|chapter|part)\\*{0,1}\\{.*)$",
 	 "\\\\[a-zA-Z@]+|\\\\.|([a-zA-Z0-9]|[^\x01-\x7f])+"),
 { .name = "default", .binary = -1 },
