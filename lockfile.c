@@ -6,6 +6,9 @@
 #include "abspath.h"
 #include "gettext.h"
 #include "lockfile.h"
+#include "parse.h"
+#include "strbuf.h"
+#include "wrapper.h"
 
 /*
  * path = absolute or relative path name
@@ -71,6 +74,59 @@ static void resolve_symlink(struct strbuf *path)
 	strbuf_reset(&link);
 }
 
+/*
+ * Lock holder info functions - write PID to a .holder file alongside
+ * the lock file for debugging stale locks. The holder file is registered
+ * as a tempfile so it gets cleaned up by signal/atexit handlers.
+ */
+
+static int lock_holder_info_enabled(void)
+{
+	return git_env_bool(GIT_LOCK_HOLDER_INFO_ENVIRONMENT, 0);
+}
+
+static struct tempfile *create_lock_holder_file(const char *lock_path, int mode)
+{
+	struct strbuf holder_path = STRBUF_INIT;
+	struct strbuf content = STRBUF_INIT;
+	struct tempfile *holder_tempfile = NULL;
+	int fd;
+
+	if (!lock_holder_info_enabled())
+		return NULL;
+
+	strbuf_addf(&holder_path, "%s%s", lock_path, LOCK_HOLDER_SUFFIX);
+	fd = open(holder_path.buf, O_WRONLY | O_CREAT | O_TRUNC, mode);
+	if (fd >= 0) {
+		strbuf_addf(&content, "%"PRIuMAX"\n", (uintmax_t)getpid());
+		if (write_in_full(fd, content.buf, content.len) < 0)
+			warning_errno(_("could not write holder file '%s'"),
+				      holder_path.buf);
+		close(fd);
+		holder_tempfile = register_tempfile(holder_path.buf);
+	}
+	strbuf_release(&content);
+	strbuf_release(&holder_path);
+	return holder_tempfile;
+}
+
+static int read_lock_holder_pid(const char *lock_path, uintmax_t *pid_out)
+{
+	struct strbuf holder_path = STRBUF_INIT;
+	struct strbuf content = STRBUF_INIT;
+	int ret = -1;
+
+	strbuf_addf(&holder_path, "%s%s", lock_path, LOCK_HOLDER_SUFFIX);
+	if (strbuf_read_file(&content, holder_path.buf, 32) > 0) {
+		*pid_out = strtoumax(content.buf, NULL, 10);
+		if (*pid_out > 0)
+			ret = 0;
+	}
+	strbuf_release(&holder_path);
+	strbuf_release(&content);
+	return ret;
+}
+
 /* Make sure errno contains a meaningful value on error */
 static int lock_file(struct lock_file *lk, const char *path, int flags,
 		     int mode)
@@ -80,9 +136,12 @@ static int lock_file(struct lock_file *lk, const char *path, int flags,
 	strbuf_addstr(&filename, path);
 	if (!(flags & LOCK_NO_DEREF))
 		resolve_symlink(&filename);
-
 	strbuf_addstr(&filename, LOCK_SUFFIX);
+
 	lk->tempfile = create_tempfile_mode(filename.buf, mode);
+	if (lk->tempfile)
+		lk->holder_tempfile = create_lock_holder_file(filename.buf, mode);
+
 	strbuf_release(&filename);
 	return lk->tempfile ? lk->tempfile->fd : -1;
 }
@@ -151,13 +210,26 @@ static int lock_file_timeout(struct lock_file *lk, const char *path,
 void unable_to_lock_message(const char *path, int err, struct strbuf *buf)
 {
 	if (err == EEXIST) {
-		strbuf_addf(buf, _("Unable to create '%s.lock': %s.\n\n"
-		    "Another git process seems to be running in this repository, e.g.\n"
+		struct strbuf lock_path = STRBUF_INIT;
+		uintmax_t holder_pid;
+
+		strbuf_addf(&lock_path, "%s%s", absolute_path(path), LOCK_SUFFIX);
+
+		strbuf_addf(buf, _("Unable to create '%s': %s.\n\n"),
+			    lock_path.buf, strerror(err));
+
+		if (lock_holder_info_enabled() &&
+		    !read_lock_holder_pid(lock_path.buf, &holder_pid))
+			strbuf_addf(buf, _("Lock is held by process %"PRIuMAX".\n\n"),
+				    holder_pid);
+
+		strbuf_addstr(buf, _("Another git process seems to be running in this repository, e.g.\n"
 		    "an editor opened by 'git commit'. Please make sure all processes\n"
 		    "are terminated then try again. If it still fails, a git process\n"
 		    "may have crashed in this repository earlier:\n"
-		    "remove the file manually to continue."),
-			    absolute_path(path), strerror(err));
+		    "remove the file manually to continue."));
+
+		strbuf_release(&lock_path);
 	} else
 		strbuf_addf(buf, _("Unable to create '%s.lock': %s"),
 			    absolute_path(path), strerror(err));
@@ -207,6 +279,8 @@ int commit_lock_file(struct lock_file *lk)
 {
 	char *result_path = get_locked_file_path(lk);
 
+	delete_tempfile(&lk->holder_tempfile);
+
 	if (commit_lock_file_to(lk, result_path)) {
 		int save_errno = errno;
 		free(result_path);
@@ -215,4 +289,10 @@ int commit_lock_file(struct lock_file *lk)
 	}
 	free(result_path);
 	return 0;
+}
+
+int rollback_lock_file(struct lock_file *lk)
+{
+	delete_tempfile(&lk->holder_tempfile);
+	return delete_tempfile(&lk->tempfile);
 }
