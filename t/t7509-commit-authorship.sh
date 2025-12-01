@@ -12,13 +12,20 @@ author_header () {
 	sed -n -e '/^$/q' -e '/^author /p'
 }
 
+committer_header () {
+	git cat-file commit "$1" |
+	sed -n -e '/^$/q' -e '/^committer /p'
+}
+
 message_body () {
 	git cat-file commit "$1" |
 	sed -e '1,/^$/d'
 }
 
 test_expect_success '-C option copies authorship and message' '
-	test_commit --author Frigate\ \<flying@over.world\> \
+	test_env GIT_COMMITTER_NAME="Frigate" \
+		GIT_COMMITTER_EMAIL="flying@over.world" \
+		test_commit --author Frigate\ \<flying@over.world\> \
 		"Initial Commit" foo Initial Initial &&
 	echo "Test 1" >>foo &&
 	test_tick &&
@@ -169,6 +176,81 @@ test_expect_success '--reset-author with CHERRY_PICK_HEAD' '
 	echo "author $GIT_AUTHOR_NAME <$GIT_AUTHOR_EMAIL> $GIT_AUTHOR_DATE" >expect &&
 	author_header HEAD >actual &&
 	test_cmp expect actual
+'
+
+test_expect_success '--committer option overrides committer' '
+	git checkout Initial &&
+	echo "Test --committer" >>foo &&
+	test_tick &&
+	git commit -a -m "test committer" --committer="Custom Committer <custom@committer.example>" &&
+	committer_header HEAD >actual &&
+	grep "Custom Committer <custom@committer.example>" actual
+'
+
+test_expect_success '--committer with pattern search' '
+	echo "Test committer pattern" >>foo &&
+	test_tick &&
+	git commit -a -m "test committer pattern" --committer="Frigate" &&
+	committer_header HEAD >actual &&
+	grep "Frigate <flying@over.world>" actual
+'
+
+test_expect_success '--committer malformed parameter' '
+	echo "Test malformed" >>foo &&
+	test_tick &&
+	test_must_fail git commit -a -m "test malformed" --committer="malformed committer"
+'
+
+test_expect_success '--committer with --amend option' '
+	git checkout -f Initial &&
+	echo "Test committer with amend" >>foo &&
+	test_tick &&
+	git commit -a -m "initial commit for amend test" &&
+	echo "Modified for amend" >>foo &&
+	test_tick &&
+	git commit -a --amend --no-edit \
+		--author="Test Author <test@author.example>" \
+		--committer="Test Committer <test@committer.example>" &&
+	author_header HEAD >actual_author &&
+	grep "Test Author <test@author.example>" actual_author &&
+	committer_header HEAD >actual_committer &&
+	grep "Test Committer <test@committer.example>" actual_committer
+'
+
+test_expect_success 'GIT_COMMITTER_* environment variables' '
+	git checkout -f Initial &&
+	echo "Test env vars" >>foo &&
+	test_tick &&
+	test_env GIT_COMMITTER_NAME="Env Committer" \
+		GIT_COMMITTER_EMAIL="env@test.example" \
+		git commit -a -m "test committer env vars" &&
+	committer_header HEAD >actual &&
+	grep "Env Committer <env@test.example>" actual
+'
+
+test_expect_success '--committer overrides GIT_COMMITTER_* environment variables' '
+	echo "Test override" >>foo &&
+	test_tick &&
+	test_env GIT_COMMITTER_NAME="Env Committer" \
+		GIT_COMMITTER_EMAIL="env@test.example" \
+		git commit -a -m "test override" \
+		--committer="Override Committer <override@test.example>" &&
+	committer_header HEAD >actual &&
+	grep "Override Committer <override@test.example>" actual
+'
+
+test_expect_success '--date with --committer changes both author and committer dates' '
+	git checkout -f Initial &&
+	echo "Test date override" >>foo &&
+	test_tick &&
+	git commit -a -m "test date" \
+		--author="Date Author <date@author.example>" \
+		--committer="Date Committer <date@committer.example>" \
+		--date="2024-06-15 10:30:00 +0800" &&
+	git log -1 --format="%ai" >author_date &&
+	git log -1 --format="%ci" >committer_date &&
+	grep "2024-06-15 10:30:00 +0800" author_date &&
+	grep "2024-06-15 10:30:00 +0800" committer_date
 '
 
 test_done
