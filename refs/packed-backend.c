@@ -1230,7 +1230,8 @@ int packed_refs_lock(struct ref_store *ref_store, int flags, struct strbuf *err)
 	if (hold_lock_file_for_update_timeout(
 			    &refs->lock,
 			    refs->path,
-			    flags, timeout_value) < 0) {
+			    flags, timeout_value,
+			    LOCKFILE_PID_REFS) < 0) {
 		unable_to_lock_message(refs->path, errno, err);
 		return -1;
 	}

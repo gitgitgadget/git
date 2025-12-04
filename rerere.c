@@ -917,7 +917,8 @@ int setup_rerere(struct repository *r, struct string_list *merge_rr, int flags)
 	else
 		fd = hold_lock_file_for_update(&write_lock,
 					       git_path_merge_rr(r),
-					       LOCK_DIE_ON_ERROR);
+					       LOCK_DIE_ON_ERROR,
+					       LOCKFILE_PID_OTHER);
 	read_rr(r, merge_rr);
 	return fd;
 }
