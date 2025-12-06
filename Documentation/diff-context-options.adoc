@@ -4,7 +4,7 @@
 	or 3 if the config option is unset.
 
 `--inter-hunk-context=<n>`::
-	Show the context between diff hunks, up to the specified _<number>_
-	of lines, thereby fusing hunks that are close to each other.
+	Show the context between diff hunks, up to _<n>_
+	lines, thereby fusing hunks that are close to each other.
 	Defaults to `diff.interHunkContext` or 0 if the config option
 	is unset.
