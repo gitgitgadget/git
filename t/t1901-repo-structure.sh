@@ -35,6 +35,37 @@ test_expect_success 'empty repository' '
 		git repo structure >out 2>err &&
 
 		test_cmp expect out &&
+		test_line_count = 0 err &&
+
+		cat >expect <<-\EOF &&
+		references.branches.count=0
+		references.tags.count=0
+		references.remotes.count=0
+		references.others.count=0
+		objects.commits.count=0
+		objects.trees.count=0
+		objects.blobs.count=0
+		objects.tags.count=0
+		objects.commits.inflated=0
+		objects.trees.inflated=0
+		objects.blobs.inflated=0
+		objects.tags.inflated=0
+		objects.commits.disk=0
+		objects.trees.disk=0
+		objects.blobs.disk=0
+		objects.tags.disk=0
+		EOF
+
+		git repo structure --format=keyvalue >out 2>err &&
+
+		test_cmp expect out &&
+		test_line_count = 0 err &&
+
+		# Replace key and value delimiters for nul format.
+		tr "\n=" "\0\n" <expect >expect_nul &&
+		git repo structure --format=nul >out 2>err &&
+
+		test_cmp expect_nul out &&
 		test_line_count = 0 err
 	)
 '
@@ -83,7 +114,7 @@ test_expect_success SHA1 'repository with references and objects' '
 	)
 '
 
-test_expect_success SHA1 'keyvalue and nul format' '
+test_expect_success SHA1 'keyvalue format' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -106,16 +137,12 @@ test_expect_success SHA1 'keyvalue and nul format' '
 		objects.tags.inflated=132
 		EOF
 
-		git repo structure --format=keyvalue >out 2>err &&
+		git repo structure --format=keyvalue >out.raw 2>err &&
+
+		# Strip object disk usage from output due to platform variance.
+		grep -v "objects\..*\.disk=" out.raw >out &&
 
 		test_cmp expect out &&
-		test_line_count = 0 err &&
-
-		# Replace key and value delimiters for nul format.
-		tr "\n=" "\0\n" <expect >expect_nul &&
-		git repo structure --format=nul >out 2>err &&
-
-		test_cmp expect_nul out &&
 		test_line_count = 0 err
 	)
 '
