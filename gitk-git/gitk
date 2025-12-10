@@ -2125,6 +2125,20 @@ proc removehead {id name} {
     unset headids($name)
 }
 
+proc removetag {id name} {
+    global tagids idtags
+
+    if {$idtags($id) eq $name} {
+        unset idtags($id)
+    } else {
+        set i [lsearch -exact $idtags($id) $name]
+        if {$i >= 0} {
+            set idtags($id) [lreplace $idtags($id) $i $i]
+        }
+    }
+    unset tagids($name)
+}
+
 proc ttk_toplevel {w args} {
     eval [linsert $args 0 ::toplevel $w]
     place [ttk::frame $w._toplevel_background] -x 0 -y 0 -relwidth 1 -relheight 1
@@ -2386,6 +2400,7 @@ proc makewindow {} {
     global filesepbgcolor filesepfgcolor
     global mergecolors foundbgcolor currentsearchhitbgcolor
     global headctxmenu progresscanv progressitem progresscoords statusw
+    global tagctxmenu
     global fprogitem fprogcoord lastprogupdate progupdatepending
     global rprogitem rprogcoord rownumsel numcommits
     global worddiff
@@ -2880,11 +2895,19 @@ proc makewindow {} {
     set headctxmenu .headctxmenu
     makemenu $headctxmenu {
         {mc "Check out this branch" command cobranch}
-        {mc "Rename this branch" command mvbranch}
+        {mc "Rename this branch..." command mvbranch}
         {mc "Remove this branch" command rmbranch}
         {mc "Copy branch name" command {clipboard clear; clipboard append $headmenuhead}}
     }
     $headctxmenu configure -tearoff 0
+
+    set tagctxmenu .tagctxmenu
+    makemenu $tagctxmenu {
+        {mc "Rename this tag..." command mvtag}
+        {mc "Remove this tag..." command rmtag}
+        {mc "Copy tag name" command {clipboard clear; clipboard append $tagmenutag}}
+    }
+    $tagctxmenu configure -tearoff 0
 
     global flist_menu
     set flist_menu .flistctxmenu
@@ -6757,6 +6780,7 @@ proc drawtags {id x xt y1} {
 
     set marks {}
     set ntags 0
+    set ntags_copy 0
     set nheads 0
     set singletag 0
     set maxtags 3
@@ -6768,8 +6792,9 @@ proc drawtags {id x xt y1} {
     if {[info exists idtags($id)]} {
         set marks $idtags($id)
         set ntags [llength $marks]
-        if {$ntags > $maxtags ||
-            [totalwidth $marks mainfont $extra] > $maxwidth} {
+        set ntags_copy $ntags
+        set out_of_bounds [expr {[totalwidth $marks mainfont $extra] > $maxwidth}]
+        if {$ntags > $maxtags || $out_of_bounds} {
             # show just a single "n tags..." tag
             set singletag 1
             if {$ntags == 1} {
@@ -6854,6 +6879,9 @@ proc drawtags {id x xt y1} {
                    -font $font -tags [list tag.$id text]]
         if {$ntags >= 0} {
             $canv bind $t <1> $tagclick
+            if {$ntags_copy <= $maxtags && !$out_of_bounds} {
+              $canv bind $t $ctxbut [list tagmenu %X %Y $id $tag_quoted]
+            }
         } elseif {$nheads >= 0} {
             $canv bind $t $ctxbut [list headmenu %X %Y $id $tag_quoted]
         }
@@ -9712,6 +9740,57 @@ proc mkbranch {} {
     branchdia $top val ui
 }
 
+proc mvtag {} {
+    global NS
+    global tagmenuid tagmenutag
+
+    set top .tagdialog
+
+    set val(name) $tagmenutag
+    set val(id) $tagmenuid
+    set val(command) [list mvtaggo $top $tagmenutag]
+
+    set ui(title) [mc "Rename tag %s" $tagmenutag]
+    set ui(accept) [mc "Rename"]
+
+    tagdia $top val ui
+}
+
+proc tagdia {top valvar uivar} {
+    global NS commitinfo
+    upvar $valvar val $uivar ui
+
+    catch {destroy $top}
+    ttk_toplevel $top
+    make_transient $top .
+    ${NS}::label $top.title -text $ui(title)
+    grid $top.title - -pady 10
+    ${NS}::label $top.id -text [mc "ID:"]
+    ${NS}::entry $top.sha1 -width 40
+    $top.sha1 insert 0 $val(id)
+    $top.sha1 conf -state readonly
+    grid $top.id $top.sha1 -sticky w
+    ${NS}::entry $top.head -width 60
+    $top.head insert 0 [lindex $commitinfo($val(id)) 0]
+    $top.head conf -state readonly
+    grid x $top.head -sticky ew
+    grid columnconfigure $top 1 -weight 1
+    ${NS}::label $top.nlab -text [mc "Name:"]
+    ${NS}::entry $top.name -width 40
+    $top.name insert 0 $val(name)
+    grid $top.nlab $top.name -sticky w
+    ${NS}::frame $top.buts
+    ${NS}::button $top.buts.go -text $ui(accept) -command $val(command)
+    ${NS}::button $top.buts.can -text [mc "Cancel"] -command "catch {destroy $top}"
+    bind $top <Key-Return> $val(command)
+    bind $top <Key-Escape> "catch {destroy $top}"
+    grid $top.buts.go $top.buts.can
+    grid columnconfigure $top.buts 0 -weight 1 -uniform a
+    grid columnconfigure $top.buts 1 -weight 1 -uniform a
+    grid $top.buts - -pady 10 -sticky ew
+    focus $top.name
+}
+
 proc mvbranch {} {
     global headmenuid headmenuhead
 
@@ -9761,6 +9840,44 @@ proc branchdia {top valvar uivar} {
     grid columnconfigure $top.buts 1 -weight 1 -uniform a
     grid $top.buts - -pady 10 -sticky ew
     focus $top.name
+}
+
+proc mvtaggo {top prevname} {
+    global tagids idtags idheads mainhead mainheadid
+
+    set name [$top.name get]
+    set id [$top.sha1 get]
+    if {$name eq $prevname} {
+          catch {destroy $top}
+          return
+    }
+    if {$name eq {}} {
+      error_popup [mc "Please specify a new name for the tag"] $top
+      return
+    }
+    catch {destroy $top}
+    nowbusy renametag
+    update
+    if {[catch {
+        # NOTE: for an annotated tag, the new tag points to the old tag object
+        # where the old primary tag name is still recorded inside. Acceptable.
+        eval exec "git tag $name $prevname"
+        eval exec "git tag -d $prevname"
+        } err]} {
+        notbusy renametag
+        error_popup $err
+    } else {
+        notbusy renametag
+        removetag $id $prevname
+        removedtag $id $prevname
+        set tagids($name) $id
+        lappend idtags($id) $name
+        addedtag $id
+        redrawtags $id
+        dispneartags 0
+        run refill_reflist
+    }
+
 }
 
 proc mkbrgo {top} {
@@ -10096,6 +10213,17 @@ proc headmenu {x y id head} {
     tk_popup $headctxmenu $x $y
 }
 
+# context menu for a tag
+proc tagmenu {x y id tag} {
+    global tagmenuid tagmenutag tagctxmenu mainhead
+
+    stopfinding
+    set tagmenuid $id
+    set tagmenutag $tag
+
+    tk_popup $tagctxmenu $x $y
+}
+
 proc cobranch {} {
     global headmenuid headmenuhead headids
     global showlocalchanges
@@ -10195,6 +10323,28 @@ proc rmbranch {} {
     removedhead $id $head
     redrawtags $id
     notbusy rmbranch
+    dispneartags 0
+    run refill_reflist
+}
+
+proc rmtag {} {
+    global tagmenuid tagmenutag
+    global idtags
+
+    set tag $tagmenutag
+    set id $tagmenuid
+    if {![confirm_popup [mc "Really delete tag %s?" $tag]]} return
+    nowbusy rmtag
+    update
+    if {[catch {exec git tag -d $tag} err]} {
+        notbusy rmtag
+        error_popup $err
+        return
+    }
+    removetag $id $tag
+    removedtag $id $tag
+    redrawtags $id
+    notbusy rmtag
     dispneartags 0
     run refill_reflist
 }
@@ -11452,6 +11602,14 @@ proc addedtag {id} {
     if {![info exists arcout($id)]} {
         recalcarc [lindex $arcnos($id) 0]
     }
+    unset -nocomplain cached_dtags
+    unset -nocomplain cached_atags
+}
+
+proc removedtag {id tag} {
+    global cached_dtags cached_atags cached_tagcontent
+
+    unset -nocomplain cached_tagcontent
     unset -nocomplain cached_dtags
     unset -nocomplain cached_atags
 }
