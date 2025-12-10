@@ -295,7 +295,8 @@ void odb_add_to_alternates_file(struct object_database *odb,
 	FILE *in, *out;
 	int found = 0;
 
-	hold_lock_file_for_update(&lock, alts, LOCK_DIE_ON_ERROR);
+	hold_lock_file_for_update(&lock, alts, LOCK_DIE_ON_ERROR,
+				  LOCKFILE_PID_OTHER);
 	out = fdopen_lock_file(&lock, "w");
 	if (!out)
 		die_errno(_("unable to fdopen alternates lockfile"));
