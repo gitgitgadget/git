@@ -23,6 +23,7 @@
 #include "odb.h"
 #include "tempfile.h"
 #include "date.h"
+#include "trace2.h"
 
 static struct trace_key trace_curl = TRACE_KEY_INIT(CURL);
 static int trace_curl_data = 1;
@@ -1738,6 +1739,8 @@ void run_active_slot(struct active_request_slot *slot)
 
 	if (waiting_for_delay) {
 		warning(_("rate limited, waiting %ld seconds before retry"), slot->retry_delay_seconds);
+	trace2_data_intmax("http", the_repository, "http/retry-sleep-seconds",
+		slot->retry_delay_seconds);
 		start_time = slot->retry_delay_start;
 	}
 
@@ -1753,6 +1756,7 @@ void run_active_slot(struct active_request_slot *slot)
 			}
 
 			if (elapsed_time.tv_sec >= slot->retry_delay_seconds) {
+				trace2_region_leave("http", "retry-sleep", the_repository);
 				slot->retry_delay_seconds = -1;
 				waiting_for_delay = 0;
 
@@ -1995,6 +1999,8 @@ static int handle_curl_result(struct slot_results *results)
 			return HTTP_REAUTH;
 		}
 	} else if (results->http_code == 429) {
+		trace2_data_intmax("http", the_repository, "http/429-retry-after",
+			results->retry_after);
 		return HTTP_RATE_LIMITED;
 	} else {
 		if (results->http_connectcode == 407)
@@ -2421,10 +2427,16 @@ static void sleep_for_retry(struct active_request_slot *slot, long retry_after)
 static long handle_rate_limit_retry(int *rate_limit_retries, long slot_retry_after)
 {
 	int retry_attempt = http_max_retries - *rate_limit_retries + 1;
+
+	trace2_data_intmax("http", the_repository, "http/429-retry-attempt",
+		retry_attempt);
+
 	if (*rate_limit_retries <= 0) {
 		/* Retries are disabled or exhausted */
 		if (http_max_retries > 0) {
 			error(_("too many rate limit retries, giving up"));
+			trace2_data_string("http", the_repository,
+				"http/429-error", "retries-exhausted");
 		}
 		return -1;
 	}
@@ -2439,6 +2451,10 @@ static long handle_rate_limit_retry(int *rate_limit_retries, long slot_retry_aft
 			error(_("rate limited (HTTP 429) requested %ld second delay, "
 				"exceeds http.maxRetryTime of %ld seconds"),
 			      slot_retry_after, http_max_retry_time);
+			trace2_data_string("http", the_repository,
+				  "http/429-error", "exceeds-max-retry-time");
+			trace2_data_intmax("http", the_repository,
+				  "http/429-requested-delay", slot_retry_after);
 			return -1;
 		}
 		return slot_retry_after;
@@ -2448,6 +2464,8 @@ static long handle_rate_limit_retry(int *rate_limit_retries, long slot_retry_aft
 			/* Not configured - exit with error */
 			error(_("rate limited (HTTP 429) and no Retry-After header provided. "
 				"Configure http.retryAfter or set GIT_HTTP_RETRY_AFTER."));
+			trace2_data_string("http", the_repository,
+				"http/429-error", "no-retry-after-config");
 			return -1;
 		}
 		/* Check if configured default exceeds maximum allowed */
@@ -2455,9 +2473,12 @@ static long handle_rate_limit_retry(int *rate_limit_retries, long slot_retry_aft
 			error(_("configured http.retryAfter (%ld seconds) exceeds "
 				"http.maxRetryTime (%ld seconds)"),
 			      http_retry_after, http_max_retry_time);
+			trace2_data_string("http", the_repository,
+					"http/429-error", "config-exceeds-max-retry-time");
 			return -1;
 		}
-
+		trace2_data_string("http", the_repository,
+			"http/429-retry-source", "config-default");
 		return http_retry_after;
 	}
 }
