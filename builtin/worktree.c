@@ -252,7 +252,7 @@ static int prune(int ac, const char **av, const char *prefix,
 		OPT__DRY_RUN(&show_only, N_("do not remove, show only")),
 		OPT__VERBOSE(&verbose, N_("report pruned working trees")),
 		OPT_EXPIRY_DATE(0, "expire", &expire,
-				N_("expire missing working trees older than <time>")),
+				N_("prune missing working trees older than <time>")),
 		OPT_END()
 	};
 
