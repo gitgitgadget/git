@@ -2237,6 +2237,81 @@ int stat_tracking_info(struct branch *branch, int *num_ours, int *num_theirs,
 	return stat_branch_pair(branch->refname, base, num_ours, num_theirs, abf);
 }
 
+static char *get_remote_push_branch(struct branch *branch, char **full_ref_out)
+{
+	const char *push_remote;
+	const char *resolved;
+	int flag;
+	struct strbuf ref_buf = STRBUF_INIT;
+	char *ret = NULL;
+
+	if (!branch)
+		return NULL;
+
+	push_remote = pushremote_for_branch(branch, NULL);
+	if (!push_remote)
+		return NULL;
+
+	strbuf_addf(&ref_buf, "refs/remotes/%s/%s", push_remote, branch->name);
+
+	resolved = refs_resolve_ref_unsafe(
+		get_main_ref_store(the_repository),
+		ref_buf.buf,
+		RESOLVE_REF_READING,
+		NULL, &flag);
+
+	if (resolved) {
+		if (full_ref_out)
+			*full_ref_out = xstrdup(resolved);
+		ret = refs_shorten_unambiguous_ref(
+			get_main_ref_store(the_repository), resolved, 0);
+	}
+
+	strbuf_release(&ref_buf);
+	return ret;
+}
+
+static void format_push_branch_comparison(struct strbuf *sb,
+					     const char *branch_refname,
+					     const char *push_full,
+					     const char *push_short,
+					     enum ahead_behind_flags abf)
+{
+	int push_ahead = 0, push_behind = 0;
+	int stat_result;
+
+	stat_result = stat_branch_pair(branch_refname, push_full,
+				       &push_ahead, &push_behind, abf);
+	if (stat_result < 0)
+		return;
+
+	strbuf_addstr(sb, "\n");
+
+	if (stat_result == 0 || (push_ahead == 0 && push_behind == 0)) {
+		strbuf_addf(sb,
+			_("Your branch is up to date with '%s'.\n"),
+			push_short);
+	} else if (push_ahead > 0 && push_behind == 0) {
+		strbuf_addf(sb,
+			Q_("Ahead of '%s' by %d commit.\n",
+			   "Ahead of '%s' by %d commits.\n",
+			   push_ahead),
+			push_short, push_ahead);
+	} else if (push_behind > 0 && push_ahead == 0) {
+		strbuf_addf(sb,
+			Q_("Behind '%s' by %d commit.\n",
+			   "Behind '%s' by %d commits.\n",
+			   push_behind),
+			push_short, push_behind);
+	} else if (push_ahead > 0 && push_behind > 0) {
+		strbuf_addf(sb,
+			Q_("Diverged from '%s' by %d commit.\n",
+			   "Diverged from '%s' by %d commits.\n",
+			   push_ahead + push_behind),
+			push_short, push_ahead + push_behind);
+	}
+}
+
 /*
  * Return true when there is anything to report, otherwise false.
  */
@@ -2258,6 +2333,7 @@ int format_tracking_info(struct branch *branch, struct strbuf *sb,
 
 	base = refs_shorten_unambiguous_ref(get_main_ref_store(the_repository),
 					    full_base, 0);
+
 	if (upstream_is_gone) {
 		strbuf_addf(sb,
 			_("Your branch is based on '%s', but the upstream is gone.\n"),
@@ -2311,6 +2387,19 @@ int format_tracking_info(struct branch *branch, struct strbuf *sb,
 			strbuf_addstr(sb,
 				_("  (use \"git pull\" if you want to integrate the remote branch with yours)\n"));
 	}
+
+	if (!upstream_is_gone && sti >= 0 && abf != AHEAD_BEHIND_QUICK) {
+		char *push_full = NULL;
+		char *push_short = get_remote_push_branch(branch, &push_full);
+
+		if (push_short && strcmp(base, push_short))
+			format_push_branch_comparison(sb, branch->refname, push_full,
+						     push_short, abf);
+
+		free(push_short);
+		free(push_full);
+	}
+
 	free(base);
 	return 1;
 }
