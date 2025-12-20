@@ -2237,6 +2237,98 @@ int stat_tracking_info(struct branch *branch, int *num_ours, int *num_theirs,
 	return stat_branch_pair(branch->refname, base, num_ours, num_theirs, abf);
 }
 
+static char *get_default_remote_ref(char **full_ref_out)
+{
+	int flag;
+	const char *resolved;
+	static const char *remotes[] = { "upstream", "origin", NULL };
+	int i;
+
+	for (i = 0; remotes[i]; i++) {
+		struct strbuf head_ref = STRBUF_INIT;
+		strbuf_addf(&head_ref, "refs/remotes/%s/HEAD", remotes[i]);
+
+		resolved = refs_resolve_ref_unsafe(
+			get_main_ref_store(the_repository),
+			head_ref.buf,
+			RESOLVE_REF_READING,
+			NULL, &flag);
+
+		strbuf_release(&head_ref);
+
+		if (resolved && (flag & REF_ISSYMREF)) {
+			if (full_ref_out)
+				*full_ref_out = xstrdup(resolved);
+			return refs_shorten_unambiguous_ref(
+				get_main_ref_store(the_repository), resolved, 0);
+		}
+	}
+
+	return NULL;
+}
+
+static int is_default_remote_branch(const char *name)
+{
+	char *default_full = NULL;
+	char *default_short;
+	int result = 0;
+
+	default_short = get_default_remote_ref(&default_full);
+	if (!default_short)
+		return 0;
+
+	result = !strcmp(name, default_short);
+
+	free(default_short);
+	free(default_full);
+	return result;
+}
+
+static void format_default_branch_comparison(struct strbuf *sb,
+					     const char *branch_refname,
+					     enum ahead_behind_flags abf)
+{
+	int default_ours = 0, default_theirs = 0;
+	char *default_full = NULL;
+	char *default_short;
+
+	default_short = get_default_remote_ref(&default_full);
+	if (!default_short)
+		return;
+
+	if (stat_branch_pair(branch_refname, default_full,
+			     &default_ours, &default_theirs, abf) <= 0) {
+		free(default_short);
+		free(default_full);
+		return;
+	}
+
+	strbuf_addstr(sb, "\n");
+
+	if (default_ours > 0 && default_theirs == 0) {
+		strbuf_addf(sb,
+			Q_("Ahead of '%s' by %d commit.\n",
+			   "Ahead of '%s' by %d commits.\n",
+			   default_ours),
+			default_short, default_ours);
+	} else if (default_theirs > 0 && default_ours == 0) {
+		strbuf_addf(sb,
+			Q_("Behind '%s' by %d commit.\n",
+			   "Behind '%s' by %d commits.\n",
+			   default_theirs),
+			default_short, default_theirs);
+	} else if (default_ours > 0 && default_theirs > 0) {
+		strbuf_addf(sb,
+			Q_("Diverged from '%s' by %d commit.\n",
+			   "Diverged from '%s' by %d commits.\n",
+			   default_ours + default_theirs),
+			default_short, default_ours + default_theirs);
+	}
+
+	free(default_short);
+	free(default_full);
+}
+
 /*
  * Return true when there is anything to report, otherwise false.
  */
@@ -2248,6 +2340,7 @@ int format_tracking_info(struct branch *branch, struct strbuf *sb,
 	const char *full_base;
 	char *base;
 	int upstream_is_gone = 0;
+	int show_default_branch_comparison;
 
 	sti = stat_tracking_info(branch, &ours, &theirs, &full_base, 0, abf);
 	if (sti < 0) {
@@ -2258,6 +2351,9 @@ int format_tracking_info(struct branch *branch, struct strbuf *sb,
 
 	base = refs_shorten_unambiguous_ref(get_main_ref_store(the_repository),
 					    full_base, 0);
+
+	show_default_branch_comparison = !is_default_remote_branch(base);
+
 	if (upstream_is_gone) {
 		strbuf_addf(sb,
 			_("Your branch is based on '%s', but the upstream is gone.\n"),
@@ -2269,6 +2365,8 @@ int format_tracking_info(struct branch *branch, struct strbuf *sb,
 		strbuf_addf(sb,
 			_("Your branch is up to date with '%s'.\n"),
 			base);
+		if (show_default_branch_comparison)
+			format_default_branch_comparison(sb, branch->refname, abf);
 	} else if (abf == AHEAD_BEHIND_QUICK) {
 		strbuf_addf(sb,
 			    _("Your branch and '%s' refer to different commits.\n"),
@@ -2285,6 +2383,8 @@ int format_tracking_info(struct branch *branch, struct strbuf *sb,
 		if (advice_enabled(ADVICE_STATUS_HINTS))
 			strbuf_addstr(sb,
 				_("  (use \"git push\" to publish your local commits)\n"));
+		if (show_default_branch_comparison)
+			format_default_branch_comparison(sb, branch->refname, abf);
 	} else if (!ours) {
 		strbuf_addf(sb,
 			Q_("Your branch is behind '%s' by %d commit, "
@@ -2296,6 +2396,8 @@ int format_tracking_info(struct branch *branch, struct strbuf *sb,
 		if (advice_enabled(ADVICE_STATUS_HINTS))
 			strbuf_addstr(sb,
 				_("  (use \"git pull\" to update your local branch)\n"));
+		if (show_default_branch_comparison)
+			format_default_branch_comparison(sb, branch->refname, abf);
 	} else {
 		strbuf_addf(sb,
 			Q_("Your branch and '%s' have diverged,\n"
@@ -2310,6 +2412,8 @@ int format_tracking_info(struct branch *branch, struct strbuf *sb,
 		    advice_enabled(ADVICE_STATUS_HINTS))
 			strbuf_addstr(sb,
 				_("  (use \"git pull\" if you want to integrate the remote branch with yours)\n"));
+		if (show_default_branch_comparison)
+			format_default_branch_comparison(sb, branch->refname, abf);
 	}
 	free(base);
 	return 1;
