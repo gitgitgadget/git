@@ -67,6 +67,8 @@ reject() {
 helper_test() {
 	HELPER=$1
 
+	# help wanted: expect warning "git-credential-store saves passwords
+	# unencrypted" when helper equals "store"
 	test_expect_success "helper ($HELPER) has no existing data" '
 		check fill $HELPER <<-\EOF
 		protocol=https
