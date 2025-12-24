@@ -309,7 +309,7 @@ test_expect_success 'status shows ahead of both tracked branch and origin/main' 
 	(
 		cd test &&
 		git checkout work >/dev/null &&
-		git config repo.settings.statusGoalBranch origin/main &&
+		git config status.goalBranch origin/main &&
 		git status --long -b
 	) >actual &&
 	cat >expect <<-\EOF &&
@@ -328,7 +328,7 @@ test_expect_success 'checkout shows ahead of both tracked branch and origin/main
 	(
 		cd test &&
 		git checkout main >/dev/null &&
-		git config repo.settings.statusGoalBranch origin/main &&
+		git config status.goalBranch origin/main &&
 		git checkout work 2>&1
 	) >actual &&
 	cat >expect <<-\EOF &&
@@ -370,7 +370,7 @@ test_expect_success 'status shows ahead of tracked and diverged from origin/main
 	(
 		cd test &&
 		git checkout work2 >/dev/null &&
-		git config repo.settings.statusGoalBranch origin/main &&
+		git config status.goalBranch origin/main &&
 		git status --long -b
 	) >actual &&
 	cat >expect <<-\EOF &&
@@ -402,7 +402,7 @@ test_expect_success 'status shows diverged from tracked and behind origin/main' 
 	(
 		cd test &&
 		git checkout work2b >/dev/null &&
-		git config repo.settings.statusGoalBranch origin/main &&
+		git config status.goalBranch origin/main &&
 		git status --long -b
 	) >actual &&
 	cat >expect <<-\EOF &&
@@ -437,7 +437,7 @@ test_expect_success 'status shows behind tracked and ahead of origin/main' '
 	(
 		cd test &&
 		git checkout work3 >/dev/null &&
-		git config repo.settings.statusGoalBranch origin/main &&
+		git config status.goalBranch origin/main &&
 		git status --long -b
 	) >actual &&
 	cat >expect <<-\EOF &&
@@ -465,7 +465,7 @@ test_expect_success 'status prefers upstream remote over origin for comparison' 
 	(
 		cd test &&
 		git checkout work >/dev/null &&
-		git config repo.settings.statusGoalBranch upstream/main &&
+		git config status.goalBranch upstream/main &&
 		git status --long -b
 	) >actual &&
 	cat >expect <<-\EOF &&
@@ -495,7 +495,7 @@ test_expect_success 'status shows up to date with tracked but diverged from defa
 	(
 		cd test &&
 		git checkout synced_feature >/dev/null &&
-		git config repo.settings.statusGoalBranch upstream/main &&
+		git config status.goalBranch upstream/main &&
 		git status --long -b
 	) >actual &&
 	cat >expect <<-\EOF &&
@@ -525,7 +525,7 @@ test_expect_success 'status shows up to date with tracked but diverged from orig
 	(
 		cd test &&
 		git checkout synced_feature2 >/dev/null &&
-		git config repo.settings.statusGoalBranch origin/main &&
+		git config status.goalBranch origin/main &&
 		git status --long -b
 	) >actual &&
 	cat >expect <<-\EOF &&
@@ -551,7 +551,7 @@ test_expect_success 'status shows up to date with tracked but shows default bran
 	(
 		cd test &&
 		git checkout synced_feature3 >/dev/null &&
-		git config repo.settings.statusGoalBranch origin/main &&
+		git config status.goalBranch origin/main &&
 		git status --long -b
 	) >actual &&
 	cat >expect <<-\EOF &&
@@ -565,11 +565,11 @@ EOF
 	test_cmp expect actual
 '
 
-test_expect_success 'status with repo.settings.statusGoalBranch unset shows no default comparison' '
+test_expect_success 'status with status.goalBranch unset shows no default comparison' '
 	(
 		cd test &&
 		git checkout synced_feature3 >/dev/null &&
-		git config --unset repo.settings.statusGoalBranch 2>/dev/null || true &&
+		git config --unset status.goalBranch 2>/dev/null || true &&
 		git status --long -b
 	) >actual &&
 	cat >expect <<-\EOF &&
@@ -581,11 +581,11 @@ EOF
 	test_cmp expect actual
 '
 
-test_expect_success 'status with repo.settings.statusGoalBranch set uses configured branch' '
+test_expect_success 'status with status.goalBranch set uses configured branch' '
 	(
 		cd test &&
 		git checkout synced_feature3 >/dev/null &&
-		git config repo.settings.statusGoalBranch origin/main &&
+		git config status.goalBranch origin/main &&
 		git status --long -b
 	) >actual &&
 	cat >expect <<-\EOF &&
@@ -599,11 +599,11 @@ EOF
 	test_cmp expect actual
 '
 
-test_expect_success 'status with repo.settings.statusGoalBranch set to different remote/branch' '
+test_expect_success 'status with status.goalBranch set to different remote/branch' '
 	(
 		cd test &&
 		git checkout work >/dev/null &&
-		git config repo.settings.statusGoalBranch origin/feature &&
+		git config status.goalBranch origin/feature &&
 		git status --long -b
 	) >actual &&
 	cat >expect <<-\EOF &&
@@ -616,11 +616,11 @@ EOF
 	test_cmp expect actual
 '
 
-test_expect_success 'status with repo.settings.statusGoalBranch set to non-existent branch' '
+test_expect_success 'status with status.goalBranch set to non-existent branch' '
 	(
 		cd test &&
 		git checkout synced_feature3 >/dev/null &&
-		git config repo.settings.statusGoalBranch origin/nonexistent &&
+		git config status.goalBranch origin/nonexistent &&
 		git status --long -b
 	) >actual &&
 	cat >expect <<-\EOF &&

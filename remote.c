@@ -2246,7 +2246,7 @@ static char *get_goal_branch_ref(char **full_ref_out)
 	char *slash_pos;
 	char *ret = NULL;
 
-	if (repo_config_get_value(the_repository, "repo.settings.statusGoalBranch", &config_value))
+	if (repo_config_get_value(the_repository, "status.goalBranch", &config_value))
 		return NULL;
 
 	if (!config_value || !*config_value)
@@ -2254,7 +2254,7 @@ static char *get_goal_branch_ref(char **full_ref_out)
 
 	slash_pos = strchr(config_value, '/');
 	if (!slash_pos || slash_pos == config_value || !slash_pos[1]) {
-		warning(_("invalid value for repo.settings.statusGoalBranch: '%s' (expected format: remote/branch)"),
+		warning(_("invalid value for status.goalBranch: '%s' (expected format: remote/branch)"),
 			config_value);
 		return NULL;
 	}
