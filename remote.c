@@ -2237,7 +2237,7 @@ int stat_tracking_info(struct branch *branch, int *num_ours, int *num_theirs,
 	return stat_branch_pair(branch->refname, base, num_ours, num_theirs, abf);
 }
 
-static char *get_default_remote_ref(char **full_ref_out)
+static char *get_goal_branch_ref(char **full_ref_out)
 {
 	const char *config_value;
 	const char *resolved;
@@ -2253,8 +2253,11 @@ static char *get_default_remote_ref(char **full_ref_out)
 		return NULL;
 
 	slash_pos = strchr(config_value, '/');
-	if (!slash_pos || slash_pos == config_value || !slash_pos[1])
+	if (!slash_pos || slash_pos == config_value || !slash_pos[1]) {
+		warning(_("invalid value for repo.settings.statusGoalBranch: '%s' (expected format: remote/branch)"),
+			config_value);
 		return NULL;
+	}
 
 	strbuf_addf(&ref_buf, "refs/remotes/%.*s/%s",
 		    (int)(slash_pos - config_value), config_value,
@@ -2277,38 +2280,38 @@ static char *get_default_remote_ref(char **full_ref_out)
 	return ret;
 }
 
-static void format_default_branch_comparison(struct strbuf *sb,
+static void format_goal_branch_comparison(struct strbuf *sb,
 					     const char *branch_refname,
-					     const char *default_full,
-					     const char *default_short,
+					     const char *goal_full,
+					     const char *goal_short,
 					     enum ahead_behind_flags abf)
 {
-	int default_ours = 0, default_theirs = 0;
+	int goal_ahead = 0, goal_behind = 0;
 
-	if (stat_branch_pair(branch_refname, default_full,
-			     &default_ours, &default_theirs, abf) <= 0)
+	if (stat_branch_pair(branch_refname, goal_full,
+			     &goal_ahead, &goal_behind, abf) <= 0)
 		return;
 
 	strbuf_addstr(sb, "\n");
 
-	if (default_ours > 0 && default_theirs == 0) {
+	if (goal_ahead > 0 && goal_behind == 0) {
 		strbuf_addf(sb,
 			Q_("Ahead of '%s' by %d commit.\n",
 			   "Ahead of '%s' by %d commits.\n",
-			   default_ours),
-			default_short, default_ours);
-	} else if (default_theirs > 0 && default_ours == 0) {
+			   goal_ahead),
+			goal_short, goal_ahead);
+	} else if (goal_behind > 0 && goal_ahead == 0) {
 		strbuf_addf(sb,
 			Q_("Behind '%s' by %d commit.\n",
 			   "Behind '%s' by %d commits.\n",
-			   default_theirs),
-			default_short, default_theirs);
-	} else if (default_ours > 0 && default_theirs > 0) {
+			   goal_behind),
+			goal_short, goal_behind);
+	} else if (goal_ahead > 0 && goal_behind > 0) {
 		strbuf_addf(sb,
 			Q_("Diverged from '%s' by %d commit.\n",
 			   "Diverged from '%s' by %d commits.\n",
-			   default_ours + default_theirs),
-			default_short, default_ours + default_theirs);
+			   goal_ahead + goal_behind),
+			goal_short, goal_ahead + goal_behind);
 	}
 }
 
@@ -2323,8 +2326,6 @@ int format_tracking_info(struct branch *branch, struct strbuf *sb,
 	const char *full_base;
 	char *base;
 	int upstream_is_gone = 0;
-	char *default_full = NULL;
-	char *default_short = NULL;
 
 	sti = stat_tracking_info(branch, &ours, &theirs, &full_base, 0, abf);
 	if (sti < 0) {
@@ -2335,14 +2336,6 @@ int format_tracking_info(struct branch *branch, struct strbuf *sb,
 
 	base = refs_shorten_unambiguous_ref(get_main_ref_store(the_repository),
 					    full_base, 0);
-
-	default_short = get_default_remote_ref(&default_full);
-	if (default_short && !strcmp(base, default_short)) {
-		free(default_short);
-		free(default_full);
-		default_short = NULL;
-		default_full = NULL;
-	}
 
 	if (upstream_is_gone) {
 		strbuf_addf(sb,
@@ -2398,13 +2391,19 @@ int format_tracking_info(struct branch *branch, struct strbuf *sb,
 				_("  (use \"git pull\" if you want to integrate the remote branch with yours)\n"));
 	}
 
-	if (default_short && !upstream_is_gone && sti >= 0 && abf != AHEAD_BEHIND_QUICK)
-		format_default_branch_comparison(sb, branch->refname, default_full,
-						 default_short, abf);
+	if (!upstream_is_gone && sti >= 0 && abf != AHEAD_BEHIND_QUICK) {
+		char *goal_full = NULL;
+		char *goal_short = get_goal_branch_ref(&goal_full);
+
+		if (goal_short && strcmp(base, goal_short))
+			format_goal_branch_comparison(sb, branch->refname, goal_full,
+						     goal_short, abf);
+
+		free(goal_short);
+		free(goal_full);
+	}
 
 	free(base);
-	free(default_short);
-	free(default_full);
 	return 1;
 }
 
