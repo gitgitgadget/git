@@ -2239,32 +2239,42 @@ int stat_tracking_info(struct branch *branch, int *num_ours, int *num_theirs,
 
 static char *get_default_remote_ref(char **full_ref_out)
 {
-	int flag;
+	const char *config_value;
 	const char *resolved;
-	static const char *remotes[] = { "upstream", "origin", NULL };
-	int i;
+	int flag;
+	struct strbuf ref_buf = STRBUF_INIT;
+	char *slash_pos;
+	char *ret = NULL;
 
-	for (i = 0; remotes[i]; i++) {
-		struct strbuf head_ref = STRBUF_INIT;
-		strbuf_addf(&head_ref, "refs/remotes/%s/HEAD", remotes[i]);
+	if (repo_config_get_value(the_repository, "repo.settings.statusGoalBranch", &config_value))
+		return NULL;
 
-		resolved = refs_resolve_ref_unsafe(
-			get_main_ref_store(the_repository),
-			head_ref.buf,
-			RESOLVE_REF_READING,
-			NULL, &flag);
+	if (!config_value || !*config_value)
+		return NULL;
 
-		strbuf_release(&head_ref);
+	slash_pos = strchr(config_value, '/');
+	if (!slash_pos || slash_pos == config_value || !slash_pos[1])
+		return NULL;
 
-		if (resolved && (flag & REF_ISSYMREF)) {
-			if (full_ref_out)
-				*full_ref_out = xstrdup(resolved);
-			return refs_shorten_unambiguous_ref(
-				get_main_ref_store(the_repository), resolved, 0);
-		}
+	strbuf_addf(&ref_buf, "refs/remotes/%.*s/%s",
+		    (int)(slash_pos - config_value), config_value,
+		    slash_pos + 1);
+
+	resolved = refs_resolve_ref_unsafe(
+		get_main_ref_store(the_repository),
+		ref_buf.buf,
+		RESOLVE_REF_READING,
+		NULL, &flag);
+
+	if (resolved) {
+		if (full_ref_out)
+			*full_ref_out = xstrdup(resolved);
+		ret = refs_shorten_unambiguous_ref(
+			get_main_ref_store(the_repository), resolved, 0);
 	}
 
-	return NULL;
+	strbuf_release(&ref_buf);
+	return ret;
 }
 
 static void format_default_branch_comparison(struct strbuf *sb,
