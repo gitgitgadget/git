@@ -790,7 +790,8 @@ retry:
 
 	if (hold_lock_file_for_update_timeout(
 			    &lock->lk, ref_file.buf, LOCK_NO_DEREF,
-			    get_files_ref_lock_timeout_ms()) < 0) {
+			    get_files_ref_lock_timeout_ms(),
+			    LOCKFILE_PID_REFS) < 0) {
 		int myerr = errno;
 		errno = 0;
 		if (myerr == ENOENT && --attempts_remaining > 0) {
@@ -1194,7 +1195,8 @@ static int create_reflock(const char *path, void *cb)
 
 	return hold_lock_file_for_update_timeout(
 			lk, path, LOCK_NO_DEREF,
-			get_files_ref_lock_timeout_ms()) < 0 ? -1 : 0;
+			get_files_ref_lock_timeout_ms(),
+			LOCKFILE_PID_REFS) < 0 ? -1 : 0;
 }
 
 /*
@@ -3536,7 +3538,8 @@ static int files_reflog_expire(struct ref_store *ref_store,
 		 * work we need, including cleaning up if the program
 		 * exits unexpectedly.
 		 */
-		if (hold_lock_file_for_update(&reflog_lock, log_file, 0) < 0) {
+		if (hold_lock_file_for_update(&reflog_lock, log_file, 0,
+					      LOCKFILE_PID_REFS) < 0) {
 			struct strbuf err = STRBUF_INIT;
 			unable_to_lock_message(log_file, errno, &err);
 			error("%s", err.buf);

@@ -21,6 +21,7 @@
 #include "gettext.h"
 #include "git-zlib.h"
 #include "ident.h"
+#include "lockfile.h"
 #include "mailmap.h"
 #include "object-name.h"
 #include "repository.h"
@@ -324,6 +325,78 @@ next_name:
 	return (current & ~negative) | positive;
 }
 
+static const struct lockfile_pid_component_name {
+	const char *name;
+	enum lockfile_pid_component component_bits;
+} lockfile_pid_component_names[] = {
+	{ "index", LOCKFILE_PID_INDEX },
+	{ "config", LOCKFILE_PID_CONFIG },
+	{ "refs", LOCKFILE_PID_REFS },
+	{ "commit-graph", LOCKFILE_PID_COMMIT_GRAPH },
+	{ "midx", LOCKFILE_PID_MIDX },
+	{ "shallow", LOCKFILE_PID_SHALLOW },
+	{ "gc", LOCKFILE_PID_GC },
+	{ "other", LOCKFILE_PID_OTHER },
+	{ "all", LOCKFILE_PID_ALL },
+};
+
+static enum lockfile_pid_component parse_lockfile_pid_components(const char *var,
+								 const char *string)
+{
+	enum lockfile_pid_component current = LOCKFILE_PID_DEFAULT;
+	enum lockfile_pid_component positive = 0, negative = 0;
+
+	while (string) {
+		size_t len;
+		const char *ep;
+		int negated = 0;
+		int found = 0;
+
+		string = string + strspn(string, ", \t\n\r");
+		ep = strchrnul(string, ',');
+		len = ep - string;
+		if (len == 4 && !strncmp(string, "none", 4)) {
+			current = LOCKFILE_PID_NONE;
+			goto next_name;
+		}
+
+		if (*string == '-') {
+			negated = 1;
+			string++;
+			len--;
+			if (!len)
+				warning(_("invalid value for variable %s"), var);
+		}
+
+		if (!len)
+			break;
+
+		for (size_t i = 0; i < ARRAY_SIZE(lockfile_pid_component_names); ++i) {
+			const struct lockfile_pid_component_name *n = &lockfile_pid_component_names[i];
+
+			if (strncmp(n->name, string, len) || strlen(n->name) != len)
+				continue;
+
+			found = 1;
+			if (negated)
+				negative |= n->component_bits;
+			else
+				positive |= n->component_bits;
+		}
+
+		if (!found) {
+			char *component = xstrndup(string, len);
+			warning(_("ignoring unknown core.lockfilePid component '%s'"), component);
+			free(component);
+		}
+
+next_name:
+		string = ep;
+	}
+
+	return (current & ~negative) | positive;
+}
+
 static int git_default_core_config(const char *var, const char *value,
 				   const struct config_context *ctx, void *cb)
 {
@@ -529,6 +602,13 @@ static int git_default_core_config(const char *var, const char *value,
 		if (fsync_object_files < 0)
 			warning(_("core.fsyncObjectFiles is deprecated; use core.fsync instead"));
 		fsync_object_files = git_config_bool(var, value);
+		return 0;
+	}
+
+	if (!strcmp(var, "core.lockfilepid")) {
+		if (!value)
+			return config_error_nonbool(var);
+		lockfile_pid_components = parse_lockfile_pid_components(var, value);
 		return 0;
 	}
 

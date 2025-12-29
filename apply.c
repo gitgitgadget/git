@@ -4212,7 +4212,8 @@ static int build_fake_ancestor(struct apply_state *state, struct patch *list)
 		}
 	}
 
-	hold_lock_file_for_update(&lock, state->fake_ancestor, LOCK_DIE_ON_ERROR);
+	hold_lock_file_for_update(&lock, state->fake_ancestor, LOCK_DIE_ON_ERROR,
+				  LOCKFILE_PID_OTHER);
 	res = write_locked_index(&result, &lock, COMMIT_LOCK);
 	discard_index(&result);
 
@@ -4869,7 +4870,8 @@ static int apply_patch(struct apply_state *state,
 		if (state->index_file)
 			hold_lock_file_for_update(&state->lock_file,
 						  state->index_file,
-						  LOCK_DIE_ON_ERROR);
+						  LOCK_DIE_ON_ERROR,
+						  LOCKFILE_PID_INDEX);
 		else
 			repo_hold_locked_index(state->repo, &state->lock_file,
 					       LOCK_DIE_ON_ERROR);

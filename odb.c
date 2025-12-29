@@ -280,7 +280,8 @@ static int odb_source_write_alternate(struct odb_source *source,
 	int found = 0;
 	int ret;
 
-	hold_lock_file_for_update(&lock, path, LOCK_DIE_ON_ERROR);
+	hold_lock_file_for_update(&lock, path, LOCK_DIE_ON_ERROR,
+				  LOCKFILE_PID_OTHER);
 	out = fdopen_lock_file(&lock, "w");
 	if (!out) {
 		ret = error_errno(_("unable to fdopen alternates lockfile"));
