@@ -2237,31 +2237,22 @@ int stat_tracking_info(struct branch *branch, int *num_ours, int *num_theirs,
 	return stat_branch_pair(branch->refname, base, num_ours, num_theirs, abf);
 }
 
-static char *get_goal_branch_ref(char **full_ref_out)
+static char *get_remote_push_branch(struct branch *branch, char **full_ref_out)
 {
-	const char *config_value;
+	const char *push_remote;
 	const char *resolved;
 	int flag;
 	struct strbuf ref_buf = STRBUF_INIT;
-	char *slash_pos;
 	char *ret = NULL;
 
-	if (repo_config_get_value(the_repository, "status.goalBranch", &config_value))
+	if (!branch)
 		return NULL;
 
-	if (!config_value || !*config_value)
+	push_remote = pushremote_for_branch(branch, NULL);
+	if (!push_remote)
 		return NULL;
 
-	slash_pos = strchr(config_value, '/');
-	if (!slash_pos || slash_pos == config_value || !slash_pos[1]) {
-		warning(_("invalid value for status.goalBranch: '%s' (expected format: remote/branch)"),
-			config_value);
-		return NULL;
-	}
-
-	strbuf_addf(&ref_buf, "refs/remotes/%.*s/%s",
-		    (int)(slash_pos - config_value), config_value,
-		    slash_pos + 1);
+	strbuf_addf(&ref_buf, "refs/remotes/%s/%s", push_remote, branch->name);
 
 	resolved = refs_resolve_ref_unsafe(
 		get_main_ref_store(the_repository),
@@ -2280,38 +2271,44 @@ static char *get_goal_branch_ref(char **full_ref_out)
 	return ret;
 }
 
-static void format_goal_branch_comparison(struct strbuf *sb,
+static void format_push_branch_comparison(struct strbuf *sb,
 					     const char *branch_refname,
-					     const char *goal_full,
-					     const char *goal_short,
+					     const char *push_full,
+					     const char *push_short,
 					     enum ahead_behind_flags abf)
 {
-	int goal_ahead = 0, goal_behind = 0;
+	int push_ahead = 0, push_behind = 0;
+	int stat_result;
 
-	if (stat_branch_pair(branch_refname, goal_full,
-			     &goal_ahead, &goal_behind, abf) <= 0)
+	stat_result = stat_branch_pair(branch_refname, push_full,
+				       &push_ahead, &push_behind, abf);
+	if (stat_result < 0)
 		return;
 
 	strbuf_addstr(sb, "\n");
 
-	if (goal_ahead > 0 && goal_behind == 0) {
+	if (stat_result == 0 || (push_ahead == 0 && push_behind == 0)) {
+		strbuf_addf(sb,
+			_("Your branch is up to date with '%s'.\n"),
+			push_short);
+	} else if (push_ahead > 0 && push_behind == 0) {
 		strbuf_addf(sb,
 			Q_("Ahead of '%s' by %d commit.\n",
 			   "Ahead of '%s' by %d commits.\n",
-			   goal_ahead),
-			goal_short, goal_ahead);
-	} else if (goal_behind > 0 && goal_ahead == 0) {
+			   push_ahead),
+			push_short, push_ahead);
+	} else if (push_behind > 0 && push_ahead == 0) {
 		strbuf_addf(sb,
 			Q_("Behind '%s' by %d commit.\n",
 			   "Behind '%s' by %d commits.\n",
-			   goal_behind),
-			goal_short, goal_behind);
-	} else if (goal_ahead > 0 && goal_behind > 0) {
+			   push_behind),
+			push_short, push_behind);
+	} else if (push_ahead > 0 && push_behind > 0) {
 		strbuf_addf(sb,
 			Q_("Diverged from '%s' by %d commit.\n",
 			   "Diverged from '%s' by %d commits.\n",
-			   goal_ahead + goal_behind),
-			goal_short, goal_ahead + goal_behind);
+			   push_ahead + push_behind),
+			push_short, push_ahead + push_behind);
 	}
 }
 
@@ -2392,15 +2389,15 @@ int format_tracking_info(struct branch *branch, struct strbuf *sb,
 	}
 
 	if (!upstream_is_gone && sti >= 0 && abf != AHEAD_BEHIND_QUICK) {
-		char *goal_full = NULL;
-		char *goal_short = get_goal_branch_ref(&goal_full);
+		char *push_full = NULL;
+		char *push_short = get_remote_push_branch(branch, &push_full);
 
-		if (goal_short && strcmp(base, goal_short))
-			format_goal_branch_comparison(sb, branch->refname, goal_full,
-						     goal_short, abf);
+		if (push_short && strcmp(base, push_short))
+			format_push_branch_comparison(sb, branch->refname, push_full,
+						     push_short, abf);
 
-		free(goal_short);
-		free(goal_full);
+		free(push_short);
+		free(push_full);
 	}
 
 	free(base);

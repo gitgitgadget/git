@@ -21,7 +21,6 @@ test_expect_success setup '
 	git clone . test &&
 	(
 		cd test &&
-		git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main &&
 		git checkout -b b1 origin &&
 		git reset --hard HEAD^ &&
 		advance d &&
@@ -293,340 +292,169 @@ test_expect_success '--set-upstream-to @{-1}' '
 	test_cmp expect actual
 '
 
-test_expect_success 'setup for ahead of non-main tracking branch' '
-	(
-		cd test &&
-		git checkout -b feature origin/main &&
-		advance feature1 &&
-		git push origin feature &&
-		git checkout -b work --track origin/feature &&
-		advance work1 &&
-		advance work2
-	)
-'
-
-test_expect_success 'status shows ahead of both tracked branch and origin/main' '
-	(
-		cd test &&
-		git checkout work &&
-		git config status.goalBranch origin/main &&
-		git status >../actual
-	) &&
-	cat >expect <<-EOF &&
-	On branch work
-	Your branch is ahead of ${SQ}origin/feature${SQ} by 2 commits.
-	  (use "git push" to publish your local commits)
-
-	Ahead of ${SQ}origin/main${SQ} by 3 commits.
-
-	nothing to commit, working tree clean
-	EOF
-	test_cmp expect actual
-'
-
-test_expect_success 'checkout shows ahead of both tracked branch and origin/main' '
-	(
-		cd test &&
-		git checkout main &&
-		git config status.goalBranch origin/main &&
-		git checkout work >../actual
-	) &&
-	cat >expect <<-EOF &&
-	Your branch is ahead of ${SQ}origin/feature${SQ} by 2 commits.
-	  (use "git push" to publish your local commits)
-
-	Ahead of ${SQ}origin/main${SQ} by 3 commits.
-	EOF
-	test_cmp expect actual
-'
-
 test_expect_success 'status tracking origin/main shows only main' '
 	(
 		cd test &&
 		git checkout b4 &&
 		git status >../actual
 	) &&
-	test_grep "ahead of .origin/main. by 2 commits" actual &&
-	test_grep ! "Ahead of" actual
+	cat >expect <<-EOF &&
+	On branch b4
+	Your branch is ahead of ${SQ}origin/main${SQ} by 2 commits.
+	  (use "git push" to publish your local commits)
+
+	nothing to commit, working tree clean
+	EOF
+	test_cmp expect actual
+'
+
+test_expect_success 'status shows ahead of both origin/main and feature branch' '
+	(
+		cd test &&
+		git checkout -b feature2 origin/main &&
+		git push origin HEAD &&
+		advance work &&
+		git status >../actual
+	) &&
+	cat >expect <<-EOF &&
+	On branch feature2
+	Your branch is ahead of ${SQ}origin/main${SQ} by 1 commit.
+	  (use "git push" to publish your local commits)
+
+	Ahead of ${SQ}origin/feature2${SQ} by 1 commit.
+
+	nothing to commit, working tree clean
+	EOF
+	test_cmp expect actual
+'
+
+test_expect_success 'checkout shows ahead of both origin/main and feature branch' '
+	(
+		cd test &&
+		git checkout feature2 >../actual
+	) &&
+	cat >expect <<-EOF &&
+	Your branch is ahead of ${SQ}origin/main${SQ} by 1 commit.
+	  (use "git push" to publish your local commits)
+
+	Ahead of ${SQ}origin/feature2${SQ} by 1 commit.
+	EOF
+	test_cmp expect actual
 '
 
 test_expect_success 'setup for ahead of tracked but diverged from main' '
 	(
 		cd test &&
+		git checkout -b feature4 origin/main &&
+		advance work1 &&
 		git checkout origin/main &&
-		git checkout -b oldfeature &&
-		advance oldfeature1 &&
-		git push origin oldfeature &&
-		git checkout origin/main &&
-		advance main_newer &&
+		advance work2 &&
 		git push origin HEAD:main &&
-		git checkout -b work2 --track origin/oldfeature &&
-		advance work2_commit
+		git checkout feature4 &&
+		advance work3
 	)
 '
 
-test_expect_success 'status shows ahead of tracked and diverged from origin/main' '
+test_expect_success 'status shows diverged from origin/main and ahead of feature branch' '
 	(
 		cd test &&
-		git checkout work2 &&
-		git config status.goalBranch origin/main &&
+		git checkout feature4 &&
+		git branch --set-upstream-to origin/main &&
+		git push origin HEAD &&
+		advance work &&
 		git status >../actual
 	) &&
 	cat >expect <<-EOF &&
-	On branch work2
-	Your branch is ahead of ${SQ}origin/oldfeature${SQ} by 1 commit.
-	  (use "git push" to publish your local commits)
-
-	Diverged from ${SQ}origin/main${SQ} by 3 commits.
-
-	nothing to commit, working tree clean
-	EOF
-	test_cmp expect actual
-'
-
-test_expect_success 'setup for diverged from tracked but behind main' '
-	(
-		cd test &&
-		git fetch origin &&
-		git checkout origin/main &&
-		git checkout -b work2b &&
-		git branch --set-upstream-to=origin/oldfeature &&
-		git checkout origin/main &&
-		advance main_extra &&
-		git push origin HEAD:main
-	)
-'
-
-test_expect_success 'status shows diverged from tracked and behind origin/main' '
-	(
-		cd test &&
-		git checkout work2b &&
-		git config status.goalBranch origin/main &&
-		git status >../actual
-	) &&
-	cat >expect <<-EOF &&
-	On branch work2b
-	Your branch and ${SQ}origin/oldfeature${SQ} have diverged,
-	and have 1 and 1 different commits each, respectively.
+	On branch feature4
+	Your branch and ${SQ}origin/main${SQ} have diverged,
+	and have 3 and 1 different commits each, respectively.
 	  (use "git pull" if you want to integrate the remote branch with yours)
 
-	Behind ${SQ}origin/main${SQ} by 1 commit.
+	Ahead of ${SQ}origin/feature4${SQ} by 1 commit.
 
 	nothing to commit, working tree clean
 	EOF
 	test_cmp expect actual
 '
 
-test_expect_success 'setup for behind tracked but ahead of main' '
-	(
-		cd test &&
-		git fetch origin &&
-		git checkout origin/main &&
-		git checkout -b feature3 &&
-		advance feature3_1 &&
-		advance feature3_2 &&
-		advance feature3_3 &&
-		git push origin feature3 &&
-		git checkout -b work3 --track origin/feature3 &&
-		git reset --hard HEAD~2
-	)
-'
-
-test_expect_success 'status shows behind tracked and ahead of origin/main' '
-	(
-		cd test &&
-		git checkout work3 &&
-		git config status.goalBranch origin/main &&
-		git status >../actual
-	) &&
-	cat >expect <<-EOF &&
-	On branch work3
-	Your branch is behind ${SQ}origin/feature3${SQ} by 2 commits, and can be fast-forwarded.
-	  (use "git pull" to update your local branch)
-
-	Ahead of ${SQ}origin/main${SQ} by 1 commit.
-
-	nothing to commit, working tree clean
-	EOF
-	test_cmp expect actual
-'
-
-test_expect_success 'setup upstream remote preference' '
+test_expect_success 'setup upstream remote' '
 	(
 		cd test &&
 		git remote add upstream ../. &&
 		git fetch upstream &&
-		git symbolic-ref refs/remotes/upstream/HEAD refs/remotes/upstream/main
+		git config remote.pushDefault origin
 	)
 '
 
-test_expect_success 'status prefers upstream remote over origin for comparison' '
+test_expect_success 'status with upstream remote and push.default set to origin' '
 	(
 		cd test &&
-		git checkout work &&
-		git config status.goalBranch upstream/main &&
+		git checkout -b feature5 upstream/main &&
+		git push origin &&
+		advance work &&
 		git status >../actual
 	) &&
 	cat >expect <<-EOF &&
-	On branch work
-	Your branch is ahead of ${SQ}origin/feature${SQ} by 2 commits.
+	On branch feature5
+	Your branch is ahead of ${SQ}upstream/main${SQ} by 1 commit.
 	  (use "git push" to publish your local commits)
 
-	Diverged from ${SQ}upstream/main${SQ} by 5 commits.
+	Ahead of ${SQ}origin/feature5${SQ} by 1 commit.
 
 	nothing to commit, working tree clean
 	EOF
 	test_cmp expect actual
 '
 
-test_expect_success 'setup for up to date with tracked but ahead of default' '
+test_expect_success 'status with upstream remote and push.default set to origin and diverged' '
 	(
 		cd test &&
-		git checkout origin/feature &&
-		git checkout -b synced_feature --track origin/feature &&
-		git checkout origin/main &&
-		advance main_ahead &&
-		git push origin HEAD:main
-	)
-'
-
-test_expect_success 'status shows up to date with tracked but diverged from default' '
-	(
-		cd test &&
-		git checkout synced_feature &&
-		git config status.goalBranch upstream/main &&
+		git checkout -b feature6 upstream/main &&
+		advance work &&
+		git push origin &&
+		git reset --hard upstream/main &&
+		advance work &&
 		git status >../actual
 	) &&
 	cat >expect <<-EOF &&
-	On branch synced_feature
-	Your branch is up to date with ${SQ}origin/feature${SQ}.
-
-	Diverged from ${SQ}upstream/main${SQ} by 3 commits.
-
-	nothing to commit, working tree clean
-	EOF
-	test_cmp expect actual
-'
-
-test_expect_success 'setup for up to date with tracked but ahead of origin/main' '
-	(
-		cd test &&
-		git remote remove upstream &&
-		git checkout origin/feature &&
-		git checkout -b synced_feature2 --track origin/feature &&
-		git checkout origin/main &&
-		advance main_ahead2 &&
-		git push origin HEAD:main
-	)
-'
-
-test_expect_success 'status shows up to date with tracked but diverged from origin/main' '
-	(
-		cd test &&
-		git checkout synced_feature2 &&
-		git config status.goalBranch origin/main &&
-		git status >../actual
-	) &&
-	cat >expect <<-EOF &&
-	On branch synced_feature2
-	Your branch is up to date with ${SQ}origin/feature${SQ}.
-
-	Diverged from ${SQ}origin/main${SQ} by 5 commits.
-
-	nothing to commit, working tree clean
-	EOF
-	test_cmp expect actual
-'
-
-test_expect_success 'setup for up to date with tracked but purely ahead of origin/main' '
-	(
-		cd test &&
-		git checkout origin/feature &&
-		git checkout -b synced_feature3 --track origin/feature
-	)
-'
-
-test_expect_success 'status shows up to date with tracked but shows default branch comparison' '
-	(
-		cd test &&
-		git checkout synced_feature3 &&
-		git config status.goalBranch origin/main &&
-		git status >../actual
-	) &&
-	cat >expect <<-EOF &&
-	On branch synced_feature3
-	Your branch is up to date with ${SQ}origin/feature${SQ}.
-
-	Diverged from ${SQ}origin/main${SQ} by 5 commits.
-
-	nothing to commit, working tree clean
-	EOF
-	test_cmp expect actual
-'
-
-test_expect_success 'status with status.goalBranch unset shows no default comparison' '
-	(
-		cd test &&
-		git checkout synced_feature3 &&
-		git config --unset status.goalBranch || true &&
-		git status >../actual
-	) &&
-	cat >expect <<-EOF &&
-	On branch synced_feature3
-	Your branch is up to date with ${SQ}origin/feature${SQ}.
-
-	nothing to commit, working tree clean
-	EOF
-	test_cmp expect actual
-'
-
-test_expect_success 'status with status.goalBranch set uses configured branch' '
-	(
-		cd test &&
-		git checkout synced_feature3 &&
-		git config status.goalBranch origin/main &&
-		git status >../actual
-	) &&
-	cat >expect <<-EOF &&
-	On branch synced_feature3
-	Your branch is up to date with ${SQ}origin/feature${SQ}.
-
-	Diverged from ${SQ}origin/main${SQ} by 5 commits.
-
-	nothing to commit, working tree clean
-	EOF
-	test_cmp expect actual
-'
-
-test_expect_success 'status with status.goalBranch set to different remote/branch' '
-	(
-		cd test &&
-		git checkout work &&
-		git config status.goalBranch origin/feature &&
-		git status >../actual
-	) &&
-	cat >expect <<-EOF &&
-	On branch work
-	Your branch is ahead of ${SQ}origin/feature${SQ} by 2 commits.
+	On branch feature6
+	Your branch is ahead of ${SQ}upstream/main${SQ} by 1 commit.
 	  (use "git push" to publish your local commits)
 
+	Diverged from ${SQ}origin/feature6${SQ} by 2 commits.
+
 	nothing to commit, working tree clean
 	EOF
 	test_cmp expect actual
 '
 
-test_expect_success 'status with status.goalBranch set to non-existent branch' '
+test_expect_success 'status with upstream remote and push branch up to date' '
 	(
 		cd test &&
-		git checkout synced_feature3 &&
-		git config status.goalBranch origin/nonexistent &&
+		git checkout -b feature7 upstream/main &&
+		git push origin &&
 		git status >../actual
 	) &&
 	cat >expect <<-EOF &&
-	On branch synced_feature3
-	Your branch is up to date with ${SQ}origin/feature${SQ}.
+	On branch feature7
+	Your branch is up to date with ${SQ}upstream/main${SQ}.
+
+	Your branch is up to date with ${SQ}origin/feature7${SQ}.
 
 	nothing to commit, working tree clean
+	EOF
+	test_cmp expect actual
+'
+
+test_expect_success 'checkout shows push branch up to date' '
+	(
+		cd test &&
+		git checkout feature7 >../actual
+	) &&
+	cat >expect <<-EOF &&
+	Your branch is up to date with ${SQ}upstream/main${SQ}.
+
+	Your branch is up to date with ${SQ}origin/feature7${SQ}.
 	EOF
 	test_cmp expect actual
 '
