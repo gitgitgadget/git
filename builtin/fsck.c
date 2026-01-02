@@ -51,6 +51,7 @@ static int show_progress = -1;
 static int show_dangling = 1;
 static int name_objects;
 static int check_references = 1;
+static timestamp_t now;
 #define ERROR_OBJECT 01
 #define ERROR_REACHABLE 02
 #define ERROR_PACK 04
@@ -510,6 +511,9 @@ static int fsck_handle_reflog_ent(const char *refname,
 				  timestamp_t timestamp, int tz UNUSED,
 				  const char *message UNUSED, void *cb_data UNUSED)
 {
+	if (now && timestamp > now)
+		return 0;
+
 	if (verbose)
 		fprintf_ln(stderr, _("Checking reflog %s->%s"),
 			   oid_to_hex(ooid), oid_to_hex(noid));
@@ -568,14 +572,53 @@ static int fsck_head_link(const char *head_ref_name,
 			  const char **head_points_at,
 			  struct object_id *head_oid);
 
-static void get_default_heads(void)
+struct ref_snapshot {
+	size_t nr;
+	size_t name_alloc;
+	size_t oid_alloc;
+	char **refname;
+	struct object_id *oid;
+};
+
+static int snapshot_refs(const struct reference *ref, void *cb_data)
+{
+	struct ref_snapshot *refs = cb_data;
+
+	ALLOC_GROW(refs->refname, refs->nr + 1, refs->name_alloc);
+	ALLOC_GROW(refs->oid, refs->nr + 1, refs->oid_alloc);
+
+	refs->refname[refs->nr] = xstrdup(ref->name);
+	oidcpy(&refs->oid[refs->nr], ref->oid);
+	refs->nr++;
+
+	return 0;
+}
+
+static void free_snapshot_refs(struct ref_snapshot *snapshot)
+{
+	for (size_t i = 0; i < snapshot->nr; i++)
+		free(snapshot->refname[i]);
+	free(snapshot->refname);
+	free(snapshot->oid);
+}
+
+static void get_default_heads(struct ref_snapshot *the_refs)
 {
 	struct worktree **worktrees, **p;
 	const char *head_points_at;
 	struct object_id head_oid;
 
-	refs_for_each_rawref(get_main_ref_store(the_repository),
-			     fsck_handle_ref, NULL);
+	if (the_refs)
+		for (size_t i = 0; i < the_refs->nr; i++) {
+			struct reference ref = {
+				.name = the_refs->refname[i],
+				.oid = &the_refs->oid[i],
+			};
+			fsck_handle_ref(&ref, NULL);
+		}
+	else
+		refs_for_each_rawref(get_main_ref_store(the_repository),
+				     fsck_handle_ref, NULL);
 
 	worktrees = get_worktrees();
 	for (p = worktrees; *p; p++) {
@@ -965,6 +1008,14 @@ int cmd_fsck(int argc,
 {
 	int i;
 	struct odb_source *source;
+	struct ref_snapshot default_refs_snapshot = {
+		.nr = 0,
+		.name_alloc = 0,
+		.oid_alloc = 0,
+		.refname = NULL,
+		.oid = NULL
+	};
+	bool use_snapshot;
 
 	/* fsck knows how to handle missing promisor objects */
 	fetch_if_missing = 0;
@@ -999,6 +1050,19 @@ int cmd_fsck(int argc,
 
 	if (check_references)
 		fsck_refs(the_repository);
+
+	/*
+	 * Take a snapshot of the refs before walking objects to avoid looking
+	 * at a set of refs that may be changed by the user while we are walking
+	 * objects. We can still walk over new objects that are added during the
+	 * execution of fsck but won't miss any objects that were reachable.
+	 */
+	use_snapshot = !argc;
+	if (use_snapshot) {
+		now = time(NULL);
+		refs_for_each_rawref(get_main_ref_store(the_repository),
+				     snapshot_refs, &default_refs_snapshot);
+	}
 
 	if (connectivity_only) {
 		for_each_loose_object(the_repository->objects,
@@ -1072,7 +1136,7 @@ int cmd_fsck(int argc,
 	 * in this case (ie this implies --cache).
 	 */
 	if (!argc) {
-		get_default_heads();
+		get_default_heads(use_snapshot ? &default_refs_snapshot : NULL);
 		keep_cache_objects = 1;
 	}
 
@@ -1149,5 +1213,7 @@ int cmd_fsck(int argc,
 		}
 	}
 
+	if (use_snapshot)
+		free_snapshot_refs(&default_refs_snapshot);
 	return errors_found;
 }
