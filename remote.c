@@ -2237,6 +2237,58 @@ int stat_tracking_info(struct branch *branch, int *num_ours, int *num_theirs,
 	return stat_branch_pair(branch->refname, base, num_ours, num_theirs, abf);
 }
 
+static char *get_remote_push_branch(struct branch *branch, char **full_ref_out)
+{
+	struct remote *remote;
+	const char *push_remote;
+	char *push_dst = NULL;
+	char *tracking_ref;
+	const char *resolved;
+	char *ret;
+
+	if (!branch)
+		return NULL;
+
+	push_remote = pushremote_for_branch(branch, NULL);
+	if (!push_remote)
+		return NULL;
+
+	remote = remotes_remote_get(the_repository, push_remote);
+	if (!remote)
+		return NULL;
+
+	push_dst = remote_ref_for_branch(branch, 1);
+	if (!push_dst) {
+		if (remote->push.nr)
+			return NULL;
+		push_dst = xstrdup(branch->refname);
+	}
+
+	tracking_ref = (char *)tracking_for_push_dest(remote, push_dst, NULL);
+	free(push_dst);
+
+	if (!tracking_ref)
+		return NULL;
+
+	resolved = refs_resolve_ref_unsafe(
+		get_main_ref_store(the_repository),
+		tracking_ref,
+		RESOLVE_REF_READING,
+		NULL, NULL);
+
+	if (!resolved) {
+		free(tracking_ref);
+		return NULL;
+	}
+
+	if (full_ref_out)
+		*full_ref_out = xstrdup(resolved);
+	ret = refs_shorten_unambiguous_ref(
+		get_main_ref_store(the_repository), resolved, 0);
+	free(tracking_ref);
+	return ret;
+}
+
 static void format_branch_comparison(struct strbuf *sb,
 				     int ahead, int behind,
 				     const char *branch_name,
@@ -2304,6 +2356,10 @@ int format_tracking_info(struct branch *branch, struct strbuf *sb,
 	const char *full_base;
 	char *base;
 	int upstream_is_gone = 0;
+	int push_ours, push_theirs, push_sti;
+	char *full_push = NULL;
+	char *push = NULL;
+	int show_push_comparison = 0;
 
 	sti = stat_tracking_info(branch, &ours, &theirs, &full_base, 0, abf);
 	if (sti < 0) {
@@ -2315,9 +2371,18 @@ int format_tracking_info(struct branch *branch, struct strbuf *sb,
 	base = refs_shorten_unambiguous_ref(get_main_ref_store(the_repository),
 					    full_base, 0);
 
+	push = get_remote_push_branch(branch, &full_push);
+	if (push && strcmp(base, push)) {
+		push_sti = stat_branch_pair(branch->refname, full_push,
+					   &push_ours, &push_theirs, abf);
+		if (push_sti >= 0)
+			show_push_comparison = 1;
+	}
+
 	format_branch_comparison(sb, ours, theirs, base, upstream_is_gone, abf, sti);
 	if (sti > 0 && abf != AHEAD_BEHIND_QUICK) {
-		if (!theirs && advice_enabled(ADVICE_STATUS_HINTS)) {
+		if (!theirs && !show_push_comparison &&
+		    advice_enabled(ADVICE_STATUS_HINTS)) {
 			strbuf_addstr(sb,
 				_("  (use \"git push\" to publish your local commits)\n"));
 		} else if (!ours && advice_enabled(ADVICE_STATUS_HINTS)) {
@@ -2330,7 +2395,20 @@ int format_tracking_info(struct branch *branch, struct strbuf *sb,
 		}
 	}
 
+	if (show_push_comparison) {
+		strbuf_addstr(sb, "\n");
+		format_branch_comparison(sb, push_ours, push_theirs, push, 0, abf, push_sti);
+		if (push_sti > 0 && abf != AHEAD_BEHIND_QUICK) {
+			if (!push_theirs && advice_enabled(ADVICE_STATUS_HINTS)) {
+				strbuf_addstr(sb,
+					_("  (use \"git push\" to publish your local commits)\n"));
+			}
+		}
+	}
+
 	free(base);
+	free(full_push);
+	free(push);
 	return 1;
 }
 
