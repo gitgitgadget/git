@@ -1512,7 +1512,14 @@ struct child_process *git_connect(int fd[2], const char *url,
 					     version);
 			}
 		}
-		strvec_push(&conn->args, cmd.buf);
+		if (!conn->use_shell || conn->args.nr > 0 ||
+		    does_cmd_require_shell(prog))
+			 strvec_push(&conn->args, cmd.buf);
+		else {
+			/* avoid running through shell; it's unnecessary */
+			strvec_pushl(&conn->args, prog, path, NULL);
+			conn->use_shell = 0;
+		}
 
 		if (start_command(conn))
 			die(_("unable to fork"));
