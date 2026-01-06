@@ -981,7 +981,7 @@ test_expect_success 'fetch.writeCommitGraph with submodules' '
 	git clone dups super &&
 	(
 		cd super &&
-		git submodule add "file://$TRASH_DIRECTORY/three" &&
+		git submodule add "$TRASH_DIRECTORY_URL/three" &&
 		git commit -m "add submodule"
 	) &&
 	git clone "super" super-clone &&
@@ -1314,7 +1314,7 @@ test_expect_success 'fetching with auto-gc does not lock up' '
 	echo "$*" &&
 	false
 	EOF
-	git clone "file://$PWD" auto-gc &&
+	git clone "file://$(pwd)" auto-gc &&
 	test_commit test2 &&
 	(
 		cd auto-gc &&

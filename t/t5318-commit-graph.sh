@@ -355,7 +355,7 @@ test_expect_success 'commit grafts invalidate commit-graph' '
 
 test_expect_success 'replace-objects invalidates commit-graph' '
 	test_when_finished rm -rf shallow &&
-	git clone --depth 2 "file://$TRASH_DIRECTORY/full" shallow &&
+	git clone --depth 2 "$TRASH_DIRECTORY_URL/full" shallow &&
 	(
 		cd shallow &&
 		git commit-graph write --reachable &&

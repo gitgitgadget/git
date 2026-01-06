@@ -236,7 +236,7 @@ test_expect_success '.git/shallow is edited by repack' '
 	git -C shallow-server checkout main &&
 
 	git clone --depth=1 --no-tags --no-single-branch \
-		"file://$PWD/shallow-server" shallow-client &&
+		"file://$(pwd)/shallow-server" shallow-client &&
 
 	: now remove the branch and fetch with prune &&
 	git -C shallow-server branch -D branch &&

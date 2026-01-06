@@ -1085,7 +1085,7 @@ test_expect_success 'submodule update --quiet passes quietness to fetch with a s
 	test_when_finished "rm -rf super4 super5 super6" &&
 	git clone . super4 &&
 	(cd super4 &&
-	 git submodule add --quiet file://"$TRASH_DIRECTORY"/submodule submodule3 &&
+	 git submodule add --quiet "$TRASH_DIRECTORY_URL"/submodule submodule3 &&
 	 git commit -am "setup submodule3"
 	) &&
 	(cd submodule &&

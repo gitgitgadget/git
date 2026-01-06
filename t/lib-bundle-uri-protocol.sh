@@ -9,7 +9,7 @@ BUNDLE_URI_TEST_BUNDLE_URI=
 case "$BUNDLE_URI_PROTOCOL" in
 file)
 	BUNDLE_URI_PARENT=file_parent
-	BUNDLE_URI_REPO_URI="file://$PWD/file_parent"
+	BUNDLE_URI_REPO_URI="file://$(pwd)/file_parent"
 	BUNDLE_URI_BUNDLE_URI="$BUNDLE_URI_REPO_URI/fake.bdl"
 	test_set_prereq BUNDLE_URI_FILE
 	;;
