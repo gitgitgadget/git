@@ -1,0 +1,24 @@
+git-config-batch(1)
+===================
+
+NAME
+----
+git-config-batch - Get and set options using machine-parseable interface
+
+
+SYNOPSIS
+--------
+[verse]
+'git config-batch' <options>
+
+DESCRIPTION
+-----------
+TODO
+
+SEE ALSO
+--------
+linkgit:git-config[1]
+
+GIT
+---
+Part of the linkgit:git[1] suite
