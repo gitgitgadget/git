@@ -44,6 +44,7 @@
 /git-commit-graph
 /git-commit-tree
 /git-config
+/git-config-batch
 /git-count-objects
 /git-credential
 /git-credential-cache

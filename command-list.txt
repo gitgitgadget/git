@@ -83,6 +83,7 @@ git-commit                              mainporcelain           history
 git-commit-graph                        plumbingmanipulators
 git-commit-tree                         plumbingmanipulators
 git-config                              ancillarymanipulators           complete
+git-config-batch                        plumbinginterrogators
 git-count-objects                       ancillaryinterrogators
 git-credential                          purehelpers
 git-credential-cache                    purehelpers
