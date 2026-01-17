@@ -13,7 +13,28 @@ SYNOPSIS
 
 DESCRIPTION
 -----------
-TODO
+Tools frequently need to change their behavior based on values stored in
+Git's configuration files. These files may have complicated conditions
+for including extra files, so it is difficult to produce an independent
+parser. To avoid executing multiple processes to discover or modify
+multiple configuration values, the `git config-batch` command allows a
+single process to handle multiple requests using a machine-parseable
+interface across `stdin` and `stdout`.
+
+PROTOCOL
+--------
+By default, the protocol uses line feeds (`LF`) to signal the end of a
+command over `stdin` or a response over `stdout`.
+
+The protocol will be extended in the future, and consumers should be
+resilient to older Git versions not understanding the latest command
+set. Thus, if the Git version includes the `git config-batch` builtin
+but doesn't understand an input command, it will return a single line
+response:
+
+```
+unknown_command LF
+```
 
 SEE ALSO
 --------
