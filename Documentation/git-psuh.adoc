@@ -22,10 +22,6 @@ OPTIONS[[OPTIONS]]
         Don't actually remove any objects, only show those that would have been
         removed.
 
-OUTPUT
-------
-...
-
 GIT
 ---
-Part of the git[1] suite
+Part of the linkgit:git[1] suite

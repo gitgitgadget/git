@@ -103,6 +103,7 @@ manpages = {
   'git-patch-id.adoc' : 1,
   'git-prune-packed.adoc' : 1,
   'git-prune.adoc' : 1,
+  'git-psuh.adoc' : 1,
   'git-pull.adoc' : 1,
   'git-push.adoc' : 1,
   'git-quiltimport.adoc' : 1,
