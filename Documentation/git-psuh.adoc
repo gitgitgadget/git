@@ -1,0 +1,31 @@
+git-psuh(1)
+===========
+
+NAME
+----
+git-psuh - Delight users' typo with a shy horse
+
+
+SYNOPSIS
+--------
+[verse]
+'git-psuh [<arg>...]'
+
+DESCRIPTION
+-----------
+this program is cool
+
+OPTIONS[[OPTIONS]]
+------------------
+-n::
+--dry-run::
+        Don't actually remove any objects, only show those that would have been
+        removed.
+
+OUTPUT
+------
+...
+
+GIT
+---
+Part of the git[1] suite

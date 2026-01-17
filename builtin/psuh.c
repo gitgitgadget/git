@@ -38,7 +38,7 @@ int cmd_psuh(int argc, const char **argv,
 
 	printf(_("Your current branch: %s\n"), status.branch);
 
-	c = lookup_commit_reference_by_name("origin/master");
+	c = lookup_commit_reference_by_name("refs/heads/psuh");
 
 	if (c != NULL) {
 		pp_commit_easy(CMIT_FMT_ONELINE, c, &commitline);
