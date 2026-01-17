@@ -12,6 +12,8 @@ static const char *const builtin_config_batch_usage[] = {
 };
 
 #define UNKNOWN_COMMAND "unknown_command"
+#define GET_COMMAND "get"
+#define COMMAND_PARSE_ERROR "command_parse_error"
 
 static int emit_response(const char *response, ...)
 {
@@ -30,6 +32,11 @@ static int emit_response(const char *response, ...)
 	return 0;
 }
 
+static int command_parse_error(const char *command)
+{
+	return emit_response(COMMAND_PARSE_ERROR, command, NULL);
+}
+
 /**
  * A function pointer type for defining a command. The function is
  * responsible for handling different versions of the command name.
@@ -46,9 +53,246 @@ typedef int (*command_fn)(struct repository *repo,
 			  char *data, size_t data_len);
 
 static int unknown_command(struct repository *repo UNUSED,
-			  char *data UNUSED, size_t data_len UNUSED)
+			   char *data UNUSED, size_t data_len UNUSED)
 {
 	return emit_response(UNKNOWN_COMMAND, NULL);
+}
+
+static size_t parse_whitespace_token(char **data, size_t *data_len,
+				     char **token, int *err UNUSED)
+{
+	size_t i = 0;
+
+	*token = *data;
+
+	while (i < *data_len && (*data)[i] && (*data)[i] != ' ')
+		i++;
+
+	if (i >= *data_len) {
+		*data_len = 0;
+		*data = NULL;
+		return i;
+	}
+
+	(*data)[i] = 0;
+	*data_len = (*data_len) - (i + 1);
+	*data = *data + (i + 1);
+	return i;
+}
+
+/**
+ * Given the remaining data line and its size, attempt to extract
+ * a token. When the token delimiter is determined, the data
+ * string is mutated to insert a NUL byte at the end of the token.
+ * The data pointer is mutated to point at the next character (or
+ * set to NULL if that exceeds the string length). The data_len
+ * value is mutated to subtract the length of the discovered
+ * token.
+ *
+ * The returned value is the length of the token that was
+ * discovered.
+ *
+ * 'err' is ignored for now, but will be filled in in a future
+ * change.
+ */
+static size_t parse_token(char **data, size_t *data_len,
+			  char **token, int *err)
+{
+	if (!*data_len)
+		return 0;
+
+	return parse_whitespace_token(data, data_len, token, err);
+}
+
+enum value_match_mode {
+	MATCH_ALL,
+	MATCH_EXACT,
+	MATCH_REGEX,
+};
+
+struct get_command_1_data {
+	/* parameters */
+	char *key;
+	enum config_scope scope;
+	enum value_match_mode mode;
+
+	/* optional parameters */
+	char *value;
+	regex_t *value_pattern;
+
+	/* data along the way, for single values. */
+	char *found;
+	enum config_scope found_scope;
+};
+
+static int get_command_1_cb(const char *key, const char *value,
+			    const struct config_context *context,
+			    void *data)
+{
+	struct get_command_1_data *d = data;
+
+	if (strcasecmp(key, d->key))
+		return 0;
+
+	if (d->scope != CONFIG_SCOPE_UNKNOWN &&
+	    d->scope != context->kvi->scope)
+		return 0;
+
+	switch (d->mode) {
+	case MATCH_EXACT:
+		if (strcasecmp(value, d->value))
+			return 0;
+		break;
+
+	case MATCH_REGEX:
+		if (regexec(d->value_pattern, value, 0, NULL, 0))
+			return 0;
+		break;
+
+	default:
+		break;
+	}
+
+	free(d->found);
+	d->found = xstrdup(value);
+	d->found_scope = context->kvi->scope;
+	return 0;
+}
+
+static const char *scope_str(enum config_scope scope)
+{
+	switch (scope) {
+	case CONFIG_SCOPE_UNKNOWN:
+		return "unknown";
+
+	case CONFIG_SCOPE_SYSTEM:
+		return "system";
+
+	case CONFIG_SCOPE_GLOBAL:
+		return "global";
+
+	case CONFIG_SCOPE_LOCAL:
+		return "local";
+
+	case CONFIG_SCOPE_WORKTREE:
+		return "worktree";
+
+	case CONFIG_SCOPE_SUBMODULE:
+		return "submodule";
+
+	case CONFIG_SCOPE_COMMAND:
+		return "command";
+
+	default:
+		BUG("invalid config scope");
+	}
+}
+
+static int parse_scope(const char *str, enum config_scope *scope)
+{
+	if (!strcmp(str, "inherited")) {
+		*scope = CONFIG_SCOPE_UNKNOWN;
+		return 0;
+	}
+
+	for (enum config_scope s = 0; s < CONFIG_SCOPE__NR; s++) {
+		if (!strcmp(str, scope_str(s))) {
+			*scope = s;
+			return 0;
+		}
+	}
+
+	return -1;
+}
+
+/**
+ * 'get' command, version 1.
+ *
+ * Positional arguments should be of the form:
+ *
+ * [0] scope ("system", "global", "local", "worktree", "command", "submodule", or "inherited")
+ * [1] config key
+ * [2*] multi-mode ("regex", "fixed-value")
+ * [3*] value regex OR value string
+ *
+ * [N*] indicates optional parameters that are not needed.
+ */
+static int get_command_1(struct repository *repo,
+			 char *data,
+			 size_t data_len)
+{
+	struct get_command_1_data gc_data = {
+		.found = NULL,
+		.mode = MATCH_ALL,
+	};
+	int res = 0, err = 0;
+	char *token;
+	size_t token_len;
+
+	if (!parse_token(&data, &data_len, &token, &err) || err)
+		goto parse_error;
+
+	if (parse_scope(token, &gc_data.scope))
+		goto parse_error;
+
+	if (!parse_token(&data, &data_len, &gc_data.key, &err) || err)
+		goto parse_error;
+
+	token_len = parse_token(&data, &data_len, &token, &err);
+	if (err)
+		goto parse_error;
+
+	if (token_len && !strncmp(token, "arg:", 4)) {
+		if (!strcmp(token + 4, "regex"))
+			gc_data.mode = MATCH_REGEX;
+		else if (!strcmp(token + 4, "fixed-value"))
+			gc_data.mode = MATCH_EXACT;
+		else
+			goto parse_error; /* unknown arg. */
+
+		/* Use the remaining data as the value string. */
+		gc_data.value = data;
+
+		if (gc_data.mode == MATCH_REGEX) {
+			CALLOC_ARRAY(gc_data.value_pattern, 1);
+			if (regcomp(gc_data.value_pattern, gc_data.value,
+				    REG_EXTENDED)) {
+				FREE_AND_NULL(gc_data.value_pattern);
+				goto parse_error;
+			}
+		}
+	} else if (token_len) {
+		/*
+		 * If we have remaining tokens not starting in "arg:",
+		 * then we don't understand them.
+		 */
+		goto parse_error;
+	}
+
+	repo_config(repo, get_command_1_cb, &gc_data);
+
+	if (gc_data.found)
+		res = emit_response(GET_COMMAND, "1", "found", gc_data.key,
+				    scope_str(gc_data.found_scope),
+				    gc_data.found,
+				    NULL);
+	else
+		res = emit_response(GET_COMMAND, "1", "missing", gc_data.key,
+				    gc_data.value, NULL);
+
+	goto cleanup;
+
+
+parse_error:
+	res = command_parse_error(GET_COMMAND);
+
+cleanup:
+	if (gc_data.value_pattern) {
+		regfree(gc_data.value_pattern);
+		free(gc_data.value_pattern);
+	}
+	free(gc_data.found);
+	return res;
 }
 
 struct command {
@@ -58,6 +302,11 @@ struct command {
 };
 
 static struct command commands[] = {
+	{
+		.name = GET_COMMAND,
+		.fn = get_command_1,
+		.version = 1,
+	},
 	/* unknown_command must be last. */
 	{
 		.name = "",
