@@ -7,8 +7,6 @@ int cmd_psuh(int argc, const char **argv,
 	const char *prefix, struct repository *repo) {
 	int i;
 	const char *config_name;
-	printf(_("Pushing to %s\n"), repo->name);
-	printf(_("Pushing to %s\n"), repo->url);
 	printf(Q_("Your args (there is %d):\n",
 		  "Your args (there are %d):\n",
 		  argc),
