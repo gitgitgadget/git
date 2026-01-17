@@ -1,5 +1,7 @@
 #include "builtin.h"
 #include "gettext.h"
+#include "config.h"
+#include "repository.h"
 
 int cmd_psuh(int argc, const char **argv,
 	const char *prefix, struct repository *repo) {
