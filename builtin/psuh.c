@@ -25,6 +25,7 @@ int cmd_psuh(int argc, const char **argv,
 		OPT_END()
 	};
 	argc = parse_options(argc, argv, prefix, options, psuh_usage, 0);
+	printf(_("Pony saying hello goes here.\n"));
 
 
 	wt_status_prepare(repo, &status);
