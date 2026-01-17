@@ -1150,7 +1150,8 @@ static int process_parents(struct rev_info *revs, struct commit *commit,
 			struct commit *p = parent->item;
 			parent = parent->next;
 			if (p)
-				p->object.flags |= UNINTERESTING;
+				p->object.flags |= UNINTERESTING |
+						   CHILD_VISITED;
 			if (repo_parse_commit_gently(revs->repo, p, 1) < 0)
 				continue;
 			if (p->parents)
@@ -1204,7 +1205,7 @@ static int process_parents(struct rev_info *revs, struct commit *commit,
 			if (!*slot)
 				*slot = *revision_sources_at(revs->sources, commit);
 		}
-		p->object.flags |= pass_flags;
+		p->object.flags |= pass_flags | CHILD_VISITED;
 		if (!(p->object.flags & SEEN)) {
 			p->object.flags |= (SEEN | NOT_USER_GIVEN);
 			if (list)
@@ -2381,6 +2382,8 @@ static int handle_revision_opt(struct rev_info *revs, int argc, const char **arg
 		revs->first_parent_only = 1;
 	} else if (!strcmp(arg, "--exclude-first-parent-only")) {
 		revs->exclude_first_parent_only = 1;
+	} else if (!strcmp(arg, "--maximal")) {
+		revs->maximal = 1;
 	} else if (!strcmp(arg, "--ancestry-path")) {
 		revs->ancestry_path = 1;
 		revs->simplify_history = 0;
@@ -4124,6 +4127,8 @@ static timestamp_t comparison_date(const struct rev_info *revs,
 enum commit_action get_commit_action(struct rev_info *revs, struct commit *commit)
 {
 	if (commit->object.flags & SHOWN)
+		return commit_ignore;
+	if (revs->maximal && (commit->object.flags & CHILD_VISITED))
 		return commit_ignore;
 	if (revs->unpacked && has_object_pack(revs->repo, &commit->object.oid))
 		return commit_ignore;

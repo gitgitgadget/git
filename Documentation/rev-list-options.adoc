@@ -444,6 +444,10 @@ The following options affect the way the simplification is performed:
 	times; if so, a commit is included if it is any of the commits
 	given or if it is an ancestor or descendant of one of them.
 
+`--maximal`::
+	Restrict the output commits to be those that are not reachable
+	from any other commits in the revision range.
+
 A more detailed explanation follows.
 
 Suppose you specified `foo` as the _<paths>_.  We shall call commits
