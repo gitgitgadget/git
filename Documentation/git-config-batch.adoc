@@ -32,9 +32,58 @@ set. Thus, if the Git version includes the `git config-batch` builtin
 but doesn't understand an input command, it will return a single line
 response:
 
-```
+------------
 unknown_command LF
-```
+------------
+
+These are the commands that are currently understood:
+
+`get` version 1::
+	The `get` command searches the config key-value pairs within a
+	given `<scope>` for values that match the fixed `<key>` and
+	filters the resulting value based on an optional `<value-filter>`.
+	This can either be a regex or a fixed value. The command format
+	is one of the following formats:
++
+------------
+get 1 <scope> <key>
+get 1 <scope> <key> arg:regex <value-pattern>
+get 1 <scope> <key> arg:fixed-value <value>
+------------
++
+The `<scope>` value can be one of `inherited`, `system`, `global`,
+`local`, `worktree`, `submodule`, or `command`. If `inherited`, then all
+config key-value pairs will be considered regardless of scope. Otherwise,
+only the given scope will be considered.
++
+If no optional arguments are given, then the value will not be filtered
+by any pattern matching. If `arg:regex` is specified, then the rest of
+the line is considered a single string, `<value-pattern>`, and is
+interpreted as a regular expression for matching against stored values,
+similar to specifying a value to `get config --get <key> "<value-pattern>"`.
+If `arg:fixed-value` is specified, then the rest of the line is
+considered a single string, `<value>`, and is checked for an exact
+match against the key-value pairs, simmilar to `git config --get <key>
+--fixed-value "<value>"`.
++
+At mmost one key-value pair is returned, that being the last key-value
+pair in the standard config order by scope and sequence within each scope.
++
+If a key-value pair is found, then the following output is given:
++
+------------
+get 1 found <key> <scope> <value>
+------------
++
+If no matching key-value pair is found, then the following output is
+given:
++
+------------
+get 1 missing <key> [<value-pattern>|<value>]
+------------
++
+where `<value-pattern>` or `<value>` is only supplied if provided in
+the command.
 
 SEE ALSO
 --------
