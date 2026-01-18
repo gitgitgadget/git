@@ -12,6 +12,7 @@ static const char *const builtin_config_batch_usage[] = {
 };
 
 #define UNKNOWN_COMMAND "unknown_command"
+#define HELP_COMMAND "help"
 #define GET_COMMAND "get"
 #define COMMAND_PARSE_ERROR "command_parse_error"
 
@@ -103,6 +104,9 @@ static size_t parse_token(char **data, size_t *data_len,
 
 	return parse_whitespace_token(data, data_len, token, err);
 }
+
+static int help_command_1(struct repository *repo,
+			  char *data, size_t data_len);
 
 enum value_match_mode {
 	MATCH_ALL,
@@ -303,6 +307,11 @@ struct command {
 
 static struct command commands[] = {
 	{
+		.name = HELP_COMMAND,
+		.fn = help_command_1,
+		.version = 1,
+	},
+	{
 		.name = GET_COMMAND,
 		.fn = get_command_1,
 		.version = 1,
@@ -315,6 +324,29 @@ static struct command commands[] = {
 };
 
 #define COMMAND_COUNT ((size_t)(sizeof(commands) / sizeof(*commands)))
+
+static int help_command_1(struct repository *repo UNUSED,
+			  char *data UNUSED, size_t data_len UNUSED)
+{
+	struct strbuf fmt_str = STRBUF_INIT;
+
+	strbuf_addf(&fmt_str, "%"PRIu32, (uint32_t)(COMMAND_COUNT - 1));
+	emit_response(HELP_COMMAND, "1", "count", fmt_str.buf, NULL);
+	strbuf_reset(&fmt_str);
+
+	for (size_t i = 0; i < COMMAND_COUNT; i++) {
+		/* Halt at unknown command. */
+		if (!commands[i].name[0])
+			break;
+
+		strbuf_addf(&fmt_str, "%d", commands[i].version);
+		emit_response(HELP_COMMAND, "1", commands[i].name, fmt_str.buf, NULL);
+		strbuf_reset(&fmt_str);
+	}
+
+	strbuf_release(&fmt_str);
+	return 0;
+}
 
 /**
  * Process a single line from stdin and process the command.
