@@ -23,6 +23,19 @@ test_expect_success 'completely broken input' '
 	test_grep "an unrecoverable error occurred during command execution" err
 '
 
+test_expect_success 'help command' '
+	echo "help 1" >in &&
+
+	cat >expect <<-\EOF &&
+	help 1 count 2
+	help 1 help 1
+	help 1 get 1
+	EOF
+
+	git config-batch >out <in &&
+	test_cmp expect out
+'
+
 test_expect_success 'failed to parse version' '
 	echo "bogus BAD_VERSION line of tokens" >in &&
 	test_must_fail git config-batch 2>err <in &&
