@@ -11,24 +11,40 @@ static const char *const builtin_config_batch_usage[] = {
 	NULL
 };
 
+static int zformat = 0;
+
 #define UNKNOWN_COMMAND "unknown_command"
 #define HELP_COMMAND "help"
 #define GET_COMMAND "get"
 #define COMMAND_PARSE_ERROR "command_parse_error"
+
+static void print_word(const char *word, int start)
+{
+	if (zformat) {
+		printf("%"PRIu32":%s", (uint32_t)strlen(word), word);
+		fputc(0, stdout);
+	} else if (start)
+		printf("%s", word);
+	else
+		printf(" %s", word);
+}
 
 static int emit_response(const char *response, ...)
 {
 	va_list params;
 	const char *token;
 
-	printf("%s", response);
+	print_word(response, 1);
 
 	va_start(params, response);
 	while ((token = va_arg(params, const char *)))
-		printf(" %s", token);
+		print_word(token, 0);
 	va_end(params);
 
-	printf("\n");
+	if (zformat)
+		fputc(0, stdout);
+	else
+		printf("\n");
 	fflush(stdout);
 	return 0;
 }
@@ -57,6 +73,52 @@ static int unknown_command(struct repository *repo UNUSED,
 			   char *data UNUSED, size_t data_len UNUSED)
 {
 	return emit_response(UNKNOWN_COMMAND, NULL);
+}
+
+/*
+ * Parse the next token using the NUL-byte format.
+ */
+static size_t parse_ztoken(char **data, size_t *data_len,
+			   char **token, int *err)
+{
+	size_t i = 0, token_len;
+
+	while (i < *data_len && (*data)[i] != ':') {
+		if ((*data)[i] < '0' || (*data)[i] > '9') {
+			goto parse_error;
+		}
+		i++;
+	}
+
+	if (i >= *data_len || (*data)[i] != ':' || i > 5)
+		goto parse_error;
+
+	(*data)[i] = 0;
+	token_len = atoi(*data);
+
+	if (token_len + i + 1 >= *data_len)
+		goto parse_error;
+
+	*token = *data + i + 1;
+	*data_len = *data_len - (i + 1);
+
+	/* check for early NULs. */
+	for (i = 0; i < token_len; i++) {
+		if (!(*token)[i])
+			goto parse_error;
+	}
+	/* check for matching NUL. */
+	if ((*token)[token_len])
+		goto parse_error;
+
+	*data = *token + token_len + 1;
+	*data_len = *data_len - (token_len + 1);
+	return token_len;
+
+parse_error:
+	*err = 1;
+	*token = NULL;
+	return 0;
 }
 
 static size_t parse_whitespace_token(char **data, size_t *data_len,
@@ -93,15 +155,23 @@ static size_t parse_whitespace_token(char **data, size_t *data_len,
  * The returned value is the length of the token that was
  * discovered.
  *
- * 'err' is ignored for now, but will be filled in in a future
- * change.
+ * The 'token' pointer is used to set the start of the token.
+ * In the whitespace format, this is always the input value of
+ * 'data' but in the NUL-terminated format this follows an "<N>:"
+ * prefix.
+ *
+ * In the case of the NUL-terminated format, a bad parse of the
+ * decimal length or a mismatch of the decimal length and the
+ * length of the following NUL-terminated string will result in
+ * the value pointed at by 'err' to be set to 1.
  */
 static size_t parse_token(char **data, size_t *data_len,
 			  char **token, int *err)
 {
 	if (!*data_len)
 		return 0;
-
+	if (zformat)
+		return parse_ztoken(data, data_len, token, err);
 	return parse_whitespace_token(data, data_len, token, err);
 }
 
@@ -255,7 +325,13 @@ static int get_command_1(struct repository *repo,
 			goto parse_error; /* unknown arg. */
 
 		/* Use the remaining data as the value string. */
-		gc_data.value = data;
+		if (!zformat)
+			gc_data.value = data;
+		else {
+			parse_token(&data, &data_len, &gc_data.value, &err);
+			if (err)
+				goto parse_error;
+		}
 
 		if (gc_data.mode == MATCH_REGEX) {
 			CALLOC_ARRAY(gc_data.value_pattern, 1);
@@ -348,17 +424,74 @@ static int help_command_1(struct repository *repo UNUSED,
 	return 0;
 }
 
-/**
- * Process a single line from stdin and process the command.
- *
- * Returns 0 on successful processing of command, including the
- * unknown_command output.
- *
- * Returns 1 on natural exit due to exist signal of empty line.
- *
- * Returns negative value on other catastrophic error.
- */
-static int process_command(struct repository *repo)
+static int process_command_nul(struct repository *repo)
+{
+	static struct strbuf line = STRBUF_INIT;
+	char *data, *command, *versionstr;
+	size_t data_len, token_len;
+	int res = 0, err = 0, version = 0, getc;
+	char c;
+
+	/* If we start with EOF it's not an error. */
+	getc = fgetc(stdin);
+	if (getc == EOF)
+		return 1;
+
+	do {
+		c = (char)getc;
+		strbuf_addch(&line, c);
+
+		if (!c && line.len > 1 && !line.buf[line.len - 2])
+			break;
+
+		getc = fgetc(stdin);
+
+		/* It's an error if we reach EOF while parsing a command. */
+		if (getc == EOF)
+			goto parse_error;
+	} while (1);
+
+	data = line.buf;
+	data_len = line.len - 1;
+
+	token_len = parse_ztoken(&data, &data_len, &command, &err);
+	if (!token_len || err)
+		goto parse_error;
+
+	token_len = parse_ztoken(&data, &data_len, &versionstr, &err);
+	if (!token_len || err)
+		goto parse_error;
+
+	if (!git_parse_int(versionstr, &version)) {
+		res = error(_("unable to parse '%s' to integer"),
+			    versionstr);
+		goto parse_error;
+	}
+
+	for (size_t i = 0; i < COMMAND_COUNT; i++) {
+		/*
+		 * Run the ith command if we have hit the unknown
+		 * command or if the name and version match.
+		 */
+		if (!commands[i].name[0] ||
+		    (!strcmp(command, commands[i].name) &&
+		     commands[i].version == version)) {
+			res = commands[i].fn(repo, data, data_len);
+			goto cleanup;
+		}
+	}
+
+	BUG(_("scanned to end of command list, including 'unknown_command'"));
+
+parse_error:
+	res = unknown_command(repo, NULL, 0);
+
+cleanup:
+	strbuf_release(&line);
+	return res;
+}
+
+static int process_command_whitespace(struct repository *repo)
 {
 	static struct strbuf line = STRBUF_INIT;
 	struct string_list tokens = STRING_LIST_INIT_NODUP;
@@ -416,6 +549,23 @@ cleanup:
 	return res;
 }
 
+/**
+ * Process a single line from stdin and process the command.
+ *
+ * Returns 0 on successful processing of command, including the
+ * unknown_command output.
+ *
+ * Returns 1 on natural exit due to exist signal of empty line.
+ *
+ * Returns negative value on other catastrophic error.
+ */
+static int process_command(struct repository *repo)
+{
+	if (zformat)
+		return process_command_nul(repo);
+	return process_command_whitespace(repo);
+}
+
 int cmd_config_batch(int argc,
 		     const char **argv,
 		     const char *prefix,
@@ -423,6 +573,8 @@ int cmd_config_batch(int argc,
 {
 	int res = 0;
 	struct option options[] = {
+		OPT_BOOL('z', NULL, &zformat,
+			 N_("stdin and stdout is NUL-terminated")),
 		OPT_END(),
 	};
 
