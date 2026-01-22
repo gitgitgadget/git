@@ -21,6 +21,15 @@ multiple configuration values, the `git config-batch` command allows a
 single process to handle multiple requests using a machine-parseable
 interface across `stdin` and `stdout`.
 
+OPTIONS
+-------
+
+`-z`::
+	If specified, then use the NUL-terminated input and output
+	format instead of the space and newline format. This format is
+	useful when the strings involved may include spaces or newlines.
+	See PROTOCOL for more details.
+
 PROTOCOL
 --------
 By default, the protocol uses line feeds (`LF`) to signal the end of a
@@ -41,13 +50,13 @@ These are the commands that are currently understood:
 `help` version 1::
 	The `help` command lists the currently-available commands in
 	this version of Git. The output is multi-line, but the first
-	line provides the count of possible commands via `help count <N>`.
-	The next `<N>` lines are of the form `help <command> <version>`
+	line provides the count of possible commands via `help 1 count <N>`.
+	The next `<N>` lines are of the form `help 1 <command> <version>`
 	to state that this Git version supports that `<command>` at
 	version `<version>`. Note that the same command may have multiple
 	available versions.
 +
-Here is the currentl output of the help text at the latest version:
+Here is the current output of the help text at the latest version:
 +
 ------------
 help 1 count 2
@@ -101,6 +110,48 @@ get 1 missing <key> [<value-pattern>|<value>]
 +
 where `<value-pattern>` or `<value>` is only supplied if provided in
 the command.
+
+NUL-Terminated Format
+~~~~~~~~~~~~~~~~~~~~~
+
+When `-z` is given, the protocol changes in some structural ways.
+
+First, each command is terminated with two NUL bytes, providing a clear
+boundary between commands regardless of future possibilities of new
+command formats.
+
+Second, any time that a space _would_ be used to partition tokens in a
+command, a NUL byte is used instead. Further, each token is prefixed
+with `<N>:` where `<N>` is a decimal representation of the length of
+the string between the `:` and the next NUL byte. Any disagreement in
+these lengths is treated as a parsing error. This use of a length does
+imply that "`0:`" is the representation of an empty string, if relevant.
+
+The decimal representation must have at most five numerals, thus the
+maximum length of a string token can have 99999 characters.
+
+For example, the `get` command, version 1, could have any of the
+following forms:
+
+------------
+3:get NUL 1:1 NUL 5:local NUL 14:key.with space NUL NUL
+3:get NUL 1:1 NUL 9:inherit NUL 8:test.key NUL 9:arg:regex NUL 6:.*\ .* NUL NUL
+3:get NUL 1:1 NUL 6:global NUL 8:test.key NUL 15:arg:fixed-value NUL 3:a b NUL NUL
+------------
+
+The output is modified similarly, such as the following output examples,
+as if the input has a parse error, a valid `help` command, a `get`
+command that had a match, and a `get` command that did not match.
+
+------------
+15:unknown_command NUL NUL
+4:help NUL 1:1 NUL 5:count NUL 1:2 NUL NUL
+4:help NUL 1:1 NUL 4:help NUL 1:1 NUL NUL
+4:help NUL 1:1 NUL 3:get NUL 1:1 NUL NUL
+3:get NUL 1:1 NUL 5:found NUL 8:test.key NUL 5:value NUL NUL
+3:get NUL 1:1 NUL 7:missing NUL 8:test.key NUL NUL
+------------
+
 
 SEE ALSO
 --------
