@@ -297,10 +297,22 @@ static wchar_t *normalize_ntpath(wchar_t *wbuf)
 
 int mingw_unlink(const char *pathname, int handle_in_use_error)
 {
-	int ret, tries = 0;
+	int ret, tries = 0, wlen = 0;
 	wchar_t wpathname[MAX_PATH];
-	if (xutftowcs_path(wpathname, pathname) < 0)
+
+	wlen = xutftowcs_path(wpathname, pathname);
+	if (wlen < 0)
 		return -1;
+
+	if (!protect_ntfs && is_path_ends_with_special_character(pathname)) {
+		wchar_t abspath[MAX_PATH];
+
+		if (convert_to_abs_path_for_special_path(abspath, wpathname,
+							 wlen) < 0)
+			return -1;
+
+		wcscpy(wpathname, abspath);
+	}
 
 	if (DeleteFileW(wpathname))
 		return 0;
@@ -465,6 +477,7 @@ int mingw_mkdir(const char *path, int mode UNUSED)
 
 	if (xutftowcs_path(wpath, path) < 0)
 		return -1;
+
 	ret = _wmkdir(wpath);
 	if (!ret && needs_hiding(path))
 		return set_hidden_flag(wpath, 1);
@@ -628,6 +641,7 @@ int mingw_open (const char *filename, int oflags, ...)
 	unsigned mode;
 	int fd, create = (oflags & (O_CREAT | O_EXCL)) == (O_CREAT | O_EXCL);
 	wchar_t wfilename[MAX_PATH];
+	int path_len = -1;
 	open_fn_t open_fn;
 	WIN32_FILE_ATTRIBUTE_DATA fdata;
 
@@ -651,8 +665,22 @@ int mingw_open (const char *filename, int oflags, ...)
 
 	if (filename && !strcmp(filename, "/dev/null"))
 		wcscpy(wfilename, L"nul");
-	else if (xutftowcs_path(wfilename, filename) < 0)
-		return -1;
+	else {
+		path_len = xutftowcs_path(wfilename, filename);
+		if (path_len < 0)
+			return -1;
+	}
+
+	if (!protect_ntfs && is_path_ends_with_special_character(filename)) {
+		wchar_t abspath[MAX_PATH];
+
+		if (convert_to_abs_path_for_special_path(abspath, wfilename,
+							 path_len) < 0)
+			return -1;
+
+		wcscpy(wfilename, abspath);
+	}
+
 
 	/*
 	 * When `symlink` exists and is a symbolic link pointing to a
@@ -736,6 +764,7 @@ int mingw_fgetc(FILE *stream)
 FILE *mingw_fopen (const char *filename, const char *otype)
 {
 	int hide = needs_hiding(filename);
+	int wlen;
 	FILE *file;
 	wchar_t wfilename[MAX_PATH], wotype[4];
 	if (filename && !strcmp(filename, "/dev/null"))
@@ -744,8 +773,21 @@ FILE *mingw_fopen (const char *filename, const char *otype)
 		int create = otype && strchr(otype, 'w');
 		errno = create ? EINVAL : ENOENT;
 		return NULL;
-	} else if (xutftowcs_path(wfilename, filename) < 0)
-		return NULL;
+	} else {
+		wlen = xutftowcs_path(wfilename, filename);
+		if (wlen < 0)
+			return NULL;
+		if (!protect_ntfs && is_path_ends_with_special_character(filename)) {
+			wchar_t abspath[MAX_PATH];
+
+			if (convert_to_abs_path_for_special_path(
+				    abspath, wfilename, wlen) < 0)
+				return NULL;
+
+			wcscpy(wfilename, abspath);
+		}
+
+	}
 
 	if (xutftowcs(wotype, otype, ARRAY_SIZE(wotype)) < 0)
 		return NULL;
@@ -765,16 +807,31 @@ FILE *mingw_fopen (const char *filename, const char *otype)
 FILE *mingw_freopen (const char *filename, const char *otype, FILE *stream)
 {
 	int hide = needs_hiding(filename);
+	int wlen;
 	FILE *file;
 	wchar_t wfilename[MAX_PATH], wotype[4];
+
 	if (filename && !strcmp(filename, "/dev/null"))
 		wcscpy(wfilename, L"nul");
 	else if (!is_valid_win32_path(filename, 1)) {
 		int create = otype && strchr(otype, 'w');
 		errno = create ? EINVAL : ENOENT;
 		return NULL;
-	} else if (xutftowcs_path(wfilename, filename) < 0)
-		return NULL;
+	} else {
+		wlen = xutftowcs_path(wfilename, filename);
+		if (wlen < 0)
+			return NULL;
+
+		if (!protect_ntfs && is_path_ends_with_special_character(filename)) {
+			wchar_t abspath[MAX_PATH];
+
+			if (convert_to_abs_path_for_special_path(
+				    abspath, wfilename, wlen) < 0)
+				return NULL;
+
+			wcscpy(wfilename, abspath);
+		}
+	}
 
 	if (xutftowcs(wotype, otype, ARRAY_SIZE(wotype)) < 0)
 		return NULL;
@@ -850,12 +907,25 @@ int mingw_access(const char *filename, int mode)
 	return _waccess(wfilename, mode & ~X_OK);
 }
 
+/* cached length of current directory for convert_to_abs_path_for_special_path */
+static int current_directory_len = 0;
+
+/* cached path of current directory for convert_to_abs_path_for_special_path */
+static wchar_t *current_directory_path;
+
+
 int mingw_chdir(const char *dirname)
 {
+	int result;
 	wchar_t wdirname[MAX_PATH];
 	if (xutftowcs_path(wdirname, dirname) < 0)
 		return -1;
-	return _wchdir(wdirname);
+
+	result =_wchdir(wdirname);
+	current_directory_len = GetCurrentDirectoryW(0, NULL);
+	ALLOC_ARRAY(current_directory_path, current_directory_len);
+	GetCurrentDirectoryW(current_directory_len, current_directory_path);
+	return result;
 }
 
 int mingw_chmod(const char *filename, int mode)
@@ -928,8 +998,20 @@ static int do_lstat(int follow, const char *file_name, struct stat *buf)
 {
 	WIN32_FILE_ATTRIBUTE_DATA fdata;
 	wchar_t wfilename[MAX_PATH];
-	if (xutftowcs_path(wfilename, file_name) < 0)
+	int wlen = xutftowcs_path(wfilename, file_name);
+	if (wlen < 0)
 		return -1;
+
+	if (is_path_ends_with_special_character(file_name)) {
+		wchar_t abspath[MAX_PATH];
+
+		int len = convert_to_abs_path_for_special_path(abspath,
+							       wfilename, wlen);
+		if (len < 0)
+			return -1;
+
+		wcscpy(wfilename, abspath);
+	}
 
 	if (GetFileAttributesExW(wfilename, GetFileExInfoStandard, &fdata)) {
 		buf->st_ino = 0;
@@ -3137,6 +3219,79 @@ not_a_reserved_name:
 	}
 }
 
+int is_path_ends_with_special_character(const char *path)
+{
+	int preceding_space_or_period = 0, i = 0, periods = 0;
+
+	skip_dos_drive_prefix((char **)&path);
+
+	for (;;) {
+		char c = *(path++);
+
+		switch (c) {
+		case '\0':
+		case '/':
+		case '\\':
+			if (preceding_space_or_period &&
+			    (i != periods || periods > 2))
+				return 1;
+
+			if (!c)
+				return 0;
+
+			i = periods = preceding_space_or_period = 0;
+			continue;
+
+		case '.':
+			periods++;
+			/* fallthru */
+
+		case ' ':
+			preceding_space_or_period = 1;
+			i++;
+			continue;
+		}
+
+		preceding_space_or_period = 0;
+		i++;
+	}
+}
+
+int convert_to_abs_path_for_special_path(wchar_t *abspath, wchar_t *path,
+					 int len)
+{
+	int result;
+
+	/**
+	 * if provided path is already absolute path, do not convert path again.
+	 */
+	if ((is_dir_sep(path[0])) || (!is_dir_sep(path[0]) && path[1] == ':')) {
+		wcscpy(abspath, path);
+		return len;
+	}
+
+	/* convert to absolute path **without** using GetFullPathNameW because
+	 * GetFullPathNameW returns invalid path */
+	result = current_directory_len + len;
+	if (result >= MAX_PATH - 4) {
+		errno = ENAMETOOLONG;
+		return -1;
+	}
+
+	wcscpy(abspath, L"\\\\?\\");
+	wcscpy(abspath + 4, current_directory_path);
+	wcscpy(abspath + 4 + current_directory_len - 1, L"\\");
+	wcscpy(abspath + 4 + current_directory_len, path);
+
+	/* normalize slashes to backslashes because Windows does not recognize
+	 * special paths as slashes */
+	for (; *abspath; abspath++)
+		if (*abspath == '/')
+			*abspath = '\\';
+
+	return result + 4;
+}
+
 #if !defined(_MSC_VER)
 /*
  * Disable MSVCRT command line wildcard expansion (__getmainargs called from
@@ -3294,6 +3449,12 @@ int wmain(int argc, const wchar_t **wargv)
 
 	/* initialize Unicode console */
 	winansi_init();
+
+	/* init path and length of current directory for convert_to_abs_path_for_special_path */
+	current_directory_len = GetCurrentDirectoryW(0, NULL);
+	ALLOC_ARRAY(current_directory_path, current_directory_len);
+	GetCurrentDirectoryW(current_directory_len, current_directory_path);
+
 
 	/* invoke the real main() using our utf8 version of argv. */
 	exit_status = main(argc, argv);
