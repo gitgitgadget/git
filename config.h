@@ -166,6 +166,26 @@ struct config_context {
 typedef int (*config_fn_t)(const char *, const char *,
 			   const struct config_context *, void *);
 
+struct config_location_options {
+	struct git_config_source source;
+	struct config_options options;
+	char *file_to_free;
+	int use_global_config;
+	int use_system_config;
+	int use_local_config;
+	int use_worktree_config;
+	int respect_includes_opt;
+};
+#define CONFIG_LOCATION_OPTIONS_INIT { \
+	.respect_includes_opt = -1, \
+}
+
+void location_options_init(struct repository *repo,
+			   struct config_location_options *opts,
+			   const char *prefix);
+
+void location_options_release(struct config_location_options *opts);
+
 /**
  * Read a specific file in git-config format.
  * This function takes the same callback and data parameters as `repo_config`.

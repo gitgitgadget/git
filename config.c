@@ -35,6 +35,7 @@
 #include "strvec.h"
 #include "trace2.h"
 #include "wildmatch.h"
+#include "worktree.h"
 #include "write-or-die.h"
 
 struct config_source {
@@ -3591,4 +3592,92 @@ int lookup_config(const char **mapping, int nr_mapping, const char *var)
 			return i;
 	}
 	return -1;
+}
+
+void location_options_init(struct repository *repo,
+			   struct config_location_options *opts,
+			   const char *prefix)
+{
+	if (!opts->source.file)
+		opts->source.file = opts->file_to_free =
+			xstrdup_or_null(getenv(CONFIG_ENVIRONMENT));
+
+	if (opts->use_global_config + opts->use_system_config +
+	    opts->use_local_config + opts->use_worktree_config +
+	    !!opts->source.file + !!opts->source.blob > 1) {
+		error(_("only one config file at a time"));
+		exit(129);
+	}
+
+	if (!startup_info->have_repository) {
+		if (opts->use_local_config)
+			die(_("--local can only be used inside a git repository"));
+		if (opts->source.blob)
+			die(_("--blob can only be used inside a git repository"));
+		if (opts->use_worktree_config)
+			die(_("--worktree can only be used inside a git repository"));
+	}
+
+	if (opts->source.file &&
+			!strcmp(opts->source.file, "-")) {
+		opts->source.file = NULL;
+		opts->source.use_stdin = 1;
+		opts->source.scope = CONFIG_SCOPE_COMMAND;
+	}
+
+	if (opts->use_global_config) {
+		opts->source.file = opts->file_to_free = git_global_config();
+		if (!opts->source.file)
+			/*
+			 * It is unknown if HOME/.gitconfig exists, so
+			 * we do not know if we should write to XDG
+			 * location; error out even if XDG_CONFIG_HOME
+			 * is set and points at a sane location.
+			 */
+			die(_("$HOME not set"));
+		opts->source.scope = CONFIG_SCOPE_GLOBAL;
+	} else if (opts->use_system_config) {
+		opts->source.file = opts->file_to_free = git_system_config();
+		opts->source.scope = CONFIG_SCOPE_SYSTEM;
+	} else if (opts->use_local_config) {
+		opts->source.file = opts->file_to_free = repo_git_path(repo, "config");
+		opts->source.scope = CONFIG_SCOPE_LOCAL;
+	} else if (opts->use_worktree_config) {
+		struct worktree **worktrees = get_worktrees();
+		if (repo->repository_format_worktree_config)
+			opts->source.file = opts->file_to_free =
+				repo_git_path(repo, "config.worktree");
+		else if (worktrees[0] && worktrees[1])
+			die(_("--worktree cannot be used with multiple "
+			      "working trees unless the config\n"
+			      "extension worktreeConfig is enabled. "
+			      "Please read \"CONFIGURATION FILE\"\n"
+			      "section in \"git help worktree\" for details"));
+		else
+			opts->source.file = opts->file_to_free =
+				repo_git_path(repo, "config");
+		opts->source.scope = CONFIG_SCOPE_LOCAL;
+		free_worktrees(worktrees);
+	} else if (opts->source.file) {
+		if (!is_absolute_path(opts->source.file) && prefix)
+			opts->source.file = opts->file_to_free =
+				prefix_filename(prefix, opts->source.file);
+		opts->source.scope = CONFIG_SCOPE_COMMAND;
+	} else if (opts->source.blob) {
+		opts->source.scope = CONFIG_SCOPE_COMMAND;
+	}
+
+	if (opts->respect_includes_opt == -1)
+		opts->options.respect_includes = !opts->source.file;
+	else
+		opts->options.respect_includes = opts->respect_includes_opt;
+	if (startup_info->have_repository) {
+		opts->options.commondir = repo_get_common_dir(repo);
+		opts->options.git_dir = repo_get_git_dir(repo);
+	}
+}
+
+void location_options_release(struct config_location_options *opts)
+{
+	free(opts->file_to_free);
 }
