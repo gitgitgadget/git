@@ -16,6 +16,7 @@ static int zformat = 0;
 #define UNKNOWN_COMMAND "unknown_command"
 #define HELP_COMMAND "help"
 #define GET_COMMAND "get"
+#define SET_COMMAND "set"
 #define COMMAND_PARSE_ERROR "command_parse_error"
 
 static void print_word(const char *word, int start)
@@ -379,6 +380,71 @@ cleanup:
 	return res;
 }
 
+
+/**
+ * 'set' command, version 1.
+ *
+ * Positional arguments should be of the form:
+ *
+ * [0] scope ("system", "global", "local", or "worktree")
+ * [1] config key
+ * [2] config value
+ */
+static int set_command_1(struct repository *repo,
+			 const char *prefix,
+			 char *data,
+			 size_t data_len)
+{
+	int res = 0, err = 0;
+	enum config_scope scope = CONFIG_SCOPE_UNKNOWN;
+	char *token = NULL, *key = NULL, *value = NULL;
+	struct config_location_options locopts = CONFIG_LOCATION_OPTIONS_INIT;
+
+	if (!parse_token(&data, &data_len, &token, &err) || err)
+		goto parse_error;
+
+	if (parse_scope(token, &scope) ||
+	    scope == CONFIG_SCOPE_UNKNOWN ||
+	    scope == CONFIG_SCOPE_SUBMODULE ||
+	    scope == CONFIG_SCOPE_COMMAND)
+		goto parse_error;
+
+	if (!parse_token(&data, &data_len, &key, &err) || err)
+		goto parse_error;
+
+	/* Use the remaining data as the value string. */
+	if (!zformat)
+		value = data;
+	else {
+		parse_token(&data, &data_len, &value, &err);
+		if (err)
+			goto parse_error;
+	}
+
+	if (location_options_set_scope(&locopts, scope))
+		goto parse_error;
+	location_options_init(repo, &locopts, prefix);
+
+	res = repo_config_set_in_file_gently(repo, locopts.source.file,
+					     key, NULL, value);
+
+	if (res)
+		res = emit_response(SET_COMMAND, "1", "failure",
+				    scope_str(scope), key, value, NULL);
+	else
+		res = emit_response(SET_COMMAND, "1", "success",
+				    scope_str(scope), key, value, NULL);
+
+	goto cleanup;
+
+parse_error:
+	res = command_parse_error(SET_COMMAND);
+
+cleanup:
+	location_options_release(&locopts);
+	return res;
+}
+
 struct command {
 	const char *name;
 	command_fn fn;
@@ -394,6 +460,11 @@ static struct command commands[] = {
 	{
 		.name = GET_COMMAND,
 		.fn = get_command_1,
+		.version = 1,
+	},
+	{
+		.name = SET_COMMAND,
+		.fn = set_command_1,
 		.version = 1,
 	},
 	/* unknown_command must be last. */

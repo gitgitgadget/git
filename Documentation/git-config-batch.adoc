@@ -111,6 +111,30 @@ get 1 missing <key> [<value-pattern>|<value>]
 where `<value-pattern>` or `<value>` is only supplied if provided in
 the command.
 
+`set` version 1::
+	The `set` command writes a single key-value pair to a config
+	file. It specifies which file by a `<scope>` parameter from
+	among `system`, `global`, `local`, and `worktree`. The `<key>`
+	is the next positional argument. The remaining data in the line
+	is provided as the `<value>` to assign the config.
++
+------------
+set 1 <scope> <key> <value>
+------------
++
+These uses will match the behavior of `git config --set --<scope> <key>
+<value>`. Note that replacing all values with the `--all` option or
+matching specific value patterns are not supported by this command.
++
+The response of these commands will include a `success` message if the
+value is written as expected or `failed` if an unexpected failure
+occurs:
++
+------------
+set 1 success <scope> <key> <value>
+set 1 failed <scope> <key> <value>
+------------
+
 NUL-Terminated Format
 ~~~~~~~~~~~~~~~~~~~~~
 

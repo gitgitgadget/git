@@ -47,9 +47,10 @@ test_expect_success 'help command' '
 	echo "help 1" >in &&
 
 	cat >expect <<-\EOF &&
-	help 1 count 2
+	help 1 count 3
 	help 1 help 1
 	help 1 get 1
+	help 1 set 1
 	EOF
 
 	git config-batch >out <in &&
@@ -63,9 +64,10 @@ test_expect_success 'help -z' '
 	EOF
 
 	cat >expect <<-\EOF &&
-	4:help 1:1 5:count 1:2
+	4:help 1:1 5:count 1:3
 	4:help 1:1 4:help 1:1
 	4:help 1:1 3:get 1:1
+	4:help 1:1 3:set 1:1
 	15:unknown_command
 	EOF
 
@@ -203,6 +205,94 @@ test_expect_success 'get config with -z' '
 
 	test_zformat git config-batch -z >out <in &&
 	test_cmp expect out
+'
+
+test_expect_success 'set config by scope' '
+	test_when_finished git config remove-section test.set &&
+	GIT_CONFIG_SYSTEM=system-config-file &&
+	GIT_CONFIG_NOSYSTEM=0 &&
+	GIT_CONFIG_GLOBAL=global-config-file &&
+	export GIT_CONFIG_SYSTEM &&
+	export GIT_CONFIG_NOSYSTEM &&
+	export GIT_CONFIG_GLOBAL &&
+
+	cat >in <<-\EOF &&
+	set 1 system test.set.system system
+	set 1 global test.set.global global
+	set 1 local test.set.local local with spaces
+	set 1 worktree test.set.worktree worktree
+	set 1 submodule test.set.submodule submodule
+	set 1 command test.set.command command
+	set 1 inherited test.set.inherited inherited
+	EOF
+
+	cat >expect <<-\EOF &&
+	set 1 success system test.set.system system
+	set 1 success global test.set.global global
+	set 1 success local test.set.local local with spaces
+	set 1 success worktree test.set.worktree worktree
+	command_parse_error set
+	command_parse_error set
+	command_parse_error set
+	EOF
+
+	git config-batch <in >out 2>err &&
+
+	test_must_be_empty err &&
+	test_cmp expect out &&
+
+	cat >expect-values <<-EOF &&
+	file:system-config-file	system
+	file:global-config-file	global
+	file:.git/config	local with spaces
+	file:.git/config.worktree	worktree
+	EOF
+
+	git config get --show-origin --regexp --all test.set.* >values &&
+	test_cmp expect-values values
+'
+
+test_expect_success 'set config by scope with -z' '
+	test_when_finished git config remove-section test.set &&
+	GIT_CONFIG_SYSTEM=system-config-file &&
+	GIT_CONFIG_NOSYSTEM=0 &&
+	GIT_CONFIG_GLOBAL=global-config-file &&
+	export GIT_CONFIG_SYSTEM &&
+	export GIT_CONFIG_NOSYSTEM &&
+	export GIT_CONFIG_GLOBAL &&
+
+	cat >in <<-\EOF &&
+	3:set NUL 1:1 NUL 6:system NUL 15:test.set.system NUL 6:system NUL NUL
+	3:set NUL 1:1 NUL 6:global NUL 15:test.set.global NUL 6:global NUL NUL
+	3:set NUL 1:1 NUL 5:local NUL 14:test.set.local NUL 17:local with spaces NUL NUL
+	3:set NUL 1:1 NUL 8:worktree NUL 17:test.set.worktree NUL 8:worktree NUL NUL
+	3:set NUL 1:1 NUL 9:submodule NUL 18:test.set.submodule NUL 9:submodule NUL NUL
+	3:set NUL 1:1 NUL 7:command NUL 16:test.set.command NUL 7:command NUL NUL
+	3:set NUL 1:1 NUL 9:inherited NUL 18:test.set.inherited NUL 9:inherited NUL NUL
+	EOF
+
+	cat >expect <<-\EOF &&
+	3:set 1:1 7:success 6:system 15:test.set.system 6:system
+	3:set 1:1 7:success 6:global 15:test.set.global 6:global
+	3:set 1:1 7:success 5:local 14:test.set.local 17:local with spaces
+	3:set 1:1 7:success 8:worktree 17:test.set.worktree 8:worktree
+	19:command_parse_error 3:set
+	19:command_parse_error 3:set
+	19:command_parse_error 3:set
+	EOF
+
+	test_zformat git config-batch -z >out <in &&
+	test_cmp expect out &&
+
+	cat >expect-values <<-EOF &&
+	file:system-config-file	system
+	file:global-config-file	global
+	file:.git/config	local with spaces
+	file:.git/config.worktree	worktree
+	EOF
+
+	git config get --show-origin --regexp --all test.set.* >values &&
+	test_cmp expect-values values
 '
 
 test_done

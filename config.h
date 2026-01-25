@@ -180,6 +180,9 @@ struct config_location_options {
 	.respect_includes_opt = -1, \
 }
 
+int location_options_set_scope(struct config_location_options *opts,
+			       enum config_scope scope);
+
 void location_options_init(struct repository *repo,
 			   struct config_location_options *opts,
 			   const char *prefix);

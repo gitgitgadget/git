@@ -3594,6 +3594,33 @@ int lookup_config(const char **mapping, int nr_mapping, const char *var)
 	return -1;
 }
 
+int location_options_set_scope(struct config_location_options *opts,
+			       enum config_scope scope)
+{
+	switch (scope) {
+	case CONFIG_SCOPE_SYSTEM:
+		opts->use_system_config = 1;
+		break;
+
+	case CONFIG_SCOPE_GLOBAL:
+		opts->use_global_config = 1;
+		break;
+
+	case CONFIG_SCOPE_LOCAL:
+		opts->use_local_config = 1;
+		break;
+
+	case CONFIG_SCOPE_WORKTREE:
+		opts->use_worktree_config = 1;
+		break;
+
+	default:
+		return -1;
+	}
+
+	return 0;
+}
+
 void location_options_init(struct repository *repo,
 			   struct config_location_options *opts,
 			   const char *prefix)
