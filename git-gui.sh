@@ -3114,7 +3114,7 @@ pack .vpane -anchor n -side top -fill both -expand 1
 
 # -- Working Directory File List
 
-textframe .vpane.files.workdir -height 100 -width 200
+textframe .vpane.files.workdir -height 300 -width 400
 tlabel .vpane.files.workdir.title -text [mc "Unstaged Changes"] \
 	-background lightsalmon -foreground black
 ttext $ui_workdir \
@@ -3135,7 +3135,7 @@ pack $ui_workdir -side left -fill both -expand 1
 
 # -- Index File List
 #
-textframe .vpane.files.index -height 100 -width 200
+textframe .vpane.files.index -height 300 -width 400
 tlabel .vpane.files.index.title \
 	-text [mc "Staged Changes (Will Commit)"] \
 	-background lightgreen -foreground black
