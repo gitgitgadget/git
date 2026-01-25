@@ -868,6 +868,7 @@ set font_descs {
 }
 set default_config(gui.stageuntracked) ask
 set default_config(gui.displayuntracked) true
+set default_config(gui.autorescan) true
 
 ######################################################################
 ##
@@ -3824,6 +3825,10 @@ bind .   <Alt-Key-1> {focus_widget $::ui_workdir}
 bind .   <Alt-Key-2> {focus_widget $::ui_index}
 bind .   <Alt-Key-3> {focus $::ui_diff}
 bind .   <Alt-Key-4> {focus $::ui_comm}
+
+if {[is_config_true gui.autorescan]} {
+	bind .   <FocusIn>  { if {"%W" eq "."} do_rescan }
+}
 
 set file_lists_last_clicked($ui_index) {}
 set file_lists_last_clicked($ui_workdir) {}
