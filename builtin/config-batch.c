@@ -67,9 +67,11 @@ static int command_parse_error(const char *command)
  * Return 0 on success.
  */
 typedef int (*command_fn)(struct repository *repo,
+			  const char *prefix,
 			  char *data, size_t data_len);
 
 static int unknown_command(struct repository *repo UNUSED,
+			   const char *prefix UNUSED,
 			   char *data UNUSED, size_t data_len UNUSED)
 {
 	return emit_response(UNKNOWN_COMMAND, NULL);
@@ -176,6 +178,7 @@ static size_t parse_token(char **data, size_t *data_len,
 }
 
 static int help_command_1(struct repository *repo,
+			  const char *prefix UNUSED,
 			  char *data, size_t data_len);
 
 enum value_match_mode {
@@ -292,6 +295,7 @@ static int parse_scope(const char *str, enum config_scope *scope)
  * [N*] indicates optional parameters that are not needed.
  */
 static int get_command_1(struct repository *repo,
+			 const char *prefix UNUSED,
 			 char *data,
 			 size_t data_len)
 {
@@ -402,6 +406,7 @@ static struct command commands[] = {
 #define COMMAND_COUNT ((size_t)(sizeof(commands) / sizeof(*commands)))
 
 static int help_command_1(struct repository *repo UNUSED,
+			  const char *prefix UNUSED,
 			  char *data UNUSED, size_t data_len UNUSED)
 {
 	struct strbuf fmt_str = STRBUF_INIT;
@@ -424,7 +429,8 @@ static int help_command_1(struct repository *repo UNUSED,
 	return 0;
 }
 
-static int process_command_nul(struct repository *repo)
+static int process_command_nul(struct repository *repo,
+			       const char *prefix)
 {
 	static struct strbuf line = STRBUF_INIT;
 	char *data, *command, *versionstr;
@@ -476,7 +482,7 @@ static int process_command_nul(struct repository *repo)
 		if (!commands[i].name[0] ||
 		    (!strcmp(command, commands[i].name) &&
 		     commands[i].version == version)) {
-			res = commands[i].fn(repo, data, data_len);
+			res = commands[i].fn(repo, prefix, data, data_len);
 			goto cleanup;
 		}
 	}
@@ -484,14 +490,15 @@ static int process_command_nul(struct repository *repo)
 	BUG(_("scanned to end of command list, including 'unknown_command'"));
 
 parse_error:
-	res = unknown_command(repo, NULL, 0);
+	res = unknown_command(repo, prefix, NULL, 0);
 
 cleanup:
 	strbuf_release(&line);
 	return res;
 }
 
-static int process_command_whitespace(struct repository *repo)
+static int process_command_whitespace(struct repository *repo,
+				      const char *prefix)
 {
 	static struct strbuf line = STRBUF_INIT;
 	struct string_list tokens = STRING_LIST_INIT_NODUP;
@@ -536,7 +543,7 @@ static int process_command_whitespace(struct repository *repo)
 		if (!commands[i].name[0] ||
 		    (!strcmp(command, commands[i].name) &&
 		     commands[i].version == version)) {
-			res = commands[i].fn(repo, data, data_len);
+			res = commands[i].fn(repo, prefix, data, data_len);
 			goto cleanup;
 		}
 	}
@@ -559,11 +566,12 @@ cleanup:
  *
  * Returns negative value on other catastrophic error.
  */
-static int process_command(struct repository *repo)
+static int process_command(struct repository *repo,
+			   const char *prefix)
 {
 	if (zformat)
-		return process_command_nul(repo);
-	return process_command_whitespace(repo);
+		return process_command_nul(repo, prefix);
+	return process_command_whitespace(repo, prefix);
 }
 
 int cmd_config_batch(int argc,
@@ -586,7 +594,7 @@ int cmd_config_batch(int argc,
 
 	repo_config(repo, git_default_config, NULL);
 
-	while (!(res = process_command(repo)));
+	while (!(res = process_command(repo, prefix)));
 
 	if (res == 1)
 		return 0;
