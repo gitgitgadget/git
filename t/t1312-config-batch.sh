@@ -295,4 +295,31 @@ test_expect_success 'set config by scope with -z' '
 	test_cmp expect-values values
 '
 
+test_expect_success 'read/write interactions in sequence' '
+	test_when_finished git config remove-section test.rw &&
+
+	cat >in <<-\EOF &&
+	get 1 local test.rw.missing
+	set 1 local test.rw.found found
+	get 1 local test.rw.found
+	set 1 local test.rw.found updated
+	get 1 local test.rw.found
+	EOF
+
+	cat >expect <<-\EOF &&
+	get 1 missing test.rw.missing
+	set 1 success local test.rw.found found
+	get 1 found test.rw.found local found
+	set 1 success local test.rw.found updated
+	get 1 found test.rw.found local updated
+	EOF
+
+	git config-batch <in >out 2>err &&
+
+	test_must_be_empty err &&
+	test_cmp expect out &&
+
+	test_cmp_config updated test.rw.found
+'
+
 test_done
