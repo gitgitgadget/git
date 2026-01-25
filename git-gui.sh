@@ -3827,7 +3827,7 @@ bind .   <Alt-Key-3> {focus $::ui_diff}
 bind .   <Alt-Key-4> {focus $::ui_comm}
 
 if {[is_config_true gui.autorescan]} {
-	bind .   <FocusIn>  { if {"%W" eq "."} do_rescan }
+	bind .   <FocusIn>  { if {"%W" eq "."} { after idle do_rescan } }
 }
 
 set file_lists_last_clicked($ui_index) {}
