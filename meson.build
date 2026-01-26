@@ -582,6 +582,7 @@ builtin_sources = [
   'builtin/commit-tree.c',
   'builtin/commit.c',
   'builtin/config.c',
+  'builtin/config-batch.c',
   'builtin/count-objects.c',
   'builtin/credential-cache--daemon.c',
   'builtin/credential-cache.c',
