@@ -12,27 +12,6 @@ proc apply_tab_size {{firsttab {}}} {
 	}
 }
 
-proc expand_tabs {line {startcol -1}} {
-	# startcol set to -1, because in preview the lines start with a '+', '-', or ' '
-	global repo_config
-
-	set col $startcol
-	set out ""
-
-	foreach char [split $line ""] {
-		if {$char eq "\t"} {
-			set spaces [expr {$repo_config(gui.tabsize) - ($col % $repo_config(gui.tabsize))}]
-			append out [string repeat " " $spaces]
-			incr col $spaces
-		} else {
-			append out $char
-			incr col
-		}
-	}
-
-	return $out
-}
-
 proc clear_diff {} {
 	global ui_diff current_diff_path current_diff_header
 	global ui_index ui_workdir
@@ -516,9 +495,8 @@ proc read_diff {fd conflict_size cont_info} {
 			}
 		}
 		set mark [$ui_diff index "end - 1 line linestart"]
-		set line [expand_tabs $line]
+		apply_tab_size 1
 		$ui_diff insert end "$line" $tags
-
 		if {[string index $line end] eq "\r"} {
 			$ui_diff tag add d_cr {end - 2c}
 		}
