@@ -414,6 +414,11 @@ static int fetch_indices(struct walker *walker, struct alt_base *repo)
 		repo->got_indices = 1;
 		ret = 0;
 		break;
+	case HTTP_RATE_LIMITED:
+		error("rate limited by '%s', please try again later", repo->base);
+		repo->got_indices = 0;
+		ret = -1;
+		break;
 	default:
 		repo->got_indices = 0;
 		ret = -1;
