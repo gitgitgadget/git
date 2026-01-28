@@ -495,6 +495,7 @@ proc read_diff {fd conflict_size cont_info} {
 			}
 		}
 		set mark [$ui_diff index "end - 1 line linestart"]
+		apply_tab_size 1
 		$ui_diff insert end $line $tags
 		if {[string index $line end] eq "\r"} {
 			$ui_diff tag add d_cr {end - 2c}
