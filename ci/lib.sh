@@ -282,7 +282,15 @@ fi
 MAKEFLAGS="$MAKEFLAGS --jobs=$JOBS"
 GIT_PROVE_OPTS="--timer --jobs $JOBS"
 
-GIT_TEST_OPTS="$GIT_TEST_OPTS --verbose-log -x"
+GIT_TEST_OPTS="$GIT_TEST_OPTS -x"
+
+case "$jobname" in
+*-meson)
+	;;
+*)
+	GIT_TEST_OPTS="$GIT_TEST_OPTS --verbose-log";;
+esac
+
 case "$CI_OS_NAME" in
 windows|windows_nt)
 	GIT_TEST_OPTS="$GIT_TEST_OPTS --no-chain-lint --no-bin-wrappers"
