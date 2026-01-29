@@ -366,6 +366,12 @@ const char *branch_get_upstream(struct branch *branch, struct strbuf *err);
  */
 const char *branch_get_push(struct branch *branch, struct strbuf *err);
 
+/**
+ * Return the fully-qualified refname of the default branch.
+ * I.e., what "@{default}" would give you.
+ */
+const char *branch_get_default_ref(void);
+
 /* Flags to match_refs. */
 enum match_refs_flags {
 	MATCH_REFS_NONE		= 0,

@@ -1961,6 +1961,18 @@ const char *branch_get_push(struct branch *branch, struct strbuf *err)
 	return branch->push_tracking_ref;
 }
 
+const char *branch_get_default_ref(void)
+{
+	static struct strbuf default_ref = STRBUF_INIT;
+	char *default_branch_name;
+
+	strbuf_reset(&default_ref);
+	default_branch_name = repo_default_branch_name(the_repository, 1);
+	strbuf_addf(&default_ref, "refs/heads/%s", default_branch_name);
+	free(default_branch_name);
+	return default_ref.buf;
+}
+
 static int ignore_symref_update(const char *refname, struct strbuf *scratch)
 {
 	return !refs_read_symbolic_ref(get_main_ref_store(the_repository), refname, scratch);
