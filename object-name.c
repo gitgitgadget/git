@@ -947,6 +947,12 @@ static inline int push_mark(const char *string, int len)
 	return at_mark(string, len, suffix, ARRAY_SIZE(suffix));
 }
 
+static inline int default_mark(const char *string, int len)
+{
+	const char *suffix[] = { "@{default}" };
+	return at_mark(string, len, suffix, ARRAY_SIZE(suffix));
+}
+
 static enum get_oid_result get_oid_1(struct repository *r, const char *name, int len, struct object_id *oid, unsigned lookup_flags);
 static int interpret_nth_prior_checkout(struct repository *r, const char *name, int namelen, struct strbuf *buf);
 
@@ -998,7 +1004,8 @@ static int get_oid_basic(struct repository *r, const char *str, int len,
 					continue;
 				}
 				if (!upstream_mark(str + at, len - at) &&
-				    !push_mark(str + at, len - at)) {
+				    !push_mark(str + at, len - at) &&
+				    !default_mark(str + at, len - at)) {
 					reflog_len = (len-1) - (at+2);
 					len = at;
 				}
@@ -1707,6 +1714,12 @@ static int branch_interpret_allowed(const char *refname, unsigned allowed)
 	return 0;
 }
 
+static const char *branch_get_default_mark(struct branch *branch UNUSED,
+					   struct strbuf *err UNUSED)
+{
+	return branch_get_default_ref();
+}
+
 static int interpret_branch_mark(struct repository *r,
 				 const char *name, int namelen,
 				 int at, struct strbuf *buf,
@@ -1795,6 +1808,17 @@ int repo_interpret_branch_name(struct repository *r,
 
 		len = interpret_branch_mark(r, name, namelen, at - name, buf,
 					    push_mark, branch_get_push,
+					    options);
+		if (len > 0)
+			return len;
+
+		if (default_mark(at, namelen - (at - name))) {
+			if (at - name > 0)
+				return -1;
+		}
+
+		len = interpret_branch_mark(r, name, namelen, at - name, buf,
+					    default_mark, branch_get_default_mark,
 					    options);
 		if (len > 0)
 			return len;

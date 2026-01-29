@@ -27,6 +27,12 @@ test_cmp_symbolic_HEAD_ref () {
 	test_cmp expect actual
 }
 
+test_expect_success '"checkout @{default}" switches to default branch' '
+	git checkout @{default} &&
+	test_cmp_symbolic_HEAD_ref main &&
+	git checkout other
+'
+
 test_expect_success '"checkout -" switches back' '
 	git checkout - &&
 	test_cmp_symbolic_HEAD_ref main
