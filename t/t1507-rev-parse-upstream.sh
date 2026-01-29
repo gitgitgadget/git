@@ -259,6 +259,12 @@ test_expect_success 'log -g other@{u}@{now}' '
 	test_cmp expect actual
 '
 
+test_expect_success '@{primary} resolves to correct full name' '
+	echo refs/heads/main >expect &&
+	git -C clone rev-parse --symbolic-full-name @{primary} >actual &&
+	test_cmp expect actual
+'
+
 test_expect_success '@{reflog}-parsing does not look beyond colon' '
 	echo content >@{yesterday} &&
 	git add @{yesterday} &&
