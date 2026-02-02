@@ -135,6 +135,34 @@ set 1 success <scope> <key> <value>
 set 1 failed <scope> <key> <value>
 ------------
 
+`unset` version 1::
+	The `unset` command removes a single value from a config file.
+	It specifies which file by a `<scope>` parameter from among
+	`system`, `global`, `local`, and `worktree`. The `<key>` is the
+	next positional argument. There could be two additional
+	arguments used to match specific config values, where the first
+	is either `arg:regex` or `arg:fixed-value` to specify the type
+	of match.
++
+------------
+unset 1 <scope> <key>
+unset 1 <scope> <key> arg:regex <value-pattern>
+unset 1 <scope> <key> arg:fixed-value <value>
+------------
++
+These uses will match the behavior of `git config --unset --<scope> <key>`
+with the additional arguments of `<value-pattern>` if `arg:regex` is
+given or `--fixed-value <value>` if `arg:fixed-value` is given.
++
+The response of these commands will include a `success` message
+if matched values are found and removed as expected or `failed` if an
+unexpected failure occurs:
++
+------------
+unset 1 success <scope> <key>
+unset 1 failed <scope> <key>
+------------
+
 NUL-Terminated Format
 ~~~~~~~~~~~~~~~~~~~~~
 

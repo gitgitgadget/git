@@ -17,6 +17,7 @@ static int zformat = 0;
 #define HELP_COMMAND "help"
 #define GET_COMMAND "get"
 #define SET_COMMAND "set"
+#define UNSET_COMMAND "unset"
 #define COMMAND_PARSE_ERROR "command_parse_error"
 
 static void print_word(const char *word, int start)
@@ -445,6 +446,99 @@ cleanup:
 	return res;
 }
 
+/**
+ * 'unset' command, version 1.
+ *
+ * Positional arguments should be of the form:
+ *
+ * [0] scope ("system", "global", "local", or "worktree")
+ * [1] config key
+ * [2] config value
+ * [3*] match ("regex", "fixed-value")
+ * [4*] value regex OR value string
+ *
+ * [N*] indicates optional parameters that are not needed.
+ */
+static int unset_command_1(struct repository *repo,
+			 const char *prefix,
+			 char *data,
+			 size_t data_len)
+{
+	int res = 0, err = 0, flags = 0;
+	enum config_scope scope = CONFIG_SCOPE_UNKNOWN;
+	char *token = NULL, *key = NULL, *value_pattern = NULL;
+	size_t token_len;
+	struct config_location_options locopts = CONFIG_LOCATION_OPTIONS_INIT;
+
+	if (!parse_token(&data, &data_len, &token, &err) || err)
+		goto parse_error;
+
+	if (parse_scope(token, &scope) ||
+	    scope == CONFIG_SCOPE_UNKNOWN ||
+	    scope == CONFIG_SCOPE_SUBMODULE ||
+	    scope == CONFIG_SCOPE_COMMAND)
+		goto parse_error;
+
+	if (!parse_token(&data, &data_len, &key, &err) || err)
+		goto parse_error;
+
+	token_len = parse_token(&data, &data_len, &token, &err);
+	if (err)
+		goto parse_error;
+
+	if (token_len && !strncmp(token, "arg:", 4)) {
+		if (!strcmp(token + 4, "fixed-value"))
+			flags |= CONFIG_FLAGS_FIXED_VALUE;
+		/* no special logic for arg:regex. */
+		else if (strcmp(token + 4, "regex"))
+			goto parse_error; /* unknown arg. */
+
+		/* Use the remaining data as the value string. */
+		if (!zformat)
+			value_pattern = data;
+		else {
+			parse_token(&data, &data_len, &value_pattern, &err);
+			if (err)
+				goto parse_error;
+		}
+	} else if (token_len) {
+		/*
+		 * If we have remaining tokens not starting in "arg:",
+		 * then we don't understand them.
+		 */
+		goto parse_error;
+	}
+
+	if (location_options_set_scope(&locopts, scope))
+		goto parse_error;
+	location_options_init(repo, &locopts, prefix);
+
+	res = repo_config_set_multivar_in_file_gently(
+			repo,
+			locopts.source.file,
+			key,
+			/* value */ NULL,
+			value_pattern,
+			/* comment */ NULL,
+			flags);
+
+	if (res)
+		res = emit_response(UNSET_COMMAND, "1", "failure",
+				    scope_str(scope), key, NULL);
+	else
+		res = emit_response(UNSET_COMMAND, "1", "success",
+				    scope_str(scope), key, NULL);
+
+	goto cleanup;
+
+parse_error:
+	res = command_parse_error(UNSET_COMMAND);
+
+cleanup:
+	location_options_release(&locopts);
+	return res;
+}
+
 struct command {
 	const char *name;
 	command_fn fn;
@@ -465,6 +559,11 @@ static struct command commands[] = {
 	{
 		.name = SET_COMMAND,
 		.fn = set_command_1,
+		.version = 1,
+	},
+	{
+		.name = UNSET_COMMAND,
+		.fn = unset_command_1,
 		.version = 1,
 	},
 	/* unknown_command must be last. */

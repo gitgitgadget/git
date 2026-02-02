@@ -47,10 +47,11 @@ test_expect_success 'help command' '
 	echo "help 1" >in &&
 
 	cat >expect <<-\EOF &&
-	help 1 count 3
+	help 1 count 4
 	help 1 help 1
 	help 1 get 1
 	help 1 set 1
+	help 1 unset 1
 	EOF
 
 	git config-batch >out <in &&
@@ -64,10 +65,11 @@ test_expect_success 'help -z' '
 	EOF
 
 	cat >expect <<-\EOF &&
-	4:help 1:1 5:count 1:3
+	4:help 1:1 5:count 1:4
 	4:help 1:1 4:help 1:1
 	4:help 1:1 3:get 1:1
 	4:help 1:1 3:set 1:1
+	4:help 1:1 5:unset 1:1
 	15:unknown_command
 	EOF
 
@@ -295,14 +297,59 @@ test_expect_success 'set config by scope with -z' '
 	test_cmp expect-values values
 '
 
-test_expect_success 'read/write interactions in sequence' '
-	test_when_finished git config remove-section test.rw &&
+test_expect_success 'unset config by scope and filter' '
+	GIT_CONFIG_SYSTEM=system-config-file &&
+	GIT_CONFIG_NOSYSTEM=0 &&
+	GIT_CONFIG_GLOBAL=global-config-file &&
+	export GIT_CONFIG_SYSTEM &&
+	export GIT_CONFIG_NOSYSTEM &&
+	export GIT_CONFIG_GLOBAL &&
 
+	cat >in <<-\EOF &&
+	set 1 system test.unset.key system
+	set 1 global test.unset.key global
+	set 1 local test.unset.key local with spaces
+	set 1 worktree test.unset.key worktree
+	unset 1 system test.unset.key
+	unset 1 global test.unset.key arg:regex g.*
+	unset 1 local test.unset.key arg:fixed-value local with spaces
+	unset 1 worktree test.unset.key arg:fixed-value submodule
+	unset 1 worktree test.unset.key arg:regex l.*
+	EOF
+
+	cat >expect <<-\EOF &&
+	set 1 success system test.unset.key system
+	set 1 success global test.unset.key global
+	set 1 success local test.unset.key local with spaces
+	set 1 success worktree test.unset.key worktree
+	unset 1 success system test.unset.key
+	unset 1 success global test.unset.key
+	unset 1 success local test.unset.key
+	unset 1 failure worktree test.unset.key
+	unset 1 failure worktree test.unset.key
+	EOF
+
+	git config-batch <in >out 2>err &&
+
+	test_must_be_empty err &&
+	test_cmp expect out &&
+
+	cat >expect-values <<-EOF &&
+	file:.git/config.worktree	worktree
+	EOF
+
+	git config get --show-origin --regexp --all test.unset.key >values &&
+	test_cmp expect-values values
+'
+
+test_expect_success 'read/write interactions in sequence' '
 	cat >in <<-\EOF &&
 	get 1 local test.rw.missing
 	set 1 local test.rw.found found
 	get 1 local test.rw.found
 	set 1 local test.rw.found updated
+	get 1 local test.rw.found
+	unset 1 local test.rw.found arg:fixed-value updated
 	get 1 local test.rw.found
 	EOF
 
@@ -312,14 +359,14 @@ test_expect_success 'read/write interactions in sequence' '
 	get 1 found test.rw.found local found
 	set 1 success local test.rw.found updated
 	get 1 found test.rw.found local updated
+	unset 1 success local test.rw.found
+	get 1 missing test.rw.found
 	EOF
 
 	git config-batch <in >out 2>err &&
 
 	test_must_be_empty err &&
-	test_cmp expect out &&
-
-	test_cmp_config updated test.rw.found
+	test_cmp expect out
 '
 
 test_done
