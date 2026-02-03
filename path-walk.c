@@ -11,6 +11,7 @@
 #include "list-objects.h"
 #include "object.h"
 #include "oid-array.h"
+#include "path.h"
 #include "prio-queue.h"
 #include "repository.h"
 #include "revision.h"
@@ -204,6 +205,34 @@ static int add_tree_entries(struct path_walk_context *ctx,
 			else if (!ctx->info->pl->use_cone_patterns &&
 				 type == OBJ_BLOB &&
 				 match != MATCHED)
+				continue;
+		}
+		if (ctx->revs->prune_data.nr) {
+			struct pathspec *pd = &ctx->revs->prune_data;
+			bool found = false;
+
+			/* remove '/' for these checks. */
+			path.buf[path.len - 1] = 0;
+
+			for (int i = 0; i < pd->nr; i++) {
+				struct pathspec_item *item = &pd->items[i];
+
+				/*
+				 * Continue if either is a directory prefix
+				 * of the other.
+				 */
+				if (dir_prefix(path.buf, item->match) ||
+				    dir_prefix(item->match, path.buf)) {
+					found = true;
+					break;
+				}
+			}
+
+			/* return '/' after these checks. */
+			path.buf[path.len - 1] = '/';
+
+			/* Skip paths that do not match the prefix. */
+			if (!found)
 				continue;
 		}
 
@@ -480,6 +509,17 @@ int walk_objects_by_path(struct path_walk_info *info)
 
 	if (info->tags)
 		info->revs->tag_objects = 1;
+
+	if (ctx.revs->prune_data.nr) {
+		/*
+		 * Only exact prefix pathspecs are currently supported.
+		 * Clear any wildcard or magic pathspecs to avoid
+		 * incorrect prefix matching.
+		 */
+		if (ctx.revs->prune_data.has_wildcard ||
+		    ctx.revs->prune_data.magic)
+			clear_pathspec(&ctx.revs->prune_data);
+	}
 
 	/* Insert a single list for the root tree into the paths. */
 	CALLOC_ARRAY(root_tree_list, 1);
