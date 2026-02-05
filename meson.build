@@ -1110,23 +1110,6 @@ else
   build_options_config.set('USE_LIBPCRE2', '')
 endif
 
-curl = dependency('libcurl', version: '>=7.21.3', required: get_option('curl'), default_options: ['default_library=static', 'tests=disabled', 'tool=disabled'])
-use_curl_for_imap_send = false
-if curl.found()
-  if curl.version().version_compare('>=7.34.0')
-    libgit_c_args += '-DUSE_CURL_FOR_IMAP_SEND'
-    use_curl_for_imap_send = true
-  endif
-
-  # Most executables don't have to link against libcurl, but we still need its
-  # include directories so that we can resolve LIBCURL_VERSION in "help.c".
-  libgit_dependencies += curl.partial_dependency(includes: true)
-  build_options_config.set('NO_CURL', '')
-else
-  libgit_c_args += '-DNO_CURL'
-  build_options_config.set('NO_CURL', '1')
-endif
-
 expat = dependency('expat', required: get_option('expat'), default_options: ['default_library=static', 'build_tests=false'])
 if expat.found()
   libgit_dependencies += expat
@@ -1545,6 +1528,23 @@ endif
 
 if https_backend != 'openssl'
   libgit_c_args += '-DNO_OPENSSL'
+endif
+
+curl = dependency('libcurl', version: '>=7.21.3', required: get_option('curl'), default_options: ['default_library=static', 'tests=disabled', 'tool=disabled'])
+use_curl_for_imap_send = false
+if curl.found()
+  if curl.version().version_compare('>=7.34.0')
+    libgit_c_args += '-DUSE_CURL_FOR_IMAP_SEND'
+    use_curl_for_imap_send = true
+  endif
+
+  # Most executables don't have to link against libcurl, but we still need its
+  # include directories so that we can resolve LIBCURL_VERSION in "help.c".
+  libgit_dependencies += curl.partial_dependency(includes: true)
+  build_options_config.set('NO_CURL', '')
+else
+  libgit_c_args += '-DNO_CURL'
+  build_options_config.set('NO_CURL', '1')
 endif
 
 if sha1_backend == 'sha1dc'
