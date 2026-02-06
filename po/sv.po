@@ -1807,7 +1807,7 @@ msgid "'%s' is already used by worktree at '%s'"
 msgstr "”%s” används redan av arbetskatalogen ”%s”"
 
 msgid "git add [<options>] [--] <pathspec>..."
-msgstr "git add [<flaggor>] [--] <sökväg>..."
+msgstr "git add [<flaggor>] [--] <sökvägsangivelse>..."
 
 #, c-format
 msgid "cannot chmod %cx '%s'"
@@ -2345,7 +2345,7 @@ msgstr ""
 "git bisect start [--term-(bad|new)=<term-ny> --term-(good|old)=<term-"
 "gammal>]\n"
 "                 [--no-checkout] [--first-parent] [<dålig> [<bra>...]] [--] "
-"[<sökvägsspecar>...]"
+"[<sökvägsangivelser>...]"
 
 msgid "git bisect (bad|new|<term-new>) [<rev>]"
 msgstr "git bisect (bad|new|<term-ny>) [<incheckning>]"
@@ -3879,7 +3879,7 @@ msgid "checkout their version for unmerged files"
 msgstr "checka ut deras version för ej sammanslagna filer"
 
 msgid "do not limit pathspecs to sparse entries only"
-msgstr "begränsa inte sökvägar till endast glesa poster"
+msgstr "begränsa inte sökvägsangivelser till endast glesa poster"
 
 #, c-format
 msgid "options '-%c', '-%c', and '%s' cannot be used together"
@@ -3966,7 +3966,7 @@ msgid ""
 "git clean [-d] [-f] [-i] [-n] [-q] [-e <pattern>] [-x | -X] [--] "
 "[<pathspec>...]"
 msgstr ""
-"git clean [-d] [-f] [-i] [-n] [-q] [-e <mönster>] [-x | -X] [--] <sökväg>..."
+"git clean [-d] [-f] [-i] [-n] [-q] [-e <mönster>] [-x | -X] [--] <sökvägsangivelse>..."
 
 #, c-format
 msgid "Removing %s\n"
@@ -4602,10 +4602,10 @@ msgstr ""
 "           [--date=<datum>] [--cleanup=<läge>] [--[no-]status]\n"
 "           [-i | -o] [--pathspec-from-file=<fil> [--pathspec-file-nul]]\n"
 "           [(--trailer <symbol>[(=|:)<värde>])...] [-S[<nyckel-id>]]\n"
-"           [--] [<sökväg>...]"
+"           [--] [<sökvägsangivelse>...]"
 
 msgid "git status [<options>] [--] [<pathspec>...]"
-msgstr "git status [<flaggor>] [--] <sökväg>..."
+msgstr "git status [<flaggor>] [--] <sökvägsangivelse>..."
 
 msgid ""
 "You asked to amend the most recent commit, but doing so would make\n"
@@ -8362,7 +8362,7 @@ msgstr ""
 "<funknamn> i <fil>"
 
 msgid "-L<range>:<file> cannot be used with pathspec"
-msgstr "-L<intervall>:<fil> kan inte användas med sökvägsspecifikation"
+msgstr "-L<intervall>:<fil> kan inte användas med sökvägsangivelse"
 
 msgid ""
 "\n"
@@ -12406,7 +12406,7 @@ msgstr "Räknar referenser"
 msgid ""
 "git rerere [clear | forget <pathspec>... | diff | status | remaining | gc]"
 msgstr ""
-"git rerere [clear | forget <sökväg>... | diff | status | remaining | gc]"
+"git rerere [clear | forget <sökvägsangivelsen>... | diff | status | remaining | gc]"
 
 msgid "register clean resolutions in index"
 msgstr "registrera rena lösningar i indexet"
@@ -12424,7 +12424,7 @@ msgstr ""
 "git reset [--mixed | --soft | --hard | --merge | --keep] [-q] [<incheckning>]"
 
 msgid "git reset [-q] [<tree-ish>] [--] <pathspec>..."
-msgstr "git reset [-q] [<träd-igt>] [--] <sökvägar>..."
+msgstr "git reset [-q] [<träd-igt>] [--] <sökvägsangivelse>..."
 
 msgid ""
 "git reset [-q] [--pathspec-from-file [--pathspec-file-nul]] [<tree-ish>]"
@@ -12432,7 +12432,7 @@ msgstr ""
 "git reset [-q] [--pathspec-from-file [--pathspec-file-nul]] [<träd-igt>]"
 
 msgid "git reset --patch [<tree-ish>] [--] [<pathspec>...]"
-msgstr "git reset --patch [<träd-igt>] [--] [<sökvägar>...]"
+msgstr "git reset --patch [<träd-igt>] [--] [<sökvägsangivelse>...]"
 
 msgid "mixed"
 msgstr "blandad"
@@ -12715,7 +12715,7 @@ msgid ""
 msgstr ""
 "git rm [-f | --force] [-n] [-r] [--cached] [--ignore-unmatch]\n"
 "       [--quiet] [--pathspec-from-file=<fil> [--pathspec-file-nul]]\n"
-"       [--] [<sökväg>...]"
+"       [--] [<sökvägsangivelse>...]"
 
 msgid ""
 "the following file has staged content different from both the\n"
@@ -13224,7 +13224,7 @@ msgstr ""
 "          [-u | --include-untracked] [-a | --all] [(-m | --message "
 "<meddelande>]\n"
 "          [--pathspec-from-file=<fil> [--pathspec-file-nul]]\n"
-"          [--] [<sökväg>...]]"
+"          [--] [<sökvägsangivelse>...]]"
 
 msgid ""
 "git stash save [-p | --patch] [-S | --staged] [-k | --[no-]keep-index] [-q | "
@@ -16910,7 +16910,7 @@ msgstr "--follow kräver exakt en sökvägsangivelse"
 
 #, c-format
 msgid "pathspec magic not supported by --follow: %s"
-msgstr "sökvägs-magi stöds inte av --follow: %s"
+msgstr "sökvägsuttryck stöds inte av --follow: %s"
 
 #, c-format
 msgid "options '%s', '%s', '%s', and '%s' cannot be used together"
@@ -19699,7 +19699,7 @@ msgstr "läs sökvägsangivelse från fil"
 
 msgid ""
 "with --pathspec-from-file, pathspec elements are separated with NUL character"
-msgstr "med --pathspec-from-file, sökvägsangivelser avdelas med NUL-tecken"
+msgstr "med --pathspec-from-file, sökvägsangivelse poster avdelas med NUL-tecken"
 
 #, c-format
 msgid "bad boolean environment value '%s' for '%s'"
@@ -19738,7 +19738,7 @@ msgid "invalid attribute name %s"
 msgstr "ogiltigt attributnamn %s"
 
 msgid "global 'glob' and 'noglob' pathspec settings are incompatible"
-msgstr "de globala sökvägsinställningarna ”glob” och ”noglob” är inkompatibla"
+msgstr "de globala sökvägsangivelse-inställningarna ”glob” och ”noglob” är inkompatibla"
 
 msgid ""
 "global 'literal' pathspec setting is incompatible with all other global "
@@ -19760,7 +19760,7 @@ msgstr "”)” saknas i slutet av sökvägsuttrycket för ”%s”"
 
 #, c-format
 msgid "Unimplemented pathspec magic '%c' in '%s'"
-msgstr "Ej implementerat sökvägsuttryckmagi ”%c” i ”%s”"
+msgstr "Ej implementerat sökvägsuttryck ”%c” i ”%s”"
 
 #, c-format
 msgid "%s: 'literal' and 'glob' are incompatible"
