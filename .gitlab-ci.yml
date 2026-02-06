@@ -69,10 +69,11 @@ test:linux:
         CC: gcc
   artifacts:
     paths:
+      - build/meson-logs
       - t/failed-test-artifacts
     reports:
       junit: build/meson-logs/testlog.junit.xml
-    when: on_failure
+    when: always
 
 test:osx:
   image: $image
@@ -111,10 +112,11 @@ test:osx:
         CC: clang
   artifacts:
     paths:
+      - build/meson-logs
       - t/failed-test-artifacts
     reports:
       junit: build/meson-logs/testlog.junit.xml
-    when: on_failure
+    when: always
 
 .windows_before_script: &windows_before_script
   # Disabling realtime monitoring fails on some of the runners, but it
@@ -183,11 +185,14 @@ test:msvc-meson:
     - job: "build:msvc-meson"
       artifacts: true
   script:
-    - meson test -C build --no-rebuild --print-errorlogs --slice $Env:CI_NODE_INDEX/$Env:CI_NODE_TOTAL
+    - meson test -C build --test-args=-x --no-rebuild --print-errorlogs --slice $Env:CI_NODE_INDEX/$Env:CI_NODE_TOTAL
   parallel: 10
   artifacts:
+    paths:
+      - build/meson-logs
     reports:
       junit: build/meson-logs/testlog.junit.xml
+    when: always
 
 test:fuzz-smoke-tests:
   image: ubuntu:latest
