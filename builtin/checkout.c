@@ -4,6 +4,7 @@
 #include "builtin.h"
 #include "advice.h"
 #include "branch.h"
+#include "branch-suggestions.h"
 #include "cache-tree.h"
 #include "checkout.h"
 #include "commit.h"
@@ -605,6 +606,10 @@ static int checkout_paths(const struct checkout_opts *opts,
 							opts);
 
 	if (report_path_error(ps_matched, &opts->pathspec)) {
+		/* If there's only one pathspec and it looks like a branch name, suggest similar branches */
+		if (opts->pathspec.nr == 1 && !strchr(opts->pathspec.items[0].original, '/')) {
+			suggest_similar_branch_names(opts->pathspec.items[0].original);
+		}
 		free(ps_matched);
 		return 1;
 	}
@@ -1447,8 +1452,10 @@ static int parse_branchname_arg(int argc, const char **argv,
 		}
 
 		if (!recover_with_dwim) {
-			if (has_dash_dash)
+			if (has_dash_dash) {
+				suggest_similar_branch_names(arg);
 				die(_("invalid reference: %s"), arg);
+			}
 			return argcount;
 		}
 	}
@@ -1635,9 +1642,11 @@ static int checkout_branch(struct checkout_opts *opts,
 	} else if (opts->track == BRANCH_TRACK_UNSPECIFIED)
 		opts->track = git_branch_track;
 
-	if (new_branch_info->name && !new_branch_info->commit)
+	if (new_branch_info->name && !new_branch_info->commit) {
+		suggest_similar_branch_names(new_branch_info->name);
 		die(_("Cannot switch branch to a non-commit '%s'"),
 		    new_branch_info->name);
+	}
 
 	if (noop_switch &&
 	    !opts->switch_branch_doing_nothing_is_ok)
