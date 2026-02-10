@@ -3,6 +3,7 @@
 #include "abspath.h"
 #include "config.h"
 #include "color.h"
+#include "date.h"
 #include "editor.h"
 #include "environment.h"
 #include "gettext.h"
@@ -245,7 +246,8 @@ struct strbuf_list {
  */
 static int format_config(const struct config_display_options *opts,
 			 struct strbuf *buf, const char *key_,
-			 const char *value_, const struct key_value_info *kvi)
+			 const char *value_, const struct key_value_info *kvi,
+			 int die_on_parse)
 {
 	if (opts->show_scope)
 		show_config_scope(opts, kvi, buf);
@@ -257,27 +259,55 @@ static int format_config(const struct config_display_options *opts,
 		if (opts->show_keys)
 			strbuf_addch(buf, opts->key_delim);
 
-		if (opts->type == TYPE_INT)
+		if (opts->type == TYPE_INT && die_on_parse) {
 			strbuf_addf(buf, "%"PRId64,
 				    git_config_int64(key_, value_ ? value_ : "", kvi));
-		else if (opts->type == TYPE_BOOL)
+		} else if (opts->type == TYPE_INT) {
+			int64_t v;
+			int ret = git_parse_int64(value_, &v);
+
+			if (ret)
+				return -1;
+
+			strbuf_addf(buf, "%"PRId64, v);
+		}
+		else if (opts->type == TYPE_BOOL && die_on_parse) {
 			strbuf_addstr(buf, git_config_bool(key_, value_) ?
 				      "true" : "false");
-		else if (opts->type == TYPE_BOOL_OR_INT) {
-			int is_bool, v;
-			v = git_config_bool_or_int(key_, value_, kvi,
-						   &is_bool);
+		} else if (opts->type == TYPE_BOOL) {
+			int value = git_parse_maybe_bool(value_);
+
+			if (value < 0)
+				return -1;
+
+			strbuf_addstr(buf, value ? "true" : "false");
+		} else if (opts->type == TYPE_BOOL_OR_INT && die_on_parse) {
+			int is_bool = 0;
+			int v = git_config_bool_or_int(key_, value_, kvi,
+						       &is_bool);
+			if (is_bool)
+				strbuf_addstr(buf, v ? "true" : "false");
+			else
+				strbuf_addf(buf, "%d", v);
+		} else if (opts->type == TYPE_BOOL_OR_INT) {
+			int is_bool = 0;
+			int v = git_parse_maybe_bool_text(value_);
+
+			if (v < 0)
+				return -1;
+
 			if (is_bool)
 				strbuf_addstr(buf, v ? "true" : "false");
 			else
 				strbuf_addf(buf, "%d", v);
 		} else if (opts->type == TYPE_BOOL_OR_STR) {
+			/* Note: this can't fail to parse! */
 			int v = git_parse_maybe_bool(value_);
 			if (v < 0)
 				strbuf_addstr(buf, value_);
 			else
 				strbuf_addstr(buf, v ? "true" : "false");
-		} else if (opts->type == TYPE_PATH) {
+		} else if (opts->type == TYPE_PATH && die_on_parse) {
 			char *v;
 			if (git_config_pathname(&v, key_, value_) < 0)
 				return -1;
@@ -286,14 +316,33 @@ static int format_config(const struct config_display_options *opts,
 			else
 				return 1; /* :(optional)no-such-file */
 			free((char *)v);
-		} else if (opts->type == TYPE_EXPIRY_DATE) {
+		} else if (opts->type == TYPE_PATH) {
+			char *v;
+			if (git_parse_maybe_pathname(value_, &v) < 0)
+				return -1;
+			if (v)
+				strbuf_addstr(buf, v);
+			else
+				return 1; /* :(optional)no-such-file */
+			free((char *)v);
+		} else if (opts->type == TYPE_EXPIRY_DATE && die_on_parse) {
 			timestamp_t t;
 			if (git_config_expiry_date(&t, key_, value_) < 0)
 				return -1;
 			strbuf_addf(buf, "%"PRItime, t);
-		} else if (opts->type == TYPE_COLOR) {
+		} else if (opts->type == TYPE_EXPIRY_DATE) {
+			timestamp_t t;
+			if (parse_expiry_date(value_, &t) < 0)
+				return -1;
+			strbuf_addf(buf, "%"PRItime, t);
+		} else if (opts->type == TYPE_COLOR && die_on_parse) {
 			char v[COLOR_MAXLEN];
 			if (git_config_color(v, key_, value_) < 0)
+				return -1;
+			strbuf_addstr(buf, v);
+		} else if (opts->type == TYPE_COLOR) {
+			char v[COLOR_MAXLEN];
+			if (color_parse(value_, v) < 0)
 				return -1;
 			strbuf_addstr(buf, v);
 		} else if (value_) {
@@ -372,7 +421,7 @@ static int collect_config(const char *key_, const char *value_,
 	strbuf_init(&values->items[values->nr], 0);
 
 	status = format_config(data->display_opts, &values->items[values->nr++],
-			       key_, value_, kvi);
+			       key_, value_, kvi, 1);
 	if (status < 0)
 		return status;
 	if (status) {
@@ -463,7 +512,7 @@ static int get_value(const struct config_location_options *opts,
 		strbuf_init(item, 0);
 
 		status = format_config(display_opts, item, key_,
-				       display_opts->default_value, &kvi);
+				       display_opts->default_value, &kvi, 1);
 		if (status < 0)
 			die(_("failed to format default config value: %s"),
 			    display_opts->default_value);
@@ -743,7 +792,7 @@ static int get_urlmatch(const struct config_location_options *opts,
 
 		status = format_config(&display_opts, &buf, item->string,
 				       matched->value_is_null ? NULL : matched->value.buf,
-				       &matched->kvi);
+				       &matched->kvi, 1);
 		if (!status)
 			fwrite(buf.buf, 1, buf.len, stdout);
 		strbuf_release(&buf);
