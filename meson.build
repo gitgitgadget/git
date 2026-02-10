@@ -4,7 +4,7 @@ project('git-gui',
 
 fs = import('fs')
 
-shell = find_program('sh')
+shell = find_program('/bin/sh', 'sh')
 tclsh = find_program('tclsh')
 wish = find_program('wish')
 
