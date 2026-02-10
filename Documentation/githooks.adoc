@@ -94,6 +94,23 @@ and is invoked after the patch is applied and a commit is made.
 This hook is meant primarily for notification, and cannot affect
 the outcome of `git am`.
 
+pre-add
+~~~~~~~
+
+This hook is invoked by linkgit:git-add[1], and can be bypassed with the
+`--no-verify` option. This hook is not invoked for `--interactive`, `--patch`,
+`--edit`, or `--dry-run`. It takes no parameters, and is invoked after pathspec
+validation and before any files are staged. Exiting with a non-zero status
+from this script causes the `git add` command to abort without modifying the
+index.
+
+This hook is invoked with the environment variable `GIT_INDEX_FILE`
+which points to the index file. This allows the hook to inspect what
+files would be staged before the operation proceeds.
+
+This hook is not invoked by `git commit -a` or `git commit --include` which
+still can run the pre-commit hook, providing a control point at commit time.
+
 pre-commit
 ~~~~~~~~~~
 
