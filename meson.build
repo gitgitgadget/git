@@ -34,6 +34,7 @@ version_file = custom_target(
     '@INPUT@',
     meson.current_source_dir(),
     '@OUTPUT@',
+    get_option('parent_project_dir'),
   ],
   build_always_stale: true,
 )
