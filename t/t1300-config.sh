@@ -2459,9 +2459,10 @@ done
 
 cat >.git/config <<-\EOF &&
 [section]
-foo = true
+foo = True
 number = 10
 big = 1M
+path = ~/dir
 EOF
 
 test_expect_success 'identical modern --type specifiers are allowed' '
@@ -2501,6 +2502,29 @@ test_expect_success '--no-type unsets type specifiers' '
 
 test_expect_success 'unset type specifiers may be reset to conflicting ones' '
 	test_cmp_config 1048576 --type=bool --no-type --type=int section.big
+'
+
+test_expect_success 'list --type=bool shows only canonicalizable bool values' '
+	cat >expect <<-EOF &&
+	section.foo=true
+	section.number=true
+	section.big=true
+	EOF
+
+	git config ${mode_prefix}list --type=bool >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'list --type=path shows only canonicalizable path values' '
+	cat >expect <<-EOF &&
+	section.foo=True
+	section.number=10
+	section.big=1M
+	section.path=$HOME/dir
+	EOF
+
+	git config ${mode_prefix}list --type=path >actual &&
+	test_cmp expect actual
 '
 
 test_expect_success '--type rejects unknown specifiers' '
