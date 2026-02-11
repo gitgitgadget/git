@@ -94,6 +94,36 @@ and is invoked after the patch is applied and a commit is made.
 This hook is meant primarily for notification, and cannot affect
 the outcome of `git am`.
 
+pre-add
+~~~~~~~
+
+This hook is invoked by linkgit:git-add[1], and can be bypassed with the
+`--no-verify` option. It is not invoked for `--interactive`, `--patch`,
+`--edit`, or `--dry-run`.
+
+It takes two parameters: the path to the index file for this invocation
+of `git add`, and the path to the lockfile containing the proposed
+index after staging. It does not read from standard input. If no index
+exists yet, the first parameter names a path that does not exist and
+should be treated as an empty index.
+
+The hook is invoked after the index has been updated in memory and
+written to the lockfile, but before it is committed to the final index
+path. Exiting with a non-zero status causes `git add` to reject the
+proposed state, roll back the lockfile, and leave the index unchanged.
+Exiting with zero status allows the index update to be committed.
+
+Git does not set `GIT_INDEX_FILE` for this hook. Hook authors may
+set `GIT_INDEX_FILE="$1"` to inspect current index state and
+`GIT_INDEX_FILE="$2"` to inspect proposed index state.
+
+This hook can be used to prevent staging of files based on names, content,
+or sizes (e.g., to block `.env` files, secret keys, or large files).
+
+This hook is not invoked by `git commit -a` or `git commit --include`
+which still can run the `pre-commit` hook, providing a control point at
+commit time.
+
 pre-commit
 ~~~~~~~~~~
 
