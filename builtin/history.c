@@ -177,6 +177,42 @@ static int parse_ref_action(const struct option *opt, const char *value, int uns
 	return 0;
 }
 
+static int revwalk_contains_merges(struct repository *repo,
+				   const struct strvec *revwalk_args)
+{
+	struct strvec args = STRVEC_INIT;
+	struct rev_info revs;
+	int ret;
+
+	for (size_t i = 0; i < revwalk_args->nr; i++)
+		strvec_push(&args, revwalk_args->v[i]);
+	strvec_push(&args, "--min-parents=2");
+
+	repo_init_revisions(repo, &revs, NULL);
+
+	setup_revisions_from_strvec(&args, &revs, NULL);
+	if (args.nr != 1)
+		BUG("revisions were set up with invalid argument");
+
+	if (prepare_revision_walk(&revs) < 0) {
+		ret = error(_("error preparing revisions"));
+		goto out;
+	}
+
+	if (get_revision(&revs)) {
+		ret = error(_("replaying merge commits is not supported yet!"));
+		goto out;
+	}
+
+	reset_revision_walk();
+	ret = 0;
+
+out:
+	release_revisions(&revs);
+	strvec_clear(&args);
+	return ret;
+}
+
 static int setup_revwalk(struct repository *repo,
 			 enum ref_action action,
 			 struct commit *original,
@@ -235,6 +271,10 @@ static int setup_revwalk(struct repository *repo,
 		strvec_push(&args, "--branches");
 		strvec_push(&args, "HEAD");
 	}
+
+	ret = revwalk_contains_merges(repo, &args);
+	if (ret < 0)
+		goto out;
 
 	setup_revisions_from_strvec(&args, revs, NULL);
 	if (args.nr != 1)
