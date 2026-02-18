@@ -11,6 +11,13 @@ page](https://git-scm.com/docs/git-gui).
 Git GUI was initially written by Shawn O. Pearce, and is distributed with the
 standard Git installation.
 
+Examples of `git gui blame` and `git citool`, the most popular tools in the git-gui
+suite:
+
+![git gui blame example](docs/git-gui-blame-example.png)
+
+![git citool example](docs/git-citool-example.png)
+
 # Building and installing
 
 You need to have the following dependencies installed before you begin:
