@@ -131,8 +131,8 @@ test_expect_success 'category key returns all matching keys' '
 '
 
 test_expect_success 'mixed key/category requests preserve request order' '
-	cat >expect <<-\EOF &&
-	object.format=sha1
+	cat >expect <<-EOF &&
+	object.format=$(test_oid algo)
 	layout.bare=false
 	layout.shallow=false
 	EOF
