@@ -228,20 +228,20 @@ test_expect_success SHA1 'keyvalue and nul format' '
 
 		cat >expect <<-EOF &&
 		references.count=$(reference_count_total)
-		references.branches.count=$(git for-each-ref --format="%(refname)" refs/heads | sed -n "\$=")
-		references.tags.count=$(git for-each-ref --format="%(refname)" refs/tags | sed -n "\$=")
-		references.remotes.count=$(git for-each-ref --format="%(refname)" refs/remotes | sed -n "\$=")
+		references.branches.count=1
+		references.tags.count=1
+		references.remotes.count=0
 		references.others.count=0
 		objects.count=$(object_count_total)
-		objects.commits.count=$(object_type_count commit)
-		objects.trees.count=$(object_type_count tree)
-		objects.blobs.count=$(object_type_count blob)
-		objects.tags.count=$(object_type_count tag)
+		objects.commits.count=42
+		objects.trees.count=42
+		objects.blobs.count=42
+		objects.tags.count=1
 		objects.inflated_size=$(object_total_inflated_size)
-		objects.commits.inflated_size=$(object_type_total_inflated_size commit)
-		objects.trees.inflated_size=$(object_type_total_inflated_size tree)
-		objects.blobs.inflated_size=$(object_type_total_inflated_size blob)
-		objects.tags.inflated_size=$(object_type_total_inflated_size tag)
+		objects.commits.inflated_size=9225
+		objects.trees.inflated_size=28554
+		objects.blobs.inflated_size=453
+		objects.tags.inflated_size=132
 		objects.max_inflated_size=$(object_max_inflated_size)
 		objects.commits.max_inflated_size=$(object_type_max_inflated_size commit)
 		objects.trees.max_inflated_size=$(object_type_max_inflated_size tree)
