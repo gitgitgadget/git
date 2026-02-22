@@ -160,6 +160,10 @@ test_expect_success 'hash-object' '
 	git hash-object large1
 '
 
+test_expect_success 'fsck does not loop forever' '
+	git fsck
+'
+
 test_expect_success 'cat-file a large file' '
 	git cat-file blob :large1 >/dev/null
 '
