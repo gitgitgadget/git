@@ -285,4 +285,25 @@ test_expect_success 'checkout -b rejects an extra path argument' '
 	test_grep "Cannot update paths and switch to branch" err
 '
 
+test_expect_success 'checkout a branch when file and directory share case-insensitive name' '
+	git init repo-case &&
+	(
+		cd repo-case &&
+
+		>Gitweb &&
+		git add Gitweb &&
+		git commit -m "add Gitweb" &&
+
+		git checkout --orphan other &&
+		git reset --hard &&
+		mkdir -p gitweb/subdir &&
+		>gitweb/subdir/file &&
+		git add gitweb &&
+		git commit -m "add gitweb/subdir/file" &&
+
+		git checkout master &&
+		test_path_is_file Gitweb
+	)
+'
+
 test_done
