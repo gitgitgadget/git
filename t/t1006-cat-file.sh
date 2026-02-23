@@ -705,7 +705,7 @@ do
 		then
 			cat >expect <<-EOF
 			error: header for $bogus_long_oid too long, exceeds 32 bytes
-			fatal: Not a valid object name $bogus_long_oid
+			fatal: not a valid object name $bogus_long_oid
 			EOF
 		else
 			cat >expect <<-EOF
@@ -721,7 +721,7 @@ do
 
 	test_expect_success "cat-file $arg1 error on missing short OID" '
 		cat >expect.err <<-EOF &&
-		fatal: Not a valid object name $(test_oid deadbeef_short)
+		fatal: not a valid object name $(test_oid deadbeef_short)
 		EOF
 		test_must_fail git cat-file $arg1 $(test_oid deadbeef_short) >out 2>err.actual &&
 		test_must_be_empty out &&
@@ -732,7 +732,7 @@ do
 		if test "$arg1" = "-p"
 		then
 			cat >expect.err <<-EOF
-			fatal: Not a valid object name $(test_oid deadbeef)
+			fatal: not a valid object name $(test_oid deadbeef)
 			EOF
 		else
 			cat >expect.err <<-\EOF
