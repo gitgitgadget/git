@@ -1,16 +1,16 @@
 receive.advertiseAtomic::
 	By default, git-receive-pack will advertise the atomic push
 	capability to its clients. If you don't want to advertise this
-	capability, set this variable to false.
+	capability, set this variable to `false`.
 
 receive.advertisePushOptions::
-	When set to true, git-receive-pack will advertise the push options
+	When set to `true`, git-receive-pack will advertise the push options
 	capability to its clients. False by default.
 
 receive.autogc::
 	By default, git-receive-pack will run "git maintenance run --auto" after
 	receiving data from git-push and updating refs.  You can stop
-	it by setting this variable to false.
+	it by setting this variable to `false`.
 
 receive.certNonceSeed::
 	By setting this variable to a string, `git receive-pack`
@@ -32,9 +32,9 @@ receive.certNonceSlop::
 	can check `GIT_PUSH_CERT_NONCE_STATUS` is `OK`.
 
 receive.fsckObjects::
-	If it is set to true, git-receive-pack will check all received
+	If it is set to `true`, git-receive-pack will check all received
 	objects. See `transfer.fsckObjects` for what's checked.
-	Defaults to false. If not set, the value of
+	Defaults to `false`. If not set, the value of
 	`transfer.fsckObjects` is used instead.
 
 receive.fsck.<msg-id>::
@@ -75,20 +75,20 @@ receive.maxInputSize::
 	is unlimited.
 
 receive.denyDeletes::
-	If set to true, git-receive-pack will deny a ref update that deletes
+	If set to `true`, git-receive-pack will deny a ref update that deletes
 	the ref. Use this to prevent such a ref deletion via a push.
 
 receive.denyDeleteCurrent::
-	If set to true, git-receive-pack will deny a ref update that
+	If set to `true`, git-receive-pack will deny a ref update that
 	deletes the currently checked out branch of a non-bare repository.
 
 receive.denyCurrentBranch::
-	If set to true or "refuse", git-receive-pack will deny a ref update
+	If set to `true` or "refuse", git-receive-pack will deny a ref update
 	to the currently checked out branch of a non-bare repository.
 	Such a push is potentially dangerous because it brings the HEAD
 	out of sync with the index and working tree. If set to "warn",
 	print a warning of such a push to stderr, but allow the push to
-	proceed. If set to false or "ignore", allow such pushes with no
+	proceed. If set to `false` or "ignore", allow such pushes with no
 	message. Defaults to "refuse".
 +
 Another option is "updateInstead" which will update the working
@@ -103,7 +103,7 @@ the index have any difference from the HEAD, but the `push-to-checkout`
 hook can be used to customize this.  See linkgit:githooks[5].
 
 receive.denyNonFastForwards::
-	If set to true, git-receive-pack will deny a ref update which is
+	If set to `true`, git-receive-pack will deny a ref update which is
 	not a fast-forward. Use this to prevent such an update via a push,
 	even if that push is forced. This configuration variable is
 	set when initializing a shared repository.
@@ -137,9 +137,9 @@ E.g.:
 	git config --system --add receive.procReceiveRefs !:refs/heads
 
 receive.updateServerInfo::
-	If set to true, git-receive-pack will run git-update-server-info
+	If set to `true`, git-receive-pack will run git-update-server-info
 	after receiving data from git-push and updating refs.
 
 receive.shallowUpdate::
-	If set to true, .git/shallow can be updated when new refs
+	If set to `true`, .git/shallow can be updated when new refs
 	require new shallow roots. Otherwise those refs are rejected.

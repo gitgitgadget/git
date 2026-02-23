@@ -20,10 +20,10 @@
 	that tracks another branch, this variable tells Git to set
 	up pull to rebase instead of merge (see `branch.<name>.rebase`).
 	The valid settings are:
-`never`;; rebase is never automatically set to true.
-`local`;; rebase is set to true for tracked branches of other local branches.
-`remote`;; rebase is set to true for tracked branches of remote-tracking branches.
-`always`;; rebase will be set to true for all tracking branches.
+`never`;; rebase is never automatically set to `true`.
+`local`;; rebase is set to `true` for tracked branches of other local branches.
+`remote`;; rebase is set to `true` for tracked branches of remote-tracking branches.
+`always`;; rebase will be set to `true` for all tracking branches.
 
 +
 See `branch.autoSetupMerge` for details on how to set up a branch to track another branch.
@@ -81,7 +81,7 @@ This option defaults to `never`.
 	supported.
 
 `branch.<name>.rebase`::
-	When true, rebase the branch _<name>_ on top of the fetched branch,
+	When `true`, rebase the branch _<name>_ on top of the fetched branch,
 	instead of merging the default branch from the default remote when
 	`git pull` is run. See `pull.rebase` for doing this in a non
 	branch-specific manner.

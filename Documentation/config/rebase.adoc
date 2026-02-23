@@ -9,22 +9,22 @@ rebase.stat::
 	rebase. False by default.
 
 rebase.autoSquash::
-	If set to true, enable the `--autosquash` option of
+	If set to `true`, enable the `--autosquash` option of
 	linkgit:git-rebase[1] by default for interactive mode.
 	This can be overridden with the `--no-autosquash` option.
 
 rebase.autoStash::
-	When set to true, automatically create a temporary stash entry
+	When set to `true`, automatically create a temporary stash entry
 	before the operation begins, and apply it after the operation
 	ends.  This means that you can run rebase on a dirty worktree.
 	However, use with care: the final stash application after a
 	successful rebase might result in non-trivial conflicts.
 	This option can be overridden by the `--no-autostash` and
 	`--autostash` options of linkgit:git-rebase[1].
-	Defaults to false.
+	Defaults to `false`.
 
 rebase.updateRefs::
-	If set to true enable `--update-refs` option by default.
+	If set to `true` enable `--update-refs` option by default.
 
 rebase.missingCommitsCheck::
 	If set to "warn", git rebase -i will print a warning if some
@@ -43,7 +43,7 @@ rebase.instructionFormat::
 	automatically have the commit hash prepended to the format.
 
 rebase.abbreviateCommands::
-	If set to true, `git rebase` will use abbreviated command names in the
+	If set to `true`, `git rebase` will use abbreviated command names in the
 	todo list resulting in something like this:
 +
 -------------------------------------------
@@ -60,7 +60,7 @@ instead of:
 	...
 -------------------------------------------
 +
-Defaults to false.
+Defaults to `false`.
 
 rebase.rescheduleFailedExec::
 	Automatically reschedule `exec` commands that failed. This only makes
@@ -68,14 +68,14 @@ rebase.rescheduleFailedExec::
 	This is the same as specifying the `--reschedule-failed-exec` option.
 
 rebase.forkPoint::
-	If set to false set `--no-fork-point` option by default.
+	If set to `false` set `--no-fork-point` option by default.
 
 rebase.rebaseMerges::
 	Whether and how to set the `--rebase-merges` option by default. Can
 	be `rebase-cousins`, `no-rebase-cousins`, or a boolean. Setting to
-	true or to `no-rebase-cousins` is equivalent to
+	`true` or to `no-rebase-cousins` is equivalent to
 	`--rebase-merges=no-rebase-cousins`, setting to `rebase-cousins` is
-	equivalent to `--rebase-merges=rebase-cousins`, and setting to false is
+	equivalent to `--rebase-merges=rebase-cousins`, and setting to `false` is
 	equivalent to `--no-rebase-merges`. Passing `--rebase-merges` on the
 	command line, with or without an argument, overrides any
 	`rebase.rebaseMerges` configuration.

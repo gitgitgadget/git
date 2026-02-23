@@ -9,7 +9,7 @@ pull.ff::
 	command line). This setting overrides `merge.ff` when pulling.
 
 pull.rebase::
-	When true, rebase branches on top of the fetched branch, instead
+	When `true`, rebase branches on top of the fetched branch, instead
 	of merging the default branch from the default remote when "git
 	pull" is run. See "branch.<name>.rebase" for setting this on a
 	per-branch basis.
@@ -30,7 +30,7 @@ pull.octopus::
 	at once.
 
 pull.autoStash::
-	When set to true, automatically create a temporary stash entry
+	When set to `true`, automatically create a temporary stash entry
 	to record the local changes before the operation begins, and
 	restore them after the operation completes.  When your "git
 	pull" rebases (instead of merges), this may be convenient, since

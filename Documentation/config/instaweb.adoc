@@ -7,7 +7,7 @@ instaweb.httpd::
 	repository. See linkgit:git-instaweb[1].
 
 instaweb.local::
-	If true the web server started by linkgit:git-instaweb[1] will
+	If `true` the web server started by linkgit:git-instaweb[1] will
 	be bound to the local IP (127.0.0.1).
 
 instaweb.modulePath::

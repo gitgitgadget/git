@@ -20,19 +20,19 @@ trace2.eventTarget::
 include::../trace2-target-values.adoc[]
 
 trace2.normalBrief::
-	Boolean.  When true `time`, `filename`, and `line` fields are
+	Boolean.  When `true` `time`, `filename`, and `line` fields are
 	omitted from normal output.  May be overridden by the
-	`GIT_TRACE2_BRIEF` environment variable.  Defaults to false.
+	`GIT_TRACE2_BRIEF` environment variable.  Defaults to `false`.
 
 trace2.perfBrief::
-	Boolean.  When true `time`, `filename`, and `line` fields are
+	Boolean.  When `true` `time`, `filename`, and `line` fields are
 	omitted from PERF output.  May be overridden by the
-	`GIT_TRACE2_PERF_BRIEF` environment variable.  Defaults to false.
+	`GIT_TRACE2_PERF_BRIEF` environment variable.  Defaults to `false`.
 
 trace2.eventBrief::
-	Boolean.  When true `time`, `filename`, and `line` fields are
+	Boolean.  When `true` `time`, `filename`, and `line` fields are
 	omitted from event output.  May be overridden by the
-	`GIT_TRACE2_EVENT_BRIEF` environment variable.  Defaults to false.
+	`GIT_TRACE2_EVENT_BRIEF` environment variable.  Defaults to `false`.
 
 trace2.eventNesting::
 	Integer.  Specifies desired depth of nested regions in the
@@ -58,7 +58,7 @@ trace2.envVars::
 	default.
 
 trace2.destinationDebug::
-	Boolean.  When true Git will print error messages when a
+	Boolean.  When `true` Git will print error messages when a
 	trace target destination cannot be opened for writing.
 	By default, these errors are suppressed and tracing is
 	silently disabled.  May be overridden by the

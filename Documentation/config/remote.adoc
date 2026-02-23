@@ -38,7 +38,7 @@ remote.<name>.push::
 	linkgit:git-push[1].
 
 remote.<name>.mirror::
-	If true, pushing to this remote will automatically behave
+	If `true`, pushing to this remote will automatically behave
 	as if the `--mirror` option was given on the command line.
 
 remote.<name>.skipDefaultUpdate::
@@ -47,7 +47,7 @@ remote.<name>.skipDefaultUpdate::
 	values, the value of the last occurrence will be used).
 
 remote.<name>.skipFetchAll::
-	If true, this remote will be skipped when updating
+	If `true`, this remote will be skipped when updating
 	using linkgit:git-fetch[1], the `update` subcommand of
 	linkgit:git-remote[1], and ignored by the prefetch task
 	of `git maintenance`.
@@ -73,13 +73,13 @@ remote.<name>.vcs::
 	the remote with the git-remote-<vcs> helper.
 
 remote.<name>.prune::
-	When set to true, fetching from this remote by default will also
+	When set to `true`, fetching from this remote by default will also
 	remove any remote-tracking references that no longer exist on the
 	remote (as if the `--prune` option was given on the command line).
 	Overrides `fetch.prune` settings, if any.
 
 remote.<name>.pruneTags::
-	When set to true, fetching from this remote by default will also
+	When set to `true`, fetching from this remote by default will also
 	remove any local tags that no longer exist on the remote if pruning
 	is activated in general via `remote.<name>.prune`, `fetch.prune` or
 	`--prune`. Overrides `fetch.pruneTags` settings, if any.
@@ -88,7 +88,7 @@ See also `remote.<name>.prune` and the PRUNING section of
 linkgit:git-fetch[1].
 
 remote.<name>.promisor::
-	When set to true, this remote will be used to fetch promisor
+	When set to `true`, this remote will be used to fetch promisor
 	objects.
 
 remote.<name>.partialclonefilter::

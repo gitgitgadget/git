@@ -40,7 +40,7 @@ use, it'll affect how the auto pack limit works.
 
 gc.autoDetach::
 	Make `git gc --auto` return immediately and run in the background
-	if the system supports it. Default is true. This config variable acts
+	if the system supports it. Default is `true`. This config variable acts
 	as a fallback in case `maintenance.autoDetach` is not set.
 
 gc.bigPackThreshold::
@@ -61,10 +61,10 @@ will also be excluded (this is the equivalent of running `git gc` with
 `--keep-largest-pack`).
 
 gc.writeCommitGraph::
-	If true, then gc will rewrite the commit-graph file when
+	If `true`, then gc will rewrite the commit-graph file when
 	linkgit:git-gc[1] is run. When using `git gc --auto`
 	the commit-graph will be updated if housekeeping is
-	required. Default is true. See linkgit:git-commit-graph[1]
+	required. Default is `true`. See linkgit:git-commit-graph[1]
 	for details.
 
 gc.logExpiry::
