@@ -1,6 +1,6 @@
 blame.blankBoundary::
 	Show blank commit object name for boundary commits in
-	linkgit:git-blame[1]. This option defaults to false.
+	linkgit:git-blame[1]. This option defaults to `false`.
 
 blame.coloring::
 	This determines the coloring scheme to be applied to blame
