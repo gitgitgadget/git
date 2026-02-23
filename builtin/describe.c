@@ -606,7 +606,7 @@ static void describe(const char *arg, int last_one)
 		fprintf(stderr, _("describe %s\n"), arg);
 
 	if (repo_get_oid(the_repository, arg, &oid))
-		die(_("Not a valid object name %s"), arg);
+		die(_("not a valid object name %s"), arg);
 	cmit = lookup_commit_reference_gently(the_repository, &oid, 1);
 
 	if (cmit)
