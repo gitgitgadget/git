@@ -42,7 +42,7 @@ int cmd_unpack_file(int argc,
 	if (argc != 2)
 		usage(usage_msg);
 	if (repo_get_oid(the_repository, argv[1], &oid))
-		die("Not a valid object name %s", argv[1]);
+		die("not a valid object name %s", argv[1]);
 
 	repo_config(the_repository, git_default_config, NULL);
 

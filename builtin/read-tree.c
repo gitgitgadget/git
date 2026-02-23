@@ -210,7 +210,7 @@ int cmd_read_tree(int argc,
 		const char *arg = argv[i];
 
 		if (repo_get_oid(the_repository, arg, &oid))
-			die("Not a valid object name %s", arg);
+			die("not a valid object name %s", arg);
 		if (list_tree(&oid) < 0)
 			die("failed to unpack tree object %s", arg);
 		stage++;

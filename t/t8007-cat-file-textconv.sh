@@ -22,7 +22,7 @@ test_expect_success 'setup ' '
 
 test_expect_success 'usage: <bad rev>' '
 	cat >expect <<-\EOF &&
-	fatal: Not a valid object name HEAD2
+	fatal: not a valid object name HEAD2
 	EOF
 	test_must_fail git cat-file --textconv HEAD2 2>actual &&
 	test_cmp expect actual

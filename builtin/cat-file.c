@@ -121,7 +121,7 @@ static int cat_one_file(int opt, const char *exp_type, const char *obj_name)
 
 	if (get_oid_with_context(the_repository, obj_name, get_oid_flags, &oid,
 				 &obj_context))
-		die("Not a valid object name %s", obj_name);
+		die("not a valid object name %s", obj_name);
 
 	if (!path)
 		path = obj_context.path;
@@ -182,7 +182,7 @@ static int cat_one_file(int opt, const char *exp_type, const char *obj_name)
 	case 'p':
 		type = odb_read_object_info(the_repository->objects, &oid, NULL);
 		if (type < 0)
-			die("Not a valid object name %s", obj_name);
+			die("not a valid object name %s", obj_name);
 
 		/* custom pretty-print here */
 		if (type == OBJ_TREE) {
