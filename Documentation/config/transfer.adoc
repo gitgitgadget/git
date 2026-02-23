@@ -39,7 +39,7 @@ data in git's configuration files. If you do want to use this, set
 transfer.fsckObjects::
 	When `fetch.fsckObjects` or `receive.fsckObjects` are
 	not set, the value of this variable is used instead.
-	Defaults to false.
+	Defaults to `false`.
 +
 When set, the fetch or receive will abort in the case of a malformed
 object or a link to a nonexistent object. In addition, various other
@@ -113,8 +113,8 @@ transfer.unpackLimit::
 	The default value is 100.
 
 transfer.advertiseSID::
-	Boolean. When true, client and server processes will advertise their
-	unique session IDs to their remote counterpart. Defaults to false.
+	Boolean. When `true`, client and server processes will advertise their
+	unique session IDs to their remote counterpart. Defaults to `false`.
 
 transfer.bundleURI::
 	When `true`, local `git clone` commands will request bundle
@@ -124,4 +124,4 @@ transfer.bundleURI::
 
 transfer.advertiseObjectInfo::
 	When `true`, the `object-info` capability is advertised by
-	servers. Defaults to false.
+	servers. Defaults to `false`.

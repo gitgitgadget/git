@@ -18,10 +18,10 @@ Git for Windows or Eclipse).
 In such a case it may be necessary to set this variable to 'false'.
 See linkgit:git-update-index[1].
 +
-The default is true (when core.filemode is not specified in the config file).
+The default is `true` (when core.filemode is not specified in the config file).
 
 core.hideDotFiles::
-	(Windows-only) If true, mark newly-created directories and files whose
+	(Windows-only) If `true`, mark newly-created directories and files whose
 	name starts with a dot as hidden.  If 'dotGitOnly', only the `.git/`
 	directory is hidden, but no other files starting with a dot.  The
 	default mode is 'dotGitOnly'.
@@ -34,8 +34,8 @@ core.ignoreCase::
 	it is really the same file, and continue to remember it as
 	"Makefile".
 +
-The default is false, except linkgit:git-clone[1] or linkgit:git-init[1]
-will probe and set core.ignoreCase true if appropriate when the repository
+The default is `false`, except linkgit:git-clone[1] or linkgit:git-init[1]
+will probe and set core.ignoreCase `true` if appropriate when the repository
 is created.
 +
 Git relies on the proper configuration of this variable for your operating
@@ -43,26 +43,26 @@ and file system. Modifying this value may result in unexpected behavior.
 
 core.precomposeUnicode::
 	This option is only used by Mac OS implementation of Git.
-	When core.precomposeUnicode=true, Git reverts the unicode decomposition
+	When core.precomposeUnicode=`true`, Git reverts the unicode decomposition
 	of filenames done by Mac OS. This is useful when sharing a repository
 	between Mac OS and Linux or Windows.
 	(Git for Windows 1.7.10 or higher is needed, or Git under cygwin 1.7).
-	When false, file names are handled fully transparent by Git,
+	When `false`, file names are handled fully transparent by Git,
 	which is backward compatible with older versions of Git.
 
 core.protectHFS::
-	If set to true, do not allow checkout of paths that would
+	If set to `true`, do not allow checkout of paths that would
 	be considered equivalent to `.git` on an HFS+ filesystem.
 	Defaults to `true` on Mac OS, and `false` elsewhere.
 
 core.protectNTFS::
-	If set to true, do not allow checkout of paths that would
+	If set to `true`, do not allow checkout of paths that would
 	cause problems with the NTFS filesystem, e.g. conflict with
 	8.3 "short" names.
 	Defaults to `true` on Windows, and `false` elsewhere.
 
 core.fsmonitor::
-	If set to true, enable the built-in file system monitor
+	If set to `true`, enable the built-in file system monitor
 	daemon for this working directory (linkgit:git-fsmonitor{litdd}daemon[1]).
 +
 Like hook-based file system monitors, the built-in file system monitor
@@ -112,15 +112,15 @@ something that can be used to determine what files have changed
 without race conditions.
 
 core.trustctime::
-	If false, the ctime differences between the index and the
+	If `false`, the ctime differences between the index and the
 	working tree are ignored; useful when the inode change time
 	is regularly modified by something outside Git (file system
 	crawlers and some backup systems).
-	See linkgit:git-update-index[1]. True by default.
+	See linkgit:git-update-index[1]. `True` by default.
 
 core.splitIndex::
-	If true, the split-index feature of the index will be used.
-	See linkgit:git-update-index[1]. False by default.
+	If `true`, the split-index feature of the index will be used.
+	See linkgit:git-update-index[1]. `False` by default.
 
 core.untrackedCache::
 	Determines what to do about the untracked cache feature of the
@@ -156,13 +156,13 @@ core.quotePath::
 	backslashes in the same way C escapes control characters (e.g.
 	`\t` for TAB, `\n` for LF, `\\` for backslash) or bytes with
 	values larger than 0x80 (e.g. octal `\302\265` for "micro" in
-	UTF-8).  If this variable is set to false, bytes higher than
+	UTF-8).  If this variable is set to `false`, bytes higher than
 	0x80 are not considered "unusual" any more. Double-quotes,
 	backslash and control characters are always escaped regardless
 	of the setting of this variable.  A simple space character is
 	not considered "unusual".  Many commands can output pathnames
 	completely verbatim using the `-z` option. The default value
-	is true.
+	is `true`.
 
 core.eol::
 	Sets the line ending type to use in the working directory for
@@ -176,7 +176,7 @@ core.eol::
 	is set to `true` or `input`.
 
 core.safecrlf::
-	If true, makes Git check if converting `CRLF` is reversible when
+	If `true`, makes Git check if converting `CRLF` is reversible when
 	end-of-line conversion is active.  Git will verify if a command
 	modifies a file in the work tree either directly or indirectly.
 	For example, committing a file followed by checking out the
@@ -223,7 +223,7 @@ mechanism.
 core.autocrlf::
 	Setting this variable to "true" is the same as setting
 	the `text` attribute to "auto" on all files and core.eol to "crlf".
-	Set to true if you want to have `CRLF` line endings in your
+	Set to `true` if you want to have `CRLF` line endings in your
 	working directory and the repository has LF line endings.
 	This variable can be set to 'input',
 	in which case no output conversion is performed.
@@ -235,14 +235,14 @@ core.checkRoundtripEncoding::
 	The default value is `SHIFT-JIS`.
 
 core.symlinks::
-	If false, symbolic links are checked out as small plain files that
+	If `false`, symbolic links are checked out as small plain files that
 	contain the link text. linkgit:git-update-index[1] and
 	linkgit:git-add[1] will not change the recorded type to regular
 	file. Useful on filesystems like FAT that do not support
 	symbolic links.
 +
-The default is true, except linkgit:git-clone[1] or linkgit:git-init[1]
-will probe and set core.symlinks false if appropriate when the repository
+The default is `true`, except linkgit:git-clone[1] or linkgit:git-init[1]
+will probe and set core.symlinks `false` if appropriate when the repository
 is created.
 
 core.gitProxy::
@@ -271,7 +271,7 @@ core.sshCommand::
 	when the environment variable is set.
 
 core.ignoreStat::
-	If true, Git will avoid using lstat() calls to detect if files have
+	If `true`, Git will avoid using lstat() calls to detect if files have
 	changed by setting the "assume-unchanged" bit for those tracked files
 	which it has updated identically in both the index and working tree.
 +
@@ -283,7 +283,7 @@ Git will not normally detect changes to those files.
 This is useful on systems where lstat() calls are very slow, such as
 CIFS/Microsoft Windows.
 +
-False by default.
+`False` by default.
 
 core.preferSymlinkRefs::
 	Instead of the default "symref" format for HEAD
@@ -313,7 +313,7 @@ core.alternateRefsPrefixes::
 	`core.alternateRefsPrefixes` has no effect.
 
 core.bare::
-	If true this repository is assumed to be 'bare' and has no
+	If `true` this repository is assumed to be 'bare' and has no
 	working directory associated with it.  If this is the case a
 	number of commands that require a working directory will be
 	disabled, such as linkgit:git-add[1] or linkgit:git-merge[1].
@@ -321,8 +321,8 @@ core.bare::
 This setting is automatically guessed by linkgit:git-clone[1] or
 linkgit:git-init[1] when the repository was created.  By default a
 repository that ends in "/.git" is assumed to be not bare (bare =
-false), while all other repositories are assumed to be bare (bare
-= true).
+`false`), while all other repositories are assumed to be bare (bare
+= `true`).
 
 core.worktree::
 	Set the path to the root of the working tree.
@@ -349,7 +349,7 @@ read-only snapshot of the same index to a location different from the
 repository's usual working tree).
 
 core.lockfilePid::
-	If true, Git will create a PID file alongside lock files. When a
+	If `true`, Git will create a PID file alongside lock files. When a
 	lock acquisition fails and a PID file exists, Git can provide
 	additional diagnostic information about the process holding the
 	lock, including whether it is still running. Defaults to `false`.
@@ -374,8 +374,8 @@ core.logAllRefUpdates::
 This information can be used to determine what commit
 was the tip of a branch "2 days ago".
 +
-This value is true by default in a repository that has
-a working directory associated with it, and false by
+This value is `true` by default in a repository that has
+a working directory associated with it, and `false` by
 default in a bare repository.
 
 core.repositoryFormatVersion::
@@ -395,11 +395,11 @@ core.sharedRepository::
 	the repo read/write-able for the owner and group, but inaccessible to
 	others (equivalent to 'group' unless umask is e.g. '0022'). '0640' is a
 	repository that is group-readable but not group-writable.
-	See linkgit:git-init[1]. False by default.
+	See linkgit:git-init[1]. `False` by default.
 
 core.warnAmbiguousRefs::
-	If true, Git will warn you if the ref name you passed it is ambiguous
-	and might match multiple refs in the repository. True by default.
+	If `true`, Git will warn you if the ref name you passed it is ambiguous
+	and might match multiple refs in the repository. `True` by default.
 
 core.compression::
 	An integer -1..9, indicating a default compression level.
@@ -708,7 +708,7 @@ core.fsyncObjectFiles::
 	This setting is deprecated. Use core.fsync instead.
 +
 This setting affects data added to the Git repository in loose-object
-form. When set to true, Git will issue an fsync or similar system call
+form. When set to `true`, Git will issue an fsync or similar system call
 to flush caches so that loose-objects remain consistent in the face
 of a unclean system shutdown.
 
@@ -719,7 +719,7 @@ This can speed up operations like 'git diff' and 'git status' especially
 on filesystems like NFS that have weak caching semantics and thus
 relatively high IO latencies.  When enabled, Git will do the
 index comparison to the filesystem data in parallel, allowing
-overlapping IO's.  Defaults to true.
+overlapping IO's.  Defaults to `true`.
 
 core.unsetenvvars::
 	Windows-only: comma-separated list of environment variables'
@@ -746,8 +746,8 @@ This setting defaults to "refs/notes/commits", and it can be overridden by
 the `GIT_NOTES_REF` environment variable.  See linkgit:git-notes[1].
 
 core.commitGraph::
-	If true, then git will read the commit-graph file (if it exists)
-	to parse the graph structure of commits. Defaults to true. See
+	If `true`, then git will read the commit-graph file (if it exists)
+	to parse the graph structure of commits. Defaults to `true`. See
 	linkgit:git-commit-graph[1] for more information.
 
 core.useReplaceRefs::
@@ -758,7 +758,7 @@ core.useReplaceRefs::
 core.multiPackIndex::
 	Use the multi-pack-index file to track multiple packfiles using a
 	single index. See linkgit:git-multi-pack-index[1] for more
-	information. Defaults to true.
+	information. Defaults to `true`.
 
 core.sparseCheckout::
 	Enable "sparse checkout" feature. See linkgit:git-sparse-checkout[1]

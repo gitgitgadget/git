@@ -8,23 +8,23 @@ format.attach::
 
 format.from::
 	Provides the default value for the `--from` option to format-patch.
-	Accepts a boolean value, or a name and email address.  If false,
+	Accepts a boolean value, or a name and email address.  If `false`,
 	format-patch defaults to `--no-from`, using commit authors directly in
-	the "From:" field of patch mails.  If true, format-patch defaults to
+	the "From:" field of patch mails.  If `true`, format-patch defaults to
 	`--from`, using your committer identity in the "From:" field of patch
 	mails and including a "From:" field in the body of the patch mail if
 	different.  If set to a non-boolean value, format-patch uses that
-	value instead of your committer identity.  Defaults to false.
+	value instead of your committer identity.  Defaults to `false`.
 
 format.forceInBodyFrom::
 	Provides the default value for the `--[no-]force-in-body-from`
-	option to format-patch.  Defaults to false.
+	option to format-patch.  Defaults to `false`.
 
 format.numbered::
 	A boolean which can enable or disable sequence numbers in patch
 	subjects.  It defaults to "auto" which enables it only if there
 	is more than one patch.  It can be enabled or disabled for all
-	messages by setting it to "true" or "false".  See --numbered
+	messages by setting it to `true` or `false`.  See --numbered
 	option in linkgit:git-format-patch[1].
 
 format.headers::
@@ -65,7 +65,7 @@ format.suffix::
 format.encodeEmailHeaders::
 	Encode email headers that have non-ASCII characters with
 	"Q-encoding" (described in RFC 2047) for email transmission.
-	Defaults to true.
+	Defaults to `true`.
 
 format.pretty::
 ifndef::with-breaking-changes[]
@@ -85,7 +85,7 @@ format.thread::
 	where the head is chosen from the cover letter, the
 	`--in-reply-to`, and the first patch mail, in this order.
 	`deep` threading makes every mail a reply to the previous one.
-	A true boolean value is the same as `shallow`, and a false
+	A `true` boolean value is the same as `shallow`, and a `false`
 	value disables threading.
 
 format.signOff::
@@ -99,7 +99,7 @@ format.coverLetter::
 	A boolean that controls whether to generate a cover-letter when
 	format-patch is invoked, but in addition can be set to "auto", to
 	generate a cover-letter only when there's more than one patch.
-	Default is false.
+	Default is `false`.
 
 format.outputDirectory::
 	Set a custom directory to store the resulting files instead of the
@@ -119,11 +119,11 @@ format.useAutoBase::
 format.notes::
 	Provides the default value for the `--notes` option to
 	format-patch. Accepts a boolean value, or a ref which specifies
-	where to get notes. If false, format-patch defaults to
-	`--no-notes`. If true, format-patch defaults to `--notes`. If
+	where to get notes. If `false`, format-patch defaults to
+	`--no-notes`. If `true`, format-patch defaults to `--notes`. If
 	set to a non-boolean value, format-patch defaults to
 	`--notes=<ref>`, where `ref` is the non-boolean value. Defaults
-	to false.
+	to `false`.
 +
 If one wishes to use the ref `refs/notes/true`, please use that literal
 instead.

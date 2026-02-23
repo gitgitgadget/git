@@ -1,5 +1,5 @@
 interactive.singleKey::
-	When set to true, allow the user to provide one-letter input
+	When set to `true`, allow the user to provide one-letter input
 	with a single key (i.e., without hitting the Enter key) in
 	interactive commands.  This is currently used by the `--patch`
 	mode of linkgit:git-add[1], linkgit:git-checkout[1],

@@ -64,7 +64,7 @@ http.emptyAuth::
 http.proactiveAuth::
 	Attempt authentication without first making an unauthenticated attempt and
 	receiving a 401 response. This can be used to ensure that all requests are
-	authenticated. If `http.emptyAuth` is set to true, this value has no effect.
+	authenticated. If `http.emptyAuth` is set to `true`, this value has no effect.
 +
 If the credential helper used specifies an authentication scheme (i.e., via the
 `authtype` field), that value will be used; if a username and password is
@@ -182,7 +182,7 @@ empty string.
 
 http.sslVerify::
 	Whether to verify the SSL certificate when fetching or pushing
-	over HTTPS. Defaults to true. Can be overridden by the
+	over HTTPS. Defaults to `true`. Can be overridden by the
 	`GIT_SSL_NO_VERIFY` environment variable.
 
 http.sslCert::
@@ -260,7 +260,7 @@ http.sslTry::
 	when connecting via regular FTP protocol. This might be needed
 	if the FTP server requires it for security reasons or you wish
 	to connect securely whenever remote FTP server supports it.
-	Default is false since it might trigger certificate verification
+	Default is `false` since it might trigger certificate verification
 	errors on misconfigured servers.
 
 http.maxRequests::
@@ -319,7 +319,7 @@ http.noEPSV::
 	A boolean which disables using of EPSV ftp command by curl.
 	This can be helpful with some "poor" ftp servers which don't
 	support EPSV mode. Can be overridden by the `GIT_CURL_FTP_NO_EPSV`
-	environment variable. Default is false (curl will use EPSV).
+	environment variable. Default is `false` (curl will use EPSV).
 
 http.userAgent::
 	The HTTP USER_AGENT string presented to an HTTP server.  The default

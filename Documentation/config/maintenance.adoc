@@ -1,7 +1,7 @@
 maintenance.auto::
 	This boolean config option controls whether some commands run
 	`git maintenance run --auto` after doing their normal work. Defaults
-	to true.
+	to `true`.
 
 maintenance.autoDetach::
 	Many Git commands trigger automatic maintenance after they have
@@ -11,7 +11,7 @@ maintenance.autoDetach::
 	continue to run in the background.
 +
 If unset, the value of `gc.autoDetach` is used as a fallback. Defaults
-to true if both are unset, meaning that the maintenance process will
+to `true` if both are unset, meaning that the maintenance process will
 detach.
 
 maintenance.strategy::
@@ -52,7 +52,7 @@ maintenance.<task>.enabled::
 	with name `<task>` is run when no `--task` option is specified to
 	`git maintenance run`. These config values are ignored if a
 	`--task` option exists. By default, only `maintenance.gc.enabled`
-	is true.
+	is `true`.
 
 maintenance.<task>.schedule::
 	This config option controls whether or not the given `<task>` runs

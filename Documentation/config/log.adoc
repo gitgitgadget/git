@@ -61,16 +61,16 @@ This is the same as the `--decorate` option of the `git log`.
 	history lines in `git log --graph`.
 
 `log.showRoot`::
-	If true, the initial commit will be shown as a big creation event.
+	If `true`, the initial commit will be shown as a big creation event.
 	This is equivalent to a diff against an empty tree.
 	Tools like linkgit:git-log[1] or linkgit:git-whatchanged[1], which
 	normally hide the root commit will now show it. True by default.
 
 `log.showSignature`::
-	If true, makes linkgit:git-log[1], linkgit:git-show[1], and
+	If `true`, makes linkgit:git-log[1], linkgit:git-show[1], and
 	linkgit:git-whatchanged[1] assume `--show-signature`.
 
 `log.mailmap`::
-	If true, makes linkgit:git-log[1], linkgit:git-show[1], and
+	If `true`, makes linkgit:git-log[1], linkgit:git-show[1], and
 	linkgit:git-whatchanged[1] assume `--use-mailmap`, otherwise
 	assume `--no-use-mailmap`. True by default.

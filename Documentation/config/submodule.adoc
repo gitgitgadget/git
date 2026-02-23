@@ -66,9 +66,9 @@ submodule.active::
 
 submodule.recurse::
 	A boolean indicating if commands should enable the `--recurse-submodules`
-	option by default. Defaults to false.
+	option by default. Defaults to `false`.
 +
-When set to true, it can be deactivated via the
+When set to `true`, it can be deactivated via the
 `--no-recurse-submodules` option. Note that some Git commands
 lacking this option may call some of the above commands affected by
 `submodule.recurse`; for instance `git remote update` will call
@@ -92,7 +92,7 @@ submodule.propagateBranches::
 	Enabling this will allow certain commands to accept
 	`--recurse-submodules` and certain commands that already accept
 	`--recurse-submodules` will now consider branches.
-	Defaults to false.
+	Defaults to `false`.
 
 submodule.fetchJobs::
 	Specifies how many submodules are fetched/cloned at the same time.

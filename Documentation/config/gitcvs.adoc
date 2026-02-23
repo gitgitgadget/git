@@ -11,7 +11,7 @@ gitcvs.logFile::
 	various stuff. See linkgit:git-cvsserver[1].
 
 gitcvs.usecrlfattr::
-	If true, the server will look up the end-of-line conversion
+	If `true`, the server will look up the end-of-line conversion
 	attributes for files to determine the `-k` modes to use. If
 	the attributes force Git to treat a file as text,
 	the `-k` mode will be left blank so CVS clients will
@@ -23,7 +23,7 @@ gitcvs.usecrlfattr::
 
 gitcvs.allBinary::
 	This is used if `gitcvs.usecrlfattr` does not resolve
-	the correct '-kb' mode to use. If true, all
+	the correct '-kb' mode to use. If `true`, all
 	unresolved files are sent to the client in
 	mode '-kb'. This causes the client to treat them
 	as binary files, which suppresses any newline munging it
