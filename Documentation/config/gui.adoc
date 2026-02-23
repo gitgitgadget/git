@@ -41,7 +41,7 @@ gui.spellingDictionary::
 	off.
 
 gui.fastCopyBlame::
-	If true, 'git gui blame' uses `-C` instead of `-C -C` for original
+	If `true`, 'git gui blame' uses `-C` instead of `-C -C` for original
 	location detection. It makes blame significantly faster on huge
 	repositories at the expense of less thorough copy detection.
 

@@ -1,6 +1,6 @@
 blame.blankBoundary::
 	Show blank commit object name for boundary commits in
-	linkgit:git-blame[1]. This option defaults to false.
+	linkgit:git-blame[1]. This option defaults to `false`.
 
 blame.coloring::
 	This determines the coloring scheme to be applied to blame
@@ -14,11 +14,11 @@ blame.date::
 
 blame.showEmail::
 	Show the author email instead of author name in linkgit:git-blame[1].
-	This option defaults to false.
+	This option defaults to `false`.
 
 blame.showRoot::
 	Do not treat root commits as boundaries in linkgit:git-blame[1].
-	This option defaults to false.
+	This option defaults to `false`.
 
 blame.ignoreRevsFile::
 	Ignore revisions listed in the file, one unabbreviated object name per

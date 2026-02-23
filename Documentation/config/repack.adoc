@@ -7,29 +7,29 @@ repack.useDeltaBaseOffset::
 	native protocol are unaffected by this option.
 
 repack.packKeptObjects::
-	If set to true, makes `git repack` act as if
+	If set to `true`, makes `git repack` act as if
 	`--pack-kept-objects` was passed. See linkgit:git-repack[1] for
 	details. Defaults to `false` normally, but `true` if a bitmap
 	index is being written (either via `--write-bitmap-index` or
 	`repack.writeBitmaps`).
 
 repack.useDeltaIslands::
-	If set to true, makes `git repack` act as if `--delta-islands`
+	If set to `true`, makes `git repack` act as if `--delta-islands`
 	was passed. Defaults to `false`.
 
 repack.writeBitmaps::
-	When true, git will write a bitmap index when packing all
+	When `true`, git will write a bitmap index when packing all
 	objects to disk (e.g., when `git repack -a` is run).  This
 	index can speed up the "counting objects" phase of subsequent
 	packs created for clones and fetches, at the cost of some disk
 	space and extra time spent on the initial repack.  This has
 	no effect if multiple packfiles are created.
-	Defaults to true on bare repos, false otherwise.
+	Defaults to `true` on bare repos, `false` otherwise.
 
 repack.updateServerInfo::
-	If set to false, linkgit:git-repack[1] will not run
-	linkgit:git-update-server-info[1]. Defaults to true. Can be overridden
-	when true by the `-n` option of linkgit:git-repack[1].
+	If set to `false`, linkgit:git-repack[1] will not run
+	linkgit:git-update-server-info[1]. Defaults to `true`. Can be overridden
+	when `true` by the `-n` option of linkgit:git-repack[1].
 
 repack.cruftWindow::
 repack.cruftWindowMemory::
@@ -41,8 +41,8 @@ repack.cruftThreads::
 	variables for defaults and meaning.
 
 repack.midxMustContainCruft::
-	When set to true, linkgit:git-repack[1] will unconditionally include
+	When set to `true`, linkgit:git-repack[1] will unconditionally include
 	cruft pack(s), if any, in the multi-pack index when invoked with
-	`--write-midx`. When false, cruft packs are only included in the MIDX
+	`--write-midx`. When `false`, cruft packs are only included in the MIDX
 	when necessary (e.g., because they might be required to form a
-	reachability closure with MIDX bitmaps). Defaults to true.
+	reachability closure with MIDX bitmaps). Defaults to `true`.

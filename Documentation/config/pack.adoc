@@ -28,7 +28,7 @@ all existing objects. You can force recompression by passing the -F option
 to linkgit:git-repack[1].
 
 pack.allowPackReuse::
-	When true or "single", and when reachability bitmaps are
+	When `true` or "single", and when reachability bitmaps are
 	enabled, pack-objects will try to send parts of the bitmapped
 	packfile verbatim. When "multi", and when a multi-pack
 	reachability bitmap is available, pack-objects will try to send
@@ -37,7 +37,7 @@ pack.allowPackReuse::
 If only a single pack bitmap is available, and `pack.allowPackReuse`
 is set to "multi", reuse parts of just the bitmapped packfile. This
 can reduce memory and CPU usage to serve fetches, but might result in
-sending a slightly larger pack. Defaults to true.
+sending a slightly larger pack. Defaults to `true`.
 
 pack.island::
 	An extended regular expression configuring a set of delta
@@ -123,13 +123,13 @@ The minimum size allowed is limited to 1 MiB. The default is unlimited.
 Common unit suffixes of 'k', 'm', or 'g' are supported.
 
 pack.useBitmaps::
-	When true, git will use pack bitmaps (if available) when packing
+	When `true`, git will use pack bitmaps (if available) when packing
 	to stdout (e.g., during the server side of a fetch). Defaults to
-	true. You should not generally need to turn this off unless
+	`true`. You should not generally need to turn this off unless
 	you are debugging pack bitmaps.
 
 pack.useBitmapBoundaryTraversal::
-	When true, Git will use an experimental algorithm for computing
+	When `true`, Git will use an experimental algorithm for computing
 	reachability queries with bitmaps. Instead of building up
 	complete bitmaps for all of the negated tips and then OR-ing
 	them together, consider negated tips with existing bitmaps as
@@ -146,7 +146,7 @@ particularly when there is poor bitmap coverage of the negated side of
 the query.
 
 pack.useSparse::
-	When true, git will default to using the '--sparse' option in
+	When `true`, git will default to using the '--sparse' option in
 	'git pack-objects' when the '--revs' option is present. This
 	algorithm only walks trees that appear in paths that introduce new
 	objects. This can have significant performance benefits when
@@ -178,34 +178,34 @@ pack.writeBitmaps (deprecated)::
 	This is a deprecated synonym for `repack.writeBitmaps`.
 
 pack.writeBitmapHashCache::
-	When true, git will include a "hash cache" section in the bitmap
+	When `true`, git will include a "hash cache" section in the bitmap
 	index (if one is written). This cache can be used to feed git's
 	delta heuristics, potentially leading to better deltas between
 	bitmapped and non-bitmapped objects (e.g., when serving a fetch
 	between an older, bitmapped pack and objects that have been
 	pushed since the last gc). The downside is that it consumes 4
-	bytes per object of disk space. Defaults to true.
+	bytes per object of disk space. Defaults to `true`.
 +
 When writing a multi-pack reachability bitmap, no new namehashes are
 computed; instead, any namehashes stored in an existing bitmap are
 permuted into their appropriate location when writing a new bitmap.
 
 pack.writeBitmapLookupTable::
-	When true, Git will include a "lookup table" section in the
+	When `true`, Git will include a "lookup table" section in the
 	bitmap index (if one is written). This table is used to defer
 	loading individual bitmaps as late as possible. This can be
 	beneficial in repositories that have relatively large bitmap
-	indexes. Defaults to false.
+	indexes. Defaults to `false`.
 
 pack.readReverseIndex::
-	When true, git will read any .rev file(s) that may be available
-	(see: linkgit:gitformat-pack[5]). When false, the reverse index
+	When `true`, git will read any .rev file(s) that may be available
+	(see: linkgit:gitformat-pack[5]). When `false`, the reverse index
 	will be generated from scratch and stored in memory. Defaults to
-	true.
+	`true`.
 
 pack.writeReverseIndex::
-	When true, git will write a corresponding .rev file (see:
+	When `true`, git will write a corresponding .rev file (see:
 	linkgit:gitformat-pack[5])
 	for each new packfile that it writes in all places except for
 	linkgit:git-fast-import[1] and in the bulk checkin mechanism.
-	Defaults to true.
+	Defaults to `true`.

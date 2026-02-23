@@ -132,7 +132,7 @@ color.interactive.<slot>::
 
 color.pager::
 	A boolean to specify whether `auto` color modes should colorize
-	output going to the pager. Defaults to true; set this to false
+	output going to the pager. Defaults to `true`; set this to `false`
 	if your pager does not understand ANSI color codes.
 
 color.push::
