@@ -406,7 +406,7 @@ int cmd_ls_tree(int argc,
 		usage_with_options(ls_tree_usage, ls_tree_options);
 	if (repo_get_oid_with_flags(the_repository, argv[0], &oid,
 				    GET_OID_HASH_ANY))
-		die("Not a valid object name %s", argv[0]);
+		die("not a valid object name %s", argv[0]);
 
 	/*
 	 * show_recursive() rolls its own matching code and is
