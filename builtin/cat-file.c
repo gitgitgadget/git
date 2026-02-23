@@ -200,7 +200,7 @@ static int cat_one_file(int opt, const char *exp_type, const char *obj_name)
 		buf = odb_read_object(the_repository->objects, &oid,
 				      &type, &size);
 		if (!buf)
-			die("Cannot read object %s", obj_name);
+			die("cannot read object %s", obj_name);
 
 		if (use_mailmap) {
 			size_t s = size;
@@ -910,7 +910,7 @@ static int batch_objects(struct batch_options *opt)
 			data.skip_object_info = 1;
 
 		if (repo_has_promisor_remote(the_repository))
-			warning("This repository uses promisor remotes. Some objects may not be loaded.");
+			warning("this repository uses promisor remotes; some objects may not be loaded");
 
 		disable_replace_refs();
 
