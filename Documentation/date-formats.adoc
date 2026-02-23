@@ -28,4 +28,16 @@ ifdef::git-commit[]
 In addition to recognizing all date formats above, the `--date` option
 will also try to make sense of other, more human-centric date formats,
 such as relative dates like "yesterday" or "last Friday at noon".
++
+The following special keywords are also recognized:
++
+`now`;; the current date and time.
+`yesterday`;; yesterday's date at the current time.
+`noon`;; today (or the given date) at 12:00.
+`midnight`;; today (or the given date) at 00:00.
+`tea`;; today (or the given date) at 17:00.
+`never`;; a zero timestamp (used e.g. by linkgit:git-reflog[1]).
++
+These keywords can be combined with other date constructs, for
+example `yesterday noon` or `3.days.ago`.
 endif::git-commit[]
