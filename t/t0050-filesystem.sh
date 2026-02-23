@@ -118,7 +118,7 @@ $test_unicode 'merge (silent unicode normalization)' '
 '
 
 test_expect_success CASE_INSENSITIVE_FS 'checkout with no pathspec and a case insensitive fs' '
-	git init repo &&
+	git init -b main repo &&
 	(
 		cd repo &&
 
@@ -133,7 +133,8 @@ test_expect_success CASE_INSENSITIVE_FS 'checkout with no pathspec and a case in
 		git add gitweb &&
 		git commit -m "add gitweb/subdir/file" &&
 
-		git checkout main
+		git checkout main &&
+		test_path_is_file Gitweb
 	)
 '
 
