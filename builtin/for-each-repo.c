@@ -1,5 +1,6 @@
 #include "builtin.h"
 #include "config.h"
+#include "environment.h"
 #include "gettext.h"
 #include "parse-options.h"
 #include "path.h"
@@ -59,6 +60,9 @@ int cmd_for_each_repo(int argc,
 			       for_each_repo_usage, options, config_key);
 	else if (err)
 		return 0;
+
+	/* Be sure to not pass GIT_DIR to children. */
+	unsetenv(GIT_DIR_ENVIRONMENT);
 
 	for (size_t i = 0; i < values->nr; i++) {
 		int ret = run_command_on_repo(values->items[i].string, argc, argv);
