@@ -2,6 +2,7 @@
 
 #include "builtin.h"
 #include "config.h"
+#include "environment.h"
 #include "gettext.h"
 #include "parse-options.h"
 #include "path.h"
@@ -15,9 +16,28 @@ static const char * const for_each_repo_usage[] = {
 
 static int run_command_on_repo(const char *path, int argc, const char ** argv)
 {
-	int i;
+	int i = 0;
 	struct child_process child = CHILD_PROCESS_INIT;
 	char *abspath = interpolate_path(path, 0);
+
+	while (local_repo_env[i]) {
+		/*
+		 * Preserve pre-builtin options:
+		 * - CONFIG_ENVIRONMENT, CONFIG_DATA_ENVIRONMENT, and
+		 *   CONFIG_COUNT_ENVIRONMENT persist -c <name>=<value>
+		 *   and --config-env=<name>=<envvar> options.
+		 * - NO_REPLACE_OBJECTS_ENVIRONMENT persists the
+		 *   --no-replace-objects option.
+		 *
+		 * Note that the following options are not in local_repo_env:
+		 * - EXEC_PATH_ENVIRONMENT persists --exec-path option.
+		 */
+		if (strncmp(local_repo_env[i], "CONFIG_", 7) &&
+		    strcmp(local_repo_env[i], NO_REPLACE_OBJECTS_ENVIRONMENT))
+			strvec_push(&child.env, local_repo_env[i]);
+
+		i++;
+	}
 
 	child.git_cmd = 1;
 	strvec_pushl(&child.args, "-C", abspath, NULL);
