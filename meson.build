@@ -1334,13 +1334,18 @@ if fsmonitor_backend != ''
     'compat/fsmonitor/fsm-health-' + fsmonitor_backend + '.c',
     'compat/fsmonitor/fsm-listen-' + fsmonitor_backend + '.c',
     'compat/fsmonitor/fsm-path-utils-' + fsmonitor_backend + '.c',
-    'compat/fsmonitor/fsm-settings-' + fsmonitor_backend + '.c',
   ]
 
   if fsmonitor_backend == 'win32'
-    libgit_sources += 'compat/fsmonitor/fsm-ipc-win32.c'
+    libgit_sources += [
+      'compat/fsmonitor/fsm-ipc-win32.c',
+      'compat/fsmonitor/fsm-settings-win32.c',
+    ]
   else
-    libgit_sources += 'compat/fsmonitor/fsm-ipc-unix.c'
+    libgit_sources += [
+      'compat/fsmonitor/fsm-ipc-unix.c',
+      'compat/fsmonitor/fsm-settings-unix.c',
+    ]
   endif
 endif
 build_options_config.set_quoted('FSMONITOR_DAEMON_BACKEND', fsmonitor_backend)

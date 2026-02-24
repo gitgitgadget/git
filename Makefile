@@ -2374,7 +2374,11 @@ endif
 
 ifdef FSMONITOR_OS_SETTINGS
 	COMPAT_CFLAGS += -DHAVE_FSMONITOR_OS_SETTINGS
-	COMPAT_OBJS += compat/fsmonitor/fsm-settings-$(FSMONITOR_OS_SETTINGS).o
+ifeq ($(FSMONITOR_OS_SETTINGS),win32)
+	COMPAT_OBJS += compat/fsmonitor/fsm-settings-win32.o
+else
+	COMPAT_OBJS += compat/fsmonitor/fsm-settings-unix.o
+endif
 	COMPAT_OBJS += compat/fsmonitor/fsm-path-utils-$(FSMONITOR_OS_SETTINGS).o
 endif
 
