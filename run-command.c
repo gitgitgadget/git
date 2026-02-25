@@ -839,11 +839,8 @@ fail_pipe:
 		 * restore default signal handlers here, in case
 		 * we catch a signal right before execve below
 		 */
-		for (sig = 1; sig < NSIG; sig++) {
-			/* ignored signals get reset to SIG_DFL on execve */
-			if (signal(sig, SIG_DFL) == SIG_IGN)
-				signal(sig, SIG_IGN);
-		}
+		for (sig = 1; sig < NSIG; sig++)
+			signal(sig, SIG_DFL);
 
 		if (sigprocmask(SIG_SETMASK, &as.old, NULL) != 0)
 			child_die(CHILD_ERR_SIGPROCMASK);
