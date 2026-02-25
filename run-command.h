@@ -141,6 +141,14 @@ struct child_process {
 	unsigned stdout_to_stderr:1;
 	unsigned clean_on_exit:1;
 	unsigned wait_after_clean:1;
+
+	/**
+	 * If set, the callback is invoked in the child between fork and
+	 * exec.  It can be used, for example, to close inherited file
+	 * descriptors that the child should not keep open.
+	 */
+	void (*pre_exec_cb)(void);
+
 	void (*clean_on_exit_handler)(struct child_process *process);
 };
 
@@ -148,6 +156,13 @@ struct child_process {
 	.args = STRVEC_INIT, \
 	.env = STRVEC_INIT, \
 }
+
+/**
+ * Close file descriptors 3 and above.  Suitable for use as a
+ * pre_exec_cb to prevent the child from inheriting pipe endpoints
+ * or other descriptors from the parent environment.
+ */
+void close_fd_above_stderr(void);
 
 /**
  * The functions: start_command, finish_command, run_command do the following:

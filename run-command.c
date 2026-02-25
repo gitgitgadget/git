@@ -674,6 +674,18 @@ static void trace_run_command(const struct child_process *cp)
 	strbuf_release(&buf);
 }
 
+void close_fd_above_stderr(void)
+{
+	long max_fd = sysconf(_SC_OPEN_MAX);
+	int fd;
+	if (max_fd < 0 || max_fd > 4096)
+		max_fd = 4096;
+	for (fd = 3; fd < max_fd; fd++) {
+		if (fd != child_notifier)
+			close(fd);
+	}
+}
+
 int start_command(struct child_process *cmd)
 {
 	int need_in, need_out, need_err;
@@ -831,6 +843,9 @@ fail_pipe:
 			child_dup2(cmd->out, 1);
 			child_close(cmd->out);
 		}
+
+		if (cmd->pre_exec_cb)
+			cmd->pre_exec_cb();
 
 		if (cmd->dir && chdir(cmd->dir))
 			child_die(CHILD_ERR_CHDIR);
