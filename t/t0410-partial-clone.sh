@@ -48,6 +48,23 @@ test_expect_success 'convert shallow clone to partial clone' '
 	test_cmp_config -C client 1 core.repositoryformatversion
 '
 
+test_expect_failure 'must filter clone' '
+	rm -fr server client &&
+	test_create_repo server &&
+	test_commit -C server my_commit 1 &&
+	test_commit -C server my_commit2 1 &&
+	git clone --filter="blob:none" --must-filter "file://$(pwd)/server" client
+'
+
+test_expect_failure 'must filter fetch' '
+	rm -fr server client &&
+	test_create_repo server &&
+	test_commit -C server my_commit 1 &&
+	test_commit -C server my_commit2 1 &&
+	git clone --depth=1 "file://$(pwd)/server" client &&
+	git -C client fetch --unshallow --filter="blob:none" --must-filter
+'
+
 test_expect_success DEFAULT_REPO_FORMAT 'convert to partial clone with noop extension' '
 	rm -fr server client &&
 	test_create_repo server &&
