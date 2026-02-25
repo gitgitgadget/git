@@ -546,7 +546,22 @@ static void atfork_parent(struct atfork_state *as)
 		"restoring signal mask");
 #endif
 }
+
 #endif /* GIT_WINDOWS_NATIVE */
+
+void close_fd_above_stderr(void)
+{
+#ifndef GIT_WINDOWS_NATIVE
+	long max_fd = sysconf(_SC_OPEN_MAX);
+	int fd;
+	if (max_fd < 0 || max_fd > 4096)
+		max_fd = 4096;
+	for (fd = 3; fd < max_fd; fd++) {
+		if (fd != child_notifier)
+			close(fd);
+	}
+#endif
+}
 
 static inline void set_cloexec(int fd)
 {
@@ -831,6 +846,9 @@ fail_pipe:
 			child_dup2(cmd->out, 1);
 			child_close(cmd->out);
 		}
+
+		if (cmd->pre_exec_cb)
+			cmd->pre_exec_cb();
 
 		if (cmd->dir && chdir(cmd->dir))
 			child_die(CHILD_ERR_CHDIR);
