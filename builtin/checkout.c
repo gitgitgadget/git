@@ -1057,7 +1057,11 @@ static void update_refs_for_switch(const struct checkout_opts *opts,
 						   old_branch_info->path);
 		}
 	}
-	remove_branch_state(the_repository, !opts->quiet);
+
+	remove_branch_state_except_merge(the_repository, !opts->quiet);
+	if (opts->force || old_branch_info->commit != new_branch_info->commit) {
+		remove_merge_branch_state(the_repository);
+	}
 	strbuf_release(&msg);
 	if (!opts->quiet &&
 	    !opts->force_detach &&
@@ -1170,6 +1174,36 @@ static void orphaned_commit_warning(struct commit *old_commit, struct commit *ne
 	release_revisions(&revs);
 }
 
+/*
+ * Check whether we're in a merge, and if so warn - about the ongoing merge and surprising merge
+ * message if the merge state will be preserved, and about the destroyed merge state otherwise.
+ */
+static void merging_checkout_warning(const char *name, struct commit *old_commit,
+				      struct commit *new_commit)
+{
+	struct wt_status_state state;
+	memset(&state, 0, sizeof(state));
+	wt_status_get_state(the_repository, &state, 0);
+
+	if (!state.merge_in_progress)
+	{
+		wt_status_state_free_buffers(&state);
+		return;
+	}
+
+	if (old_commit == new_commit)
+		warning(_("switching while merge-in-progress (without changing commit).\n"
+			  "An auto-generated commit message may still refer to the previous\n"
+			  "branch.\n"));
+	else
+		warning(_("switching to a different commit while while merge-in-progress;\n"
+			  "merge metadata was removed. To avoid accidentally losing merge,\n"
+			  "metadata in this way, please use \"git switch\" instead of\n"
+			  "\"git checkout\".\n"));
+
+	wt_status_state_free_buffers(&state);
+}
+
 static int switch_branches(const struct checkout_opts *opts,
 			   struct branch_info *new_branch_info)
 {
@@ -1225,6 +1259,9 @@ static int switch_branches(const struct checkout_opts *opts,
 
 	if (!opts->quiet && !old_branch_info.path && old_branch_info.commit && new_branch_info->commit != old_branch_info.commit)
 		orphaned_commit_warning(old_branch_info.commit, new_branch_info->commit);
+
+	if (!opts->quiet && !opts->force)
+		merging_checkout_warning(old_branch_info.name, old_branch_info.commit, new_branch_info->commit);
 
 	update_refs_for_switch(opts, &old_branch_info, new_branch_info);
 
@@ -1533,15 +1570,31 @@ static void die_expecting_a_branch(const struct branch_info *branch_info)
 	exit(code);
 }
 
-static void die_if_some_operation_in_progress(void)
+static void die_if_some_incompatible_operation_in_progress(struct commit *new_commit)
 {
+	/*
+	 * Note: partially coordinated logic in related function
+	 * merging_checkout_warning(), checking for merge_in_progress
+	 * and old_commit != new_commit to issue warnings. Issuing those
+	 * warnings here would be simpler to implement, but would make the
+	 * language more complex to account for common situations where the
+	 * switch still won't happen (namely working tree merge failure).
+	 */
+
 	struct wt_status_state state;
+	struct branch_info old_branch_info = { 0 };
+	struct object_id rev;
+	int flag;
 
 	memset(&state, 0, sizeof(state));
 	wt_status_get_state(the_repository, &state, 0);
+	memset(&old_branch_info, 0, sizeof(old_branch_info));
+	old_branch_info.path = resolve_refdup("HEAD", 0, &rev, &flag);
+	if (old_branch_info.path)
+		old_branch_info.commit = lookup_commit_reference_gently(the_repository, &rev, 1);
 
-	if (state.merge_in_progress)
-		die(_("cannot switch branch while merging\n"
+	if (state.merge_in_progress && old_branch_info.commit != new_commit)
+		die(_("cannot switch to a different commit while merging\n"
 		      "Consider \"git merge --quit\" "
 		      "or \"git worktree add\"."));
 	if (state.am_in_progress)
@@ -1564,6 +1617,7 @@ static void die_if_some_operation_in_progress(void)
 		warning(_("you are switching branch while bisecting"));
 
 	wt_status_state_free_buffers(&state);
+	branch_info_release(&old_branch_info);
 }
 
 /*
@@ -1652,7 +1706,7 @@ static int checkout_branch(struct checkout_opts *opts,
 		die_expecting_a_branch(new_branch_info);
 
 	if (!opts->can_switch_when_in_progress)
-		die_if_some_operation_in_progress();
+		die_if_some_incompatible_operation_in_progress(new_branch_info->commit);
 
 	/* "git checkout <branch>" */
 	if (new_branch_info->path && !opts->force_detach && !opts->new_branch)

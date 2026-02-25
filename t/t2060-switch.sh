@@ -111,13 +111,29 @@ test_expect_success 'guess and create branch' '
 	test_cmp expected actual
 '
 
-test_expect_success 'not switching when something is in progress' '
+test_expect_success 'not switching to a different commit when something is in progress' '
 	test_when_finished rm -f .git/MERGE_HEAD &&
 	# fake a merge-in-progress
 	cp .git/HEAD .git/MERGE_HEAD &&
 	test_must_fail git switch -d @^
 '
 
+test_expect_success 'switching to same-commit when merge is in progress succeeds' '
+	test_when_finished rm -f .git/MERGE_HEAD &&
+	# fake a merge-in-progress
+	cp .git/HEAD .git/MERGE_HEAD &&
+	git switch -d @ &&
+	# confirm the merge-in-progress is still there
+	test -e .git/MERGE_HEAD
+'
+test_expect_success 'switching with --force removes merge state' '
+	test_when_finished rm -f .git/MERGE_HEAD &&
+	# fake a merge-in-progress
+	cp .git/HEAD .git/MERGE_HEAD &&
+	git switch --force -d @ &&
+	# confirm the merge-in-progress is removed
+	test ! -e .git/MERGE_HEAD
+'
 test_expect_success 'tracking info copied with autoSetupMerge=inherit' '
 	# default config does not copy tracking info
 	git switch -c foo-no-inherit foo &&
