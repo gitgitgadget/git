@@ -2579,6 +2579,101 @@ static void wt_porcelain_v2_print(struct wt_status *s)
 	}
 }
 
+
+static void wt_json_print_string_array(struct wt_status *s, const char *name, struct string_list *list)
+{
+	int i;
+	fprintf(s->fp, "  \"%s\": [", name);
+	for (i = 0; i < list->nr; i++) {
+		if (i > 0)
+			fprintf(s->fp, ", ");
+		fprintf(s->fp, "\"%s\"", list->items[i].string);
+	}
+	fprintf(s->fp, "]");
+}
+
+static void wt_json_print_change_array(struct wt_status *s, const char *name, int change_type)
+{
+	int i;
+	struct string_list files = STRING_LIST_INIT_DUP;
+
+	for (i = 0; i < s->change.nr; i++) {
+		struct wt_status_change_data *d;
+		struct string_list_item *it;
+		it = &(s->change.items[i]);
+		d = it->util;
+
+		if ((change_type == WT_STATUS_UPDATED && d->index_status &&
+		     d->index_status != DIFF_STATUS_UNMERGED) ||
+		    (change_type == WT_STATUS_CHANGED && d->worktree_status &&
+		     d->worktree_status != DIFF_STATUS_UNMERGED)) {
+			string_list_append(&files, it->string);
+		}
+	}
+
+	wt_json_print_string_array(s, name, &files);
+	string_list_clear(&files, 0);
+}
+
+static void wt_json_print_branch_info(struct wt_status *s)
+{
+	struct branch *branch;
+	const char *branch_name;
+	int ahead = 0, behind = 0;
+
+	fprintf(s->fp, "  \"branch\": {\n");
+
+	if (s->branch && !s->is_initial) {
+		if (!strcmp(s->branch, "HEAD")) {
+			fprintf(s->fp, "    \"current\": \"HEAD\",\n");
+			fprintf(s->fp, "    \"detached\": true");
+		} else {
+			if (skip_prefix(s->branch, "refs/heads/", &branch_name)) {
+				fprintf(s->fp, "    \"current\": \"%s\",\n", branch_name);
+				fprintf(s->fp, "    \"detached\": false");
+
+				branch = branch_get(branch_name);
+				if (branch && branch->merge && branch->merge[0] && branch->merge[0]->dst) {
+					if (!stat_tracking_info(branch, &ahead, &behind, NULL, 0, 0)) {
+						fprintf(s->fp, ",\n    \"ahead\": %d,\n    \"behind\": %d", ahead, behind);
+					}
+				}
+			} else {
+				fprintf(s->fp, "    \"current\": \"%s\",\n", s->branch);
+				fprintf(s->fp, "    \"detached\": false");
+			}
+		}
+	} else {
+		fprintf(s->fp, "    \"current\": null,\n");
+		fprintf(s->fp, "    \"detached\": false");
+	}
+
+	fprintf(s->fp, "\n  }");
+}
+
+static void wt_json_status_print(struct wt_status *s)
+{
+	fprintf(s->fp, "{\n");
+
+	wt_json_print_branch_info(s);
+	fprintf(s->fp, ",\n");
+
+	wt_json_print_change_array(s, "staged", WT_STATUS_UPDATED);
+	fprintf(s->fp, ",\n");
+
+	wt_json_print_change_array(s, "unstaged", WT_STATUS_CHANGED);
+	fprintf(s->fp, ",\n");
+
+	wt_json_print_string_array(s, "untracked", &s->untracked);
+
+	if (s->ignored.nr > 0) {
+		fprintf(s->fp, ",\n");
+		wt_json_print_string_array(s, "ignored", &s->ignored);
+	}
+
+	fprintf(s->fp, "\n}\n");
+}
+
 void wt_status_print(struct wt_status *s)
 {
 	trace2_data_intmax("status", s->repo, "count/changed", s->change.nr);
@@ -2597,6 +2692,9 @@ void wt_status_print(struct wt_status *s)
 		break;
 	case STATUS_FORMAT_PORCELAIN_V2:
 		wt_porcelain_v2_print(s);
+		break;
+	case STATUS_FORMAT_JSON:
+		wt_json_status_print(s);
 		break;
 	case STATUS_FORMAT_UNSPECIFIED:
 		BUG("finalize_deferred_config() should have been called");

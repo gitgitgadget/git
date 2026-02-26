@@ -1561,6 +1561,9 @@ struct repository *repo UNUSED)
 		OPT_SET_INT(0, "long", &status_format,
 			    N_("show status in long format (default)"),
 			    STATUS_FORMAT_LONG),
+		OPT_SET_INT(0, "json", &status_format,
+		    N_("show status in JSON format"),
+		    STATUS_FORMAT_JSON),
 		OPT_BOOL('z', "null", &s.null_termination,
 			 N_("terminate entries with NUL")),
 		{
@@ -1624,7 +1627,8 @@ struct repository *repo UNUSED)
 		       prefix, argv);
 
 	if (status_format != STATUS_FORMAT_PORCELAIN &&
-	    status_format != STATUS_FORMAT_PORCELAIN_V2)
+	    status_format != STATUS_FORMAT_PORCELAIN_V2 &&
+	    status_format != STATUS_FORMAT_JSON)
 		progress_flag = REFRESH_PROGRESS;
 	repo_read_index(the_repository);
 	refresh_index(the_repository->index,
@@ -1758,6 +1762,9 @@ int cmd_commit(int argc,
 		OPT_SET_INT(0, "long", &status_format,
 			    N_("show status in long format (default)"),
 			    STATUS_FORMAT_LONG),
+		OPT_SET_INT(0, "json", &status_format,
+		    N_("show status in JSON format"),
+		    STATUS_FORMAT_JSON),
 		OPT_BOOL('z', "null", &s.null_termination,
 			 N_("terminate entries with NUL")),
 		OPT_BOOL(0, "amend", &amend, N_("amend previous commit")),
