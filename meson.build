@@ -1288,6 +1288,8 @@ elif host_machine.system() == 'windows'
   else
     libgit_sources += 'compat/mingw.c'
   endif
+elif host_machine.system() == 'darwin'
+  libgit_sources += 'compat/osxmmap.c'
 endif
 
 if host_machine.system() == 'linux'

@@ -278,6 +278,13 @@ int git_munmap(void *start, size_t length);
 
 #include <sys/mman.h>
 
+#if defined(__APPLE__)
+#define mmap git_mmap
+#define munmap git_munmap
+void *git_mmap(void *start, size_t length, int prot, int flags, int fd, off_t offset);
+int git_munmap(void *start, size_t length);
+#endif
+
 #endif /* NO_MMAP || USE_WIN32_MMAP */
 
 #ifndef MAP_FAILED
