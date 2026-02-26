@@ -861,10 +861,6 @@ process_split_commit () {
 	if test -z "$tree"
 	then
 		set_notree "$rev"
-		if test -n "$newparents"
-		then
-			cache_set "$rev" "$rev"
-		fi
 		return
 	fi
 
