@@ -133,6 +133,7 @@ invalid_credential_test() {
 		password=askpass-password
 		--
 		askpass: Username for '\''https://example.com'\'':
+		warning: git-credential-store saves passwords unencrypted on disk. For alternatives, see gitcredentials(7) or https://git-scm.com/doc/credential-helpers.
 		askpass: Password for '\''https://askpass-username@example.com'\'':
 		--
 		EOF
@@ -155,6 +156,7 @@ test_expect_success 'get: credentials with DOS line endings are invalid' '
 	password=askpass-password
 	--
 	askpass: Username for '\''https://example.com'\'':
+	warning: git-credential-store saves passwords unencrypted on disk. For alternatives, see gitcredentials(7) or https://git-scm.com/doc/credential-helpers.
 	askpass: Password for '\''https://askpass-username@example.com'\'':
 	--
 	EOF
@@ -186,6 +188,7 @@ test_expect_success 'get: credentials with DOS line endings are invalid if path 
 	password=askpass-password
 	--
 	askpass: Username for '\''https://example.com/repo.git'\'':
+	warning: git-credential-store saves passwords unencrypted on disk. For alternatives, see gitcredentials(7) or https://git-scm.com/doc/credential-helpers.
 	askpass: Password for '\''https://askpass-username@example.com/repo.git'\'':
 	--
 	EOF
