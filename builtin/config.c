@@ -71,20 +71,6 @@ static const char *const builtin_config_edit_usage[] = {
 	OPT_STRING('f', "file", &opts.source.file, N_("file"), N_("use given config file")), \
 	OPT_STRING(0, "blob", &opts.source.blob, N_("blob-id"), N_("read config from given blob object"))
 
-struct config_location_options {
-	struct git_config_source source;
-	struct config_options options;
-	char *file_to_free;
-	int use_global_config;
-	int use_system_config;
-	int use_local_config;
-	int use_worktree_config;
-	int respect_includes_opt;
-};
-#define CONFIG_LOCATION_OPTIONS_INIT { \
-	.respect_includes_opt = -1, \
-}
-
 #define CONFIG_TYPE_OPTIONS(type) \
 	OPT_GROUP(N_("Type")), \
 	OPT_CALLBACK('t', "type", &type, N_("type"), N_("value is given this type"), option_parse_type), \
@@ -772,93 +758,6 @@ static char *default_user_config(void)
 	return strbuf_detach(&buf, NULL);
 }
 
-static void location_options_init(struct config_location_options *opts,
-				  const char *prefix)
-{
-	if (!opts->source.file)
-		opts->source.file = opts->file_to_free =
-			xstrdup_or_null(getenv(CONFIG_ENVIRONMENT));
-
-	if (opts->use_global_config + opts->use_system_config +
-	    opts->use_local_config + opts->use_worktree_config +
-	    !!opts->source.file + !!opts->source.blob > 1) {
-		error(_("only one config file at a time"));
-		exit(129);
-	}
-
-	if (!startup_info->have_repository) {
-		if (opts->use_local_config)
-			die(_("--local can only be used inside a git repository"));
-		if (opts->source.blob)
-			die(_("--blob can only be used inside a git repository"));
-		if (opts->use_worktree_config)
-			die(_("--worktree can only be used inside a git repository"));
-	}
-
-	if (opts->source.file &&
-			!strcmp(opts->source.file, "-")) {
-		opts->source.file = NULL;
-		opts->source.use_stdin = 1;
-		opts->source.scope = CONFIG_SCOPE_COMMAND;
-	}
-
-	if (opts->use_global_config) {
-		opts->source.file = opts->file_to_free = git_global_config();
-		if (!opts->source.file)
-			/*
-			 * It is unknown if HOME/.gitconfig exists, so
-			 * we do not know if we should write to XDG
-			 * location; error out even if XDG_CONFIG_HOME
-			 * is set and points at a sane location.
-			 */
-			die(_("$HOME not set"));
-		opts->source.scope = CONFIG_SCOPE_GLOBAL;
-	} else if (opts->use_system_config) {
-		opts->source.file = opts->file_to_free = git_system_config();
-		opts->source.scope = CONFIG_SCOPE_SYSTEM;
-	} else if (opts->use_local_config) {
-		opts->source.file = opts->file_to_free = repo_git_path(the_repository, "config");
-		opts->source.scope = CONFIG_SCOPE_LOCAL;
-	} else if (opts->use_worktree_config) {
-		struct worktree **worktrees = get_worktrees();
-		if (the_repository->repository_format_worktree_config)
-			opts->source.file = opts->file_to_free =
-				repo_git_path(the_repository, "config.worktree");
-		else if (worktrees[0] && worktrees[1])
-			die(_("--worktree cannot be used with multiple "
-			      "working trees unless the config\n"
-			      "extension worktreeConfig is enabled. "
-			      "Please read \"CONFIGURATION FILE\"\n"
-			      "section in \"git help worktree\" for details"));
-		else
-			opts->source.file = opts->file_to_free =
-				repo_git_path(the_repository, "config");
-		opts->source.scope = CONFIG_SCOPE_LOCAL;
-		free_worktrees(worktrees);
-	} else if (opts->source.file) {
-		if (!is_absolute_path(opts->source.file) && prefix)
-			opts->source.file = opts->file_to_free =
-				prefix_filename(prefix, opts->source.file);
-		opts->source.scope = CONFIG_SCOPE_COMMAND;
-	} else if (opts->source.blob) {
-		opts->source.scope = CONFIG_SCOPE_COMMAND;
-	}
-
-	if (opts->respect_includes_opt == -1)
-		opts->options.respect_includes = !opts->source.file;
-	else
-		opts->options.respect_includes = opts->respect_includes_opt;
-	if (startup_info->have_repository) {
-		opts->options.commondir = repo_get_common_dir(the_repository);
-		opts->options.git_dir = repo_get_git_dir(the_repository);
-	}
-}
-
-static void location_options_release(struct config_location_options *opts)
-{
-	free(opts->file_to_free);
-}
-
 static void display_options_init(struct config_display_options *opts)
 {
 	if (opts->end_nul) {
@@ -885,7 +784,7 @@ static int cmd_config_list(int argc, const char **argv, const char *prefix,
 	argc = parse_options(argc, argv, prefix, opts, builtin_config_list_usage, 0);
 	check_argc(argc, 0, 0);
 
-	location_options_init(&location_opts, prefix);
+	location_options_init(the_repository, &location_opts, prefix);
 	display_options_init(&display_opts);
 
 	setup_auto_pager("config", 1);
@@ -944,7 +843,7 @@ static int cmd_config_get(int argc, const char **argv, const char *prefix,
 		    value_pattern))
 		die(_("--url= cannot be used with --all, --regexp or --value"));
 
-	location_options_init(&location_opts, prefix);
+	location_options_init(the_repository, &location_opts, prefix);
 	display_options_init(&display_opts);
 
 	if (display_opts.type != TYPE_COLOR)
@@ -998,7 +897,7 @@ static int cmd_config_set(int argc, const char **argv, const char *prefix,
 
 	comment = git_config_prepare_comment_string(comment_arg);
 
-	location_options_init(&location_opts, prefix);
+	location_options_init(the_repository, &location_opts, prefix);
 	check_write(&location_opts.source);
 
 	value = normalize_value(argv[0], argv[1], type, &default_kvi);
@@ -1044,7 +943,7 @@ static int cmd_config_unset(int argc, const char **argv, const char *prefix,
 	if ((flags & CONFIG_FLAGS_FIXED_VALUE) && !value_pattern)
 		die(_("--fixed-value only applies with 'value-pattern'"));
 
-	location_options_init(&location_opts, prefix);
+	location_options_init(the_repository, &location_opts, prefix);
 	check_write(&location_opts.source);
 
 	if ((flags & CONFIG_FLAGS_MULTI_REPLACE) || value_pattern)
@@ -1073,7 +972,7 @@ static int cmd_config_rename_section(int argc, const char **argv, const char *pr
 			     PARSE_OPT_STOP_AT_NON_OPTION);
 	check_argc(argc, 2, 2);
 
-	location_options_init(&location_opts, prefix);
+	location_options_init(the_repository, &location_opts, prefix);
 	check_write(&location_opts.source);
 
 	ret = repo_config_rename_section_in_file(the_repository, location_opts.source.file,
@@ -1103,7 +1002,7 @@ static int cmd_config_remove_section(int argc, const char **argv, const char *pr
 			     PARSE_OPT_STOP_AT_NON_OPTION);
 	check_argc(argc, 1, 1);
 
-	location_options_init(&location_opts, prefix);
+	location_options_init(the_repository, &location_opts, prefix);
 	check_write(&location_opts.source);
 
 	ret = repo_config_rename_section_in_file(the_repository, location_opts.source.file,
@@ -1163,7 +1062,7 @@ static int cmd_config_edit(int argc, const char **argv, const char *prefix,
 	argc = parse_options(argc, argv, prefix, opts, builtin_config_edit_usage, 0);
 	check_argc(argc, 0, 0);
 
-	location_options_init(&location_opts, prefix);
+	location_options_init(the_repository, &location_opts, prefix);
 	check_write(&location_opts.source);
 
 	ret = show_editor(&location_opts);
@@ -1231,7 +1130,7 @@ static int cmd_config_actions(int argc, const char **argv, const char *prefix)
 			     builtin_config_usage,
 			     PARSE_OPT_STOP_AT_NON_OPTION);
 
-	location_options_init(&location_opts, prefix);
+	location_options_init(the_repository, &location_opts, prefix);
 	display_options_init(&display_opts);
 
 	if ((actions & (ACTION_GET_COLOR|ACTION_GET_COLORBOOL)) && display_opts.type) {

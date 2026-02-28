@@ -1394,6 +1394,7 @@ BUILTIN_OBJS += builtin/commit-graph.o
 BUILTIN_OBJS += builtin/commit-tree.o
 BUILTIN_OBJS += builtin/commit.o
 BUILTIN_OBJS += builtin/config.o
+BUILTIN_OBJS += builtin/config-batch.o
 BUILTIN_OBJS += builtin/count-objects.o
 BUILTIN_OBJS += builtin/credential-cache--daemon.o
 BUILTIN_OBJS += builtin/credential-cache.o
