@@ -103,6 +103,25 @@ config setting.
 	file helps performance of many Git commands, including `git merge-base`,
 	`git push -f`, and `git log --graph`. Defaults to `false`.
 
+`fetch.blobSizeLimit`::
+	When set to a size value (e.g., `1m`, `100k`, `1g`), both
+	linkgit:git-clone[1] and linkgit:git-fetch[1] will automatically
+	use `--filter=blob:limit=<value>` to enable partial clone
+	behavior. Blobs larger than this threshold are excluded from the
+	initial transfer and lazily fetched on demand when needed (e.g.,
+	during checkout).
++
+This provides a convenient way to enable size-based partial clones
+globally without passing `--filter` on every command. Once a clone or
+fetch applies this setting, the remote is registered as a promisor
+remote with the corresponding filter, so subsequent fetches inherit
+the filter automatically.
++
+An explicit `--filter` option on the command line takes precedence over
+this config. An existing `remote.<name>.partialclonefilter` also takes
+precedence. If the server does not support object filtering, the
+setting is silently ignored.
+
 `fetch.bundleURI`::
 	This value stores a URI for downloading Git object data from a bundle
 	URI before performing an incremental fetch from the origin Git server.

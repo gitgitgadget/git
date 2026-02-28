@@ -722,6 +722,66 @@ test_expect_success 'after fetching descendants of non-promisor commits, gc work
 	git -C partial gc --prune=now
 '
 
+# Test fetch.blobSizeLimit config
+
+test_expect_success 'setup for fetch.blobSizeLimit tests' '
+	git init blob-limit-src &&
+	echo "small" >blob-limit-src/small.txt &&
+	dd if=/dev/zero of=blob-limit-src/large.bin bs=1024 count=100 2>/dev/null &&
+	git -C blob-limit-src add . &&
+	git -C blob-limit-src commit -m "initial" &&
+
+	git clone --bare "file://$(pwd)/blob-limit-src" blob-limit-srv.bare &&
+	git -C blob-limit-srv.bare config --local uploadpack.allowfilter 1 &&
+	git -C blob-limit-srv.bare config --local uploadpack.allowanysha1inwant 1
+'
+
+test_expect_success 'clone with fetch.blobSizeLimit config applies filter' '
+	git -c fetch.blobSizeLimit=1k clone \
+		"file://$(pwd)/blob-limit-srv.bare" blob-limit-clone &&
+
+	test "$(git -C blob-limit-clone config --local remote.origin.promisor)" = "true" &&
+	test "$(git -C blob-limit-clone config --local remote.origin.partialclonefilter)" = "blob:limit=1024"
+'
+
+test_expect_success 'clone with --filter overrides fetch.blobSizeLimit' '
+	git -c fetch.blobSizeLimit=1k clone --filter=blob:none \
+		"file://$(pwd)/blob-limit-srv.bare" blob-limit-override &&
+
+	test "$(git -C blob-limit-override config --local remote.origin.partialclonefilter)" = "blob:none"
+'
+
+test_expect_success 'fetch with fetch.blobSizeLimit registers promisor remote' '
+	git clone --no-checkout "file://$(pwd)/blob-limit-srv.bare" blob-limit-fetch &&
+
+	# Sanity: not yet a partial clone
+	test_must_fail git -C blob-limit-fetch config --local remote.origin.promisor &&
+
+	# Add a new commit to the server
+	echo "new-small" >blob-limit-src/new-small.txt &&
+	dd if=/dev/zero of=blob-limit-src/new-large.bin bs=1024 count=100 2>/dev/null &&
+	git -C blob-limit-src add . &&
+	git -C blob-limit-src commit -m "second" &&
+	git -C blob-limit-src push "file://$(pwd)/blob-limit-srv.bare" main &&
+
+	# Fetch with the config set
+	git -C blob-limit-fetch -c fetch.blobSizeLimit=1k fetch origin &&
+
+	test "$(git -C blob-limit-fetch config --local remote.origin.promisor)" = "true" &&
+	test "$(git -C blob-limit-fetch config --local remote.origin.partialclonefilter)" = "blob:limit=1024"
+'
+
+test_expect_success 'fetch.blobSizeLimit does not override existing partialclonefilter' '
+	git clone --filter=blob:none \
+		"file://$(pwd)/blob-limit-srv.bare" blob-limit-existing &&
+
+	test "$(git -C blob-limit-existing config --local remote.origin.partialclonefilter)" = "blob:none" &&
+
+	# Fetch with a different blobSizeLimit; existing filter should win
+	git -C blob-limit-existing -c fetch.blobSizeLimit=1k fetch origin &&
+
+	test "$(git -C blob-limit-existing config --local remote.origin.partialclonefilter)" = "blob:none"
+'
 
 . "$TEST_DIRECTORY"/lib-httpd.sh
 start_httpd
