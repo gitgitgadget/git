@@ -44,6 +44,7 @@
 #include "path.h"
 #include "pkt-line.h"
 #include "list-objects-filter-options.h"
+#include "urlmatch.h"
 #include "hook.h"
 #include "bundle.h"
 #include "bundle-uri.h"
@@ -757,6 +758,65 @@ static int git_clone_config(const char *k, const char *v,
 	return git_default_config(k, v, ctx, cb);
 }
 
+struct clone_filter_data {
+	char *default_object_filter;
+};
+
+static int clone_filter_collect(const char *var, const char *value,
+				const struct config_context *ctx UNUSED,
+				void *cb)
+{
+	struct clone_filter_data *data = cb;
+
+	if (!strcmp(var, "clone.defaultobjectfilter")) {
+		free(data->default_object_filter);
+		data->default_object_filter = xstrdup(value);
+	}
+	return 0;
+}
+
+/*
+ * Look up clone.<url>.defaultObjectFilter using the urlmatch
+ * infrastructure.  Only URL-qualified forms are supported; a bare
+ * clone.defaultObjectFilter (without a URL) is ignored.
+ */
+static char *get_default_object_filter(const char *url)
+{
+	struct urlmatch_config config = URLMATCH_CONFIG_INIT;
+	struct clone_filter_data data = { 0 };
+	struct string_list_item *item;
+	char *normalized_url;
+
+	config.section = "clone";
+	config.key = "defaultobjectfilter";
+	config.collect_fn = clone_filter_collect;
+	config.cascade_fn = git_clone_config;
+	config.cb = &data;
+
+	normalized_url = url_normalize(url, &config.url);
+
+	repo_config(the_repository, urlmatch_config_entry, &config);
+	free(normalized_url);
+
+	/*
+	 * Reject the bare form clone.defaultObjectFilter (no URL
+	 * subsection).  urlmatch stores the best match in vars with
+	 * hostmatch_len == 0 for non-URL-qualified entries; discard
+	 * the result if that is what we got.
+	 */
+	item = string_list_lookup(&config.vars, "defaultobjectfilter");
+	if (item) {
+		const struct urlmatch_item *m = item->util;
+		if (!m->hostmatch_len && !m->pathmatch_len) {
+			FREE_AND_NULL(data.default_object_filter);
+		}
+	}
+
+	urlmatch_config_release(&config);
+
+	return data.default_object_filter;
+}
+
 static int write_one_config(const char *key, const char *value,
 			    const struct config_context *ctx,
 			    void *data)
@@ -1056,6 +1116,14 @@ int cmd_clone(int argc,
 		display_repo = transport_anonymize_url(repo);
 	} else
 		die(_("repository '%s' does not exist"), repo_name);
+
+	if (!filter_options.choice) {
+		char *config_filter = get_default_object_filter(repo);
+		if (config_filter) {
+			parse_list_objects_filter(&filter_options, config_filter);
+			free(config_filter);
+		}
+	}
 
 	/* no need to be strict, transport_set_option() will validate it again */
 	if (option_depth && atoi(option_depth) < 1)
