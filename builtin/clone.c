@@ -78,6 +78,7 @@ static struct string_list option_optional_reference = STRING_LIST_INIT_NODUP;
 static int max_jobs = -1;
 static struct string_list option_recurse_submodules = STRING_LIST_INIT_NODUP;
 static int config_filter_submodules = -1;    /* unspecified */
+static char *config_blob_size_limit;
 static int option_remote_submodules;
 
 static int recurse_submodules_cb(const struct option *opt,
@@ -753,6 +754,10 @@ static int git_clone_config(const char *k, const char *v,
 		config_reject_shallow = git_config_bool(k, v);
 	if (!strcmp(k, "clone.filtersubmodules"))
 		config_filter_submodules = git_config_bool(k, v);
+	if (!strcmp(k, "fetch.blobsizelimit")) {
+		free(config_blob_size_limit);
+		git_config_string(&config_blob_size_limit, k, v);
+	}
 
 	return git_default_config(k, v, ctx, cb);
 }
@@ -1009,6 +1014,13 @@ int cmd_clone(int argc,
 
 	argc = parse_options(argc, argv, prefix, builtin_clone_options,
 			     builtin_clone_usage, 0);
+
+	if (!filter_options.choice && config_blob_size_limit) {
+		struct strbuf buf = STRBUF_INIT;
+		strbuf_addf(&buf, "blob:limit=%s", config_blob_size_limit);
+		parse_list_objects_filter(&filter_options, buf.buf);
+		strbuf_release(&buf);
+	}
 
 	if (argc > 2)
 		usage_msg_opt(_("Too many arguments."),
@@ -1634,6 +1646,7 @@ int cmd_clone(int argc,
 		       ref_storage_format);
 
 	list_objects_filter_release(&filter_options);
+	free(config_blob_size_limit);
 
 	string_list_clear(&option_not, 0);
 	string_list_clear(&option_config, 0);

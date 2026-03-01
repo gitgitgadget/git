@@ -109,6 +109,7 @@ struct fetch_config {
 	int recurse_submodules;
 	int parallel;
 	int submodule_fetch_jobs;
+	char *blob_size_limit;
 };
 
 static int git_fetch_config(const char *k, const char *v,
@@ -159,6 +160,9 @@ static int git_fetch_config(const char *k, const char *v,
 			fetch_config->parallel = online_cpus();
 		return 0;
 	}
+
+	if (!strcmp(k, "fetch.blobsizelimit"))
+		return git_config_string(&fetch_config->blob_size_limit, k, v);
 
 	if (!strcmp(k, "fetch.output")) {
 		if (!v)
@@ -2342,7 +2346,8 @@ static int fetch_multiple(struct string_list *list, int max_children,
  * or inherit the default filter-spec from the config.
  */
 static inline void fetch_one_setup_partial(struct remote *remote,
-					   struct list_objects_filter_options *filter_options)
+					   struct list_objects_filter_options *filter_options,
+					   const struct fetch_config *config)
 {
 	/*
 	 * Explicit --no-filter argument overrides everything, regardless
@@ -2352,10 +2357,12 @@ static inline void fetch_one_setup_partial(struct remote *remote,
 		return;
 
 	/*
-	 * If no prior partial clone/fetch and the current fetch DID NOT
-	 * request a partial-fetch, do a normal fetch.
+	 * If no prior partial clone/fetch, the current fetch did not
+	 * request a partial-fetch, and no global blob size limit is
+	 * configured, do a normal fetch.
 	 */
-	if (!repo_has_promisor_remote(the_repository) && !filter_options->choice)
+	if (!repo_has_promisor_remote(the_repository) &&
+	    !filter_options->choice && !config->blob_size_limit)
 		return;
 
 	/*
@@ -2372,11 +2379,27 @@ static inline void fetch_one_setup_partial(struct remote *remote,
 	/*
 	 * Do a partial-fetch from the promisor remote using either the
 	 * explicitly given filter-spec or inherit the filter-spec from
-	 * the config.
+	 * the per-remote config.
 	 */
-	if (!filter_options->choice)
-		partial_clone_get_default_filter_spec(filter_options, remote->name);
-	return;
+	if (repo_has_promisor_remote(the_repository)) {
+		partial_clone_get_default_filter_spec(filter_options,
+						      remote->name);
+		if (filter_options->choice)
+			return;
+	}
+
+	/*
+	 * Fall back to the global fetch.blobSizeLimit config. This
+	 * enables partial clone behavior without requiring --filter
+	 * on the command line or a pre-existing promisor remote.
+	 */
+	if (!filter_options->choice && config->blob_size_limit) {
+		struct strbuf buf = STRBUF_INIT;
+		strbuf_addf(&buf, "blob:limit=%s", config->blob_size_limit);
+		parse_list_objects_filter(filter_options, buf.buf);
+		strbuf_release(&buf);
+		partial_clone_register(remote->name, filter_options);
+	}
 }
 
 static int fetch_one(struct remote *remote, int argc, const char **argv,
@@ -2762,9 +2785,10 @@ int cmd_fetch(int argc,
 		oidset_clear(&acked_commits);
 		trace2_region_leave("fetch", "negotiate-only", the_repository);
 	} else if (remote) {
-		if (filter_options.choice || repo_has_promisor_remote(the_repository)) {
+		if (filter_options.choice || repo_has_promisor_remote(the_repository) ||
+		    config.blob_size_limit) {
 			trace2_region_enter("fetch", "setup-partial", the_repository);
-			fetch_one_setup_partial(remote, &filter_options);
+			fetch_one_setup_partial(remote, &filter_options, &config);
 			trace2_region_leave("fetch", "setup-partial", the_repository);
 		}
 		trace2_region_enter("fetch", "fetch-one", the_repository);
@@ -2876,5 +2900,6 @@ int cmd_fetch(int argc,
  cleanup:
 	string_list_clear(&list, 0);
 	list_objects_filter_release(&filter_options);
+	free(config.blob_size_limit);
 	return result;
 }
