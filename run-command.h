@@ -510,6 +510,13 @@ struct run_process_parallel_opts
 void run_processes_parallel(const struct run_process_parallel_opts *opts);
 
 /**
+ * Unset all local-repo GIT_* variables in env; see local_repo_env in
+ * environment.h. GIT_CONFIG_PARAMETERS and GIT_CONFIG_COUNT are preserved
+ * to pass -c and --config-env options from the parent process.
+ */
+void clear_local_repo_env(struct strvec *env);
+
+/**
  * Convenience function which prepares env for a command to be run in a
  * new repo. This adds all GIT_* environment variables to env with the
  * exception of GIT_CONFIG_PARAMETERS and GIT_CONFIG_COUNT (which cause the
