@@ -345,6 +345,24 @@ users typically do not use them directly.
 
 include::{build_dir}/cmds-purehelpers.adoc[]
 
+External commands
+-----------------
+
+In addition to the commands implemented by Git, Git will execute any executable
+with the prefix "git-" in the user path as if it is a Git command.
+
+All parameters of the invocation are passed to the script, making running "git
+foo arg1 arg2" equivalent to running "git-foo arg1 arg2".  When running "git
+help" with the command name, Git will invoke the man page for the given
+command, making running "git help foo" equivalent to running "man git-foo".
+
+This makes it possible to extend Git with custom commands, without the need to
+change its source code.
+
+Git looks for external commands after looking for built-in commands, but before
+looking for aliases. Therefore, if an external command have the same name as an
+alias, it'll run instead of the alias.
+
 Guides
 ------
 
