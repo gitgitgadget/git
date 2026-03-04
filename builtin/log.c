@@ -317,6 +317,10 @@ static void cmd_log_init_finish(int argc, const char **argv, const char *prefix,
 	if (rev->line_level_traverse && rev->prune_data.nr)
 		die(_("-L<range>:<file> cannot be used with pathspec"));
 
+	if (rev->line_level_traverse &&
+	    (rev->diffopt.pickaxe_opts & DIFF_PICKAXE_KINDS_MASK))
+		die(_("-L does not yet support -G, -S, or --find-object"));
+
 	memset(&w, 0, sizeof(w));
 	userformat_find_requirements(NULL, &w);
 
