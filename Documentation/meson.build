@@ -29,6 +29,7 @@ manpages = {
   'git-commit-tree.adoc' : 1,
   'git-commit.adoc' : 1,
   'git-config.adoc' : 1,
+  'git-config-batch.adoc' : 1,
   'git-count-objects.adoc' : 1,
   'git-credential-cache--daemon.adoc' : 1,
   'git-credential-cache.adoc' : 1,

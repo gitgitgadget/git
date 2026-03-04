@@ -44,6 +44,9 @@ enum config_scope {
 	CONFIG_SCOPE_WORKTREE,
 	CONFIG_SCOPE_COMMAND,
 	CONFIG_SCOPE_SUBMODULE,
+
+	/* Must be last */
+	CONFIG_SCOPE__NR
 };
 const char *config_scope_name(enum config_scope scope);
 
@@ -162,6 +165,29 @@ struct config_context {
  */
 typedef int (*config_fn_t)(const char *, const char *,
 			   const struct config_context *, void *);
+
+struct config_location_options {
+	struct git_config_source source;
+	struct config_options options;
+	char *file_to_free;
+	int use_global_config;
+	int use_system_config;
+	int use_local_config;
+	int use_worktree_config;
+	int respect_includes_opt;
+};
+#define CONFIG_LOCATION_OPTIONS_INIT { \
+	.respect_includes_opt = -1, \
+}
+
+int location_options_set_scope(struct config_location_options *opts,
+			       enum config_scope scope);
+
+void location_options_init(struct repository *repo,
+			   struct config_location_options *opts,
+			   const char *prefix);
+
+void location_options_release(struct config_location_options *opts);
 
 /**
  * Read a specific file in git-config format.

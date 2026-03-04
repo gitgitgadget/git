@@ -68,11 +68,17 @@
  *
  * . Add `builtin/foo.o` to `BUILTIN_OBJS` in `Makefile`.
  *
+ * . Add 'builtin/foo.c' to the 'builtin_sources' array in 'meson.build'.
+ *
  * Additionally, if `foo` is a new command, there are 4 more things to do:
  *
  * . Add tests to `t/` directory.
  *
+ * . Add the test script to 'integration_tests' in  't/meson.build'.
+ *
  * . Write documentation in `Documentation/git-foo.adoc`.
+ *
+ * . Add 'git-foo.adoc' to the manpages list in 'Documentation/meson.build'.
  *
  * . Add an entry for `git-foo` to `command-list.txt`.
  *
@@ -167,6 +173,7 @@ int cmd_commit(int argc, const char **argv, const char *prefix, struct repositor
 int cmd_commit_graph(int argc, const char **argv, const char *prefix, struct repository *repo);
 int cmd_commit_tree(int argc, const char **argv, const char *prefix, struct repository *repo);
 int cmd_config(int argc, const char **argv, const char *prefix, struct repository *repo);
+int cmd_config_batch(int argc, const char **argv, const char *prefix, struct repository *repo);
 int cmd_count_objects(int argc, const char **argv, const char *prefix, struct repository *repo);
 int cmd_credential(int argc, const char **argv, const char *prefix, struct repository *repo);
 int cmd_credential_cache(int argc, const char **argv, const char *prefix, struct repository *repo);

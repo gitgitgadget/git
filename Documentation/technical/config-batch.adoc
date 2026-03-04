@@ -1,0 +1,70 @@
+Git Config-Batch Design Notes
+=============================
+
+The `git config-batch` builtin has a robust protocol for parsing multiple
+commands over `stdin` and providing structured output over `stdout`. The
+intended use is for scripts or third-party software to interact with the
+config settings of a repository multiple times within the same Git process.
+The protocol is built with versioning that allows the consumer to know when
+a certain command is available and to fall back to single-use `git config`
+processes if the installed Git version does not have the latest commands
+at the required versions.
+
+Recommended interaction pattern
+-------------------------------
+
+This section provides a guide for ideal interaction with the `git
+config-batch` command and its protocol.
+
+For maximum compatibility, do not attempt parsing the output of `git
+version` to determine which commands are available. Instead, first check
+if the `git config-batch` command succeeds and does not die immediately
+due to the builtin being unavailable. Then, use the v1 of the `help`
+command to get a list of available commands and versions. Use this list to
+determine if your capabilities are available or should be replaced with an
+appropriate `git config` single-use process.
+
+Further, all automated tooling would be better off using the
+NUL-terminated format instead of the whitespace-delimited format, in case
+config keys contain spaces or config values contain newlines. The
+whitespace-delimited version is available for simpler integration and
+human inspection.
+
+Current commands
+----------------
+
+See the documentation in linkgit::config-batch[1] for the latest set of
+available commands and their protocols.
+
+Future commands
+---------------
+
+The following modes of `git config` are not currently available as commands
+in `git config-batch`, but are planned for future integration:
+
+`git config list [--<scope>]`::
+	Getting all values, regardless of config key, would require a
+	multi-valued output similar to the `help` command. This tool will
+	likely assume advanced options such as `--show-origin`.
+
+`git config set [--<scope>] <key> <value>`::
+	It will be desirable to set a config key at a given scope as a
+	single value, replacing the current value at that scope, if it
+	exists and is a single value. A `set` command could satisfy this
+	purpose.
+
+`git config set --all [<value-pattern>|--fixed-value=<fixedvalue>] <key> <value>`::
+	When replacing multiple values, it may be necessary to have a different
+	output describing the places those values were set, so it may need to
+	be implemented via a `set-all` command to differentiate from a `set`
+	command.
+
+`git config unset <key>`::
+
+`git config unset --all [<value-pattern>|--fixed-value=<fixedvalue>] <key>`::
+
+`git config get --all --rexexp <key-pattern> [<value-options>]`::
+
+`--replace-all` option::
+
+`--type=<type>` option::
