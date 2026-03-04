@@ -24,7 +24,7 @@ test_expect_success 'setup' '
 
 test_expect_success 'clone repo (detached HEAD points to branch)' '
 	git checkout main^0 &&
-	git clone "file://$PWD" detached-branch
+	git clone "file://$(pwd)" detached-branch
 '
 test_expect_success 'cloned HEAD matches' '
 	echo three >expect &&
@@ -37,7 +37,7 @@ test_expect_failure 'cloned HEAD is detached' '
 
 test_expect_success 'clone repo (detached HEAD points to tag)' '
 	git checkout two^0 &&
-	git clone "file://$PWD" detached-tag
+	git clone "file://$(pwd)" detached-tag
 '
 test_expect_success 'cloned HEAD matches' '
 	echo two >expect &&
@@ -50,7 +50,7 @@ test_expect_success 'cloned HEAD is detached' '
 
 test_expect_success 'clone repo (detached HEAD points to history)' '
 	git checkout two^ &&
-	git clone "file://$PWD" detached-history
+	git clone "file://$(pwd)" detached-history
 '
 test_expect_success 'cloned HEAD matches' '
 	echo one >expect &&
@@ -65,7 +65,7 @@ test_expect_success 'clone repo (orphan detached HEAD)' '
 	git checkout main^0 &&
 	echo four >file &&
 	git commit -a -m four &&
-	git clone "file://$PWD" detached-orphan
+	git clone "file://$(pwd)" detached-orphan
 '
 test_expect_success 'cloned HEAD matches' '
 	echo four >expect &&

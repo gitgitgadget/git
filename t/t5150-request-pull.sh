@@ -14,7 +14,7 @@ test_expect_success 'setup' '
 	git clone upstream.git upstream-private &&
 	git clone downstream.git local &&
 
-	trash_url="file://$TRASH_DIRECTORY" &&
+	trash_url="$TRASH_DIRECTORY_URL" &&
 	downstream_url="$trash_url/downstream.git/" &&
 	upstream_url="$trash_url/upstream.git/" &&
 

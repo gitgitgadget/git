@@ -23,7 +23,7 @@ test_expect_success 'setup repo with odd suffix ref' '
 '
 
 test_expect_success 'suffix ref is ignored during fetch' '
-	git clone --bare file://"$PWD" suffix &&
+	git clone --bare file://"$(pwd)" suffix &&
 	echo three >expect &&
 	git --git-dir=suffix log -1 --format=%s refs/heads/main >actual &&
 	test_cmp expect actual

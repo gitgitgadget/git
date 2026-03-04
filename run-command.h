@@ -201,6 +201,15 @@ int exists_in_PATH(const char *command);
 char *git_shell_path(void);
 
 /**
+ * Determines whether the command needs to run through a shell (for example,
+ * `git-upload-pack` does not need a shell, while `less -R` does).
+ */
+static inline int does_cmd_require_shell(const char *cmd)
+{
+	return strcspn(cmd, "|&;<>()$`\\\"' \t\n*?[#~=%") != strlen(cmd);
+}
+
+/**
  * Start a sub-process. Takes a pointer to a `struct child_process`
  * that specifies the details and returns pipe FDs (if requested).
  * See below for details.

@@ -291,7 +291,7 @@ static const char **prepare_shell_cmd(struct strvec *out, const char **argv)
 	if (!argv[0])
 		BUG("shell command is empty");
 
-	if (strcspn(argv[0], "|&;<>()$`\\\"' \t\n*?[#~=%") != strlen(argv[0])) {
+	if (does_cmd_require_shell(argv[0])) {
 		strvec_push_nodup(out, git_shell_path());
 		strvec_push(out, "-c");
 

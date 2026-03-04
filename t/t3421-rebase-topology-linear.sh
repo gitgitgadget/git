@@ -37,7 +37,7 @@ test_expect_success 'setup branches and remote tracking' '
 	do
 		git branch branch-$tag $tag || return 1
 	done &&
-	git remote add origin "file://$PWD" &&
+	git remote add origin "file://$(pwd)" &&
 	git fetch origin
 '
 
