@@ -865,7 +865,13 @@ static void queue_diffs(struct line_log_data *range,
 		diff_tree_oid(parent_tree_oid, tree_oid, "", opt);
 
 		filter_diffs_for_paths(range, 1);
-		diffcore_std(opt);
+		/*
+		 * Call diffcore_rename() directly, as only rename
+		 * detection is needed.  diffcore_std() would also run
+		 * pickaxe, which may discard pairs needed for rename
+		 * detection and break rename following.
+		 */
+		diffcore_rename(opt);
 		filter_diffs_for_paths(range, 0);
 	}
 	move_diff_queue(queue, &diff_queued_diff);
