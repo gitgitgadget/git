@@ -149,4 +149,26 @@ test_expect_success 'git repo info --keys uses lines as its default output forma
 	test_cmp expect actual
 '
 
+
+test_expect_success 'git repo structure succeeds' '
+	git repo structure >actual 2>stderr &&
+	test_must_be_empty stderr
+'
+
+test_expect_success 'git repo structure --format=lines succeeds' '
+	git repo structure --format=lines >actual &&
+	grep "references.branches.count=" actual &&
+	grep "objects.commits.count=" actual
+'
+
+test_expect_success 'git repo structure --format=nul succeeds' '
+	git repo structure --format=nul >actual
+'
+
+test_expect_success 'git repo structure rejects unknown format' '
+	echo "fatal: invalid format ${SQ}foo${SQ}" >expect &&
+	test_must_fail git repo structure --format=foo 2>actual &&
+	test_cmp expect actual
+'
+
 test_done
