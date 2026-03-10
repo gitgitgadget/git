@@ -327,15 +327,8 @@ void advise_on_checkout_dirty_files(struct string_list *file_list)
 	fprintf(stderr, "\t%s\n", item->string);
 
     advise_if_enabled(ADVICE_STASH_BEFORE_CHECKOUT,
-		      _("You can save your local changes before switching by running:\n"
+		      _("To carry your local changes over to the new branch, use:\n"
 			"\n"
-			"\tgit stash push\n"
-			"\n"
-			"Then restore them after switching with:\n"
-			"\n"
-			"\tgit stash pop\n"
-			"\n"
-			"Or to discard your local changes, use:\n"
-			"\n"
-			"\tgit checkout -- <file>"));
+			"\tgit checkout -m <branch>\n"
+			));
 }
