@@ -142,6 +142,20 @@ should result in deletion of the path).
 	`merge.conflictStyle` configuration variable.  Possible values are
 	`merge` (default), `diff3`, and `zdiff3`.
 
+`--autostash`::
+`--no-autostash`::
+	When switching branches, if any of the paths that differ
+	between the current branch and the target branch have local
+	changes (in the index or the working tree), automatically
+	create a temporary stash entry before the operation begins,
+	and apply it after the operation ends.  If the local changes
+	do not overlap with the branch difference, the switch proceeds
+	without stashing.  When a stash entry is created and the
+	subsequent application results in conflicts, the stash entry
+	is saved so that you can use `git stash pop` to recover and
+	`git stash drop` when done.  Use with `--force` to always
+	stash local changes regardless of conflicts.
+
 `-q`::
 `--quiet`::
 	Quiet, suppress feedback messages.

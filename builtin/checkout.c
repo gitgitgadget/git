@@ -30,6 +30,7 @@
 #include "repo-settings.h"
 #include "resolve-undo.h"
 #include "revision.h"
+#include "sequencer.h"
 #include "setup.h"
 #include "submodule.h"
 #include "symlinks.h"
@@ -68,6 +69,7 @@ struct checkout_opts {
 	int only_merge_on_switching_branches;
 	int can_switch_when_in_progress;
 	int orphan_from_empty_tree;
+	int autostash;
 	int empty_pathspec_ok;
 	int checkout_index;
 	int checkout_worktree;
@@ -1157,6 +1159,55 @@ static void orphaned_commit_warning(struct commit *old_commit, struct commit *ne
 	release_revisions(&revs);
 }
 
+static int checkout_would_clobber_changes(struct branch_info *old_branch_info,
+					  struct branch_info *new_branch_info)
+{
+	struct tree_desc trees[2];
+	struct tree *old_tree, *new_tree;
+	struct unpack_trees_options topts;
+	struct index_state tmp_index = INDEX_STATE_INIT(the_repository);
+	const struct object_id *old_commit_oid;
+	int ret;
+
+	if (!new_branch_info->commit)
+		return 0;
+
+	old_commit_oid = old_branch_info->commit ?
+		&old_branch_info->commit->object.oid :
+		the_hash_algo->empty_tree;
+	old_tree = repo_parse_tree_indirect(the_repository, old_commit_oid);
+	if (!old_tree)
+		return 0;
+
+	new_tree = repo_get_commit_tree(the_repository,
+					new_branch_info->commit);
+	if (!new_tree)
+		return 0;
+	if (repo_parse_tree(the_repository, new_tree) < 0)
+		return 0;
+
+	memset(&topts, 0, sizeof(topts));
+	topts.head_idx = -1;
+	topts.src_index = the_repository->index;
+	topts.dst_index = &tmp_index;
+	topts.initial_checkout = is_index_unborn(the_repository->index);
+	topts.merge = 1;
+	topts.update = 1;
+	topts.dry_run = 1;
+	topts.quiet = 1;
+	topts.fn = twoway_merge;
+
+	init_tree_desc(&trees[0], &old_tree->object.oid,
+		       old_tree->buffer, old_tree->size);
+	init_tree_desc(&trees[1], &new_tree->object.oid,
+		       new_tree->buffer, new_tree->size);
+
+	ret = unpack_trees(2, trees, &topts);
+	discard_index(&tmp_index);
+
+	return ret != 0;
+}
+
 static int switch_branches(const struct checkout_opts *opts,
 			   struct branch_info *new_branch_info)
 {
@@ -1202,9 +1253,20 @@ static int switch_branches(const struct checkout_opts *opts,
 			do_merge = 0;
 	}
 
+	if (opts->autostash) {
+		if (repo_read_index(the_repository) < 0)
+			die(_("index file corrupt"));
+		if (opts->discard_changes ||
+		    checkout_would_clobber_changes(&old_branch_info,
+						   new_branch_info))
+			create_autostash_ref(the_repository,
+					     "CHECKOUT_AUTOSTASH");
+	}
+
 	if (do_merge) {
 		ret = merge_working_tree(opts, &old_branch_info, new_branch_info, &writeout_error);
 		if (ret) {
+			apply_autostash_ref(the_repository, "CHECKOUT_AUTOSTASH");
 			branch_info_release(&old_branch_info);
 			return ret;
 		}
@@ -1214,6 +1276,8 @@ static int switch_branches(const struct checkout_opts *opts,
 		orphaned_commit_warning(old_branch_info.commit, new_branch_info->commit);
 
 	update_refs_for_switch(opts, &old_branch_info, new_branch_info);
+
+	apply_autostash_ref(the_repository, "CHECKOUT_AUTOSTASH");
 
 	ret = post_checkout_hook(old_branch_info.commit, new_branch_info->commit, 1);
 	branch_info_release(&old_branch_info);
@@ -1234,6 +1298,10 @@ static int git_checkout_config(const char *var, const char *value,
 	}
 	if (!strcmp(var, "checkout.guess")) {
 		opts->dwim_new_local_branch = git_config_bool(var, value);
+		return 0;
+	}
+	if (!strcmp(var, "checkout.autostash")) {
+		opts->autostash = git_config_bool(var, value);
 		return 0;
 	}
 
@@ -1745,6 +1813,7 @@ static struct option *add_common_switch_branch_options(
 			   PARSE_OPT_NOCOMPLETE),
 		OPT_BOOL(0, "ignore-other-worktrees", &opts->ignore_other_worktrees,
 			 N_("do not check if another worktree is using this branch")),
+		OPT_AUTOSTASH(&opts->autostash),
 		OPT_END()
 	};
 	struct option *newopts = parse_options_concat(prevopts, options);
