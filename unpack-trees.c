@@ -128,8 +128,17 @@ void setup_unpack_trees_porcelain(struct unpack_trees_options *opts,
 	if (!strcmp(cmd, "checkout"))
 		msg = advice_enabled(ADVICE_COMMIT_BEFORE_MERGE)
 		      ? _("Your local changes to the following files would be overwritten by checkout:\n%%s"
-			  "Please commit your changes or stash them before you switch branches.")
-		      : _("Your local changes to the following files would be overwritten by checkout:\n%%s");
+			  "Please commit your changes or stash them before you switch branches.\n"
+			  "Try using 'git checkout -m <branch>' for a quick fix. \n"
+			  "Please Note :- that using -m (merge) will not save your changes, rather would directly merge them.\n"
+			  "Meaning if you are not able to resolve conflicts and does --hard reset your local changes would be gone."
+			  )
+		      : _("Your local changes to the following files would be overwritten by checkout:\n%%s"
+				"Please commit your changes or stash them before you switch branches.\n"
+			  "Try using 'git checkout -m <branch>' for a quick fix.\n"
+			  "Please Note :- that using -m (merge) will not save your changes, rather would directly merge them.\n"
+			  "Meaning if you are not able to resolve conflicts and does --hard reset your local changes would be gone."
+			  );
 	else if (!strcmp(cmd, "merge"))
 		msg = advice_enabled(ADVICE_COMMIT_BEFORE_MERGE)
 		      ? _("Your local changes to the following files would be overwritten by merge:\n%%s"
