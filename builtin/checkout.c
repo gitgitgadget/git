@@ -30,6 +30,7 @@
 #include "repo-settings.h"
 #include "resolve-undo.h"
 #include "revision.h"
+#include "sequencer.h"
 #include "setup.h"
 #include "submodule.h"
 #include "symlinks.h"
@@ -68,6 +69,7 @@ struct checkout_opts {
 	int only_merge_on_switching_branches;
 	int can_switch_when_in_progress;
 	int orphan_from_empty_tree;
+	int autostash;
 	int empty_pathspec_ok;
 	int checkout_index;
 	int checkout_worktree;
@@ -1202,9 +1204,16 @@ static int switch_branches(const struct checkout_opts *opts,
 			do_merge = 0;
 	}
 
+	if (opts->autostash) {
+		if (repo_read_index(the_repository) < 0)
+			die(_("index file corrupt"));
+		create_autostash_ref(the_repository, "CHECKOUT_AUTOSTASH");
+	}
+
 	if (do_merge) {
 		ret = merge_working_tree(opts, &old_branch_info, new_branch_info, &writeout_error);
 		if (ret) {
+			apply_autostash_ref(the_repository, "CHECKOUT_AUTOSTASH");
 			branch_info_release(&old_branch_info);
 			return ret;
 		}
@@ -1214,6 +1223,8 @@ static int switch_branches(const struct checkout_opts *opts,
 		orphaned_commit_warning(old_branch_info.commit, new_branch_info->commit);
 
 	update_refs_for_switch(opts, &old_branch_info, new_branch_info);
+
+	apply_autostash_ref(the_repository, "CHECKOUT_AUTOSTASH");
 
 	ret = post_checkout_hook(old_branch_info.commit, new_branch_info->commit, 1);
 	branch_info_release(&old_branch_info);
@@ -1234,6 +1245,10 @@ static int git_checkout_config(const char *var, const char *value,
 	}
 	if (!strcmp(var, "checkout.guess")) {
 		opts->dwim_new_local_branch = git_config_bool(var, value);
+		return 0;
+	}
+	if (!strcmp(var, "checkout.autostash")) {
+		opts->autostash = git_config_bool(var, value);
 		return 0;
 	}
 
@@ -1745,6 +1760,7 @@ static struct option *add_common_switch_branch_options(
 			   PARSE_OPT_NOCOMPLETE),
 		OPT_BOOL(0, "ignore-other-worktrees", &opts->ignore_other_worktrees,
 			 N_("do not check if another worktree is using this branch")),
+		OPT_AUTOSTASH(&opts->autostash),
 		OPT_END()
 	};
 	struct option *newopts = parse_options_concat(prevopts, options);

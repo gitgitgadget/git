@@ -142,6 +142,15 @@ should result in deletion of the path).
 	`merge.conflictStyle` configuration variable.  Possible values are
 	`merge` (default), `diff3`, and `zdiff3`.
 
+`--autostash`::
+`--no-autostash`::
+	Automatically create a temporary stash entry before the
+	operation begins, and apply it after the operation ends.
+	This means that you can switch branches on a dirty worktree.
+	However, use with care: the final stash application after a
+	successful branch switch might result in non-trivial
+	conflicts.
+
 `-q`::
 `--quiet`::
 	Quiet, suppress feedback messages.

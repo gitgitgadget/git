@@ -36,6 +36,18 @@ with a small number of cores, the default sequential checkout often performs
 better. The size and compression level of a repository might also influence how
 well the parallel version performs.
 
+`checkout.autoStash`::
+	When set to true, automatically create a temporary stash entry
+	before the operation begins, and apply it after the operation
+	ends.  This means that you can run `git checkout` or `git switch`
+	on a dirty worktree.  However, use with care: the final stash
+	application after a successful branch switch might result in
+	non-trivial conflicts.
+	This option can be overridden by the `--no-autostash` and
+	`--autostash` options of linkgit:git-checkout[1] and
+	linkgit:git-switch[1].
+	Defaults to false.
+
 `checkout.thresholdForParallelism`::
 	When running parallel checkout with a small number of files, the cost
 	of subprocess spawning and inter-process communication might outweigh

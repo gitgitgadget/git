@@ -272,6 +272,15 @@ When switching branches with `--merge`, staged changes may be lost.
 	`merge.conflictStyle` configuration variable.  Possible values are
 	`merge` (default), `diff3`, and `zdiff3`.
 
+`--autostash`::
+`--no-autostash`::
+	When switching branches, automatically create a temporary stash
+	entry before the operation begins, and apply it after the
+	operation ends.  This means that you can switch branches on a
+	dirty worktree.  However, use with care: the final stash
+	application after a successful branch switch might result in
+	non-trivial conflicts.
+
 `-p`::
 `--patch`::
 	Interactively select hunks in the difference between the
