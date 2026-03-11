@@ -78,7 +78,8 @@ error: Your local changes to the following files would be overwritten by checkou
 	rep/two
 Please commit your changes or stash them before you switch branches.
 Try using 'git checkout -m <branch>' for a quick fix.
-Please Note :- that using -m (merge) will not save your changes, rather would directly merge them. Meaning if you are not able to resolve conflicts and does --hard reset your local changes would be gone.
+Please Note :- that using -m (merge) will not save your changes, rather would directly merge them.
+Meaning if you are not able to resolve conflicts and does --hard reset your local changes would be gone.
 Aborting
 EOF
 
@@ -102,7 +103,8 @@ error: Your local changes to the following files would be overwritten by checkou
 	rep/two
 Please commit your changes or stash them before you switch branches.
 Try using 'git checkout -m <branch>' for a quick fix.
-Please Note :- that using -m (merge) will not save your changes, rather would directly merge them. Meaning if you are not able to resolve conflicts and does --hard reset your local changes would be gone.
+Please Note :- that using -m (merge) will not save your changes, rather would directly merge them.
+Meaning if you are not able to resolve conflicts and does --hard reset your local changes would be gone.
 Aborting
 EOF
 
