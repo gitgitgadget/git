@@ -450,6 +450,7 @@ static int fetch_refs_via_pack(struct transport *transport,
 	args.quiet = (transport->verbose < 0);
 	args.no_progress = !transport->progress;
 	args.depth = data->options.depth;
+	args.must_filter = data->options.must_filter;
 	args.deepen_since = data->options.deepen_since;
 	args.deepen_not = data->options.deepen_not;
 	args.deepen_relative = data->options.deepen_relative;

@@ -40,6 +40,7 @@ struct fetch_pack_args {
 	unsigned cloning:1;
 	unsigned update_shallow:1;
 	unsigned reject_shallow_remote:1;
+	unsigned must_filter:1;
 	unsigned deepen:1;
 	unsigned refetch:1;
 
