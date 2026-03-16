@@ -21,13 +21,18 @@
 static int initialize_pipe_name(const char *path, wchar_t *wpath, size_t alloc)
 {
 	int off = 0;
+	int real_off = 0;
 	struct strbuf realpath = STRBUF_INIT;
 
 	if (!strbuf_realpath(&realpath, path, 0))
 		return -1;
 
+	/* UNC Path, skip leading slash */
+	if (realpath.buf[0] == '/' && realpath.buf[1] == '/')
+		real_off = 1;
+
 	off = swprintf(wpath, alloc, L"\\\\.\\pipe\\");
-	if (xutftowcs(wpath + off, realpath.buf, alloc - off) < 0)
+	if (xutftowcs(wpath + off, realpath.buf + real_off, alloc - off) < 0)
 		return -1;
 
 	/* Handle drive prefix */
