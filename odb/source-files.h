@@ -32,4 +32,18 @@ static inline struct odb_source_files *odb_source_files_downcast(struct odb_sour
 	return container_of(source, struct odb_source_files, base);
 }
 
+/*
+ * Try to cast the given source to the files backend. Returns NULL if
+ * the source uses a different backend. Use this in loops that iterate
+ * over heterogeneous source chains (e.g. when alternates may include
+ * non-files backends). Use odb_source_files_downcast() when the source
+ * is known to be a files backend.
+ */
+static inline struct odb_source_files *odb_source_files_try(struct odb_source *source)
+{
+	if (source->type != ODB_SOURCE_FILES)
+		return NULL;
+	return container_of(source, struct odb_source_files, base);
+}
+
 #endif
