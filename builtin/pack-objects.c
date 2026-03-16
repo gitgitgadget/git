@@ -1531,8 +1531,11 @@ static int want_cruft_object_mtime(struct repository *r,
 	struct odb_source *source;
 
 	for (source = r->objects->sources; source; source = source->next) {
-		struct odb_source_files *files = odb_source_files_downcast(source);
-		struct packed_git **cache = packfile_store_get_kept_pack_cache(files->packed, flags);
+		struct odb_source_files *files = odb_source_files_try(source);
+		struct packed_git **cache;
+		if (!files)
+			continue;
+		cache = packfile_store_get_kept_pack_cache(files->packed, flags);
 
 		for (; *cache; cache++) {
 			struct packed_git *p = *cache;
@@ -1754,7 +1757,9 @@ static int want_object_in_pack_mtime(const struct object_id *oid,
 	}
 
 	for (source = the_repository->objects->sources; source; source = source->next) {
-		struct odb_source_files *files = odb_source_files_downcast(source);
+		struct odb_source_files *files = odb_source_files_try(source);
+		if (!files)
+			continue;
 
 		for (e = files->packed->packs.head; e; e = e->next) {
 			struct packed_git *p = e->pack;
@@ -4350,7 +4355,9 @@ static void add_objects_in_unpacked_packs(void)
 
 	odb_prepare_alternates(to_pack.repo->objects);
 	for (source = to_pack.repo->objects->sources; source; source = source->next) {
-		struct odb_source_files *files = odb_source_files_downcast(source);
+		struct odb_source_files *files = odb_source_files_try(source);
+		if (!files)
+			continue;
 
 		if (!source->local)
 			continue;

@@ -64,9 +64,12 @@ static int insert_loose_map(struct odb_source *source,
 
 static int load_one_loose_object_map(struct repository *repo, struct odb_source *source)
 {
-	struct odb_source_files *files = odb_source_files_downcast(source);
+	struct odb_source_files *files = odb_source_files_try(source);
 	struct strbuf buf = STRBUF_INIT, path = STRBUF_INIT;
 	FILE *fp;
+
+	if (!files)
+		return 0;
 
 	if (!files->loose->map)
 		loose_object_map_init(&files->loose->map);
@@ -235,8 +238,11 @@ int repo_loose_object_map_oid(struct repository *repo,
 	khiter_t pos;
 
 	for (source = repo->objects->sources; source; source = source->next) {
-		struct odb_source_files *files = odb_source_files_downcast(source);
-		struct loose_object_map *loose_map = files->loose->map;
+		struct odb_source_files *files = odb_source_files_try(source);
+		struct loose_object_map *loose_map;
+		if (!files)
+			continue;
+		loose_map = files->loose->map;
 		if (!loose_map)
 			continue;
 		map = (to == repo->compat_hash_algo) ?

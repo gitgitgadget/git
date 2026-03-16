@@ -363,7 +363,9 @@ static int unuse_one_window(struct object_database *odb)
 	struct pack_window *lru_w = NULL, *lru_l = NULL;
 
 	for (source = odb->sources; source; source = source->next) {
-		struct odb_source_files *files = odb_source_files_downcast(source);
+		struct odb_source_files *files = odb_source_files_try(source);
+		if (!files)
+			continue;
 		for (e = files->packed->packs.head; e; e = e->next)
 			scan_windows(e->pack, &lru_p, &lru_w, &lru_l);
 	}
@@ -539,7 +541,9 @@ static int close_one_pack(struct repository *r)
 	int accept_windows_inuse = 1;
 
 	for (source = r->objects->sources; source; source = source->next) {
-		struct odb_source_files *files = odb_source_files_downcast(source);
+		struct odb_source_files *files = odb_source_files_try(source);
+		if (!files)
+			continue;
 		for (e = files->packed->packs.head; e; e = e->next) {
 			if (e->pack->pack_fd == -1)
 				continue;
@@ -1251,8 +1255,10 @@ const struct packed_git *has_packed_and_bad(struct repository *r,
 	struct odb_source *source;
 
 	for (source = r->objects->sources; source; source = source->next) {
-		struct odb_source_files *files = odb_source_files_downcast(source);
+		struct odb_source_files *files = odb_source_files_try(source);
 		struct packfile_list_entry *e;
+		if (!files)
+			continue;
 
 		for (e = files->packed->packs.head; e; e = e->next)
 			if (oidset_contains(&e->pack->bad_objects, oid))
@@ -2268,8 +2274,11 @@ int has_object_pack(struct repository *r, const struct object_id *oid)
 
 	odb_prepare_alternates(r->objects);
 	for (source = r->objects->sources; source; source = source->next) {
-		struct odb_source_files *files = odb_source_files_downcast(source);
-		int ret = find_pack_entry(files->packed, oid, &e);
+		struct odb_source_files *files = odb_source_files_try(source);
+		int ret;
+		if (!files)
+			continue;
+		ret = find_pack_entry(files->packed, oid, &e);
 		if (ret)
 			return ret;
 	}
@@ -2284,8 +2293,10 @@ int has_object_kept_pack(struct repository *r, const struct object_id *oid,
 	struct pack_entry e;
 
 	for (source = r->objects->sources; source; source = source->next) {
-		struct odb_source_files *files = odb_source_files_downcast(source);
+		struct odb_source_files *files = odb_source_files_try(source);
 		struct packed_git **cache;
+		if (!files)
+			continue;
 
 		cache = packfile_store_get_kept_pack_cache(files->packed, flags);
 

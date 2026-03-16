@@ -115,9 +115,11 @@ static void find_short_object_filename(struct disambiguate_state *ds)
 {
 	struct odb_source *source;
 
-	for (source = ds->repo->objects->sources; source && !ds->ambiguous; source = source->next)
-		oidtree_each(odb_source_loose_cache(source, &ds->bin_pfx),
-				&ds->bin_pfx, ds->len, match_prefix, ds);
+	for (source = ds->repo->objects->sources; source && !ds->ambiguous; source = source->next) {
+		struct oidtree *tree = odb_source_loose_cache(source, &ds->bin_pfx);
+		if (tree)
+			oidtree_each(tree, &ds->bin_pfx, ds->len, match_prefix, ds);
+	}
 }
 
 static int match_hash(unsigned len, const unsigned char *a, const unsigned char *b)

@@ -95,7 +95,9 @@ static int midx_read_object_offsets(const unsigned char *chunk_start,
 
 struct multi_pack_index *get_multi_pack_index(struct odb_source *source)
 {
-	struct odb_source_files *files = odb_source_files_downcast(source);
+	struct odb_source_files *files = odb_source_files_try(source);
+	if (!files)
+		return NULL;
 	packfile_store_prepare(files->packed);
 	return files->packed->midx;
 }
@@ -806,7 +808,9 @@ void clear_midx_file(struct repository *r)
 		struct odb_source *source;
 
 		for (source = r->objects->sources; source; source = source->next) {
-			struct odb_source_files *files = odb_source_files_downcast(source);
+			struct odb_source_files *files = odb_source_files_try(source);
+			if (!files)
+				continue;
 			if (files->packed->midx)
 				close_midx(files->packed->midx);
 			files->packed->midx = NULL;

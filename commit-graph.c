@@ -1981,7 +1981,9 @@ static void fill_oids_from_all_packs(struct write_commit_graph_context *ctx)
 
 	odb_prepare_alternates(ctx->r->objects);
 	for (source = ctx->r->objects->sources; source; source = source->next) {
-		struct odb_source_files *files = odb_source_files_downcast(source);
+		struct odb_source_files *files = odb_source_files_try(source);
+		if (!files)
+			continue;
 		packfile_store_for_each_object(files->packed, &oi, add_packed_commits_oi,
 					       ctx, ODB_FOR_EACH_OBJECT_PACK_ORDER);
 	}

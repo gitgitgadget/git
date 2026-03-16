@@ -982,7 +982,9 @@ static int store_object(
 	}
 
 	for (source = the_repository->objects->sources; source; source = source->next) {
-		struct odb_source_files *files = odb_source_files_downcast(source);
+		struct odb_source_files *files = odb_source_files_try(source);
+		if (!files)
+			continue;
 
 		if (!packfile_list_find_oid(packfile_store_get_packs(files->packed), &oid))
 			continue;
@@ -1189,7 +1191,9 @@ static void stream_blob(uintmax_t len, struct object_id *oidout, uintmax_t mark)
 	}
 
 	for (source = the_repository->objects->sources; source; source = source->next) {
-		struct odb_source_files *files = odb_source_files_downcast(source);
+		struct odb_source_files *files = odb_source_files_try(source);
+		if (!files)
+			continue;
 
 		if (!packfile_list_find_oid(packfile_store_get_packs(files->packed), &oid))
 			continue;

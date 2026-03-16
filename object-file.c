@@ -1879,13 +1879,19 @@ static int append_loose_object(const struct object_id *oid,
 struct oidtree *odb_source_loose_cache(struct odb_source *source,
 				       const struct object_id *oid)
 {
-	struct odb_source_files *files = odb_source_files_downcast(source);
-	int subdir_nr = oid->hash[0];
+	struct odb_source_files *files = odb_source_files_try(source);
+	int subdir_nr;
 	struct strbuf buf = STRBUF_INIT;
-	size_t word_bits = bitsizeof(files->loose->subdir_seen[0]);
-	size_t word_index = subdir_nr / word_bits;
-	size_t mask = (size_t)1u << (subdir_nr % word_bits);
+	size_t word_bits, word_index, mask;
 	uint32_t *bitmap;
+
+	if (!files)
+		return NULL;
+
+	subdir_nr = oid->hash[0];
+	word_bits = bitsizeof(files->loose->subdir_seen[0]);
+	word_index = subdir_nr / word_bits;
+	mask = (size_t)1u << (subdir_nr % word_bits);
 
 	if (subdir_nr < 0 ||
 	    (size_t) subdir_nr >= bitsizeof(files->loose->subdir_seen))
@@ -1919,7 +1925,9 @@ static void odb_source_loose_clear_cache(struct odb_source_loose *loose)
 
 void odb_source_loose_reprepare(struct odb_source *source)
 {
-	struct odb_source_files *files = odb_source_files_downcast(source);
+	struct odb_source_files *files = odb_source_files_try(source);
+	if (!files)
+		return;
 	odb_source_loose_clear_cache(files->loose);
 }
 
