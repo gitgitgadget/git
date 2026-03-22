@@ -1,3 +1,9 @@
+#!/bin/sh
+
+test_description='test pack-refs'
+
+. ./test-lib.sh
+
 pack_refs=${pack_refs:-pack-refs}
 
 test_expect_success 'enable reflogs' '
@@ -61,7 +67,7 @@ test_expect_success 'see if a branch still exists after git ${pack_refs} --prune
 test_expect_success 'see if git ${pack_refs} --prune remove ref files' '
 	git branch f &&
 	git ${pack_refs} --all --prune &&
-	! test -f .git/refs/heads/f
+	test_path_is_missing .git/refs/heads/f
 '
 
 test_expect_success 'see if git ${pack_refs} --prune removes empty dirs' '
