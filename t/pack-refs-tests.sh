@@ -1,9 +1,3 @@
-#!/bin/sh
-
-test_description='test pack-refs'
-
-. ./test-lib.sh
-
 pack_refs=${pack_refs:-pack-refs}
 
 test_expect_success 'enable reflogs' '
