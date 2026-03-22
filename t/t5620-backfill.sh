@@ -176,6 +176,12 @@ test_expect_success 'backfill --sparse without cone mode (negative)' '
 	test_line_count = 12 missing
 '
 
+test_expect_success 'backfill rejects unexpected arguments' '
+	test_must_fail git -C backfill1 backfill unexpected-arg >err 2>&1 &&
+	grep "unknown argument .*unexpected-arg" err &&
+	! grep "Minimum number of objects" err
+'
+
 . "$TEST_DIRECTORY"/lib-httpd.sh
 start_httpd
 

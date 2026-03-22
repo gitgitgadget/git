@@ -136,6 +136,11 @@ int cmd_backfill(int argc, const char **argv, const char *prefix, struct reposit
 	argc = parse_options(argc, argv, prefix, options, builtin_backfill_usage,
 			     0);
 
+	if (argc) {
+		error(_("unknown argument '%s'"), argv[0]);
+		usage(builtin_backfill_usage[0]);
+	}
+
 	repo_config(repo, git_default_config, NULL);
 
 	if (ctx.sparse < 0)
