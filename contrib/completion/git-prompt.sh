@@ -147,7 +147,7 @@ printf -v __git_printf_supports_v -- '%s' yes >/dev/null 2>&1
 
 # like __git_SOH=$'\001' etc but works also in shells without $'...'
 eval "$(printf '
-	__git_SOH="\001" __git_STX="\002" __git_ESC="\033"
+	__git_SOH="\\001" __git_STX="\\002" __git_ESC="\033"
 	__git_LF="\n" __git_CRLF="\r\n"
 ')"
 
