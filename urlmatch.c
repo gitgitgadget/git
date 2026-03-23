@@ -440,6 +440,18 @@ char *url_normalize(const char *url, struct url_info *out_info)
 	return url_normalize_1(url, out_info, false);
 }
 
+bool url_is_valid_pattern(const char *url)
+{
+	char *normalized = url_normalize_1(url, NULL, true);
+
+	if (normalized) {
+		free(normalized);
+		return true;
+	}
+
+	return false;
+}
+
 static size_t url_match_prefix(const char *url,
 			       const char *url_prefix,
 			       size_t url_prefix_len)

@@ -36,6 +36,17 @@ struct url_info {
 
 char *url_normalize(const char *, struct url_info *);
 
+/*
+ * Return 'true' if the string looks like a valid URL or a valid URL pattern
+ * (allowing '*' globs), 'false' otherwise.
+ *
+ * This is NOT a URL validation function.  Full URL validation is NOT
+ * performed.  Some invalid host names are passed through this function
+ * undetected.  However, most all other problems that make a URL invalid
+ * will be detected (including a missing host for non file: URLs).
+ */
+bool url_is_valid_pattern(const char *url);
+
 struct urlmatch_item {
 	size_t hostmatch_len;
 	size_t pathmatch_len;
