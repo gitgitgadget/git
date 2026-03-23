@@ -434,15 +434,19 @@ static struct string_list *fields_stored(void)
 
 /*
  * Struct for promisor remotes involved in the "promisor-remote"
- * protocol capability.
+ * protocol capability:
  *
- * Except for "name", each <member> in this struct and its <value>
- * should correspond (either on the client side or on the server side)
- * to a "remote.<name>.<member>" config variable set to <value> where
- * "<name>" is a promisor remote name.
+ * - "name" is the name the server advertised.
+ * - "local_name" is the name we use locally (may be auto-generated).
+ *
+ * Except for "name" and "local_name", each <member> in this struct
+ * and its <value> should correspond (either on the client side or on
+ * the server side) to a "remote.<name>.<member>" config variable set
+ * to <value> where "<name>" is a promisor remote name.
  */
 struct promisor_info {
 	const char *name;
+	const char *local_name;
 	const char *url;
 	const char *filter;
 	const char *token;
@@ -451,6 +455,7 @@ struct promisor_info {
 static void promisor_info_free(struct promisor_info *p)
 {
 	free((char *)p->name);
+	free((char *)p->local_name);
 	free((char *)p->url);
 	free((char *)p->filter);
 	free((char *)p->token);
@@ -462,6 +467,11 @@ static void promisor_info_list_clear(struct string_list *list)
 	for (size_t i = 0; i < list->nr; i++)
 		promisor_info_free(list->items[i].util);
 	string_list_clear(list, 0);
+}
+
+static const char *promisor_info_internal_name(struct promisor_info *p)
+{
+	return p->local_name ? p->local_name : p->name;
 }
 
 static void set_one_field(struct promisor_info *p,
@@ -819,7 +829,7 @@ static bool promisor_store_advertised_fields(struct promisor_info *advertised,
 {
 	struct promisor_info *p;
 	struct string_list_item *item;
-	const char *remote_name = advertised->name;
+	const char *remote_name = promisor_info_internal_name(advertised);
 	bool reload_config = false;
 
 	if (!(store_info->store_filter || store_info->store_token))
@@ -927,7 +937,8 @@ static void filter_promisor_remote(struct repository *repo,
 	/* Apply accepted remotes to the stable repo state */
 	for_each_string_list_item(item, accepted_remotes) {
 		struct promisor_info *info = item->util;
-		struct promisor_remote *r = repo_promisor_remote_find(repo, info->name);
+		const char *local = promisor_info_internal_name(info);
+		struct promisor_remote *r = repo_promisor_remote_find(repo, local);
 
 		if (r) {
 			r->accepted = 1;
