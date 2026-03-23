@@ -14,6 +14,7 @@
 #include "url.h"
 #include "urlmatch.h"
 #include "version.h"
+#include "wildmatch.h"
 
 struct promisor_remote_config {
 	struct promisor_remote *promisors;
@@ -727,8 +728,31 @@ static struct string_list *accept_from_server_url(struct repository *repo)
 	return &accept_urls;
 }
 
+static struct allowed_url *url_matches_accept_list(
+		struct string_list *accept_urls, const char *url)
+{
+	struct string_list_item *item;
+	char *normalized = url_normalize(url, NULL);
+
+	if (!normalized)
+		return NULL;
+
+	for_each_string_list_item(item, accept_urls) {
+		struct allowed_url *allowed = item->util;
+
+		if (!wildmatch(allowed->url_pattern, normalized, 0)) {
+			free(normalized);
+			return allowed;
+		}
+	}
+
+	free(normalized);
+	return NULL;
+}
+
 static int should_accept_remote(enum accept_promisor accept,
 				struct promisor_info *advertised,
+				struct string_list *accept_urls,
 				struct string_list *config_info)
 {
 	struct promisor_info *p;
@@ -757,9 +781,6 @@ static int should_accept_remote(enum accept_promisor accept,
 	if (accept == ACCEPT_KNOWN_NAME)
 		return all_fields_match(advertised, config_info, p);
 
-	if (accept != ACCEPT_KNOWN_URL)
-		BUG("Unhandled 'enum accept_promisor' value '%d'", accept);
-
 	if (strcmp(p->url, remote_url)) {
 		warning(_("known remote named '%s' but with URL '%s' instead of '%s', "
 			  "ignoring this remote"),
@@ -767,7 +788,21 @@ static int should_accept_remote(enum accept_promisor accept,
 		return 0;
 	}
 
-	return all_fields_match(advertised, config_info, p);
+	if (accept == ACCEPT_KNOWN_URL)
+		return all_fields_match(advertised, config_info, p);
+
+	if (accept != ACCEPT_NONE)
+		BUG("Unhandled 'enum accept_promisor' value '%d'", accept);
+
+	/*
+	 * Even if accept == ACCEPT_NONE, we MUST trust this known
+	 * remote to update its token or other such fields if its URL
+	 * matches the acceptFromServerUrl whitelist!
+	 */
+	if (url_matches_accept_list(accept_urls, remote_url))
+		return all_fields_match(advertised, config_info, p);
+
+	return 0;
 }
 
 static int skip_field_name_prefix(const char *elem, const char *field_name, const char **value)
@@ -972,10 +1007,9 @@ static void filter_promisor_remote(struct repository *repo,
 	struct string_list_item *item;
 	bool reload_config = false;
 	enum accept_promisor accept = accept_from_server(repo);
-	/* Pre-load and validate the acceptFromServerUrl config */
-	(void)accept_from_server_url(repo);
+	struct string_list *accept_urls = accept_from_server_url(repo);
 
-	if (accept == ACCEPT_NONE)
+	if (accept == ACCEPT_NONE && !accept_urls->nr)
 		return;
 
 	/* Parse remote info received */
@@ -995,7 +1029,7 @@ static void filter_promisor_remote(struct repository *repo,
 			string_list_sort(&config_info);
 		}
 
-		if (should_accept_remote(accept, advertised, &config_info)) {
+		if (should_accept_remote(accept, advertised, accept_urls, &config_info)) {
 			if (!store_info)
 				store_info = store_info_new(repo);
 			if (promisor_store_advertised_fields(advertised, store_info))

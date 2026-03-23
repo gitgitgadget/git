@@ -51,6 +51,52 @@ promisor.acceptFromServer::
 	to "fetch" and "clone" requests from the client. Name and URL
 	comparisons are case sensitive. See linkgit:gitprotocol-v2[5].
 
+promisor.acceptFromServerUrl::
+	A glob pattern to specify which URLs advertised by a server
+	are considered trusted by the client. This option acts as an
+	additive security whitelist that works in conjunction with
+	`promisor.acceptFromServer`.
++
+This option can appear multiple times in config files. An advertised
+URL will be accepted if it matches _ANY_ glob pattern specified by
+this option in _ANY_ config file read by Git.
++
+Be _VERY_ careful with these glob patterns, as it can be a big
+security hole to allow any advertised remote to be auto-configured!
+To minimize security risks, follow these guidelines:
++
+1. Start with a secure protocol scheme, like `https://` or `ssh://`.
++
+2. Only allow domain names or paths where you control and trust _ALL_
+   the content. Be especially careful with shared hosting platforms
+   like `github.com` or `gitlab.com`. A broad pattern like
+   `https://gitlab.com/*` is dangerous because it trusts every
+   repository on the entire platform. Always restrict such patterns to
+   your specific organization or namespace (e.g.,
+   `https://gitlab.com/your-org/*`).
++
+3. Don't use globs (`*`) in the domain name. For example
+   `https://cdn.example.com/*` is much safer than
+   `https://*.example.com/*`, because the latter matches
+   `https://evil-hacker.net/fake.example.com/repo`.
++
+4. Make sure to have a `/` at the end of the domain name (or the end
+   of specific directories). For example `https://cdn.example.com/*`
+   is much safer than `https://cdn.example.com*`, because the latter
+   matches `https://cdn.example.com.hacker.net/repo`.
++
+Before matching, the advertised URL is normalized: the scheme and
+host are lowercased, percent-encoded characters are decoded where
+possible, and path segments like `..` are resolved.  Glob patterns
+are matched against this normalized URL as-is, so patterns should
+be written in normalized form (e.g., lowercase scheme and host).
++
+Even if `promisor.acceptFromServer` is set to `None` (the default),
+Git will still accept field updates (like tokens) for known remotes,
+provided their URLs match a pattern in
+`promisor.acceptFromServerUrl`. See linkgit:gitprotocol-v2[5] for
+details on the protocol.
+
 promisor.checkFields::
 	A comma or space separated list of additional remote related
 	field names. A client checks if the values of these fields
