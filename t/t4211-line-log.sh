@@ -367,4 +367,19 @@ test_expect_success 'show line-log with graph' '
 	test_cmp expect actual
 '
 
+test_expect_success '-L with -G is rejected' '
+	test_must_fail git log -L 1,1:a.c -G "pattern" 2>err &&
+	test_grep "does not yet support" err
+'
+
+test_expect_success '-L with -S is rejected' '
+	test_must_fail git log -L 1,1:a.c -S "pattern" 2>err &&
+	test_grep "does not yet support" err
+'
+
+test_expect_success '-L with --find-object is rejected' '
+	test_must_fail git log -L 1,1:a.c --find-object=HEAD 2>err &&
+	test_grep "does not yet support" err
+'
+
 test_done
