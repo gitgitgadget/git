@@ -2206,6 +2206,7 @@ int do_read_index(struct index_state *istate, const char *path, int must_exist)
 	size_t extension_offset = 0;
 	int nr_threads, cpus;
 	struct index_entry_offset_table *ieot = NULL;
+	struct repository *r;
 
 	if (istate->initialized)
 		return istate->cache_nr;
@@ -2313,9 +2314,10 @@ int do_read_index(struct index_state *istate, const char *path, int must_exist)
 	 * TODO trace2: replace "the_repository" with the actual repo instance
 	 * that is associated with the given "istate".
 	 */
-	trace2_data_intmax("index", the_repository, "read/version",
+	r = istate->repo ? istate->repo : the_repository;
+	trace2_data_intmax("index", r, "read/version",
 			   istate->version);
-	trace2_data_intmax("index", the_repository, "read/cache_nr",
+	trace2_data_intmax("index", r, "read/cache_nr",
 			   istate->cache_nr);
 
 	/*
