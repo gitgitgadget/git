@@ -55,6 +55,7 @@
 
 static int diff_detect_rename_default;
 static int diff_indent_heuristic = 1;
+static int diff_slide_down;
 static int diff_rename_limit_default = 1000;
 static int diff_suppress_blank_empty;
 static enum git_colorbool diff_use_color_default = GIT_COLOR_UNKNOWN;
@@ -289,6 +290,8 @@ int git_diff_heuristic_config(const char *var, const char *value,
 {
 	if (!strcmp(var, "diff.indentheuristic"))
 		diff_indent_heuristic = git_config_bool(var, value);
+	if (!strcmp(var, "diff.slidedown"))
+		diff_slide_down = git_config_bool(var, value);
 	return 0;
 }
 
@@ -4861,6 +4864,8 @@ void repo_diff_setup(struct repository *r, struct diff_options *options)
 	options->xdl_opts |= diff_algorithm;
 	if (diff_indent_heuristic)
 		DIFF_XDL_SET(options, INDENT_HEURISTIC);
+	if (diff_slide_down)
+		DIFF_XDL_SET(options, SLIDE_DOWN);
 
 	options->orderfile = xstrdup_or_null(diff_order_file_cfg);
 
@@ -5910,6 +5915,9 @@ struct option *add_diff_options(const struct option *opts,
 		OPT_BIT(0, "indent-heuristic", &options->xdl_opts,
 			N_("heuristic to shift diff hunk boundaries for easy reading"),
 			XDF_INDENT_HEURISTIC),
+		OPT_BIT(0, "slide-down", &options->xdl_opts,
+			N_("slide ambiguous diff hunks downward (append after context)"),
+			XDF_SLIDE_DOWN),
 		OPT_CALLBACK_F(0, "patience", options, NULL,
 			       N_("generate diff using the \"patience diff\" algorithm"),
 			       PARSE_OPT_NONEG | PARSE_OPT_NOARG,
