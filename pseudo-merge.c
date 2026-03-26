@@ -644,7 +644,7 @@ static struct pseudo_merge_commit *find_pseudo_merge(const struct pseudo_merge_m
 	if (!pm->commits_nr)
 		return NULL;
 
-	return bsearch(&pos, pm->commits, pm->commits_nr,
+	return (struct pseudo_merge_commit *) bsearch(&pos, pm->commits, pm->commits_nr,
 		       PSEUDO_MERGE_COMMIT_RAWSZ, pseudo_merge_commit_cmp);
 }
 
