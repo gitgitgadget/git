@@ -13,11 +13,41 @@ enum odb_source_type {
 
 	/* The "files" backend that uses loose objects and packfiles. */
 	ODB_SOURCE_FILES,
+
+	/* An external helper process (git-local-<name>). */
+	ODB_SOURCE_HELPER,
 };
 
 struct object_id;
 struct odb_read_stream;
 struct strvec;
+
+/*
+ * Options for write_packfile. When NULL is passed, the backend
+ * uses sensible defaults.
+ */
+struct odb_write_packfile_options {
+	unsigned int nr_objects;
+	uint32_t pack_header_version;
+	uint32_t pack_header_entries;
+	int use_thin_pack;
+	int from_promisor;
+	int fsck_objects;
+	int check_self_contained;
+	unsigned long max_input_size;
+	int quiet;
+	int show_progress;
+	int report_end_of_input;
+	const char *shallow_file;
+	char **lockfile_out;
+
+	/*
+	 * Output: set to 1 by the backend if the ingested pack was
+	 * verified as self-contained (all referenced objects present).
+	 * Used by the transport layer to skip connectivity checks.
+	 */
+	int self_contained_out;
+};
 
 /*
  * The source is the part of the object database that stores the actual
@@ -47,6 +77,21 @@ struct odb_source {
 	 * written to.
 	 */
 	bool local;
+
+	/*
+	 * Packfile store for this source, or NULL if this source does
+	 * not manage pack files. Set by the files backend; left NULL
+	 * by backends that store objects differently. Used by the
+	 * pack iterator (repo_for_each_pack) to skip non-pack sources
+	 * without downcasting.
+	 */
+	struct packfile_store *packed;
+
+	/*
+	 * Loose object store for this source, or NULL if this source
+	 * does not manage loose objects.
+	 */
+	struct odb_source_loose *loose;
 
 	/*
 	 * This object store is ephemeral, so there is no need to fsync.
@@ -237,6 +282,45 @@ struct odb_source {
 	 */
 	int (*write_alternate)(struct odb_source *source,
 			       const char *alternate);
+
+	/*
+	 * Ingest a pack from a file descriptor. Each backend chooses
+	 * its own ingestion strategy:
+	 *
+	 *   - The files backend spawns index-pack (large packs) or
+	 *     unpack-objects (small packs), then registers the result.
+	 *
+	 *   - Non-files backends may parse the pack and write each
+	 *     object individually through write_object.
+	 *
+	 * Returns 0 on success, a negative error code otherwise.
+	 */
+	int (*write_packfile)(struct odb_source *source,
+			      int pack_fd,
+			      struct odb_write_packfile_options *opts);
+
+	/*
+	 * Iterate over all objects whose object ID starts with the
+	 * given prefix. Used for object name disambiguation.
+	 *
+	 * Returns 0 on success, a negative error code in case
+	 * iteration has failed, or a non-zero value from the callback.
+	 */
+	int (*for_each_unique_abbrev)(struct odb_source *source,
+				      const struct object_id *oid_prefix,
+				      unsigned int prefix_len,
+				      odb_for_each_object_cb cb,
+				      void *cb_data);
+
+	/*
+	 * Translate an object ID from one hash algorithm to another
+	 * using the source's internal mapping (for SHA-1/SHA-256
+	 * migration). Returns 0 on success, -1 if no mapping exists.
+	 */
+	int (*convert_object_id)(struct odb_source *source,
+				 const struct object_id *src,
+				 const struct git_hash_algo *to,
+				 struct object_id *dest);
 };
 
 /*
@@ -440,6 +524,45 @@ static inline int odb_source_begin_transaction(struct odb_source *source,
 					       struct odb_transaction **out)
 {
 	return source->begin_transaction(source, out);
+}
+
+/*
+ * Ingest a pack from a file descriptor into the given source. Returns 0 on
+ * success, a negative error code otherwise.
+ */
+static inline int odb_source_write_packfile(struct odb_source *source,
+					    int pack_fd,
+					    struct odb_write_packfile_options *opts)
+{
+	return source->write_packfile(source, pack_fd, opts);
+}
+
+/*
+ * Iterate over all objects in the source whose ID starts with the given
+ * prefix. Used for object name disambiguation.
+ */
+static inline int odb_source_for_each_unique_abbrev(struct odb_source *source,
+						    const struct object_id *oid_prefix,
+						    unsigned int prefix_len,
+						    odb_for_each_object_cb cb,
+						    void *cb_data)
+{
+	return source->for_each_unique_abbrev(source, oid_prefix, prefix_len,
+					      cb, cb_data);
+}
+
+/*
+ * Translate an object ID between hash algorithms using the source's mapping.
+ * Returns 0 on success, -1 if no mapping exists.
+ */
+static inline int odb_source_convert_object_id(struct odb_source *source,
+					       const struct object_id *src,
+					       const struct git_hash_algo *to,
+					       struct object_id *dest)
+{
+	if (!source->convert_object_id)
+		return -1;
+	return source->convert_object_id(source, src, to, dest);
 }
 
 #endif

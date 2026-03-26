@@ -17,6 +17,7 @@
 #include "object-file.h"
 #include "object-name.h"
 #include "odb.h"
+#include "odb/source.h"
 #include "odb/streaming.h"
 #include "path.h"
 #include "read-cache-ll.h"
@@ -769,24 +770,74 @@ static int fsck_subdir(unsigned int nr, const char *path UNUSED, void *data)
 	return 0;
 }
 
+static int fsck_vtable_object(const struct object_id *oid,
+			      struct object_info *oi UNUSED,
+			      void *data UNUSED)
+{
+	enum object_type type;
+	unsigned long size;
+	void *contents;
+	struct object *obj;
+	int eaten;
+
+	contents = odb_read_object(the_repository->objects, oid,
+				   &type, &size);
+	if (!contents) {
+		errors_found |= ERROR_OBJECT;
+		error(_("%s: object missing"),
+		      describe_object(oid));
+		return 0;
+	}
+
+	obj = parse_object_buffer(the_repository, oid, type,
+				  size, contents, &eaten);
+	if (!obj) {
+		errors_found |= ERROR_OBJECT;
+		error(_("%s: object corrupt or missing"),
+		      describe_object(oid));
+		if (!eaten)
+			free(contents);
+		return 0;
+	}
+	obj->flags |= HAS_OBJ;
+	if (fsck_obj(obj, contents, size))
+		errors_found |= ERROR_OBJECT;
+	if (!eaten)
+		free(contents);
+	return 0;
+}
+
 static void fsck_source(struct odb_source *source)
 {
 	struct progress *progress = NULL;
-	struct for_each_loose_cb cb_data = {
-		.progress = progress,
-	};
 
 	if (verbose)
 		fprintf_ln(stderr, _("Checking object directory"));
 
-	if (show_progress)
-		progress = start_progress(the_repository,
-					  _("Checking object directories"), 256);
+	if (!source->packed) {
+		/*
+		 * Non-files source: iterate objects through the vtable
+		 * and fsck each one.
+		 */
+		odb_source_for_each_object(source, NULL,
+					   fsck_vtable_object, NULL, 0);
+		return;
+	}
 
-	for_each_loose_file_in_source(source, fsck_loose,
-				      fsck_cruft, fsck_subdir, &cb_data);
-	display_progress(progress, 256);
-	stop_progress(&progress);
+	{
+		struct for_each_loose_cb cb_data = {
+			.progress = progress,
+		};
+
+		if (show_progress)
+			progress = start_progress(the_repository,
+						  _("Checking object directories"), 256);
+
+		for_each_loose_file_in_source(source, fsck_loose,
+					      fsck_cruft, fsck_subdir, &cb_data);
+		display_progress(progress, 256);
+		stop_progress(&progress);
+	}
 }
 
 static int fsck_cache_tree(struct cache_tree *it, const char *index_path)

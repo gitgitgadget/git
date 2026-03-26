@@ -24,6 +24,7 @@
 #include "object-file.h"
 #include "object-name.h"
 #include "odb.h"
+#include "odb/source.h"
 #include "odb/streaming.h"
 #include "replace-object.h"
 #include "promisor-remote.h"
@@ -859,8 +860,17 @@ static void batch_each_object(struct batch_options *opt,
 	 */
 	odb_prepare_alternates(the_repository->objects);
 	for (source = the_repository->objects->sources; source; source = source->next) {
-		int ret = odb_source_loose_for_each_object(source, NULL, batch_one_object_oi,
-							   &payload, flags);
+		int ret;
+		if (!source->packed) {
+			/*
+			 * Non-files source: dispatch through vtable.
+			 */
+			ret = odb_source_for_each_object(source, NULL,
+				batch_one_object_oi, &payload, flags);
+		} else {
+			ret = odb_source_loose_for_each_object(source, NULL,
+				batch_one_object_oi, &payload, flags);
+		}
 		if (ret)
 			break;
 	}
@@ -882,11 +892,14 @@ static void batch_each_object(struct batch_options *opt,
 		struct object_info oi = { 0 };
 
 		for (source = the_repository->objects->sources; source; source = source->next) {
-			struct odb_source_files *files = odb_source_files_downcast(source);
-			int ret = packfile_store_for_each_object(files->packed, &oi,
-								 batch_one_object_oi, &payload, flags);
-			if (ret)
-				break;
+			if (!source->packed)
+				continue;
+			{
+				int ret = packfile_store_for_each_object(source->packed, &oi,
+									 batch_one_object_oi, &payload, flags);
+				if (ret)
+					break;
+			}
 		}
 	}
 
