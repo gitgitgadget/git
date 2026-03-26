@@ -479,7 +479,7 @@ static int cmd_clone(int argc, const char **argv)
 		/* Strip suffix `.git`, if any */
 		strbuf_strip_suffix(&buf, ".git");
 
-		enlistment = find_last_dir_sep(buf.buf);
+		enlistment = (char *) find_last_dir_sep(buf.buf);
 		if (!enlistment) {
 			die(_("cannot deduce worktree name from '%s'"), url);
 		}

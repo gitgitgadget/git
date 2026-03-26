@@ -2270,7 +2270,7 @@ static int check_casefolding_conflict(const char *git_dir,
 	DIR *dir = NULL;
 	int ret = 0;
 
-	if ((p = find_last_dir_sep(modules_dir)))
+	if ((p = (char *) find_last_dir_sep(modules_dir)))
 		*p = '\0';
 
 	/* No conflict is possible if modules_dir doesn't exist (first clone) */
