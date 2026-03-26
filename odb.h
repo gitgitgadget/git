@@ -374,6 +374,13 @@ enum object_info_flags {
 	 * clone. Implies OBJECT_INFO_SKIP_FETCH_OBJECT and OBJECT_INFO_QUICK.
 	 */
 	OBJECT_INFO_FOR_PREFETCH = (OBJECT_INFO_SKIP_FETCH_OBJECT | OBJECT_INFO_QUICK),
+
+	/*
+	 * Only consider objects marked as "kept" (surviving GC). Used by
+	 * helper backends that track kept status per object. Backends that
+	 * do not support kept tracking should return -1 (not found).
+	 */
+	OBJECT_INFO_KEPT_ONLY = (1 << 5),
 };
 
 /*
@@ -569,6 +576,25 @@ struct odb_write_stream {
 int odb_write_object_stream(struct object_database *odb,
 			    struct odb_write_stream *stream, size_t len,
 			    struct object_id *oid);
+
+/*
+ * Ingest a pack from a file descriptor into the primary source.
+ * Returns 0 on success, a negative error code otherwise.
+ */
+struct odb_write_packfile_options;
+int odb_write_packfile(struct object_database *odb,
+		       int pack_fd,
+		       struct odb_write_packfile_options *opts);
+
+/*
+ * Iterate over all objects across all sources whose ID starts with
+ * the given prefix. Used for object name disambiguation.
+ */
+int odb_for_each_unique_abbrev(struct object_database *odb,
+			       const struct object_id *oid_prefix,
+			       unsigned int prefix_len,
+			       odb_for_each_object_cb cb,
+			       void *cb_data);
 
 void parse_alternates(const char *string,
 		      int sep,
