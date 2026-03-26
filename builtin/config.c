@@ -852,7 +852,7 @@ static int get_urlmatch(const struct config_location_options *opts,
 		die("%s", config.url.err);
 
 	config.section = xstrdup_tolower(var);
-	section_tail = strchr(config.section, '.');
+	section_tail = (char *) strchr(config.section, '.');
 	if (section_tail) {
 		*section_tail = '\0';
 		config.key = section_tail + 1;

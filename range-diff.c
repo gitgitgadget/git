@@ -106,7 +106,7 @@ static int read_patches(const char *range, struct string_list *list,
 				strbuf_reset(&buf);
 			}
 			CALLOC_ARRAY(util, 1);
-			if (include_merges && (q = strstr(p, " (from ")))
+			if (include_merges && (q = (char *) strstr(p, " (from ")))
 				*q = '\0';
 			if (repo_get_oid(the_repository, p, &util->oid)) {
 				error(_("could not parse commit '%s'"), p);

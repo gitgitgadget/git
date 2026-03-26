@@ -1042,7 +1042,7 @@ static int read_proc_receive_report(struct packet_reader *reader,
 		response++;
 
 		head = reader->line;
-		p = strchr(head, ' ');
+		p = (char *) strchr(head, ' ');
 		if (!p) {
 			strbuf_addf(errmsg, "proc-receive reported incomplete status line: '%s'\n", head);
 			code = -1;
@@ -1072,7 +1072,7 @@ static int read_proc_receive_report(struct packet_reader *reader,
 				new_report = 0;
 			}
 			key = p;
-			p = strchr(key, ' ');
+			p = (char *) strchr(key, ' ');
 			if (p)
 				*p++ = '\0';
 			val = p;
@@ -1095,7 +1095,7 @@ static int read_proc_receive_report(struct packet_reader *reader,
 		report = NULL;
 		new_report = 0;
 		refname = p;
-		p = strchr(refname, ' ');
+		p = (char *) strchr(refname, ' ');
 		if (p)
 			*p++ = '\0';
 		if (strcmp(head, "ok") && strcmp(head, "ng")) {

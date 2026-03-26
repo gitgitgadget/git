@@ -800,7 +800,7 @@ static int push_update_ref_status(struct strbuf *buf,
 			state->new_report = 0;
 		}
 		key = buf->buf + 7;
-		p = strchr(key, ' ');
+		p = (char *) strchr(key, ' ');
 		if (p)
 			*p++ = '\0';
 		val = p;

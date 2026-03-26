@@ -752,7 +752,7 @@ static int redact_sensitive_header(struct strbuf *header, size_t offset)
 
 		while (cookie) {
 			char *equals;
-			char *semicolon = strstr(cookie, "; ");
+			char *semicolon = (char *) strstr(cookie, "; ");
 			if (semicolon)
 				*semicolon = 0;
 			equals = strchrnul(cookie, '=');

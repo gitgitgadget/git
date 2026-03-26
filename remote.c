@@ -2861,7 +2861,7 @@ void remote_state_clear(struct remote_state *remote_state)
  */
 static int chop_last_dir(char **remoteurl, int is_relative)
 {
-	char *rfind = find_last_dir_sep(*remoteurl);
+	char *rfind = (char *) find_last_dir_sep(*remoteurl);
 	if (rfind) {
 		*rfind = '\0';
 		return 0;

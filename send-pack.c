@@ -181,7 +181,7 @@ static int receive_status(struct repository *r,
 		if (packet_reader_read(reader) != PACKET_READ_NORMAL)
 			break;
 		head = reader->line;
-		p = strchr(head, ' ');
+		p = (char *) strchr(head, ' ');
 		if (!p) {
 			error("invalid status line from remote: %s", reader->line);
 			ret = -1;
@@ -212,7 +212,7 @@ static int receive_status(struct repository *r,
 				new_report = 0;
 			}
 			key = p;
-			p = strchr(key, ' ');
+			p = (char *) strchr(key, ' ');
 			if (p)
 				*p++ = '\0';
 			val = p;
@@ -237,7 +237,7 @@ static int receive_status(struct repository *r,
 			break;
 		}
 		refname = p;
-		p = strchr(refname, ' ');
+		p = (char *) strchr(refname, ' ');
 		if (p)
 			*p++ = '\0';
 		/* first try searching at our hint, falling back to all refs */

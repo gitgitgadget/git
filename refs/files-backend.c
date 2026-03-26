@@ -2196,7 +2196,7 @@ static int show_one_reflog_ent(struct files_ref_store *refs,
 	if (!sb->len || sb->buf[sb->len - 1] != '\n' ||
 	    parse_oid_hex_algop(p, &ooid, &p, refs->base.repo->hash_algo) || *p++ != ' ' ||
 	    parse_oid_hex_algop(p, &noid, &p, refs->base.repo->hash_algo) || *p++ != ' ' ||
-	    !(email_end = strchr(p, '>')) ||
+	    !(email_end = (char *) strchr(p, '>')) ||
 	    email_end[1] != ' ' ||
 	    !(timestamp = parse_timestamp(email_end + 2, &message, 10)) ||
 	    !message || message[0] != ' ' ||

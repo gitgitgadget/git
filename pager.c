@@ -118,7 +118,7 @@ static void setup_pager_env(struct strvec *env)
 			split_cmdline_strerror(n));
 
 	for (i = 0; i < n; i++) {
-		char *cp = strchr(argv[i], '=');
+		char *cp = (char *) strchr(argv[i], '=');
 
 		if (!cp)
 			die("malformed build-time PAGER_ENV");
