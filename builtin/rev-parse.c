@@ -265,7 +265,7 @@ static int show_file(const char *arg, int output_prefix)
 	return 0;
 }
 
-static int try_difference(const char *arg)
+static int try_difference(char *arg)
 {
 	char *dotdot;
 	struct object_id start_oid;
@@ -325,7 +325,7 @@ static int try_difference(const char *arg)
 	return 0;
 }
 
-static int try_parent_shorthands(const char *arg)
+static int try_parent_shorthands(char *arg)
 {
 	char *dotdot;
 	struct object_id oid;
@@ -1145,9 +1145,9 @@ int cmd_rev_parse(int argc,
 		}
 
 		/* Not a flag argument */
-		if (try_difference(arg))
+		if (try_difference((char *) arg))
 			continue;
-		if (try_parent_shorthands(arg))
+		if (try_parent_shorthands((char *) arg))
 			continue;
 		name = arg;
 		type = NORMAL;

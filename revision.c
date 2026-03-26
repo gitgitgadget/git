@@ -2132,7 +2132,7 @@ static int handle_dotdot(const char *arg,
 			 int cant_be_filename)
 {
 	struct object_context a_oc = {0}, b_oc = {0};
-	char *dotdot = strstr(arg, "..");
+	char *dotdot = (char *) strstr(arg, "..");
 	int ret;
 
 	if (!dotdot)
@@ -2176,7 +2176,7 @@ static int handle_revision_arg_1(const char *arg_, struct rev_info *revs, int fl
 		goto out;
 	}
 
-	mark = strstr(arg, "^@");
+	mark = (char *) strstr(arg, "^@");
 	if (mark && !mark[2]) {
 		*mark = 0;
 		if (add_parents_only(revs, arg, flags, 0)) {
@@ -2185,13 +2185,13 @@ static int handle_revision_arg_1(const char *arg_, struct rev_info *revs, int fl
 		}
 		*mark = '^';
 	}
-	mark = strstr(arg, "^!");
+	mark = (char *) strstr(arg, "^!");
 	if (mark && !mark[2]) {
 		*mark = 0;
 		if (!add_parents_only(revs, arg, flags ^ (UNINTERESTING | BOTTOM), 0))
 			*mark = '^';
 	}
-	mark = strstr(arg, "^-");
+	mark = (char *) strstr(arg, "^-");
 	if (mark) {
 		int exclude_parent = 1;
 
