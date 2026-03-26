@@ -1772,7 +1772,7 @@ int cmd_main(int argc, const char **argv)
 			str_end_url_with_slash(arg, &repo->url);
 			repo->path_len = strlen(repo->url);
 			if (path) {
-				repo->path = strchr(path+2, '/');
+				repo->path = (char *) strchr(path+2, '/');
 				if (repo->path)
 					repo->path_len = strlen(repo->path);
 			}

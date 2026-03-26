@@ -604,7 +604,7 @@ static void trace_add_env(struct strbuf *dst, const char *const *deltaenv)
 	/* Last one wins, see run-command.c:prep_childenv() for context */
 	for (e = deltaenv; e && *e; e++) {
 		struct strbuf key = STRBUF_INIT;
-		char *equals = strchr(*e, '=');
+		char *equals = (char *) strchr(*e, '=');
 
 		if (equals) {
 			strbuf_add(&key, *e, equals - *e);
