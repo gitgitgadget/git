@@ -981,6 +981,32 @@ int odb_write_object_stream(struct object_database *odb,
 	return odb_source_write_object_stream(odb->sources, stream, len, oid);
 }
 
+int odb_write_packfile(struct object_database *odb,
+		       int pack_fd,
+		       struct odb_write_packfile_options *opts)
+{
+	return odb_source_write_packfile(odb->sources, pack_fd, opts);
+}
+
+int odb_for_each_unique_abbrev(struct object_database *odb,
+			       const struct object_id *oid_prefix,
+			       unsigned int prefix_len,
+			       odb_for_each_object_cb cb,
+			       void *cb_data)
+{
+	int ret;
+
+	odb_prepare_alternates(odb);
+	for (struct odb_source *source = odb->sources; source; source = source->next) {
+		ret = odb_source_for_each_unique_abbrev(source, oid_prefix,
+							prefix_len, cb, cb_data);
+		if (ret)
+			return ret;
+	}
+
+	return 0;
+}
+
 struct object_database *odb_new(struct repository *repo,
 				const char *primary_source,
 				const char *secondary_sources)

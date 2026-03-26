@@ -876,10 +876,7 @@ static void end_packfile(void)
 	running = 1;
 	clear_delta_base_cache();
 	if (object_count) {
-		struct odb_source_files *files = odb_source_files_downcast(pack_data->repo->objects->sources);
-		struct packed_git *new_p;
 		struct object_id cur_pack_oid;
-		char *idx_name;
 		int i;
 		struct branch *b;
 		struct tag *t;
@@ -891,26 +888,25 @@ static void end_packfile(void)
 					 object_count, cur_pack_oid.hash,
 					 pack_size);
 
-		if (object_count <= unpack_limit) {
-			if (!loosen_small_pack(pack_data)) {
-				invalidate_pack_id(pack_id);
-				goto discard_pack;
-			}
-		}
+		if (lseek(pack_data->pack_fd, 0, SEEK_SET) < 0)
+			die_errno(_("failed seeking to start of '%s'"),
+				  pack_data->pack_name);
 
-		close(pack_data->pack_fd);
-		idx_name = keep_pack(create_index());
+		if (odb_write_packfile(the_repository->objects,
+				       pack_data->pack_fd, NULL))
+			die(_("failed to ingest pack"));
 
-		/* Register the packfile with core git's machinery. */
-		new_p = packfile_store_load_pack(files->packed, idx_name, 1);
-		if (!new_p)
-			die(_("core Git rejected index %s"), idx_name);
-		all_packs[pack_id] = new_p;
-		free(idx_name);
+		/*
+		 * Non-files backends do not register a pack on disk,
+		 * so NULL out the slot to prevent use-after-free in
+		 * gfi_unpack_entry.
+		 */
+		all_packs[pack_id] = NULL;
 
 		/* Print the boundary */
 		if (pack_edges) {
-			fprintf(pack_edges, "%s:", new_p->pack_name);
+			fprintf(pack_edges, "pack-%s:",
+				hash_to_hex(pack_data->hash));
 			for (i = 0; i < branch_table_sz; i++) {
 				for (b = branch_table[i]; b; b = b->table_next_branch) {
 					if (b->pack_id == pack_id)
@@ -1239,6 +1235,17 @@ static void *gfi_unpack_entry(
 {
 	enum object_type type;
 	struct packed_git *p = all_packs[oe->pack_id];
+	if (!p) {
+		/*
+		 * Pack was ingested by a non-files backend via
+		 * odb_write_packfile() and is no longer on disk.
+		 * Read the object back through the ODB instead.
+		 */
+		enum object_type type;
+		enum object_type odb_type;
+		return odb_read_object(the_repository->objects,
+				       &oe->idx.oid, &odb_type, sizep);
+	}
 	if (p == pack_data && p->pack_size < (pack_size + the_hash_algo->rawsz)) {
 		/* The object is stored in the packfile we are writing to
 		 * and we have modified it since the last time we scanned
