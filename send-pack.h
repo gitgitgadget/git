@@ -18,6 +18,7 @@ struct repository;
 
 struct send_pack_args {
 	const char *url;
+	const char *remote_name;
 	unsigned verbose:1,
 		quiet:1,
 		porcelain:1,

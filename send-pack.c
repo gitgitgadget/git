@@ -433,6 +433,7 @@ static void reject_invalid_nonce(const char *nonce, int len)
 
 static void get_commons_through_negotiation(struct repository *r,
 					    const char *url,
+					    const char *remote_name,
 					    const struct ref *remote_refs,
 					    struct oid_array *commons)
 {
@@ -452,7 +453,12 @@ static void get_commons_through_negotiation(struct repository *r,
 			nr_negotiation_tip++;
 		}
 	}
-	strvec_push(&child.args, url);
+	/*
+	 * Use the remote name so the subprocess can find
+	 * remote.<name>.haveRefs config. Fall back to the URL if no
+	 * remote name is available.
+	 */
+	strvec_push(&child.args, remote_name ? remote_name : url);
 
 	if (!nr_negotiation_tip) {
 		child_process_clear(&child);
@@ -528,7 +534,8 @@ int send_pack(struct repository *r,
 	repo_config_get_bool(r, "push.negotiate", &push_negotiate);
 	if (push_negotiate) {
 		trace2_region_enter("send_pack", "push_negotiate", r);
-		get_commons_through_negotiation(r, args->url, remote_refs, &commons);
+		get_commons_through_negotiation(r, args->url, args->remote_name,
+					       remote_refs, &commons);
 		trace2_region_leave("send_pack", "push_negotiate", r);
 	}
 
