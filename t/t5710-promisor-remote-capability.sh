@@ -296,15 +296,15 @@ test_expect_success "clone with 'KnownUrl' and empty url, so not advertised" '
 '
 
 test_expect_success "clone with promisor.sendFields" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client" &&
 
-	git -C server remote add otherLop "https://invalid.invalid"  &&
-	git -C server config remote.otherLop.token "fooBar" &&
-	git -C server config remote.otherLop.stuff "baz" &&
-	git -C server config remote.otherLop.partialCloneFilter "blob:limit=10k" &&
-	test_when_finished "git -C server remote remove otherLop" &&
-	test_config -C server promisor.sendFields "partialCloneFilter, token" &&
+	git --git-dir=server remote add otherLop "https://invalid.invalid"  &&
+	git --git-dir=server config remote.otherLop.token "fooBar" &&
+	git --git-dir=server config remote.otherLop.stuff "baz" &&
+	git --git-dir=server config remote.otherLop.partialCloneFilter "blob:limit=10k" &&
+	test_when_finished "git --git-dir=server remote remove otherLop" &&
+	test_config --git-dir server promisor.sendFields "partialCloneFilter, token" &&
 	test_when_finished "rm trace" &&
 
 	# Clone from server to create a client
@@ -327,15 +327,15 @@ test_expect_success "clone with promisor.sendFields" '
 '
 
 test_expect_success "clone with promisor.checkFields" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client" &&
 
-	git -C server remote add otherLop "https://invalid.invalid"  &&
-	git -C server config remote.otherLop.token "fooBar" &&
-	git -C server config remote.otherLop.stuff "baz" &&
-	git -C server config remote.otherLop.partialCloneFilter "blob:limit=10k" &&
-	test_when_finished "git -C server remote remove otherLop" &&
-	test_config -C server promisor.sendFields "partialCloneFilter, token" &&
+	git --git-dir=server remote add otherLop "https://invalid.invalid"  &&
+	git --git-dir=server config remote.otherLop.token "fooBar" &&
+	git --git-dir=server config remote.otherLop.stuff "baz" &&
+	git --git-dir=server config remote.otherLop.partialCloneFilter "blob:limit=10k" &&
+	test_when_finished "git --git-dir=server remote remove otherLop" &&
+	test_config --git-dir server promisor.sendFields "partialCloneFilter, token" &&
 	test_when_finished "rm trace" &&
 
 	# Clone from server to create a client
@@ -361,19 +361,19 @@ test_expect_success "clone with promisor.checkFields" '
 '
 
 test_expect_success "clone with promisor.storeFields=partialCloneFilter" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client" &&
 
-	git -C server remote add otherLop "https://invalid.invalid"  &&
-	git -C server config remote.otherLop.token "fooBar" &&
-	git -C server config remote.otherLop.stuff "baz" &&
-	git -C server config remote.otherLop.partialCloneFilter "blob:limit=10k" &&
-	test_when_finished "git -C server remote remove otherLop" &&
+	git --git-dir=server remote add otherLop "https://invalid.invalid"  &&
+	git --git-dir=server config remote.otherLop.token "fooBar" &&
+	git --git-dir=server config remote.otherLop.stuff "baz" &&
+	git --git-dir=server config remote.otherLop.partialCloneFilter "blob:limit=10k" &&
+	test_when_finished "git --git-dir=server remote remove otherLop" &&
 
-	git -C server config remote.lop.token "fooXXX" &&
-	git -C server config remote.lop.partialCloneFilter "blob:limit=8k" &&
+	git --git-dir=server config remote.lop.token "fooXXX" &&
+	git --git-dir=server config remote.lop.partialCloneFilter "blob:limit=8k" &&
 
-	test_config -C server promisor.sendFields "partialCloneFilter, token" &&
+	test_config --git-dir server promisor.sendFields "partialCloneFilter, token" &&
 	test_when_finished "rm trace" &&
 
 	# Clone from server to create a client
@@ -424,11 +424,11 @@ test_expect_success "clone with promisor.storeFields=partialCloneFilter" '
 '
 
 test_expect_success "clone and fetch with --filter=auto" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client trace" &&
 
-	git -C server config remote.lop.partialCloneFilter "blob:limit=9500" &&
-	test_config -C server promisor.sendFields "partialCloneFilter" &&
+	git --git-dir=server config remote.lop.partialCloneFilter "blob:limit=9500" &&
+	test_config --git-dir server promisor.sendFields "partialCloneFilter" &&
 
 	GIT_TRACE_PACKET="$(pwd)/trace" GIT_NO_LAZY_FETCH=0 git clone \
 		-c remote.lop.promisor=true \

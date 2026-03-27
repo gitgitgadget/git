@@ -164,14 +164,14 @@ test_expect_success 'clone does not segfault with --bare and core.bare=false' '
 	test_config_global core.bare false &&
 	git clone --bare parent clone-bare &&
 	echo true >expect &&
-	git -C clone-bare rev-parse --is-bare-repository >actual &&
+	git --git-dir=clone-bare rev-parse --is-bare-repository >actual &&
 	test_cmp expect actual
 '
 
 test_expect_success 'chooses correct default initial branch name' '
 	GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME= \
 	git -c init.defaultBranch=foo init --bare empty &&
-	test_config -C empty lsrefs.unborn advertise &&
+	test_config --git-dir empty lsrefs.unborn advertise &&
 	GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME= \
 	git -c init.defaultBranch=up -c protocol.version=2 clone empty whats-up &&
 	test refs/heads/foo = $(git -C whats-up symbolic-ref HEAD) &&

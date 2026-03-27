@@ -107,32 +107,32 @@ test_expect_success 'check that transfer.hideRefs does not match unstripped refs
 
 test_expect_success 'hide full refs with transfer.hideRefs' '
 	GIT_NAMESPACE=namespace \
-		git -C pushee -c transfer.hideRefs="^refs/namespaces/namespace/refs/tags" \
-		ls-remote "ext::git %s ." >actual &&
+		git --git-dir=pushee -c transfer.hideRefs="^refs/namespaces/namespace/refs/tags" \
+		ls-remote "ext::git %s pushee" >actual &&
 	printf "$commit1\trefs/heads/main\n" >expected &&
 	test_cmp expected actual
 '
 
 test_expect_success 'try to update a hidden ref' '
-	test_config -C pushee transfer.hideRefs refs/heads/main &&
+	test_config --git-dir pushee transfer.hideRefs refs/heads/main &&
 	test_must_fail git -C original push pushee-namespaced main
 '
 
 test_expect_success 'try to update a ref that is not hidden' '
-	test_config -C pushee transfer.hideRefs refs/namespaces/namespace/refs/heads/main &&
+	test_config --git-dir pushee transfer.hideRefs refs/namespaces/namespace/refs/heads/main &&
 	git -C original push pushee-namespaced main
 '
 
 test_expect_success 'git-receive-pack(1) with transfer.hideRefs does not match unstripped refs during advertisement' '
-	git -C pushee update-ref refs/namespaces/namespace/refs/heads/foo/1 refs/namespaces/namespace/refs/heads/main &&
-	git -C pushee pack-refs --all &&
-	test_config -C pushee transfer.hideRefs refs/namespaces/namespace/refs/heads/foo &&
+	git --git-dir=pushee update-ref refs/namespaces/namespace/refs/heads/foo/1 refs/namespaces/namespace/refs/heads/main &&
+	git --git-dir=pushee pack-refs --all &&
+	test_config --git-dir pushee transfer.hideRefs refs/namespaces/namespace/refs/heads/foo &&
 	GIT_TRACE_PACKET="$(pwd)/trace" git -C original push pushee-namespaced main &&
 	test_grep refs/heads/foo/1 trace
 '
 
 test_expect_success 'try to update a hidden full ref' '
-	test_config -C pushee transfer.hideRefs "^refs/namespaces/namespace/refs/heads/main" &&
+	test_config --git-dir pushee transfer.hideRefs "^refs/namespaces/namespace/refs/heads/main" &&
 	test_must_fail git -C original push pushee-namespaced main
 '
 

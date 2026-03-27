@@ -357,40 +357,40 @@ test_expect_success 'upload-pack complains of bogus filter config' '
 '
 
 test_expect_success 'upload-pack fails banned object filters' '
-	test_config -C srv.bare uploadpackfilter.blob:none.allow false &&
+	test_config --git-dir srv.bare uploadpackfilter.blob:none.allow false &&
 	test_must_fail ok=sigpipe git clone --no-checkout --filter=blob:none \
 		"file://$(pwd)/srv.bare" pc3 2>err &&
 	test_grep "filter '\''blob:none'\'' not supported" err
 '
 
 test_expect_success 'upload-pack fails banned combine object filters' '
-	test_config -C srv.bare uploadpackfilter.allow false &&
-	test_config -C srv.bare uploadpackfilter.combine.allow true &&
-	test_config -C srv.bare uploadpackfilter.tree.allow true &&
-	test_config -C srv.bare uploadpackfilter.blob:none.allow false &&
+	test_config --git-dir srv.bare uploadpackfilter.allow false &&
+	test_config --git-dir srv.bare uploadpackfilter.combine.allow true &&
+	test_config --git-dir srv.bare uploadpackfilter.tree.allow true &&
+	test_config --git-dir srv.bare uploadpackfilter.blob:none.allow false &&
 	test_must_fail ok=sigpipe git clone --no-checkout --filter=tree:1 \
 		--filter=blob:none "file://$(pwd)/srv.bare" pc3 2>err &&
 	test_grep "filter '\''blob:none'\'' not supported" err
 '
 
 test_expect_success 'upload-pack fails banned object filters with fallback' '
-	test_config -C srv.bare uploadpackfilter.allow false &&
+	test_config --git-dir srv.bare uploadpackfilter.allow false &&
 	test_must_fail ok=sigpipe git clone --no-checkout --filter=blob:none \
 		"file://$(pwd)/srv.bare" pc3 2>err &&
 	test_grep "filter '\''blob:none'\'' not supported" err
 '
 
 test_expect_success 'upload-pack limits tree depth filters' '
-	test_config -C srv.bare uploadpackfilter.allow false &&
-	test_config -C srv.bare uploadpackfilter.tree.allow true &&
-	test_config -C srv.bare uploadpackfilter.tree.maxDepth 0 &&
+	test_config --git-dir srv.bare uploadpackfilter.allow false &&
+	test_config --git-dir srv.bare uploadpackfilter.tree.allow true &&
+	test_config --git-dir srv.bare uploadpackfilter.tree.maxDepth 0 &&
 	test_must_fail ok=sigpipe git clone --no-checkout --filter=tree:1 \
 		"file://$(pwd)/srv.bare" pc3 2>err &&
 	test_grep "tree filter allows max depth 0, but got 1" err &&
 
 	git clone --no-checkout --filter=tree:0 "file://$(pwd)/srv.bare" pc4 &&
 
-	test_config -C srv.bare uploadpackfilter.tree.maxDepth 5 &&
+	git --git-dir=srv.bare config uploadpackfilter.tree.maxDepth 5 &&
 	git clone --no-checkout --filter=tree:5 "file://$(pwd)/srv.bare" pc5 &&
 	test_must_fail ok=sigpipe git clone --no-checkout --filter=tree:6 \
 		"file://$(pwd)/srv.bare" pc6 2>err &&
