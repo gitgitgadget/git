@@ -8,24 +8,32 @@ export GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME
 . ./test-lib.sh
 
 print_all_reflog_entries () {
-	repo=$1 &&
-	test-tool -C "$repo" ref-store main for-each-reflog >reflogs &&
+	repo_flag=$1 &&
+	repo=$2 &&
+	test-tool "$repo_flag" "$repo" ref-store main for-each-reflog >reflogs &&
 	while read reflog
 	do
 		echo "REFLOG: $reflog" &&
-		test-tool -C "$repo" ref-store main for-each-reflog-ent "$reflog" ||
+		test-tool "$repo_flag" "$repo" ref-store main for-each-reflog-ent "$reflog" ||
 		return 1
 	done <reflogs
 }
 
 # Migrate the provided repository from one format to the other and
 # verify that the references and logs are migrated over correctly.
-# Usage: test_migration <repo> <format> [<skip_reflog_verify> [<options...>]]
+# Usage: test_migration [--git-dir] <repo> <format> [<skip_reflog_verify> [<options...>]]
+#   --git-dir: treat <repo> as a git directory (for bare repositories).
 #   <repo> is the relative path to the repo to be migrated.
 #   <format> is the ref format to be migrated to.
 #   <skip_reflog_verify> (default: false) whether to skip reflog verification.
 #   <options...> are other options be passed directly to 'git refs migrate'.
 test_migration () {
+	repo_flag=-C &&
+	if test "$1" = "--git-dir"
+	then
+		repo_flag=--git-dir &&
+		shift
+	fi &&
 	repo=$1 &&
 	format=$2 &&
 	shift 2 &&
