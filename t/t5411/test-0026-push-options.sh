@@ -85,7 +85,7 @@ test_expect_success "restore proc-receive hook ($PROTOCOL)" '
 # Refs of upstream : main(A)             next(A)
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "cleanup ($PROTOCOL)" '
-	git -C "$upstream" update-ref -d refs/heads/next
+	git --git-dir="$upstream" update-ref -d refs/heads/next
 '
 
 # Refs of upstream : main(A)
@@ -120,7 +120,7 @@ test_expect_success "proc-receive: push with options ($PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	<COMMIT-A> refs/heads/next
 	EOF
@@ -129,5 +129,5 @@ test_expect_success "proc-receive: push with options ($PROTOCOL)" '
 # Refs of upstream : main(A)             next(A)
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "cleanup ($PROTOCOL)" '
-	git -C "$upstream" update-ref -d refs/heads/next
+	git --git-dir="$upstream" update-ref -d refs/heads/next
 '

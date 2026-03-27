@@ -314,7 +314,7 @@ test_expect_success 'linked worktrees with relative paths are shown with absolut
 
 test_expect_success 'worktree path when called in .git directory' '
 	git worktree list >list1 &&
-	git -C .git worktree list >list2 &&
+	git --git-dir=.git worktree list >list2 &&
 	test_cmp list1 list2
 '
 

@@ -404,7 +404,7 @@ test_expect_success '"add --orphan" with empty repository' '
 	test_when_finished "rm -rf empty_repo" &&
 	echo refs/heads/newbranch >expected &&
 	GIT_DIR="empty_repo" git init --bare &&
-	git -C empty_repo worktree add --orphan -b newbranch worktreedir &&
+	git --git-dir=empty_repo worktree add --orphan -b newbranch empty_repo/worktreedir &&
 	git -C empty_repo/worktreedir symbolic-ref HEAD >actual &&
 	test_cmp expected actual
 '

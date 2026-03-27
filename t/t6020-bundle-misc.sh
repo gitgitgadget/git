@@ -452,7 +452,7 @@ test_expect_success 'create bundle 4 - with tags' '
 
 test_expect_success 'clone from bundle' '
 	git clone --mirror 1.bdl mirror.git &&
-	git -C mirror.git show-ref |
+	git --git-dir=mirror.git show-ref |
 		make_user_friendly_and_stable_output >actual &&
 	cat >expect <<-\EOF &&
 	<COMMIT-D> refs/heads/topic/1
@@ -526,7 +526,7 @@ test_expect_success 'full bundle upto annotated tag' '
 
 test_expect_success 'clone from full bundle upto annotated tag' '
 	git clone --mirror v2.bdl tag-clone.git &&
-	git -C tag-clone.git show-ref |
+	git --git-dir=tag-clone.git show-ref |
 		make_user_friendly_and_stable_output >actual &&
 	cat >expect <<-\EOF &&
 	<TAG-2> refs/tags/v2

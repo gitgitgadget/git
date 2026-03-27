@@ -171,9 +171,9 @@ check_unpack () {
 	test_when_finished "rm -rf git2" &&
 	git $git_config init --bare git2 &&
 	(
-		git $git_config -C git2 unpack-objects -n <"$packname".pack &&
-		git $git_config -C git2 unpack-objects <"$packname".pack &&
-		git $git_config -C git2 cat-file --batch-check="%(objectname)"
+		git $git_config --git-dir=git2 unpack-objects -n <"$packname".pack &&
+		git $git_config --git-dir=git2 unpack-objects <"$packname".pack &&
+		git $git_config --git-dir=git2 cat-file --batch-check="%(objectname)"
 	) <"$object_list" >current &&
 	cmp "$object_list" current
 }

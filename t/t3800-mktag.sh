@@ -50,15 +50,15 @@ check_verify_failure () {
 		rm -rf bad-tag &&
 
 		git init --bare bad-tag &&
-		bad_tag=$(git -C bad-tag hash-object -t tag -w --stdin --literally <tag.sig)
+		bad_tag=$(git --git-dir=bad-tag hash-object -t tag -w --stdin --literally <tag.sig)
 	'
 
 	test_expect_success "hash-object & fsck unreachable: $subject" '
 		if test -n "$fsck_obj_ok"
 		then
-			git -C bad-tag fsck
+			git --git-dir=bad-tag fsck
 		else
-			test_must_fail git -C bad-tag fsck
+			test_must_fail git --git-dir=bad-tag fsck
 		fi
 	'
 

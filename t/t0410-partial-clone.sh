@@ -643,10 +643,10 @@ test_expect_success 'exact rename does not need to fetch the blob lazily' '
 	test_config -C repo uploadpack.allowanysha1inwant 1 &&
 
 	git clone --filter=blob:none --bare "file://$(pwd)/repo" partial.git &&
-	git -C partial.git rev-list --objects --missing=print HEAD >out &&
+	git --git-dir=partial.git rev-list --objects --missing=print HEAD >out &&
 	grep "[?]$FILE_HASH" out &&
-	git -C partial.git log --follow -- new-file.txt &&
-	git -C partial.git rev-list --objects --missing=print HEAD >out &&
+	git --git-dir=partial.git log --follow -- new-file.txt &&
+	git --git-dir=partial.git rev-list --objects --missing=print HEAD >out &&
 	grep "[?]$FILE_HASH" out
 '
 
@@ -661,22 +661,22 @@ test_expect_success 'lazy-fetch when accessing object not in the_repository' '
 	FILE_HASH=$(git -C full rev-parse HEAD:file.txt) &&
 
 	# Sanity check that the file is missing
-	git -C partial.git rev-list --objects --missing=print HEAD >out &&
+	git --git-dir=partial.git rev-list --objects --missing=print HEAD >out &&
 	grep "[?]$FILE_HASH" out &&
 
 	# The no-lazy-fetch mechanism prevents Git from fetching
 	test_must_fail env GIT_NO_LAZY_FETCH=1 \
-		git -C partial.git cat-file -e "$FILE_HASH" &&
+		git --git-dir=partial.git cat-file -e "$FILE_HASH" &&
 
 	# The same with command line option to "git"
-	test_must_fail git --no-lazy-fetch -C partial.git cat-file -e "$FILE_HASH" &&
+	test_must_fail git --no-lazy-fetch --git-dir=partial.git cat-file -e "$FILE_HASH" &&
 
 	# The same, forcing a subprocess via an alias
-	test_must_fail git --no-lazy-fetch -C partial.git \
+	test_must_fail git --no-lazy-fetch --git-dir=partial.git \
 		-c alias.foo="!git cat-file" foo -e "$FILE_HASH" &&
 
 	# Sanity check that the file is still missing
-	git -C partial.git rev-list --objects --missing=print HEAD >out &&
+	git --git-dir=partial.git rev-list --objects --missing=print HEAD >out &&
 	grep "[?]$FILE_HASH" out &&
 
 	git -C full cat-file -s "$FILE_HASH" >expect &&
@@ -684,7 +684,7 @@ test_expect_success 'lazy-fetch when accessing object not in the_repository' '
 	test_cmp expect actual &&
 
 	# Sanity check that the file is now present
-	git -C partial.git rev-list --objects --missing=print HEAD >out &&
+	git --git-dir=partial.git rev-list --objects --missing=print HEAD >out &&
 	! grep "[?]$FILE_HASH" out
 '
 

@@ -142,7 +142,7 @@ test_expect_success "setup proc-receive hook (hook --die-read-push-options, $PRO
 # Refs of workbench: main(A)  tags/v123
 # git push         :                       refs/for/main/topic(A)
 test_expect_success "proc-receive: bad protocol (hook --die-read-push-options, $PROTOCOL/porcelain)" '
-	git -C "$upstream" config receive.advertisePushOptions true &&
+	git --git-dir="$upstream" config receive.advertisePushOptions true &&
 	test_must_fail git -C workbench push --porcelain origin \
 		-o reviewers=user1,user2 \
 		HEAD:refs/for/main/topic \
@@ -223,7 +223,7 @@ test_expect_success "proc-receive: bad protocol (no report, $PROTOCOL/porcelain)
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	<COMMIT-A> refs/heads/next
 	EOF
@@ -298,7 +298,7 @@ test_expect_success "proc-receive: bad protocol (unknown status, $PROTOCOL/porce
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '

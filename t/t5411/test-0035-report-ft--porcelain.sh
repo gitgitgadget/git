@@ -30,7 +30,7 @@ test_expect_success "proc-receive: fall through, let receive-pack to execute ($P
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-B> refs/for/main/topic
 	<COMMIT-A> refs/heads/main
 	EOF
@@ -39,5 +39,5 @@ test_expect_success "proc-receive: fall through, let receive-pack to execute ($P
 # Refs of upstream : main(A)             refs/for/main/topic(A)
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "cleanup ($PROTOCOL/porcelain)" '
-	git -C "$upstream" update-ref -d refs/for/main/topic
+	git --git-dir="$upstream" update-ref -d refs/for/main/topic
 '

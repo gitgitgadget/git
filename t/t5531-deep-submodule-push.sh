@@ -485,8 +485,8 @@ test_expect_success 'push --dry-run does not recursively update submodules' '
 		git commit -m "Ninth commit for gar/bage" &&
 		git push --dry-run --recurse-submodules=on-demand ../pub.git main
 	) &&
-	git -C submodule.git rev-parse main >actual_submodule &&
-	git -C pub.git rev-parse main >actual_pub &&
+	git --git-dir=submodule.git rev-parse main >actual_submodule &&
+	git --git-dir=pub.git rev-parse main >actual_pub &&
 	test_cmp expected_pub actual_pub &&
 	test_cmp expected_submodule actual_submodule
 '
@@ -494,20 +494,20 @@ test_expect_success 'push --dry-run does not recursively update submodules' '
 test_expect_success 'push --dry-run does not recursively update submodules' '
 	git -C work push --dry-run --recurse-submodules=only ../pub.git main &&
 
-	git -C submodule.git rev-parse main >actual_submodule &&
-	git -C pub.git rev-parse main >actual_pub &&
+	git --git-dir=submodule.git rev-parse main >actual_submodule &&
+	git --git-dir=pub.git rev-parse main >actual_pub &&
 	test_cmp expected_pub actual_pub &&
 	test_cmp expected_submodule actual_submodule
 '
 
 test_expect_success 'push only unpushed submodules recursively' '
 	git -C work/gar/bage rev-parse main >expected_submodule &&
-	git -C pub.git rev-parse main >expected_pub &&
+	git --git-dir=pub.git rev-parse main >expected_pub &&
 
 	git -C work push --recurse-submodules=only ../pub.git main &&
 
-	git -C submodule.git rev-parse main >actual_submodule &&
-	git -C pub.git rev-parse main >actual_pub &&
+	git --git-dir=submodule.git rev-parse main >actual_submodule &&
+	git --git-dir=pub.git rev-parse main >actual_pub &&
 	test_cmp expected_submodule actual_submodule &&
 	test_cmp expected_pub actual_pub
 '
@@ -577,8 +577,8 @@ test_expect_success 'push propagating the remotes name to a submodule' '
 	# Succeeds when submodules has matching remote and refspec
 	git -C work push --recurse-submodules=on-demand origin main &&
 
-	git -C submodule.git rev-parse main >actual_submodule &&
-	git -C pub.git rev-parse main >actual_pub &&
+	git --git-dir=submodule.git rev-parse main >actual_submodule &&
+	git --git-dir=pub.git rev-parse main >actual_pub &&
 	git -C work/gar/bage rev-parse main >expected_submodule &&
 	git -C work rev-parse main >expected_pub &&
 	test_cmp expected_submodule actual_submodule &&
@@ -607,8 +607,8 @@ test_expect_success 'push propagating refspec to a submodule' '
 	git -C work/gar/bage branch branch2 main &&
 	git -C work push --recurse-submodules=on-demand origin branch2 &&
 
-	git -C submodule.git rev-parse branch2 >actual_submodule &&
-	git -C pub.git rev-parse branch2 >actual_pub &&
+	git --git-dir=submodule.git rev-parse branch2 >actual_submodule &&
+	git --git-dir=pub.git rev-parse branch2 >actual_pub &&
 	git -C work/gar/bage rev-parse branch2 >expected_submodule &&
 	git -C work rev-parse branch2 >expected_pub &&
 	test_cmp expected_submodule actual_submodule &&
@@ -629,8 +629,8 @@ test_expect_success 'push propagating HEAD refspec to a submodule' '
 	git -C work push --recurse-submodules=on-demand origin \
 		HEAD:refs/heads/branch2 &&
 
-	git -C submodule.git rev-parse branch2 >actual_submodule &&
-	git -C pub.git rev-parse branch2 >actual_pub &&
+	git --git-dir=submodule.git rev-parse branch2 >actual_submodule &&
+	git --git-dir=pub.git rev-parse branch2 >actual_pub &&
 	git -C work/gar/bage rev-parse branch2 >expected_submodule &&
 	git -C work rev-parse branch2 >expected_pub &&
 	test_cmp expected_submodule actual_submodule &&

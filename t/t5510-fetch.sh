@@ -1349,7 +1349,7 @@ test_expect_success 'prepare source branch' '
 '
 
 validate_store_type () {
-	git -C dest count-objects -v >actual &&
+	git --git-dir=dest count-objects -v >actual &&
 	case "$store_type" in
 	packed)
 		grep "^count: 0$" actual ;;
@@ -1373,9 +1373,9 @@ test_unpack_limit () {
 	test_expect_success "fetch trumps transfer limit" '
 		rm -fr dest &&
 		git --bare init dest &&
-		git -C dest config fetch.unpacklimit $fetch_limit &&
-		git -C dest config transfer.unpacklimit $transfer_limit &&
-		git -C dest fetch .. onebranch &&
+		git --git-dir=dest config fetch.unpacklimit $fetch_limit &&
+		git --git-dir=dest config transfer.unpacklimit $transfer_limit &&
+		git --git-dir=dest fetch . onebranch &&
 		validate_store_type
 	'
 }
@@ -1588,10 +1588,10 @@ test_expect_success 'fetch --tags fetches existing tags' '
 	git clone --bare base repo &&
 
 	git -C base tag tag-1 &&
-	git -C repo for-each-ref >out &&
+	git --git-dir=repo for-each-ref >out &&
 	test_grep ! "tag-1" out &&
-	git -C repo fetch --tags &&
-	git -C repo for-each-ref >out &&
+	git --git-dir=repo fetch --tags &&
+	git --git-dir=repo for-each-ref >out &&
 	test_grep "tag-1" out
 '
 
@@ -1605,15 +1605,15 @@ test_expect_success 'fetch --tags fetches non-conflicting tags' '
 	git clone --bare base repo &&
 
 	git -C base tag tag-2 &&
-	git -C repo for-each-ref >out &&
+	git --git-dir=repo for-each-ref >out &&
 	test_grep ! "tag-2" out &&
 
 	git -C base commit --allow-empty -m "second empty-commit" &&
 	git -C base tag -f tag-1 &&
 
-	test_must_fail git -C repo fetch --tags 2>out &&
+	test_must_fail git --git-dir=repo fetch --tags 2>out &&
 	test_grep "tag-1  (would clobber existing tag)" out &&
-	git -C repo for-each-ref >out &&
+	git --git-dir=repo for-each-ref >out &&
 	test_grep "tag-2" out
 '
 

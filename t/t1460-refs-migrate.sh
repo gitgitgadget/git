@@ -43,25 +43,25 @@ test_migration () {
 		skip_reflog_verify=$1
 		shift
 	fi &&
-	git -C "$repo" for-each-ref --include-root-refs \
+	git "$repo_flag" "$repo" for-each-ref --include-root-refs \
 		--format='%(refname) %(objectname) %(symref)' >expect &&
 	if ! $skip_reflog_verify
 	then
-		print_all_reflog_entries "$repo" >expect_logs
+		print_all_reflog_entries "$repo_flag" "$repo" >expect_logs
 	fi &&
 
-	git -C "$repo" refs migrate --ref-format="$format" "$@" &&
+	git "$repo_flag" "$repo" refs migrate --ref-format="$format" "$@" &&
 
-	git -C "$repo" for-each-ref --include-root-refs \
+	git "$repo_flag" "$repo" for-each-ref --include-root-refs \
 		--format='%(refname) %(objectname) %(symref)' >actual &&
 	test_cmp expect actual &&
 	if ! $skip_reflog_verify
 	then
-		print_all_reflog_entries "$repo" >actual_logs &&
+		print_all_reflog_entries "$repo_flag" "$repo" >actual_logs &&
 		test_cmp expect_logs actual_logs
 	fi &&
 
-	git -C "$repo" rev-parse --show-ref-format >actual &&
+	git "$repo_flag" "$repo" rev-parse --show-ref-format >actual &&
 	echo "$format" >expect &&
 	test_cmp expect actual
 }
@@ -152,7 +152,7 @@ do
 			git init --ref-format=$from_format repo &&
 			test_commit -C repo initial &&
 			git clone --ref-format=$from_format --mirror repo repo.git &&
-			test_migration repo.git "$to_format"
+			test_migration --git-dir repo.git "$to_format"
 		'
 
 		test_expect_success "$from_format -> $to_format: dangling symref" '

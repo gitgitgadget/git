@@ -28,7 +28,7 @@ test_expect_success "proc-receive: ok ($PROTOCOL/porcelain)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '

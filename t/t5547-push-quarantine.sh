@@ -6,7 +6,7 @@ test_description='check quarantine of objects during push'
 
 test_expect_success 'create picky dest repo' '
 	git init --bare dest.git &&
-	test_hook --setup -C dest.git pre-receive <<-\EOF
+	test_hook --setup --git-dir dest.git pre-receive <<-\EOF
 	while read old new ref; do
 		test "$(git log -1 --format=%s $new)" = reject && exit 1
 	done

@@ -951,32 +951,32 @@ test_expect_success 'setup bare repo' '
 	git clone --bare "file://$(pwd)/repo" bare
 '
 test_expect_success 'list fails outside work tree' '
-	test_must_fail git -C bare sparse-checkout list 2>err &&
+	test_must_fail git --git-dir=bare sparse-checkout list 2>err &&
 	test_grep "this operation must be run in a work tree" err
 '
 
 test_expect_success 'add fails outside work tree' '
-	test_must_fail git -C bare sparse-checkout add deeper 2>err &&
+	test_must_fail git --git-dir=bare sparse-checkout add deeper 2>err &&
 	test_grep "this operation must be run in a work tree" err
 '
 
 test_expect_success 'set fails outside work tree' '
-	test_must_fail git -C bare sparse-checkout set deeper 2>err &&
+	test_must_fail git --git-dir=bare sparse-checkout set deeper 2>err &&
 	test_grep "this operation must be run in a work tree" err
 '
 
 test_expect_success 'init fails outside work tree' '
-	test_must_fail git -C bare sparse-checkout init 2>err &&
+	test_must_fail git --git-dir=bare sparse-checkout init 2>err &&
 	test_grep "this operation must be run in a work tree" err
 '
 
 test_expect_success 'reapply fails outside work tree' '
-	test_must_fail git -C bare sparse-checkout reapply 2>err &&
+	test_must_fail git --git-dir=bare sparse-checkout reapply 2>err &&
 	test_grep "this operation must be run in a work tree" err
 '
 
 test_expect_success 'disable fails outside work tree' '
-	test_must_fail git -C bare sparse-checkout disable 2>err &&
+	test_must_fail git --git-dir=bare sparse-checkout disable 2>err &&
 	test_grep "this operation must be run in a work tree" err
 '
 

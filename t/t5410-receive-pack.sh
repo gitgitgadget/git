@@ -71,7 +71,7 @@ test_expect_success TEE_DOES_NOT_HANG \
 
 	test_grep "missing necessary objects" actual &&
 	test_grep "fatal: Failed to traverse parents" err &&
-	test_must_fail git -C remote.git cat-file -e $(git -C repo rev-parse HEAD)
+	test_must_fail git --git-dir=remote.git cat-file -e $(git -C repo rev-parse HEAD)
 '
 
 test_expect_success TEE_DOES_NOT_HANG \
@@ -93,8 +93,8 @@ test_expect_success TEE_DOES_NOT_HANG \
 
 	test_grep ! "missing necessary objects" actual &&
 	test_must_be_empty err &&
-	git -C remote.git cat-file -e $(git -C repo rev-parse HEAD) &&
-	test_must_fail git -C remote.git rev-list $(git -C repo rev-parse HEAD)
+	git --git-dir=remote.git cat-file -e $(git -C repo rev-parse HEAD) &&
+	test_must_fail git --git-dir=remote.git rev-list $(git -C repo rev-parse HEAD)
 '
 
 test_done

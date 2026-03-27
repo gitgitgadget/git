@@ -28,8 +28,8 @@ test_expect_success 'enter "large" codepath, with small core.bigFileThreshold' '
 	test_when_finished "rm -rf repo" &&
 
 	git init --bare repo &&
-	echo large | git -C repo hash-object -w --stdin &&
-	git -C repo -c core.bigfilethreshold=4 fsck
+	echo large | git --git-dir=repo hash-object -w --stdin &&
+	git --git-dir=repo -c core.bigfilethreshold=4 fsck
 '
 
 # add a large file with different settings

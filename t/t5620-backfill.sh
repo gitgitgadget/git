@@ -37,8 +37,8 @@ test_expect_success 'setup repo for object creation' '
 # server for the partial clone.
 test_expect_success 'setup bare clone for server' '
 	git clone --bare "file://$(pwd)/src" srv.bare &&
-	git -C srv.bare config --local uploadpack.allowfilter 1 &&
-	git -C srv.bare config --local uploadpack.allowanysha1inwant 1
+	git --git-dir=srv.bare config --local uploadpack.allowfilter 1 &&
+	git --git-dir=srv.bare config --local uploadpack.allowanysha1inwant 1
 '
 
 # do basic partial clone from "srv.bare"

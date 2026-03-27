@@ -20,7 +20,7 @@ test_expect_success "git-push ($PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-B> refs/heads/main
 	<COMMIT-A> refs/heads/next
 	EOF
@@ -45,7 +45,7 @@ test_expect_success "git-push --atomic ($PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-B> refs/heads/main
 	<COMMIT-A> refs/heads/next
 	EOF
@@ -74,7 +74,7 @@ test_expect_success "non-fast-forward git-push ($PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-B> refs/heads/main
 	<COMMIT-B> refs/heads/next
 	EOF
@@ -114,7 +114,7 @@ test_expect_success "git-push -f ($PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/a/b/c
 	<COMMIT-A> refs/heads/main
 	<COMMIT-A> refs/review/main/topic
