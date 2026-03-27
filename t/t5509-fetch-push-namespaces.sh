@@ -88,17 +88,17 @@ test_expect_success 'mirroring a repository using a ref namespace' '
 
 test_expect_success 'hide namespaced refs with transfer.hideRefs' '
 	GIT_NAMESPACE=namespace \
-		git -C pushee -c transfer.hideRefs=refs/tags \
-		ls-remote "ext::git %s ." >actual &&
+		git --git-dir=pushee -c transfer.hideRefs=refs/tags \
+		ls-remote "ext::git %s pushee" >actual &&
 	printf "$commit1\trefs/heads/main\n" >expected &&
 	test_cmp expected actual
 '
 
 test_expect_success 'check that transfer.hideRefs does not match unstripped refs' '
-	git -C pushee pack-refs --all &&
+	git --git-dir=pushee pack-refs --all &&
 	GIT_NAMESPACE=namespace \
-		git -C pushee -c transfer.hideRefs=refs/namespaces/namespace/refs/tags \
-		ls-remote "ext::git %s ." >actual &&
+		git --git-dir=pushee -c transfer.hideRefs=refs/namespaces/namespace/refs/tags \
+		ls-remote "ext::git %s pushee" >actual &&
 	printf "$commit1\trefs/heads/main\n" >expected &&
 	printf "$commit0\trefs/tags/0\n" >>expected &&
 	printf "$commit1\trefs/tags/1\n" >>expected &&

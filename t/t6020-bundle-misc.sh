@@ -358,11 +358,11 @@ test_expect_success 'fail to verify bundle without prerequisites' '
 	error: <COMMIT-G> Z
 	EOF
 
-	test_must_fail git -C test1.git bundle verify ../2.bdl 2>&1 |
+	test_must_fail git --git-dir=test1.git bundle verify 2.bdl 2>&1 |
 		make_user_friendly_and_stable_output >actual &&
 	test_cmp expect actual &&
 
-	test_must_fail git -C test1.git bundle verify ../stdin-2.bdl 2>&1 |
+	test_must_fail git --git-dir=test1.git bundle verify stdin-2.bdl 2>&1 |
 		make_user_friendly_and_stable_output >actual &&
 	test_cmp expect actual
 '
@@ -460,8 +460,8 @@ test_expect_success 'clone from bundle' '
 	EOF
 	test_cmp expect actual &&
 
-	git -C mirror.git fetch ../2.bdl "+refs/*:refs/*" &&
-	git -C mirror.git show-ref |
+	git --git-dir=mirror.git fetch 2.bdl "+refs/*:refs/*" &&
+	git --git-dir=mirror.git show-ref |
 		make_user_friendly_and_stable_output >actual &&
 	cat >expect <<-\EOF &&
 	<COMMIT-N> refs/heads/release
@@ -470,8 +470,8 @@ test_expect_success 'clone from bundle' '
 	EOF
 	test_cmp expect actual &&
 
-	git -C mirror.git fetch ../3.bdl "+refs/*:refs/*" &&
-	git -C mirror.git show-ref |
+	git --git-dir=mirror.git fetch 3.bdl "+refs/*:refs/*" &&
+	git --git-dir=mirror.git show-ref |
 		make_user_friendly_and_stable_output >actual &&
 	cat >expect <<-\EOF &&
 	<COMMIT-P> refs/heads/main
@@ -481,8 +481,8 @@ test_expect_success 'clone from bundle' '
 	EOF
 	test_cmp expect actual &&
 
-	git -C mirror.git fetch ../4.bdl "+refs/*:refs/*" &&
-	git -C mirror.git show-ref |
+	git --git-dir=mirror.git fetch 4.bdl "+refs/*:refs/*" &&
+	git --git-dir=mirror.git show-ref |
 		make_user_friendly_and_stable_output >actual &&
 	cat >expect <<-\EOF &&
 	<COMMIT-P> refs/heads/main

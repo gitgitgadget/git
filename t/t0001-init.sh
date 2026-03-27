@@ -346,7 +346,7 @@ test_expect_success 'bare & --separate-git-dir incompatible within worktree' '
 	test_when_finished "rm -rf bare.git linkwt seprepo" &&
 	test_commit gumby &&
 	git clone --bare . bare.git &&
-	git -C bare.git worktree add --detach ../linkwt &&
+	git --git-dir=bare.git worktree add --detach linkwt &&
 	test_must_fail git -C linkwt init --separate-git-dir seprepo 2>err &&
 	test_grep "incompatible" err
 '

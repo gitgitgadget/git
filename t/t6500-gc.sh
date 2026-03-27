@@ -203,8 +203,8 @@ test_expect_success 'gc.repackFilterTo store filtered out objects' '
 	test_when_finished "rm -rf bare.git filtered.git" &&
 
 	git init --bare filtered.git &&
-	git -C bare.git -c gc.repackFilter=blob:none \
-		-c gc.repackFilterTo=../filtered.git/objects/pack/pack \
+	git --git-dir=bare.git -c gc.repackFilter=blob:none \
+		-c gc.repackFilterTo=filtered.git/objects/pack/pack \
 		-c repack.writeBitmaps=false -c gc.cruftPacks=false gc &&
 
 	test_stdout_line_count = 1 ls bare.git/objects/pack/*.pack &&
