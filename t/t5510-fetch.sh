@@ -1728,6 +1728,79 @@ test_expect_success REFFILES "HEAD is updated even with conflicts" '
 	)
 '
 
+test_expect_success 'remote.<name>.haveRefs includes configured refs as haves' '
+	test_when_finished rm -f trace &&
+	setup_negotiation_tip server server 0 &&
+
+	# With --negotiation-tip restricting tips, only alpha_1 is
+	# normally sent. Configure remote.origin.haveRefs to also include beta_1.
+	git -C client config --add remote.origin.haveRefs refs/tags/beta_1 &&
+	GIT_TRACE_PACKET="$(pwd)/trace" git -C client fetch \
+		--negotiation-tip=alpha_1 \
+		origin alpha_s beta_s &&
+
+	ALPHA_1=$(git -C client rev-parse alpha_1) &&
+	test_grep "fetch> have $ALPHA_1" trace &&
+	BETA_1=$(git -C client rev-parse beta_1) &&
+	test_grep "fetch> have $BETA_1" trace
+'
+
+test_expect_success 'remote.<name>.haveRefs works with glob patterns' '
+	test_when_finished rm -f trace &&
+	setup_negotiation_tip server server 0 &&
+
+	git -C client config --add remote.origin.haveRefs "refs/tags/beta_*" &&
+	GIT_TRACE_PACKET="$(pwd)/trace" git -C client fetch \
+		--negotiation-tip=alpha_1 \
+		origin alpha_s beta_s &&
+
+	BETA_1=$(git -C client rev-parse beta_1) &&
+	test_grep "fetch> have $BETA_1" trace &&
+	BETA_2=$(git -C client rev-parse beta_2) &&
+	test_grep "fetch> have $BETA_2" trace
+'
+
+test_expect_success 'remote.<name>.haveRefs is additive with negotiation' '
+	test_when_finished rm -f trace &&
+	setup_negotiation_tip server server 0 &&
+
+	# Without --negotiation-tip, all local refs are used as tips.
+	# remote.origin.haveRefs should add its refs unconditionally on top.
+	git -C client config --add remote.origin.haveRefs refs/tags/beta_1 &&
+	GIT_TRACE_PACKET="$(pwd)/trace" git -C client fetch \
+		origin alpha_s beta_s &&
+
+	BETA_1=$(git -C client rev-parse beta_1) &&
+	test_grep "fetch> have $BETA_1" trace
+'
+
+test_expect_success 'remote.<name>.haveRefs ignores non-existent refs silently' '
+	setup_negotiation_tip server server 0 &&
+
+	git -C client config --add remote.origin.haveRefs refs/tags/nonexistent &&
+	git -C client fetch --quiet \
+		--negotiation-tip=alpha_1 \
+		origin alpha_s beta_s 2>err &&
+	test_must_be_empty err
+'
+
+test_expect_success 'remote.<name>.haveRefs avoids duplicates with negotiator' '
+	test_when_finished rm -f trace &&
+	setup_negotiation_tip server server 0 &&
+
+	# Configure a ref that will also be a negotiation tip.
+	# fetch should still complete successfully.
+	ALPHA_1=$(git -C client rev-parse alpha_1) &&
+	git -C client config --add remote.origin.haveRefs refs/tags/alpha_1 &&
+	GIT_TRACE_PACKET="$(pwd)/trace" git -C client fetch \
+		--negotiation-tip=alpha_1 \
+		origin alpha_s beta_s &&
+
+	# alpha_1 should appear as a have
+	test_grep "fetch> have $ALPHA_1" trace >matches &&
+	test_line_count = 1 matches
+'
+
 . "$TEST_DIRECTORY"/lib-httpd.sh
 start_httpd
 
