@@ -317,6 +317,15 @@ struct git_graph {
 	struct strbuf prefix_buf;
 };
 
+static int graph_needs_truncation(struct git_graph *graph, int lane)
+{
+	int max = graph->revs->graph_max_lanes;
+	/*
+	 * Ignore values <= 0, meaning no limit.
+	 */
+	return max > 0 && lane >= max;
+}
+
 static const char *diff_output_prefix_callback(struct diff_options *opt, void *data)
 {
 	struct git_graph *graph = data;
@@ -697,6 +706,18 @@ static void graph_update_columns(struct git_graph *graph)
 	}
 
 	/*
+	 * If graph_max_lanes is set, cap the padding from the branches
+	 */
+	if (graph->revs->graph_max_lanes > 0) {
+		/*
+		 * width of "| " per lanes plus truncation mark "~ ".
+		 */
+		int max_columns_width = graph->revs->graph_max_lanes * 2 + 2;
+		if (graph->width > max_columns_width)
+			graph->width = max_columns_width;
+	}
+
+	/*
 	 * Shrink mapping_size to be the minimum necessary
 	 */
 	while (graph->mapping_size > 1 &&
@@ -846,6 +867,10 @@ static void graph_output_padding_line(struct git_graph *graph,
 	 * Output a padding row, that leaves all branch lines unchanged
 	 */
 	for (i = 0; i < graph->num_new_columns; i++) {
+		if (graph_needs_truncation(graph, i)) {
+			graph_line_addstr(line, "~ ");
+			break;
+		}
 		graph_line_write_column(line, &graph->new_columns[i], '|');
 		graph_line_addch(line, ' ');
 	}
@@ -903,6 +928,9 @@ static void graph_output_pre_commit_line(struct git_graph *graph,
 			seen_this = 1;
 			graph_line_write_column(line, col, '|');
 			graph_line_addchars(line, ' ', graph->expansion_row);
+		} else if (seen_this && graph_needs_truncation(graph, i)) {
+			graph_line_addstr(line, "~ ");
+			break;
 		} else if (seen_this && (graph->expansion_row == 0)) {
 			/*
 			 * This is the first line of the pre-commit output.
@@ -994,6 +1022,12 @@ static void graph_draw_octopus_merge(struct git_graph *graph, struct graph_line 
 		col = &graph->new_columns[j];
 
 		graph_line_write_column(line, col, '-');
+
+		if (graph_needs_truncation(graph, j / 2 + i)) {
+			graph_line_addstr(line, "~ ");
+			break;
+		}
+
 		graph_line_write_column(line, col, (i == dashed_parents - 1) ? '.' : '-');
 	}
 
@@ -1028,8 +1062,17 @@ static void graph_output_commit_line(struct git_graph *graph, struct graph_line 
 			seen_this = 1;
 			graph_output_commit_char(graph, line);
 
+			if (graph_needs_truncation(graph, i)) {
+				graph_line_addch(line, ' ');
+				break;
+			}
+
 			if (graph->num_parents > 2)
 				graph_draw_octopus_merge(graph, line);
+		} else if (graph_needs_truncation(graph, i)) {
+			graph_line_addstr(line, "~ ");
+			seen_this = 1;
+			break;
 		} else if (seen_this && (graph->edges_added > 1)) {
 			graph_line_write_column(line, col, '\\');
 		} else if (seen_this && (graph->edges_added == 1)) {
@@ -1065,10 +1108,32 @@ static void graph_output_commit_line(struct git_graph *graph, struct graph_line 
 
 	/*
 	 * Update graph->state
+	 *
+	 * If the commit is a merge and the first parent is in a visible lane,
+	 * then the GRAPH_POST_MERGE is needed to draw the merge lane.
+	 *
+	 * If the commit is over the truncation limit, but the first parent is on
+	 * a visible lane, then we still need the merge lane but truncated.
+	 *
+	 * If both commit and first parent are over the truncation limit, then
+	 * there's no need to draw the merge lane because it would work as a
+	 * padding lane.
 	 */
-	if (graph->num_parents > 1)
-		graph_update_state(graph, GRAPH_POST_MERGE);
-	else if (graph_is_mapping_correct(graph))
+	if (graph->num_parents > 1) {
+		if (!graph_needs_truncation(graph, graph->commit_index)) {
+			graph_update_state(graph, GRAPH_POST_MERGE);
+		} else {
+			struct commit_list *first_parent = first_interesting_parent(graph);
+			int first_parent_col = graph_find_new_column_by_commit(graph, first_parent->item);
+
+			if (!graph_needs_truncation(graph, first_parent_col))
+				graph_update_state(graph, GRAPH_POST_MERGE);
+			else if (graph_is_mapping_correct(graph))
+				graph_update_state(graph, GRAPH_PADDING);
+			else
+				graph_update_state(graph, GRAPH_COLLAPSING);
+		}
+	} else if (graph_is_mapping_correct(graph))
 		graph_update_state(graph, GRAPH_PADDING);
 	else
 		graph_update_state(graph, GRAPH_COLLAPSING);
@@ -1109,6 +1174,7 @@ static void graph_output_post_merge_line(struct git_graph *graph, struct graph_l
 			int par_column;
 			int idx = graph->merge_layout;
 			char c;
+			int truncated = 0;
 			seen_this = 1;
 
 			for (j = 0; j < graph->num_parents; j++) {
@@ -1117,23 +1183,46 @@ static void graph_output_post_merge_line(struct git_graph *graph, struct graph_l
 
 				c = merge_chars[idx];
 				graph_line_write_column(line, &graph->new_columns[par_column], c);
+				if (graph_needs_truncation(graph, j / 2 + i) &&
+				    j / 2 + i <= graph->num_columns) {
+					if ((j + i * 2) % 2 != 0)
+						graph_line_addch(line, ' ');
+					graph_line_addstr(line, "~ ");
+					truncated = 1;
+					break;
+				}
+
 				if (idx == 2) {
-					if (graph->edges_added > 0 || j < graph->num_parents - 1)
+					if (graph_needs_truncation(graph, (j + 1) / 2 + i) &&
+					    j < graph->num_parents - 1) {
+						graph_line_addstr(line, "~ ");
+						truncated = 1;
+						break;
+					} else if (graph->edges_added > 0 || j < graph->num_parents - 1)
 						graph_line_addch(line, ' ');
 				} else {
 					idx++;
 				}
 				parents = next_interesting_parent(graph, parents);
 			}
+			if (truncated)
+				break;
 			if (graph->edges_added == 0)
 				graph_line_addch(line, ' ');
-
+		} else if (graph_needs_truncation(graph, i)) {
+			graph_line_addstr(line, "~ ");
+			break;
 		} else if (seen_this) {
 			if (graph->edges_added > 0)
 				graph_line_write_column(line, col, '\\');
 			else
 				graph_line_write_column(line, col, '|');
-			graph_line_addch(line, ' ');
+			/*
+			 * If it's between two lanes and next would be truncated,
+			 * don't add space padding.
+			 */
+			if (!graph_needs_truncation(graph, i + 1))
+				graph_line_addch(line, ' ');
 		} else {
 			graph_line_write_column(line, col, '|');
 			if (graph->merge_layout != 0 || i != graph->commit_index - 1) {
@@ -1164,6 +1253,7 @@ static void graph_output_collapsing_line(struct git_graph *graph, struct graph_l
 	short used_horizontal = 0;
 	int horizontal_edge = -1;
 	int horizontal_edge_target = -1;
+	int truncated = 0;
 
 	/*
 	 * Swap the mapping and old_mapping arrays
@@ -1279,26 +1369,35 @@ static void graph_output_collapsing_line(struct git_graph *graph, struct graph_l
 	 */
 	for (i = 0; i < graph->mapping_size; i++) {
 		int target = graph->mapping[i];
-		if (target < 0)
-			graph_line_addch(line, ' ');
-		else if (target * 2 == i)
-			graph_line_write_column(line, &graph->new_columns[target], '|');
-		else if (target == horizontal_edge_target &&
-			 i != horizontal_edge - 1) {
-				/*
-				 * Set the mappings for all but the
-				 * first segment to -1 so that they
-				 * won't continue into the next line.
-				 */
-				if (i != (target * 2)+3)
-					graph->mapping[i] = -1;
-				used_horizontal = 1;
-			graph_line_write_column(line, &graph->new_columns[target], '_');
+
+		if (!truncated && graph_needs_truncation(graph, i / 2)) {
+			graph_line_addstr(line, "~ ");
+			truncated = 1;
+		}
+
+		if (target < 0) {
+			if (!truncated)
+				graph_line_addch(line, ' ');
+		} else if (target * 2 == i) {
+			if (!truncated)
+				graph_line_write_column(line, &graph->new_columns[target], '|');
+		} else if (target == horizontal_edge_target &&
+			   i != horizontal_edge - 1) {
+			/*
+			 * Set the mappings for all but the
+			 * first segment to -1 so that they
+			 * won't continue into the next line.
+			 */
+			if (i != (target * 2)+3)
+				graph->mapping[i] = -1;
+			used_horizontal = 1;
+			if (!truncated)
+				graph_line_write_column(line, &graph->new_columns[target], '_');
 		} else {
 			if (used_horizontal && i < horizontal_edge)
 				graph->mapping[i] = -1;
-			graph_line_write_column(line, &graph->new_columns[target], '/');
-
+			if (!truncated)
+				graph_line_write_column(line, &graph->new_columns[target], '/');
 		}
 	}
 
@@ -1371,6 +1470,11 @@ static void graph_padding_line(struct git_graph *graph, struct strbuf *sb)
 	 */
 	for (i = 0; i < graph->num_columns; i++) {
 		struct column *col = &graph->columns[i];
+
+		if (graph_needs_truncation(graph, i)) {
+			graph_line_addch(&line, '~');
+			break;
+		}
 
 		graph_line_write_column(&line, col, '|');
 
