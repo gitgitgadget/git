@@ -32,24 +32,106 @@ variable is set to "true", and the "name" and "url" fields are always
 advertised regardless of this setting.
 
 promisor.acceptFromServer::
-	If set to "all", a client will accept all the promisor remotes
-	a server might advertise using the "promisor-remote"
-	capability. If set to "knownName" the client will accept
-	promisor remotes which are already configured on the client
-	and have the same name as those advertised by the client. This
-	is not very secure, but could be used in a corporate setup
-	where servers and clients are trusted to not switch name and
-	URLs. If set to "knownUrl", the client will accept promisor
-	remotes which have both the same name and the same URL
-	configured on the client as the name and URL advertised by the
-	server. This is more secure than "all" or "knownName", so it
-	should be used if possible instead of those options. Default
-	is "none", which means no promisor remote advertised by a
-	server will be accepted. By accepting a promisor remote, the
-	client agrees that the server might omit objects that are
-	lazily fetchable from this promisor remote from its responses
-	to "fetch" and "clone" requests from the client. Name and URL
-	comparisons are case sensitive. See linkgit:gitprotocol-v2[5].
+	Controls which promisor remotes advertised by a server (using the
+	"promisor-remote" protocol capability) a client will accept. By
+	accepting a promisor remote, the client agrees that the server
+	might omit objects that are lazily fetchable from this promisor
+	remote from its responses to "fetch" and "clone" requests.
++
+Note that this option does not cause new remotes to be automatically
+created in the client's configuration. It only allows remotes which
+are somehow already configured to be trusted for the current
+operation, or their fields to be updated (if `promisor.storeFields` is
+set and the remote already exists locally). To allow Git to
+automatically create and persist new remotes from server
+advertisements, use `promisor.acceptFromServerUrl`.
++
+The available options are:
++
+* `none` (default): No promisor remote advertised by a server will be
+  accepted.
++
+* `knownUrl`: The client will accept promisor remotes that are already
+  configured on the client and have both the same name and the same URL
+  as advertised by the server. This is more secure than `all` or
+  `knownName`, and should be used if possible instead of those options.
++
+* `knownName`: The client will accept promisor remotes that are already
+  configured on the client and have the same name as those advertised
+  by the server. This is not very secure, but could be used in a corporate
+  setup where servers and clients are trusted to not switch names and URLs.
++
+* `all`: The client will accept all the promisor remotes a server might
+  advertise. This is the least secure option and should only be used in
+  fully trusted environments.
++
+Name and URL comparisons are case-sensitive. See linkgit:gitprotocol-v2[5]
+for protocol details.
+
+promisor.acceptFromServerUrl::
+	A glob pattern to specify which URLs advertised by a server
+	are allowed to be auto-configured (created and persisted) on
+	the client side. Unlike `promisor.acceptFromServer`, which
+	only accepts already configured remotes, a match against this
+	option instructs Git to write a new `[remote "<name>"]`
+	section to the client's configuration.
++
+This option can appear multiple times in config files. An advertised
+URL will be accepted if it matches _ANY_ glob pattern specified by
+this option in _ANY_ config file read by Git.
++
+Be _VERY_ careful with these glob patterns, as it can be a big
+security hole to allow any advertised remote to be auto-configured!
+To minimize security risks, follow these guidelines:
++
+1. Start with a secure protocol scheme, like `https://` or `ssh://`.
++
+2. Only allow domain names or paths where you control and trust _ALL_
+   the content. Be especially careful with shared hosting platforms
+   like `github.com` or `gitlab.com`. A broad pattern like
+   `https://gitlab.com/*` is dangerous because it trusts every
+   repository on the entire platform. Always restrict such patterns to
+   your specific organization or namespace (e.g.,
+   `https://gitlab.com/your-org/*`).
++
+3. Don't use globs (`*`) in the domain name. For example
+   `https://cdn.example.com/*` is much safer than
+   `https://*.example.com/*`, because the latter matches
+   `https://evil-hacker.net/fake.example.com/repo`.
++
+4. Make sure to have a `/` at the end of the domain name (or the end
+   of specific directories). For example `https://cdn.example.com/*`
+   is much safer than `https://cdn.example.com*`, because the latter
+   matches `https://cdn.example.com.hacker.net/repo`.
++
+Before matching, the advertised URL is normalized: the scheme and
+host are lowercased, percent-encoded characters are decoded where
+possible, and path segments like `..` are resolved.  Glob patterns
+are matched against this normalized URL as-is, so patterns should
+be written in normalized form (e.g., lowercase scheme and host).
++
+The glob pattern can optionally be prefixed with a remote name and an
+equals sign (e.g., `cdn=https://cdn.example.com/*`). If such a prefix
+is provided, accepted remotes will be saved under that name. If no
+such prefix is provided, a safe remote name will be automatically
+generated by sanitizing the URL and prefixing it with
+`promisor-auto-`. If a remote with the chosen name already exists but
+points to a different URL, Git will append a numeric suffix (e.g.,
+`-1`, `-2`) to the name to prevent overwriting existing
+configurations. You should make sure that this doesn't happen often
+though, as remotes will be rejected if the numeric suffix increases
+too much. In all cases, the original name advertised by the server is
+recorded in the `remote.<name>.advertisedAs` configuration variable
+for tracing and debugging purposes.
++
+Note that this option acts as an additive security whitelist. It works
+in conjunction with `promisor.acceptFromServer` (see the documentation
+of that option for the implications of accepting a promisor
+remote). Even if `promisor.acceptFromServer` is set to `None` (the
+default), Git will still automatically configure new remotes, and
+accept field updates (like tokens) for known remotes, provided their
+URLs match a pattern in `promisor.acceptFromServerUrl`. See
+linkgit:gitprotocol-v2[5] for details on the protocol.
 
 promisor.checkFields::
 	A comma or space separated list of additional remote related

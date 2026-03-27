@@ -12,7 +12,9 @@
 #include "packfile.h"
 #include "environment.h"
 #include "url.h"
+#include "urlmatch.h"
 #include "version.h"
+#include "wildmatch.h"
 
 struct promisor_remote_config {
 	struct promisor_remote *promisors;
@@ -275,11 +277,37 @@ static int remove_fetched_oids(struct repository *repo,
 	return remaining_nr;
 }
 
+static int try_promisor_remotes(struct repository *repo,
+				struct object_id **remaining_oids,
+				int *remaining_nr, int *to_free,
+				bool accepted_only)
+{
+	struct promisor_remote *r = repo->promisor_remote_config->promisors;
+
+	for (; r; r = r->next) {
+		if (accepted_only && !r->accepted)
+			continue;
+		if (!accepted_only && r->accepted)
+			continue;
+		if (fetch_objects(repo, r->name, *remaining_oids, *remaining_nr) < 0) {
+			if (*remaining_nr == 1)
+				continue;
+			*remaining_nr = remove_fetched_oids(repo, remaining_oids,
+							    *remaining_nr, *to_free);
+			if (*remaining_nr) {
+				*to_free = 1;
+				continue;
+			}
+		}
+		return 1; /* all fetched */
+	}
+	return 0;
+}
+
 void promisor_remote_get_direct(struct repository *repo,
 				const struct object_id *oids,
 				int oid_nr)
 {
-	struct promisor_remote *r;
 	struct object_id *remaining_oids = (struct object_id *)oids;
 	int remaining_nr = oid_nr;
 	int to_free = 0;
@@ -290,19 +318,13 @@ void promisor_remote_get_direct(struct repository *repo,
 
 	promisor_remote_init(repo);
 
-	for (r = repo->promisor_remote_config->promisors; r; r = r->next) {
-		if (fetch_objects(repo, r->name, remaining_oids, remaining_nr) < 0) {
-			if (remaining_nr == 1)
-				continue;
-			remaining_nr = remove_fetched_oids(repo, &remaining_oids,
-							 remaining_nr, to_free);
-			if (remaining_nr) {
-				to_free = 1;
-				continue;
-			}
-		}
+	/* Try accepted remotes first (those the server told us to use) */
+	if (try_promisor_remotes(repo, &remaining_oids, &remaining_nr,
+				 &to_free, true))
 		goto all_fetched;
-	}
+	if (try_promisor_remotes(repo, &remaining_oids, &remaining_nr,
+				 &to_free, false))
+		goto all_fetched;
 
 	for (i = 0; i < remaining_nr; i++) {
 		if (is_promisor_object(repo, &remaining_oids[i]))
@@ -421,15 +443,19 @@ static struct string_list *fields_stored(void)
 
 /*
  * Struct for promisor remotes involved in the "promisor-remote"
- * protocol capability.
+ * protocol capability:
  *
- * Except for "name", each <member> in this struct and its <value>
- * should correspond (either on the client side or on the server side)
- * to a "remote.<name>.<member>" config variable set to <value> where
- * "<name>" is a promisor remote name.
+ * - "name" is the name the server advertised.
+ * - "local_name" is the name we use locally (may be auto-generated).
+ *
+ * Except for "name" and "local_name", each <member> in this struct
+ * and its <value> should correspond (either on the client side or on
+ * the server side) to a "remote.<name>.<member>" config variable set
+ * to <value> where "<name>" is a promisor remote name.
  */
 struct promisor_info {
 	const char *name;
+	const char *local_name;
 	const char *url;
 	const char *filter;
 	const char *token;
@@ -438,6 +464,7 @@ struct promisor_info {
 static void promisor_info_free(struct promisor_info *p)
 {
 	free((char *)p->name);
+	free((char *)p->local_name);
 	free((char *)p->url);
 	free((char *)p->filter);
 	free((char *)p->token);
@@ -449,6 +476,11 @@ static void promisor_info_list_clear(struct string_list *list)
 	for (size_t i = 0; i < list->nr; i++)
 		promisor_info_free(list->items[i].util);
 	string_list_clear(list, 0);
+}
+
+static const char *promisor_info_internal_name(struct promisor_info *p)
+{
+	return p->local_name ? p->local_name : p->name;
 }
 
 static void set_one_field(struct promisor_info *p,
@@ -575,9 +607,18 @@ static int match_field_against_config(const char *field, const char *value,
 	return 0;
 }
 
+/*
+ * Check that the advertised fields match the local configuration.
+ *
+ * When 'config_entry' is NULL (ACCEPT_ALL mode), every checked field
+ * must match at least one remote in 'config_info'.
+ *
+ * When 'config_entry' points to a specific remote's config, the
+ * checked fields are compared against that single remote only.
+ */
 static int all_fields_match(struct promisor_info *advertised,
 			    struct string_list *config_info,
-			    int in_list)
+			    struct promisor_info *config_entry)
 {
 	struct string_list *fields = fields_checked();
 	struct string_list_item *item_checked;
@@ -586,7 +627,6 @@ static int all_fields_match(struct promisor_info *advertised,
 		int match = 0;
 		const char *field = item_checked->string;
 		const char *value = NULL;
-		struct string_list_item *item;
 
 		if (!strcasecmp(field, promisor_field_filter))
 			value = advertised->filter;
@@ -596,19 +636,17 @@ static int all_fields_match(struct promisor_info *advertised,
 		if (!value)
 			return 0;
 
-		if (in_list) {
+		if (config_entry) {
+			match = match_field_against_config(field, value,
+							   config_entry);
+		} else {
+			struct string_list_item *item;
 			for_each_string_list_item(item, config_info) {
 				struct promisor_info *p = item->util;
 				if (match_field_against_config(field, value, p)) {
 					match = 1;
 					break;
 				}
-			}
-		} else {
-			item = string_list_lookup(config_info, advertised->name);
-			if (item) {
-				struct promisor_info *p = item->util;
-				match = match_field_against_config(field, value, p);
 			}
 		}
 
@@ -619,43 +657,348 @@ static int all_fields_match(struct promisor_info *advertised,
 	return 1;
 }
 
-static int should_accept_remote(enum accept_promisor accept,
+static bool has_control_char(const char *s)
+{
+	for (const char *c = s; *c; c++)
+		if (iscntrl(*c))
+			return true;
+	return false;
+}
+
+struct allowed_url {
+	char *remote_name;
+	char *url_pattern;
+};
+
+static struct allowed_url *valid_accept_url(const char *url)
+{
+	char *dup, *p;
+	struct allowed_url *allowed;
+
+	if (!url)
+		return NULL;
+
+	dup = xstrdup(url);
+	p = strchr(dup, '=');
+	if (p) {
+		*p = '\0';
+		if (!valid_remote_name(dup)) {
+			warning(_("invalid remote name '%s' before '=' sign "
+				  "in '%s' from promisor.acceptFromServerUrl config"),
+				dup, url);
+			free(dup);
+			return NULL;
+		}
+		p++;
+	} else {
+		p = dup;
+	}
+
+	if (has_control_char(p) || !url_is_valid_pattern(p)) {
+		warning(_("invalid url pattern '%s' "
+			  "in '%s' from promisor.acceptFromServerUrl config"), p, url);
+		free(dup);
+		return NULL;
+	}
+
+	allowed = xmalloc(sizeof(*allowed));
+	allowed->remote_name = (p == dup) ? NULL : dup;
+	allowed->url_pattern = p;
+
+	return allowed;
+}
+
+static struct string_list *accept_from_server_url(struct repository *repo)
+{
+	static struct string_list accept_urls = STRING_LIST_INIT_DUP;
+	static int initialized;
+	const struct string_list *config_urls;
+
+	if (initialized)
+		return &accept_urls;
+
+	initialized = 1;
+
+	if (!repo_config_get_string_multi(repo, "promisor.acceptfromserverurl", &config_urls)) {
+		struct string_list_item *item;
+
+		for_each_string_list_item(item, config_urls) {
+			struct allowed_url *allowed = valid_accept_url(item->string);
+			if (allowed) {
+				struct string_list_item *new;
+				new = string_list_append(&accept_urls, item->string);
+				new->util = allowed;
+			}
+		}
+	}
+
+	return &accept_urls;
+}
+
+static struct allowed_url *url_matches_accept_list(
+		struct string_list *accept_urls, const char *url)
+{
+	struct string_list_item *item;
+	char *normalized = url_normalize(url, NULL);
+
+	if (!normalized)
+		return NULL;
+
+	for_each_string_list_item(item, accept_urls) {
+		struct allowed_url *allowed = item->util;
+
+		if (!wildmatch(allowed->url_pattern, normalized, 0)) {
+			free(normalized);
+			return allowed;
+		}
+	}
+
+	free(normalized);
+	return NULL;
+}
+
+/*
+ * Sanitize the buffer to make it a valid remote name coming from the
+ * server by:
+ *
+ * - replacing any non alphanumeric character with a '-'
+ * - stripping any leading '-',
+ * - condensing multiple '-' into one,
+ * - prepending "promisor-auto-",
+ * - validating the result.
+ */
+static int sanitize_remote_name(struct strbuf *buf, const char *url)
+{
+	char prev = '-';
+	for (size_t i = 0; i < buf->len; ) {
+		if (!isalnum(buf->buf[i]))
+			buf->buf[i] = '-';
+		if (prev == '-' && buf->buf[i] == '-') {
+			strbuf_remove(buf, i, 1);
+		} else {
+			prev = buf->buf[i];
+			i++;
+		}
+	}
+
+	strbuf_strip_suffix(buf, "-");
+
+	if (!buf->len) {
+		warning(_("couldn't generate a valid remote name from "
+			  "advertised url '%s', ignoring this remote"), url);
+		return -1;
+	}
+
+	strbuf_insertstr(buf, 0, "promisor-auto-");
+
+	if (!valid_remote_name(buf->buf)) {
+		warning(_("generated remote name '%s' from advertised url '%s' "
+			  "is invalid, ignoring this remote"), buf->buf, url);
+		return -1;
+	}
+
+	return 0;
+}
+
+static char *promisor_remote_name_from_url(const char *url)
+{
+	struct url_info url_info = { 0 };
+	char *normalized = url_normalize(url, &url_info);
+	struct strbuf buf = STRBUF_INIT;
+
+	if (!normalized) {
+		warning(_("couldn't normalize advertised url '%s', "
+			  "ignoring this remote"), url);
+		return NULL;
+	}
+
+	if (url_info.host_len) {
+		strbuf_add(&buf, normalized + url_info.host_off, url_info.host_len);
+		strbuf_addch(&buf, '-');
+	}
+
+	if (url_info.port_len) {
+		strbuf_add(&buf, normalized + url_info.port_off, url_info.port_len);
+		strbuf_addch(&buf, '-');
+	}
+
+	if (url_info.path_len) {
+		strbuf_add(&buf, normalized + url_info.path_off, url_info.path_len);
+		strbuf_trim_trailing_dir_sep(&buf);
+		strbuf_strip_suffix(&buf, ".git");
+	}
+
+	free(normalized);
+
+	if (sanitize_remote_name(&buf, url)) {
+		strbuf_release(&buf);
+		return NULL;
+	}
+
+	return strbuf_detach(&buf, NULL);
+}
+
+static void configure_auto_promisor_remote(struct repository *repo,
+					   const char *name,
+					   const char *url,
+					   const char *advertised_as,
+					   bool reuse)
+{
+	char *key;
+
+	if (!reuse) {
+		fprintf(stderr, _("Auto-creating promisor remote '%s' for URL '%s'\n"),
+			name, url);
+
+		key = xstrfmt("remote.%s.url", name);
+		repo_config_set_gently(repo, key, url);
+		free(key);
+	}
+
+	/* NB: when reusing, this promotes an existing non-promisor remote */
+	key = xstrfmt("remote.%s.promisor", name);
+	repo_config_set_gently(repo, key, "true");
+	free(key);
+
+	if (advertised_as) {
+		key = xstrfmt("remote.%s.advertisedAs", name);
+		repo_config_set_gently(repo, key, advertised_as);
+		free(key);
+	}
+}
+
+#define MAX_REMOTES_WITH_SIMILAR_NAMES 20
+
+/* Return the allocated local name, or NULL on failure */
+static char *handle_matching_allowed_url(struct repository *repo,
+					 char *allowed_name,
+					 const char *remote_url,
+					 const char *remote_name)
+{
+	char *name;
+	char *basename = allowed_name ?
+		xstrdup(allowed_name) :
+		promisor_remote_name_from_url(remote_url);
+	int i = 0;
+	bool reuse = false;
+
+	if (!basename)
+		return NULL;
+
+	name = xstrdup(basename);
+
+	while (i < MAX_REMOTES_WITH_SIMILAR_NAMES) {
+		char *url_key = xstrfmt("remote.%s.url", name);
+		const char *existing_url;
+		int exists = !repo_config_get_string_tmp(repo, url_key, &existing_url);
+
+		free(url_key);
+
+		if (!exists)
+			break; /* Free to use */
+
+		if (!strcmp(existing_url, remote_url)) {
+			reuse = true;
+			break; /* Same URL, so safe to reuse */
+		}
+
+		i++;
+		free(name);
+		name = xstrfmt("%s-%d", basename, i);
+	}
+
+	if (i < MAX_REMOTES_WITH_SIMILAR_NAMES) {
+		configure_auto_promisor_remote(repo, name,
+					       remote_url, remote_name,
+					       reuse);
+	} else {
+		warning(_("too many remotes accepted with name like '%s-X', "
+			  "ignoring this remote"), basename);
+		FREE_AND_NULL(name);
+	}
+
+	free(basename);
+	return name;
+}
+
+static int should_accept_new_remote_url(struct repository *repo,
+					struct string_list *accept_urls,
+					struct promisor_info *advertised)
+{
+	struct allowed_url *allowed = url_matches_accept_list(accept_urls,
+							     advertised->url);
+	if (allowed) {
+		char *name = handle_matching_allowed_url(repo,
+							 allowed->remote_name,
+							 advertised->url,
+							 advertised->name);
+		if (name) {
+			free((char *)advertised->local_name);
+			advertised->local_name = name;
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+static int should_accept_remote(struct repository *repo,
+				enum accept_promisor accept,
 				struct promisor_info *advertised,
-				struct string_list *config_info)
+				struct string_list *accept_urls,
+				struct string_list *config_info,
+				bool *reload_config)
 {
 	struct promisor_info *p;
 	struct string_list_item *item;
 	const char *remote_name = advertised->name;
 	const char *remote_url = advertised->url;
 
+	if (!remote_url || !*remote_url) {
+		warning(_("no or empty URL advertised for remote '%s', "
+			  "ignoring this remote"), remote_name);
+		return 0;
+	}
+
 	if (accept == ACCEPT_ALL)
-		return all_fields_match(advertised, config_info, 1);
+		return all_fields_match(advertised, config_info, NULL);
 
 	/* Get config info for that promisor remote */
 	item = string_list_lookup(config_info, remote_name);
 
-	if (!item)
+	if (!item) {
 		/* We don't know about that remote */
-		return 0;
+		int res = should_accept_new_remote_url(repo, accept_urls, advertised);
+		if (res)
+			*reload_config = true;
+		return res;
+	}
 
 	p = item->util;
 
 	if (accept == ACCEPT_KNOWN_NAME)
-		return all_fields_match(advertised, config_info, 0);
+		return all_fields_match(advertised, config_info, p);
 
-	if (accept != ACCEPT_KNOWN_URL)
-		BUG("Unhandled 'enum accept_promisor' value '%d'", accept);
-
-	if (!remote_url || !*remote_url) {
-		warning(_("no or empty URL advertised for remote '%s'"), remote_name);
+	if (strcmp(p->url, remote_url)) {
+		warning(_("known remote named '%s' but with URL '%s' instead of '%s', "
+			  "ignoring this remote"),
+			remote_name, p->url, remote_url);
 		return 0;
 	}
 
-	if (!strcmp(p->url, remote_url))
-		return all_fields_match(advertised, config_info, 0);
+	if (accept == ACCEPT_KNOWN_URL)
+		return all_fields_match(advertised, config_info, p);
 
-	warning(_("known remote named '%s' but with URL '%s' instead of '%s'"),
-		remote_name, p->url, remote_url);
+	if (accept != ACCEPT_NONE)
+		BUG("Unhandled 'enum accept_promisor' value '%d'", accept);
+
+	/*
+	 * Even if accept == ACCEPT_NONE, we MUST trust this known
+	 * remote to update its token or other such fields if its URL
+	 * matches the acceptFromServerUrl whitelist!
+	 */
+	if (url_matches_accept_list(accept_urls, remote_url))
+		return all_fields_match(advertised, config_info, p);
 
 	return 0;
 }
@@ -748,18 +1091,14 @@ static bool valid_filter(const char *filter, const char *remote_name)
 	return !res;
 }
 
-/* Check that a token doesn't contain any control character */
 static bool valid_token(const char *token, const char *remote_name)
 {
-	const char *c = token;
-
-	for (; *c; c++)
-		if (iscntrl(*c)) {
-			warning(_("invalid token '%s' for remote '%s' "
-				  "will not be stored"),
-				token, remote_name);
-			return false;
-		}
+	if (has_control_char(token)) {
+		warning(_("invalid token '%s' for remote '%s' "
+			  "will not be stored"),
+			token, remote_name);
+		return false;
+	}
 
 	return true;
 }
@@ -801,7 +1140,7 @@ static bool promisor_store_advertised_fields(struct promisor_info *advertised,
 {
 	struct promisor_info *p;
 	struct string_list_item *item;
-	const char *remote_name = advertised->name;
+	const char *remote_name = promisor_info_internal_name(advertised);
 	bool reload_config = false;
 
 	if (!(store_info->store_filter || store_info->store_token))
@@ -834,20 +1173,12 @@ static bool promisor_store_advertised_fields(struct promisor_info *advertised,
 	return reload_config;
 }
 
-static void filter_promisor_remote(struct repository *repo,
-				   struct strvec *accepted,
-				   const char *info)
+static enum accept_promisor accept_from_server(struct repository *repo)
 {
 	const char *accept_str;
 	enum accept_promisor accept = ACCEPT_NONE;
-	struct string_list config_info = STRING_LIST_INIT_NODUP;
-	struct string_list remote_info = STRING_LIST_INIT_DUP;
-	struct store_info *store_info = NULL;
-	struct string_list_item *item;
-	bool reload_config = false;
-	struct string_list accepted_filters = STRING_LIST_INIT_DUP;
 
-	if (!repo_config_get_string_tmp(the_repository, "promisor.acceptfromserver", &accept_str)) {
+	if (!repo_config_get_string_tmp(repo, "promisor.acceptfromserver", &accept_str)) {
 		if (!*accept_str || !strcasecmp("None", accept_str))
 			accept = ACCEPT_NONE;
 		else if (!strcasecmp("KnownUrl", accept_str))
@@ -861,7 +1192,22 @@ static void filter_promisor_remote(struct repository *repo,
 				accept_str, "promisor.acceptfromserver");
 	}
 
-	if (accept == ACCEPT_NONE)
+	return accept;
+}
+
+static void filter_promisor_remote(struct repository *repo,
+				   struct string_list *accepted_remotes,
+				   const char *info)
+{
+	struct string_list config_info = STRING_LIST_INIT_NODUP;
+	struct string_list remote_info = STRING_LIST_INIT_DUP;
+	struct store_info *store_info = NULL;
+	struct string_list_item *item;
+	bool reload_config = false;
+	enum accept_promisor accept = accept_from_server(repo);
+	struct string_list *accept_urls = accept_from_server_url(repo);
+
+	if (accept == ACCEPT_NONE && !accept_urls->nr)
 		return;
 
 	/* Parse remote info received */
@@ -881,23 +1227,17 @@ static void filter_promisor_remote(struct repository *repo,
 			string_list_sort(&config_info);
 		}
 
-		if (should_accept_remote(accept, advertised, &config_info)) {
+		if (should_accept_remote(repo, accept, advertised, accept_urls,
+					 &config_info, &reload_config)) {
 			if (!store_info)
 				store_info = store_info_new(repo);
 			if (promisor_store_advertised_fields(advertised, store_info))
 				reload_config = true;
 
-			strvec_push(accepted, advertised->name);
-
-			/* Capture advertised filters for accepted remotes */
-			if (advertised->filter) {
-				struct string_list_item *i;
-				i = string_list_append(&accepted_filters, advertised->name);
-				i->util = xstrdup(advertised->filter);
-			}
+			string_list_append(accepted_remotes, advertised->name)->util = advertised;
+		} else {
+			promisor_info_free(advertised);
 		}
-
-		promisor_info_free(advertised);
 	}
 
 	promisor_info_list_clear(&config_info);
@@ -907,39 +1247,37 @@ static void filter_promisor_remote(struct repository *repo,
 	if (reload_config)
 		repo_promisor_remote_reinit(repo);
 
-	/* Apply accepted remote filters to the stable repo state */
-	for_each_string_list_item(item, &accepted_filters) {
-		struct promisor_remote *r = repo_promisor_remote_find(repo, item->string);
+	/* Apply accepted remotes to the stable repo state */
+	for_each_string_list_item(item, accepted_remotes) {
+		struct promisor_info *info = item->util;
+		const char *local = promisor_info_internal_name(info);
+		struct promisor_remote *r = repo_promisor_remote_find(repo, local);
+
 		if (r) {
-			free(r->advertised_filter);
-			r->advertised_filter = item->util;
-			item->util = NULL;
-		}
-	}
-
-	string_list_clear(&accepted_filters, 1);
-
-	/* Mark the remotes as accepted in the repository state */
-	for (size_t i = 0; i < accepted->nr; i++) {
-		struct promisor_remote *r = repo_promisor_remote_find(repo, accepted->v[i]);
-		if (r)
 			r->accepted = 1;
+			if (info->filter) {
+				free(r->advertised_filter);
+				r->advertised_filter = xstrdup(info->filter);
+			}
+		}
 	}
 }
 
 void promisor_remote_reply(const char *info, char **accepted_out)
 {
-	struct strvec accepted = STRVEC_INIT;
+	struct string_list accepted_remotes = STRING_LIST_INIT_NODUP;
 
-	filter_promisor_remote(the_repository, &accepted, info);
+	filter_promisor_remote(the_repository, &accepted_remotes, info);
 
 	if (accepted_out) {
-		if (accepted.nr) {
+		if (accepted_remotes.nr) {
 			struct strbuf reply = STRBUF_INIT;
-			for (size_t i = 0; i < accepted.nr; i++) {
-				if (i)
+			struct string_list_item *item;
+
+			for_each_string_list_item(item, &accepted_remotes) {
+				if (reply.len)
 					strbuf_addch(&reply, ';');
-				strbuf_addstr_urlencode(&reply, accepted.v[i], allow_unsanitized);
+				strbuf_addstr_urlencode(&reply, item->string, allow_unsanitized);
 			}
 			*accepted_out = strbuf_detach(&reply, NULL);
 		} else {
@@ -947,7 +1285,7 @@ void promisor_remote_reply(const char *info, char **accepted_out)
 		}
 	}
 
-	strvec_clear(&accepted);
+	promisor_info_list_clear(&accepted_remotes);
 }
 
 void mark_promisor_remotes_as_accepted(struct repository *r, const char *remotes)
