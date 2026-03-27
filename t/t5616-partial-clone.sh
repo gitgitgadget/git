@@ -447,7 +447,7 @@ test_expect_success 'partial clone with sparse filter succeeds' '
 		  --filter=sparse:oid=main:only-one \
 		  sparse-src dst.git &&
 	(
-		cd dst.git &&
+		cd dst.git && GIT_DIR=. && export GIT_DIR &&
 		git rev-list --objects --missing=print HEAD >out &&
 		grep "^$(git rev-parse HEAD:one.t)" out &&
 		grep "^?$(git rev-parse HEAD:two.t)" out

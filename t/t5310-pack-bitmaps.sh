@@ -223,7 +223,7 @@ test_bitmap_cases () {
 	test_expect_success JGIT,SHA1 'we can read jgit bitmaps' '
 		git clone --bare . compat-jgit.git &&
 		(
-			cd compat-jgit.git &&
+			cd compat-jgit.git && GIT_DIR=. && export GIT_DIR &&
 			rm -f objects/pack/*.bitmap &&
 			jgit gc &&
 			git rev-list --test-bitmap HEAD
@@ -233,7 +233,7 @@ test_bitmap_cases () {
 	test_expect_success JGIT,SHA1 'jgit can read our bitmaps' '
 		git clone --bare . compat-us.git &&
 		(
-			cd compat-us.git &&
+			cd compat-us.git && GIT_DIR=. && export GIT_DIR &&
 			git config pack.writeBitmapLookupTable '"$writeLookupTable"' &&
 			git repack -adb &&
 			# jgit gc will barf if it does not like our bitmaps
@@ -374,7 +374,7 @@ test_bitmap_cases () {
 		test_when_finished "rm -rf client.git" &&
 		git init --bare client.git &&
 		(
-			cd client.git &&
+			cd client.git && GIT_DIR=. && export GIT_DIR &&
 			git config transfer.unpackLimit 1 &&
 			git fetch .. delta-reuse-old:delta-reuse-old &&
 			git fetch .. delta-reuse-new:delta-reuse-new &&
@@ -388,7 +388,7 @@ test_bitmap_cases () {
 		test_when_finished "rm -rf client.git" &&
 		git init --bare client.git &&
 		(
-			cd client.git &&
+			cd client.git && GIT_DIR=. && export GIT_DIR &&
 
 			# This test relies on reusing a delta, but if the
 			# path-walk machinery is engaged, the base object

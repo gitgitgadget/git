@@ -174,13 +174,15 @@ test_expect_success '"add" from a bare repo' '
 	(
 		git clone --bare . bare &&
 		cd bare &&
-		git worktree add -b bare-main ../there2 main
+		GIT_DIR=. git worktree add -b bare-main ../there2 main
 	)
 '
 
 test_expect_success 'checkout from a bare repo without "add"' '
 	(
 		cd bare &&
+		GIT_DIR=. &&
+		export GIT_DIR &&
 		test_must_fail git checkout main
 	)
 '
@@ -189,7 +191,7 @@ test_expect_success '"add" default branch of a bare repo' '
 	(
 		git clone --bare . bare2 &&
 		cd bare2 &&
-		git worktree add ../there3 main &&
+		GIT_DIR=. git worktree add ../there3 main &&
 		cd ../there3 &&
 		# Simple check that a Git command does not
 		# immediately fail with the current setup
@@ -206,6 +208,8 @@ test_expect_success '"add" to bare repo with worktree config' '
 	(
 		git clone --bare . bare3 &&
 		cd bare3 &&
+		GIT_DIR=. &&
+		export GIT_DIR &&
 		git config extensions.worktreeconfig true &&
 
 		# Add config values that are erroneous to have in
@@ -219,6 +223,7 @@ test_expect_success '"add" to bare repo with worktree config' '
 		git config --worktree bogus.key value &&
 		git config --unset core.bare &&
 		git worktree add ../there4 main &&
+		sane_unset GIT_DIR &&
 		cd ../there4 &&
 
 		# Simple check that a Git command does not

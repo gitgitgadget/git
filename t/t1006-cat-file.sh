@@ -805,6 +805,8 @@ test_expect_success 'cat-file -t and -s on corrupt loose object' '
 	git init --bare corrupt-loose.git &&
 	(
 		cd corrupt-loose.git &&
+		GIT_DIR=. &&
+		export GIT_DIR &&
 
 		# Setup and create the empty blob and its path
 		empty_path=$(git rev-parse --git-path objects/$(test_oid_to_path "$EMPTY_BLOB")) &&

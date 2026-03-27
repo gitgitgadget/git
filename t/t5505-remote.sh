@@ -562,6 +562,7 @@ test_expect_success 'add --mirror && prune' '
 	(
 		cd mirror &&
 		git init --bare &&
+		GIT_DIR=. && export GIT_DIR &&
 		git remote add --mirror -f origin ../one
 	) &&
 	(
@@ -570,6 +571,7 @@ test_expect_success 'add --mirror && prune' '
 	) &&
 	(
 		cd mirror &&
+		GIT_DIR=. && export GIT_DIR &&
 		git rev-parse --verify refs/heads/side2 &&
 		test_must_fail git rev-parse --verify refs/heads/side &&
 		git fetch origin &&
@@ -584,6 +586,7 @@ test_expect_success 'add --mirror setting HEAD' '
 	(
 		cd headmirror &&
 		git init --bare -b notmain &&
+		GIT_DIR=. && export GIT_DIR &&
 		git remote add --mirror -f origin ../one &&
 		test "$(git symbolic-ref HEAD)" = "refs/heads/main"
 	)
@@ -594,6 +597,7 @@ test_expect_success 'non-mirror fetch does not interfere with mirror' '
 	(
 		git init --bare -b notmain headnotmain &&
 		cd headnotmain &&
+		GIT_DIR=. && export GIT_DIR &&
 		git remote add -f other ../two &&
 		test "$(git symbolic-ref HEAD)" = "refs/heads/notmain"
 	)
@@ -609,6 +613,7 @@ test_expect_success 'add --mirror=fetch' '
 	git init --bare mirror-fetch/child &&
 	(
 		cd mirror-fetch/child &&
+		GIT_DIR=. && export GIT_DIR &&
 		git remote add --mirror=fetch -f parent ../parent
 	)
 '
@@ -621,6 +626,7 @@ test_expect_success 'fetch mirrors act as mirrors during fetch' '
 	) &&
 	(
 		cd mirror-fetch/child &&
+		GIT_DIR=. && export GIT_DIR &&
 		git fetch parent &&
 		git rev-parse --verify refs/heads/new &&
 		git rev-parse --verify refs/heads/renamed
@@ -630,6 +636,7 @@ test_expect_success 'fetch mirrors act as mirrors during fetch' '
 test_expect_success 'fetch mirrors can prune' '
 	(
 		cd mirror-fetch/child &&
+		GIT_DIR=. && export GIT_DIR &&
 		git remote prune parent &&
 		test_must_fail git rev-parse --verify refs/heads/main
 	)
@@ -642,6 +649,7 @@ test_expect_success 'fetch mirrors do not act as mirrors during push' '
 	) &&
 	(
 		cd mirror-fetch/child &&
+		GIT_DIR=. && export GIT_DIR &&
 		git branch -m renamed renamed2 &&
 		git push parent :
 	) &&
@@ -656,6 +664,7 @@ test_expect_success 'add fetch mirror with specific branches' '
 	git init --bare mirror-fetch/track &&
 	(
 		cd mirror-fetch/track &&
+		GIT_DIR=. && export GIT_DIR &&
 		git remote add --mirror=fetch -t heads/new parent ../parent
 	)
 '
@@ -663,6 +672,7 @@ test_expect_success 'add fetch mirror with specific branches' '
 test_expect_success 'fetch mirror respects specific branches' '
 	(
 		cd mirror-fetch/track &&
+		GIT_DIR=. && export GIT_DIR &&
 		git fetch parent &&
 		git rev-parse --verify refs/heads/new &&
 		test_must_fail git rev-parse --verify refs/heads/renamed
@@ -698,6 +708,7 @@ test_expect_success 'push mirrors act as mirrors during push' '
 test_expect_success 'push mirrors do not act as mirrors during fetch' '
 	(
 		cd mirror-push/public &&
+		GIT_DIR=. && export GIT_DIR &&
 		git branch -m renamed renamed2 &&
 		git symbolic-ref HEAD refs/heads/renamed2
 	) &&
@@ -1293,6 +1304,7 @@ test_expect_success 'remote set-branches with --mirror' '
 	git clone --mirror .git/ setbranches-mirror &&
 	(
 		cd setbranches-mirror &&
+		GIT_DIR=. && export GIT_DIR &&
 		git remote rename origin scratch &&
 		git config --get-all remote.scratch.fetch >../actual.initial &&
 

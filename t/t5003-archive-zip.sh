@@ -161,7 +161,7 @@ check_zip d
 
 test_expect_success \
     'git archive --format=zip in a bare repo' \
-    '(cd bare.git && git archive --format=zip HEAD) >d1.zip'
+    '(cd bare.git && GIT_DIR=. && export GIT_DIR && git archive --format=zip HEAD) >d1.zip'
 
 test_expect_success \
     'git archive --format=zip vs. the same in a bare repo' \

@@ -112,7 +112,7 @@ test_expect_success "fetch test remote HEAD in bare repository" '
 	test_when_finished rm -rf barerepo &&
 	(
 		git init --bare barerepo &&
-		cd barerepo &&
+		cd barerepo && GIT_DIR=. && export GIT_DIR &&
 		git remote add upstream ../two &&
 		git fetch upstream &&
 		git rev-parse --verify refs/remotes/upstream/HEAD &&
@@ -1488,7 +1488,7 @@ test_expect_success CASE_INSENSITIVE_FS,REFFILES 'existing references in a case 
 	test_when_finished rm -rf case_insensitive &&
 	(
 		git init --bare case_insensitive &&
-		cd case_insensitive &&
+		cd case_insensitive && GIT_DIR=. && export GIT_DIR &&
 		git remote add origin -- ../case_sensitive &&
 		test_must_fail git fetch -f origin "refs/heads/*:refs/heads/*" 2>err &&
 		test_grep "You${SQ}re on a case-insensitive filesystem" err &&
@@ -1513,7 +1513,7 @@ test_expect_success REFFILES 'existing reference lock in repo' '
 		cd .. &&
 
 		git init --ref-format=files --bare repo &&
-		cd repo &&
+		cd repo && GIT_DIR=. && export GIT_DIR &&
 		git remote add origin ../base &&
 		touch refs/heads/foo.lock &&
 		test_must_fail git fetch -f origin "refs/heads/*:refs/heads/*" 2>err &&
@@ -1528,7 +1528,7 @@ test_expect_success CASE_INSENSITIVE_FS,REFFILES 'F/D conflict on case insensiti
 	test_when_finished rm -rf case_insensitive &&
 	(
 		git init --bare case_insensitive &&
-		cd case_insensitive &&
+		cd case_insensitive && GIT_DIR=. && export GIT_DIR &&
 		git remote add origin -- ../case_sensitive_fd &&
 		test_must_fail git fetch -f origin "refs/heads/*:refs/heads/*" 2>err &&
 		test_grep "cannot process ${SQ}refs/remotes/origin/foo${SQ} and ${SQ}refs/remotes/origin/foo/bar${SQ} at the same time" err &&
@@ -1542,7 +1542,7 @@ test_expect_success CASE_INSENSITIVE_FS,REFFILES 'D/F conflict on case insensiti
 	test_when_finished rm -rf case_insensitive &&
 	(
 		git init --bare case_insensitive &&
-		cd case_insensitive &&
+		cd case_insensitive && GIT_DIR=. && export GIT_DIR &&
 		git remote add origin -- ../case_sensitive_df &&
 		test_must_fail git fetch -f origin "refs/heads/*:refs/heads/*" 2>err &&
 		test_grep "cannot lock ref ${SQ}refs/remotes/origin/foo${SQ}: there is a non-empty directory ${SQ}./refs/remotes/origin/foo${SQ} blocking reference ${SQ}refs/remotes/origin/foo${SQ}" err &&
@@ -1567,7 +1567,7 @@ test_expect_success REFFILES 'D/F conflict on case sensitive filesystem with loc
 		cd .. &&
 
 		git init --ref-format=files --bare repo &&
-		cd repo &&
+		cd repo && GIT_DIR=. && export GIT_DIR &&
 		git remote add origin ../base &&
 		mkdir refs/heads/foo &&
 		touch refs/heads/foo/random.lock &&
@@ -1654,7 +1654,7 @@ test_expect_success REFFILES "FETCH_HEAD is updated even if ref updates fail" '
 
 	git init --bare repo &&
 	(
-		cd repo &&
+		cd repo && GIT_DIR=. && export GIT_DIR &&
 		rm -f FETCH_HEAD &&
 		git remote add origin ../base &&
 		>refs/heads/foo.lock &&
@@ -1673,7 +1673,7 @@ test_expect_success "upstream tracking info is added with --set-upstream" '
 
 	git init --bare --initial-branch=main repo &&
 	(
-		cd repo &&
+		cd repo && GIT_DIR=. && export GIT_DIR &&
 		git remote add origin ../base &&
 		git fetch origin --set-upstream main &&
 		git config get branch.main.remote >actual &&
@@ -1690,7 +1690,7 @@ test_expect_success REFFILES "upstream tracking info is added even with conflict
 
 	git init --bare --initial-branch=main repo &&
 	(
-		cd repo &&
+		cd repo && GIT_DIR=. && export GIT_DIR &&
 		git remote add origin ../base &&
 		test_must_fail git config get branch.main.remote &&
 
@@ -1717,7 +1717,7 @@ test_expect_success REFFILES "HEAD is updated even with conflicts" '
 
 	git init --bare repo &&
 	(
-		cd repo &&
+		cd repo && GIT_DIR=. && export GIT_DIR &&
 		git remote add origin ../base &&
 
 		test_path_is_missing refs/remotes/origin/HEAD &&

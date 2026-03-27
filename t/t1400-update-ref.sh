@@ -28,11 +28,13 @@ create_test_commits ()
 test_expect_success setup '
 	git checkout --orphan main &&
 	create_test_commits "" &&
-	mkdir $bare &&
-	cd $bare &&
-	git init --bare -b main &&
+	git init --bare -b main $bare &&
+	# Cannot use a subshell: create_test_commits sets bareA..bareF
+	# via eval, and those must remain visible to later tests.
+	GIT_DIR=$bare &&
+	export GIT_DIR &&
 	create_test_commits "bare" &&
-	cd -
+	sane_unset GIT_DIR
 '
 
 test_expect_success "create $m" '

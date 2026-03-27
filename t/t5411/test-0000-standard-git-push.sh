@@ -126,7 +126,7 @@ test_expect_success "git-push -f ($PROTOCOL)" '
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "cleanup ($PROTOCOL)" '
 	(
-		cd "$upstream" &&
+		cd "$upstream" && GIT_DIR=. && export GIT_DIR &&
 		git update-ref -d refs/review/main/topic &&
 		git update-ref -d refs/tags/v123 &&
 		git update-ref -d refs/heads/a/b/c

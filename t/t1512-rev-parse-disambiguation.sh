@@ -39,7 +39,9 @@ test_cmp_failed_rev_parse () {
 test_expect_success 'ambiguous blob output' '
 	git init --bare blob.prefix &&
 	(
-		cd blob.prefix &&
+		cd blob.prefix && GIT_DIR=. && export GIT_DIR &&
+		GIT_DIR=. &&
+		export GIT_DIR &&
 
 		# Both start with "dead..", under both SHA-1 and SHA-256
 		echo brocdnra | git hash-object -w --stdin &&
@@ -65,7 +67,9 @@ test_expect_success 'ambiguous blob output' '
 test_expect_success 'ambiguous loose bad object parsed as OBJ_BAD' '
 	git init --bare blob.bad &&
 	(
-		cd blob.bad &&
+		cd blob.bad && GIT_DIR=. && export GIT_DIR &&
+		GIT_DIR=. &&
+		export GIT_DIR &&
 
 		# Both have the prefix "bad0"
 		echo xyzfaowcoh | loose_obj objects bad &&
@@ -81,7 +85,9 @@ test_expect_success 'ambiguous loose bad object parsed as OBJ_BAD' '
 test_expect_success POSIXPERM 'ambigous zlib corrupt loose blob' '
 	git init --bare blob.corrupt &&
 	(
-		cd blob.corrupt &&
+		cd blob.corrupt && GIT_DIR=. && export GIT_DIR &&
+		GIT_DIR=. &&
+		export GIT_DIR &&
 
 		# Both have the prefix "cafe"
 		echo bnkxmdwz | git hash-object -w --stdin &&

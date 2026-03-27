@@ -86,6 +86,10 @@ graph_read_expect() {
 	EOF
 	(
 		cd "$DIR" &&
+		if test -n "$BARE"
+		then
+			GIT_DIR=. && export GIT_DIR
+		fi &&
 		test-tool read-graph >output &&
 		test_cmp expect output
 	)

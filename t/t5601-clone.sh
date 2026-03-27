@@ -118,9 +118,9 @@ test_expect_success 'clone --mirror' '
 	git clone --mirror src mirror &&
 	test -f mirror/HEAD &&
 	test ! -f mirror/file &&
-	FETCH="$(cd mirror && git config remote.origin.fetch)" &&
+	FETCH="$(cd mirror && GIT_DIR=. && export GIT_DIR && git config remote.origin.fetch)" &&
 	test "+refs/*:refs/*" = "$FETCH" &&
-	MIRROR="$(cd mirror && git config --bool remote.origin.mirror)" &&
+	MIRROR="$(cd mirror && GIT_DIR=. && export GIT_DIR && git config --bool remote.origin.mirror)" &&
 	test "$MIRROR" = true
 
 '
@@ -157,7 +157,7 @@ test_expect_success 'clone --mirror does not repeat tags' '
 	(cd src &&
 	 git tag some-tag HEAD) &&
 	git clone --mirror src mirror2 &&
-	(cd mirror2 &&
+	(cd mirror2 && GIT_DIR=. && export GIT_DIR &&
 	 git show-ref 2> clone.err > clone.out) &&
 	! grep Duplicate mirror2/clone.err &&
 	grep some-tag mirror2/clone.out

@@ -227,7 +227,7 @@ check_use_objects () {
 	git init --bare git2 &&
 	cp "$1".pack "$1".idx git2/objects/pack &&
 	(
-		cd git2 &&
+		cd git2 && GIT_DIR=. && export GIT_DIR &&
 		git diff-tree --root -p $commit &&
 		while read object
 		do

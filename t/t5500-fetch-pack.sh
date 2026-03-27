@@ -454,10 +454,11 @@ test_expect_success 'fetch in shallow repo unreachable shallow objects' '
 	(
 		git clone --bare --branch B --single-branch "file://$(pwd)/." no-reflog &&
 		git clone --depth 1 "file://$(pwd)/no-reflog" shallow9 &&
-		cd no-reflog &&
+		cd no-reflog && GIT_DIR=. && export GIT_DIR &&
 		git tag -d TAGB1 TAGB2 &&
 		git update-ref refs/heads/B B~~ &&
 		git gc --prune=now &&
+		unset GIT_DIR &&
 		cd ../shallow9 &&
 		git fetch origin &&
 		git fsck --no-dangling

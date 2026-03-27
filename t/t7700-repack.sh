@@ -362,7 +362,7 @@ test_expect_success 'repacking with two filters works' '
 	) &&
 	git clone --no-local --bare two-filters two-filters.git &&
 	(
-		cd two-filters.git &&
+		cd two-filters.git && GIT_DIR=. && export GIT_DIR &&
 		test_stdout_line_count = 1 ls objects/pack/*.pack &&
 		git -c repack.writebitmaps=false repack -a -d \
 			--filter=blob:none --filter=tree:1 &&
@@ -389,7 +389,7 @@ prepare_for_keep_packs () {
 	) &&
 	git clone --no-local --bare keep-packs keep-packs.git &&
 	(
-		cd keep-packs.git &&
+		cd keep-packs.git && GIT_DIR=. && export GIT_DIR &&
 
 		# Create two packs
 		# The first pack will contain all of the objects except one blob
@@ -408,7 +408,7 @@ prepare_for_keep_packs () {
 test_expect_success '--filter works with .keep packs' '
 	prepare_for_keep_packs &&
 	(
-		cd keep-packs.git &&
+		cd keep-packs.git && GIT_DIR=. && export GIT_DIR &&
 
 		foo_pack=$(test-tool find-pack -c 1 HEAD:foo.t) &&
 		bar_pack=$(test-tool find-pack -c 1 HEAD:bar.t) &&
@@ -438,7 +438,7 @@ test_expect_success '--filter works with --pack-kept-objects and .keep packs' '
 	rm -rf keep-packs keep-packs.git &&
 	prepare_for_keep_packs &&
 	(
-		cd keep-packs.git &&
+		cd keep-packs.git && GIT_DIR=. && export GIT_DIR &&
 
 		foo_pack=$(test-tool find-pack -c 1 HEAD:foo.t) &&
 		bar_pack=$(test-tool find-pack -c 1 HEAD:bar.t) &&
@@ -506,7 +506,7 @@ test_expect_success '--filter works with --max-pack-size' '
 	) &&
 	git clone --no-local --bare max-pack-size max-pack-size.git &&
 	(
-		cd max-pack-size.git &&
+		cd max-pack-size.git && GIT_DIR=. && export GIT_DIR &&
 		git -c repack.writebitmaps=false repack -a -d --filter=blob:none \
 			--max-pack-size=1M \
 			--filter-to=../filtered.git/objects/pack/pack &&
