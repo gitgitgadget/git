@@ -1,6 +1,6 @@
 test_expect_success "setup pre-receive hook ($PROTOCOL)" '
 	mv "$upstream/hooks/pre-receive" "$upstream/hooks/pre-receive.ok" &&
-	test_hook -C "$upstream" --clobber pre-receive <<-\EOF
+	test_hook --git-dir "$upstream" --clobber pre-receive <<-\EOF
 	exit 1
 	EOF
 '

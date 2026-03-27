@@ -1,9 +1,9 @@
 test_expect_success "setup receive.procReceiveRefs" '
-	git -C "$upstream" config --add receive.procReceiveRefs refs/for
+	git --git-dir="$upstream" config --add receive.procReceiveRefs refs/for
 '
 
 test_expect_success "setup proc-receive hook" '
-	test_hook -C "$upstream" --clobber proc-receive <<-EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok refs/for/main/topic1" \

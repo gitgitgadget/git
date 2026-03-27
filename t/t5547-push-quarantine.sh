@@ -61,13 +61,13 @@ test_expect_success 'push to repo path with path separator (colon)' '
 
 test_expect_success 'updating a ref from quarantine is forbidden' '
 	git init --bare update.git &&
-	test_hook -C update.git pre-receive <<-\EOF &&
+	test_hook --git-dir update.git pre-receive <<-\EOF &&
 	read old new refname
 	git update-ref refs/heads/unrelated $new
 	exit 1
 	EOF
 	test_must_fail git push update.git HEAD &&
-	git -C update.git fsck
+	git --git-dir=update.git fsck
 '
 
 test_done

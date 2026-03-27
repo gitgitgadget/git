@@ -510,7 +510,7 @@ test_expect_success 'fetch --atomic aborts all reference updates if hook aborts'
 	EOF
 
 	rm -f atomic/actual &&
-	test_hook -C atomic/.git reference-transaction <<-\EOF &&
+	test_hook --git-dir atomic/.git reference-transaction <<-\EOF &&
 		( echo "$*" && cat ) >>actual
 		exit 1
 	EOF

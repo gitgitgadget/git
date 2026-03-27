@@ -110,11 +110,11 @@ test_expect_success 'interleaving hook calls succeed' '
 
 	git init --bare target-repo.git &&
 
-	test_hook -C target-repo.git reference-transaction <<-\EOF &&
+	test_hook --git-dir target-repo.git reference-transaction <<-\EOF &&
 		echo $0 "$@" >>actual
 	EOF
 
-	test_hook -C target-repo.git update <<-\EOF &&
+	test_hook --git-dir target-repo.git update <<-\EOF &&
 		echo $0 "$@" >>actual
 	EOF
 

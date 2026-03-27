@@ -1075,7 +1075,7 @@ done
 post_checkout_hook () {
 	test_when_finished "rm -rf .git/hooks" &&
 	mkdir .git/hooks &&
-	test_hook -C "$1" post-checkout <<-\EOF
+	test_hook "$@" post-checkout <<-\EOF
 	{
 		echo $*
 		git rev-parse --git-dir --show-toplevel
