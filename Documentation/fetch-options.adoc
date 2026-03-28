@@ -67,7 +67,8 @@ this option multiple times, one for each matching ref name.
 +
 See also the `fetch.negotiationAlgorithm` and `push.negotiate`
 configuration variables documented in linkgit:git-config[1], and the
-`--negotiate-only` option below.
+`--negotiate-only` option below. Also, these restrictions do not apply
+to any `remote.<name>.haveRefs` config values.
 
 `--negotiate-only`::
 	Do not fetch anything from the server, and instead print the
