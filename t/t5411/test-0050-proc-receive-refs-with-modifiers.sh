@@ -1,6 +1,6 @@
 test_expect_success "config receive.procReceiveRefs with modifiers ($PROTOCOL)" '
 	(
-		cd "$upstream" &&
+		cd "$upstream" && GIT_DIR=. && export GIT_DIR &&
 		git config --unset-all receive.procReceiveRefs &&
 		git config --add receive.procReceiveRefs m:refs/heads/main &&
 		git config --add receive.procReceiveRefs ad:refs/heads &&
@@ -9,7 +9,7 @@ test_expect_success "config receive.procReceiveRefs with modifiers ($PROTOCOL)" 
 '
 
 test_expect_success "setup proc-receive hook ($PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok refs/heads/main" \
@@ -51,7 +51,7 @@ test_expect_success "proc-receive: update branch and new tag ($PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
@@ -59,10 +59,10 @@ test_expect_success "proc-receive: update branch and new tag ($PROTOCOL)" '
 # Refs of upstream : main(A)
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "setup upstream: create tags/v123 ($PROTOCOL)" '
-	git -C "$upstream" update-ref refs/heads/topic $A &&
-	git -C "$upstream" update-ref refs/tags/v123 $TAG &&
+	git --git-dir="$upstream" update-ref refs/heads/topic $A &&
+	git --git-dir="$upstream" update-ref refs/tags/v123 $TAG &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	<COMMIT-A> refs/heads/topic
 	<TAG-v123> refs/tags/v123
@@ -70,7 +70,7 @@ test_expect_success "setup upstream: create tags/v123 ($PROTOCOL)" '
 '
 
 test_expect_success "setup proc-receive hook ($PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok refs/heads/main" \
@@ -122,7 +122,7 @@ test_expect_success "proc-receive: create/delete branch, and delete tag ($PROTOC
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	<COMMIT-B> refs/heads/topic
 	EOF

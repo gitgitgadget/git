@@ -47,7 +47,7 @@ test_shallow_bitmaps () {
 	'
 
 	test_expect_success 'shallow fetch from bitmapped repo' '
-		(cd shallow.git && git fetch)
+		(cd shallow.git && GIT_DIR=. && export GIT_DIR && git fetch)
 	'
 }
 

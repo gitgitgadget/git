@@ -1,6 +1,6 @@
 test_expect_success "setup proc-receive hook and disable push-options ($PROTOCOL)" '
-	git -C "$upstream" config receive.advertisePushOptions false &&
-	test_hook -C "$upstream" --clobber proc-receive <<-\EOF
+	git --git-dir="$upstream" config receive.advertisePushOptions false &&
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok refs/for/main/topic"
@@ -21,17 +21,17 @@ test_expect_success "proc-receive: not support push options ($PROTOCOL)" '
 	test_grep "fatal: the receiving end does not support push options" \
 		actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
 
 test_expect_success "enable push options ($PROTOCOL)" '
-	git -C "$upstream" config receive.advertisePushOptions true
+	git --git-dir="$upstream" config receive.advertisePushOptions true
 '
 
 test_expect_success "setup version=0 for proc-receive hook ($PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-\EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		--version 0 \
@@ -68,14 +68,14 @@ test_expect_success "proc-receive: ignore push-options for version 0 ($PROTOCOL)
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	<COMMIT-A> refs/heads/next
 	EOF
 '
 
 test_expect_success "restore proc-receive hook ($PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-\EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok refs/for/main/topic"
@@ -85,7 +85,7 @@ test_expect_success "restore proc-receive hook ($PROTOCOL)" '
 # Refs of upstream : main(A)             next(A)
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "cleanup ($PROTOCOL)" '
-	git -C "$upstream" update-ref -d refs/heads/next
+	git --git-dir="$upstream" update-ref -d refs/heads/next
 '
 
 # Refs of upstream : main(A)
@@ -120,7 +120,7 @@ test_expect_success "proc-receive: push with options ($PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	<COMMIT-A> refs/heads/next
 	EOF
@@ -129,5 +129,5 @@ test_expect_success "proc-receive: push with options ($PROTOCOL)" '
 # Refs of upstream : main(A)             next(A)
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "cleanup ($PROTOCOL)" '
-	git -C "$upstream" update-ref -d refs/heads/next
+	git --git-dir="$upstream" update-ref -d refs/heads/next
 '

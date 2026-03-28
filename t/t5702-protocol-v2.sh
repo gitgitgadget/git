@@ -289,7 +289,7 @@ test_expect_success 'bare clone propagates empty default branch' '
 		clone --bare \
 		"file://$(pwd)/file_empty_parent" file_empty_child.git &&
 	echo "refs/heads/mydefaultbranch" >expect &&
-	git -C file_empty_child.git symbolic-ref HEAD >actual &&
+	git --git-dir=file_empty_child.git symbolic-ref HEAD >actual &&
 	test_cmp expect actual
 '
 
@@ -341,7 +341,7 @@ test_expect_success 'bare clone propagates unborn HEAD from non-empty repo' '
 		clone --bare "file://$(pwd)/file_unborn_parent" \
 		file_unborn_child.git 2>stderr &&
 	echo "refs/heads/mydefaultbranch" >expect &&
-	git -C file_unborn_child.git symbolic-ref HEAD >actual &&
+	git --git-dir=file_unborn_child.git symbolic-ref HEAD >actual &&
 	test_cmp expect actual &&
 	! grep "warning:" stderr
 '

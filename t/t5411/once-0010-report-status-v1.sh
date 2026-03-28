@@ -1,9 +1,9 @@
 test_expect_success "setup receive.procReceiveRefs" '
-	git -C "$upstream" config --add receive.procReceiveRefs refs/for
+	git --git-dir="$upstream" config --add receive.procReceiveRefs refs/for
 '
 
 test_expect_success "setup proc-receive hook" '
-	test_hook -C "$upstream" --clobber proc-receive <<-EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok refs/for/main/topic1" \
@@ -42,7 +42,7 @@ test_expect_success "proc-receive: report status v1" '
 		printf "%s %s refs/for/main/topic2\n" \
 			$ZERO_OID $A | packetize &&
 		printf 0000 &&
-		printf "" | git -C "$upstream" pack-objects --stdout
+		printf "" | git --git-dir="$upstream" pack-objects --stdout
 	} | git receive-pack "$upstream" --stateless-rpc \
 	>out 2>&1 &&
 	make_user_friendly_and_stable_output <out >actual &&
@@ -83,7 +83,7 @@ test_expect_success "proc-receive: report status v1" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/for/main/topic1
 	<COMMIT-A> refs/heads/foo
 	<COMMIT-B> refs/heads/main

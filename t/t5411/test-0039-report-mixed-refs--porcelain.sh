@@ -1,5 +1,5 @@
 test_expect_success "setup proc-receive hook ($PROTOCOL/porcelain)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok refs/for/next/topic2" \
@@ -67,7 +67,7 @@ test_expect_success "proc-receive: report update of mixed refs ($PROTOCOL/porcel
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/bar
 	<COMMIT-A> refs/heads/baz
 	<COMMIT-A> refs/heads/foo
@@ -79,7 +79,7 @@ test_expect_success "proc-receive: report update of mixed refs ($PROTOCOL/porcel
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "cleanup ($PROTOCOL/porcelain)" '
 	(
-		cd "$upstream" &&
+		cd "$upstream" && GIT_DIR=. && export GIT_DIR &&
 		git update-ref refs/heads/main $A &&
 		git update-ref -d refs/heads/foo &&
 		git update-ref -d refs/heads/bar &&

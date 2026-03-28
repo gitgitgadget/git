@@ -1,5 +1,5 @@
 test_expect_success "setup proc-receive hook (unexpected ref, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-\EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok refs/heads/main"
@@ -31,7 +31,7 @@ test_expect_success "proc-receive: report unexpected ref ($PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-B> refs/heads/main
 	EOF
 '
@@ -39,5 +39,5 @@ test_expect_success "proc-receive: report unexpected ref ($PROTOCOL)" '
 # Refs of upstream : main(B)
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "cleanup ($PROTOCOL)" '
-	git -C "$upstream" update-ref refs/heads/main $A
+	git --git-dir="$upstream" update-ref refs/heads/main $A
 '

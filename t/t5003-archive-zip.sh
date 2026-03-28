@@ -146,7 +146,7 @@ test_expect_success 'create bare clone' '
 	cp .git/info/attributes bare.git/info/attributes &&
 	# Recreate our changes to .git/config rather than just copying it, as
 	# we do not want to clobber core.bare or other settings.
-	git -C bare.git config diff.custom.binary true
+	git --git-dir=bare.git config diff.custom.binary true
 '
 
 test_expect_success \
@@ -161,7 +161,7 @@ check_zip d
 
 test_expect_success \
     'git archive --format=zip in a bare repo' \
-    '(cd bare.git && git archive --format=zip HEAD) >d1.zip'
+    '(cd bare.git && GIT_DIR=. && export GIT_DIR && git archive --format=zip HEAD) >d1.zip'
 
 test_expect_success \
     'git archive --format=zip vs. the same in a bare repo' \

@@ -1,5 +1,5 @@
 test_expect_success "setup proc-receive hook (option without matching ok, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "option refname refs/pull/123/head" \
@@ -30,7 +30,7 @@ test_expect_success "proc-receive: report option without matching ok ($PROTOCOL)
 '
 
 test_expect_success "setup proc-receive hook (option refname, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-\EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok refs/for/main/topic" \
@@ -62,7 +62,7 @@ test_expect_success "proc-receive: report option refname ($PROTOCOL)" '
 '
 
 test_expect_success "setup proc-receive hook (option refname and forced-update, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-\EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok refs/for/main/topic" \
@@ -95,7 +95,7 @@ test_expect_success "proc-receive: report option refname and forced-update ($PRO
 '
 
 test_expect_success "setup proc-receive hook (option refname and old-oid, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok refs/for/main/topic" \
@@ -129,7 +129,7 @@ test_expect_success "proc-receive: report option refname and old-oid ($PROTOCOL)
 '
 
 test_expect_success "setup proc-receive hook (option old-oid, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok refs/for/main/topic" \
@@ -161,7 +161,7 @@ test_expect_success "proc-receive: report option old-oid ($PROTOCOL)" '
 '
 
 test_expect_success "setup proc-receive hook (option old-oid and new-oid, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok refs/for/main/topic" \
@@ -195,7 +195,7 @@ test_expect_success "proc-receive: report option old-oid and new-oid ($PROTOCOL)
 '
 
 test_expect_success "setup proc-receive hook (report with multiple rewrites, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok refs/for/a/b/c/topic" \
@@ -247,7 +247,7 @@ test_expect_success "proc-receive: report with multiple rewrites ($PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '

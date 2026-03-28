@@ -1,5 +1,5 @@
 test_expect_success "setup proc-receive hook (ng, no message, $PROTOCOL/porcelain)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-\EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ng refs/for/main/topic"
@@ -26,13 +26,13 @@ test_expect_success "proc-receive: fail to update (ng, no message, $PROTOCOL/por
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
 
 test_expect_success "setup proc-receive hook (ng message, $PROTOCOL/porcelain)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-\EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ng refs/for/main/topic error msg"
@@ -59,7 +59,7 @@ test_expect_success "proc-receive: fail to update (ng, with message, $PROTOCOL/p
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '

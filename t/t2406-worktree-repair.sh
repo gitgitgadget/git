@@ -81,10 +81,12 @@ test_expect_success 'repair .git file from linked worktree' '
 test_expect_success 'repair .git file from bare.git' '
 	test_when_finished "rm -rf bare.git corrupt && git worktree prune" &&
 	git clone --bare . bare.git &&
-	git -C bare.git worktree add --detach ../corrupt &&
+	(cd bare.git && GIT_DIR=. && export GIT_DIR &&
+	git worktree add --detach ../corrupt) &&
 	git -C corrupt rev-parse --absolute-git-dir >expect &&
 	rm -f corrupt/.git &&
-	git -C bare.git worktree repair &&
+	(cd bare.git && GIT_DIR=. && export GIT_DIR &&
+	git worktree repair) &&
 	git -C corrupt rev-parse --absolute-git-dir >actual &&
 	test_cmp expect actual
 '

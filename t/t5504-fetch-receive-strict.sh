@@ -362,7 +362,7 @@ test_expect_success \
 test_expect_success PERL_TEST_HELPERS 'badFilemode is not a strict error' '
 	git init --bare badmode.git &&
 	tree=$(
-		cd badmode.git &&
+		cd badmode.git && GIT_DIR=. && export GIT_DIR &&
 		blob=$(echo blob | git hash-object -w --stdin | hex2oct) &&
 		printf "123456 foo\0${blob}" |
 		git hash-object -t tree --stdin -w --literally
@@ -370,9 +370,9 @@ test_expect_success PERL_TEST_HELPERS 'badFilemode is not a strict error' '
 
 	rm -rf dst.git &&
 	git init --bare dst.git &&
-	git -C dst.git config transfer.fsckObjects true &&
+	git --git-dir=dst.git config transfer.fsckObjects true &&
 
-	git -C badmode.git push ../dst.git $tree:refs/tags/tree 2>err &&
+	git --git-dir=badmode.git push dst.git $tree:refs/tags/tree 2>err &&
 	grep "$tree: badFilemode" err
 '
 

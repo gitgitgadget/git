@@ -122,7 +122,7 @@ test_expect_success 'absorb the git dir outside of primary worktree' '
 	test_when_finished "rm -rf repo-bare.git" &&
 	git clone --bare . repo-bare.git &&
 	test_when_finished "rm -rf repo-wt" &&
-	git -C repo-bare.git worktree add ../repo-wt &&
+	git --git-dir=repo-bare.git worktree add repo-wt &&
 
 	test_when_finished "rm -f .gitconfig" &&
 	test_config_global protocol.file.allow always &&

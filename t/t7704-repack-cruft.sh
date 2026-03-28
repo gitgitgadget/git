@@ -109,7 +109,7 @@ test_expect_success '--expire-to stores pruned objects (5.minutes.ago)' '
 		test_cmp expect actual &&
 
 		(
-			cd expired.git &&
+			cd expired.git && GIT_DIR=. && export GIT_DIR &&
 
 			expired="$(ls objects/pack/pack-*.mtimes)" &&
 			test-tool pack-mtimes $(basename $expired) >out &&

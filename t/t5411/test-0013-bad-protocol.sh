@@ -1,5 +1,5 @@
 test_expect_success "setup proc-receive hook (unknown version, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-\EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v --version 2
 	EOF
@@ -34,13 +34,13 @@ test_expect_success "proc-receive: bad protocol (unknown version, $PROTOCOL)" '
 	EOF
 	test_cmp expect actual-error &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
 
 test_expect_success "setup proc-receive hook (hook --die-read-version, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-\EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v --die-read-version
 	EOF
@@ -65,13 +65,13 @@ test_expect_success "proc-receive: bad protocol (hook --die-read-version, $PROTO
 	grep "remote: fatal: die with the --die-read-version option" out-$test_count &&
 	grep "remote: error: fail to negotiate version with proc-receive hook" out-$test_count &&
 
-	test_cmp_refs -C "$upstream" <<-\EOF
+	test_cmp_refs --git-dir "$upstream" <<-\EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
 
 test_expect_success "setup proc-receive hook (hook --die-write-version, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-\EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v --die-write-version
 	EOF
@@ -96,13 +96,13 @@ test_expect_success "proc-receive: bad protocol (hook --die-write-version, $PROT
 	grep "remote: fatal: die with the --die-write-version option" out-$test_count &&
 	grep "remote: error: fail to negotiate version with proc-receive hook" out-$test_count &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
 
 test_expect_success "setup proc-receive hook (hook --die-read-commands, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-\EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v --die-read-commands
 	EOF
@@ -126,13 +126,13 @@ test_expect_success "proc-receive: bad protocol (hook --die-read-commands, $PROT
 	test_cmp expect actual &&
 	grep "remote: fatal: die with the --die-read-commands option" out-$test_count &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
 
 test_expect_success "setup proc-receive hook (hook --die-read-push-options, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-\EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v --die-read-push-options
 	EOF
@@ -142,7 +142,7 @@ test_expect_success "setup proc-receive hook (hook --die-read-push-options, $PRO
 # Refs of workbench: main(A)  tags/v123
 # git push         :                       refs/for/main/topic(A)
 test_expect_success "proc-receive: bad protocol (hook --die-read-push-options, $PROTOCOL)" '
-	git -C "$upstream" config receive.advertisePushOptions true &&
+	git --git-dir="$upstream" config receive.advertisePushOptions true &&
 	test_must_fail git -C workbench push origin \
 		-o reviewers=user1,user2 \
 		HEAD:refs/for/main/topic \
@@ -158,13 +158,13 @@ test_expect_success "proc-receive: bad protocol (hook --die-read-push-options, $
 	test_cmp expect actual &&
 	grep "remote: fatal: die with the --die-read-push-options option" out-$test_count &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
 
 test_expect_success "setup proc-receive hook (hook --die-write-report, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-\EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v --die-write-report
 	EOF
@@ -188,13 +188,13 @@ test_expect_success "proc-receive: bad protocol (hook --die-write-report, $PROTO
 	test_cmp expect actual &&
 	grep "remote: fatal: die with the --die-write-report option" out-$test_count &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
 
 test_expect_success "setup proc-receive hook (no report, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-\EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v
 	EOF
@@ -222,7 +222,7 @@ test_expect_success "proc-receive: bad protocol (no report, $PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	<COMMIT-A> refs/heads/next
 	EOF
@@ -231,12 +231,12 @@ test_expect_success "proc-receive: bad protocol (no report, $PROTOCOL)" '
 # Refs of upstream : main(A)             next(A)
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "cleanup ($PROTOCOL)" '
-	git -C "$upstream" update-ref -d refs/heads/next
+	git --git-dir="$upstream" update-ref -d refs/heads/next
 
 '
 
 test_expect_success "setup proc-receive hook (no ref, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-\EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok"
@@ -263,13 +263,13 @@ test_expect_success "proc-receive: bad protocol (no ref, $PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
 
 test_expect_success "setup proc-receive hook (unknown status, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-\EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "xx refs/for/main/topic"
@@ -296,7 +296,7 @@ test_expect_success "proc-receive: bad protocol (unknown status, $PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '

@@ -174,13 +174,15 @@ test_expect_success '"add" from a bare repo' '
 	(
 		git clone --bare . bare &&
 		cd bare &&
-		git worktree add -b bare-main ../there2 main
+		GIT_DIR=. git worktree add -b bare-main ../there2 main
 	)
 '
 
 test_expect_success 'checkout from a bare repo without "add"' '
 	(
 		cd bare &&
+		GIT_DIR=. &&
+		export GIT_DIR &&
 		test_must_fail git checkout main
 	)
 '
@@ -189,7 +191,7 @@ test_expect_success '"add" default branch of a bare repo' '
 	(
 		git clone --bare . bare2 &&
 		cd bare2 &&
-		git worktree add ../there3 main &&
+		GIT_DIR=. git worktree add ../there3 main &&
 		cd ../there3 &&
 		# Simple check that a Git command does not
 		# immediately fail with the current setup
@@ -206,6 +208,8 @@ test_expect_success '"add" to bare repo with worktree config' '
 	(
 		git clone --bare . bare3 &&
 		cd bare3 &&
+		GIT_DIR=. &&
+		export GIT_DIR &&
 		git config extensions.worktreeconfig true &&
 
 		# Add config values that are erroneous to have in
@@ -219,6 +223,7 @@ test_expect_success '"add" to bare repo with worktree config' '
 		git config --worktree bogus.key value &&
 		git config --unset core.bare &&
 		git worktree add ../there4 main &&
+		sane_unset GIT_DIR &&
 		cd ../there4 &&
 
 		# Simple check that a Git command does not
@@ -404,7 +409,7 @@ test_expect_success '"add --orphan" with empty repository' '
 	test_when_finished "rm -rf empty_repo" &&
 	echo refs/heads/newbranch >expected &&
 	GIT_DIR="empty_repo" git init --bare &&
-	git -C empty_repo worktree add --orphan -b newbranch worktreedir &&
+	git --git-dir=empty_repo worktree add --orphan -b newbranch empty_repo/worktreedir &&
 	git -C empty_repo/worktreedir symbolic-ref HEAD >actual &&
 	test_cmp expected actual
 '
@@ -467,7 +472,7 @@ test_expect_success 'local clone from linked checkout' '
 '
 
 test_expect_success 'local clone --shared from linked checkout' '
-	git -C bare worktree add --detach ../baretree &&
+	git --git-dir=bare worktree add --detach baretree &&
 	git clone --local --shared baretree bare-clone &&
 	grep /bare/ bare-clone/.git/objects/info/alternates
 '
@@ -1075,7 +1080,7 @@ done
 post_checkout_hook () {
 	test_when_finished "rm -rf .git/hooks" &&
 	mkdir .git/hooks &&
-	test_hook -C "$1" post-checkout <<-\EOF
+	test_hook "$@" post-checkout <<-\EOF
 	{
 		echo $*
 		git rev-parse --git-dir --show-toplevel
@@ -1131,8 +1136,8 @@ test_expect_success '"add" in bare repo invokes post-checkout hook' '
 		echo $(pwd)/bare/worktrees/goozy &&
 		echo $(pwd)/goozy
 	} >hook.expect &&
-	post_checkout_hook bare &&
-	git -C bare worktree add --detach ../goozy &&
+	post_checkout_hook --git-dir bare &&
+	git --git-dir=bare worktree add --detach goozy &&
 	test_cmp hook.expect goozy/hook.actual
 '
 

@@ -21,10 +21,10 @@ test_expect_success 'setup' '
 	echo "secret" >sensitive/secret &&
 
 	git init --bare "$REPO" &&
-	test_commit_bulk -C "$REPO" --ref=main 1 &&
+	(GIT_DIR="$REPO" && export GIT_DIR && test_commit_bulk --ref=main 1) &&
 
-	git -C "$REPO" update-ref HEAD main &&
-	git -C "$REPO" update-server-info &&
+	git --git-dir="$REPO" update-ref HEAD main &&
+	git --git-dir="$REPO" update-server-info &&
 
 	git init malicious &&
 	(
@@ -48,9 +48,9 @@ test_expect_success 'setup' '
 	# avoid the client attempting to checkout any objects (which
 	# will be missing, and thus will cause the clone to fail before
 	# we can trigger the exploit).
-	git -C "$REPO" for-each-ref --format="delete %(refname)" >in &&
-	git -C "$REPO" update-ref --stdin <in &&
-	git -C "$REPO" update-server-info
+	git --git-dir="$REPO" for-each-ref --format="delete %(refname)" >in &&
+	git --git-dir="$REPO" update-ref --stdin <in &&
+	git --git-dir="$REPO" update-server-info
 '
 
 test_expect_success 'ambiguous transport does not lead to arbitrary file-inclusion' '

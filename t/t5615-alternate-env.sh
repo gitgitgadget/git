@@ -19,9 +19,9 @@ check_obj () {
 
 test_expect_success 'create alternate repositories' '
 	git init --bare one.git &&
-	one=$(echo one | git -C one.git hash-object -w --stdin) &&
+	one=$(echo one | git --git-dir=one.git hash-object -w --stdin) &&
 	git init --bare two.git &&
-	two=$(echo two | git -C two.git hash-object -w --stdin)
+	two=$(echo two | git --git-dir=two.git hash-object -w --stdin)
 '
 
 test_expect_success 'objects inaccessible without alternates' '
@@ -48,9 +48,12 @@ test_expect_success 'access multiple alternates' '
 # bare paths are relative from $GIT_DIR
 test_expect_success 'access alternate via relative path (bare)' '
 	git init --bare bare.git &&
-	check_obj "../one.git/objects" -C bare.git <<-EOF
-	$one blob
-	EOF
+	(
+		cd bare.git && GIT_DIR=. && export GIT_DIR &&
+		check_obj "../one.git/objects" <<-EOF
+		$one blob
+		EOF
+	)
 '
 
 # non-bare paths are relative to top of worktree
