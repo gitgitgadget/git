@@ -1,14 +1,21 @@
 #include "git-compat-util.h"
 #include "abspath.h"
 #include "chdir-notify.h"
+#include "config.h"
 #include "gettext.h"
 #include "lockfile.h"
+#include "loose.h"
+#include "midx.h"
 #include "object-file.h"
 #include "odb.h"
 #include "odb/source.h"
 #include "odb/source-files.h"
+#include "pack-objects.h"
 #include "packfile.h"
+#include "run-command.h"
 #include "strbuf.h"
+#include "strvec.h"
+#include "oidtree.h"
 #include "write-or-die.h"
 
 static void odb_source_files_reparent(const char *name UNUSED,
@@ -232,6 +239,255 @@ out:
 	return ret;
 }
 
+static int odb_source_files_write_packfile(struct odb_source *source,
+					   int pack_fd,
+					   struct odb_write_packfile_options *opts)
+{
+	struct odb_source_files *files = odb_source_files_downcast(source);
+	struct child_process cmd = CHILD_PROCESS_INIT;
+	int fsck_objects = 0;
+	int use_index_pack = 1;
+	int ret;
+
+	if (opts && opts->nr_objects) {
+		int transfer_unpack_limit = -1;
+		int fetch_unpack_limit = -1;
+		int unpack_limit = 100;
+
+		repo_config_get_int(source->odb->repo, "fetch.unpacklimit",
+				    &fetch_unpack_limit);
+		repo_config_get_int(source->odb->repo, "transfer.unpacklimit",
+				    &transfer_unpack_limit);
+		if (0 <= fetch_unpack_limit)
+			unpack_limit = fetch_unpack_limit;
+		else if (0 <= transfer_unpack_limit)
+			unpack_limit = transfer_unpack_limit;
+
+		if (opts->nr_objects < (unsigned int)unpack_limit &&
+		    !opts->from_promisor && !opts->lockfile_out)
+			use_index_pack = 0;
+	}
+
+	cmd.in = pack_fd;
+	cmd.git_cmd = 1;
+
+	if (!use_index_pack) {
+		strvec_push(&cmd.args, "unpack-objects");
+		if (opts && opts->quiet)
+			strvec_push(&cmd.args, "-q");
+		if (opts && opts->pack_header_version)
+			strvec_pushf(&cmd.args, "--pack_header=%"PRIu32",%"PRIu32,
+				     opts->pack_header_version,
+				     opts->pack_header_entries);
+		repo_config_get_bool(source->odb->repo, "transfer.fsckobjects",
+				     &fsck_objects);
+		repo_config_get_bool(source->odb->repo, "receive.fsckobjects",
+				     &fsck_objects);
+		if (fsck_objects)
+			strvec_push(&cmd.args, "--strict");
+		if (opts && opts->max_input_size)
+			strvec_pushf(&cmd.args, "--max-input-size=%lu",
+				     opts->max_input_size);
+		ret = run_command(&cmd);
+		if (ret)
+			return error(_("unpack-objects failed"));
+		return 0;
+	}
+
+	strvec_push(&cmd.args, "index-pack");
+	strvec_push(&cmd.args, "--stdin");
+	strvec_push(&cmd.args, "--keep=write_packfile");
+
+	if (opts && opts->pack_header_version)
+		strvec_pushf(&cmd.args, "--pack_header=%"PRIu32",%"PRIu32,
+			     opts->pack_header_version,
+			     opts->pack_header_entries);
+
+	if (opts) {
+		if (opts->use_thin_pack)
+			strvec_push(&cmd.args, "--fix-thin");
+		if (opts->from_promisor)
+			strvec_push(&cmd.args, "--promisor");
+		if (opts->check_self_contained)
+			strvec_push(&cmd.args, "--check-self-contained-and-connected");
+		if (opts->max_input_size)
+			strvec_pushf(&cmd.args, "--max-input-size=%lu",
+				     opts->max_input_size);
+		if (opts->shallow_file)
+			strvec_pushf(&cmd.env, "GIT_SHALLOW_FILE=%s",
+				     opts->shallow_file);
+		if (opts->report_end_of_input)
+			strvec_push(&cmd.args, "--report-end-of-input");
+		if (opts->fsck_objects)
+			fsck_objects = 1;
+	}
+
+	if (!fsck_objects) {
+		repo_config_get_bool(source->odb->repo, "transfer.fsckobjects",
+				     &fsck_objects);
+		repo_config_get_bool(source->odb->repo, "fetch.fsckobjects",
+				     &fsck_objects);
+	}
+	if (fsck_objects)
+		strvec_push(&cmd.args, "--strict");
+
+	if (opts && opts->lockfile_out) {
+		cmd.out = -1;
+		ret = start_command(&cmd);
+		if (ret)
+			return error(_("index-pack failed to start"));
+		*opts->lockfile_out = index_pack_lockfile(source->odb->repo,
+							  cmd.out, NULL);
+		close(cmd.out);
+		ret = finish_command(&cmd);
+	} else {
+		ret = run_command(&cmd);
+	}
+
+	if (ret)
+		return error(_("index-pack failed"));
+
+	if (opts && opts->check_self_contained)
+		opts->self_contained_out = 1;
+
+	packfile_store_reprepare(files->packed);
+	return 0;
+}
+
+static int match_hash_prefix(unsigned len, const unsigned char *a,
+			     const unsigned char *b)
+{
+	while (len > 1) {
+		if (*a != *b)
+			return 0;
+		a++; b++; len -= 2;
+	}
+	if (len)
+		if ((*a ^ *b) & 0xf0)
+			return 0;
+	return 1;
+}
+
+struct abbrev_cb_data {
+	odb_for_each_object_cb cb;
+	void *cb_data;
+	int ret;
+};
+
+static enum cb_next abbrev_loose_cb(const struct object_id *oid, void *data)
+{
+	struct abbrev_cb_data *d = data;
+	d->ret = d->cb(oid, NULL, d->cb_data);
+	return d->ret ? CB_BREAK : CB_CONTINUE;
+}
+
+static int odb_source_files_for_each_unique_abbrev(struct odb_source *source,
+						   const struct object_id *oid_prefix,
+						   unsigned int prefix_len,
+						   odb_for_each_object_cb cb,
+						   void *cb_data)
+{
+	struct odb_source_files *files = odb_source_files_downcast(source);
+	struct multi_pack_index *m;
+	struct packfile_list_entry *entry;
+	unsigned int hexsz = source->odb->repo->hash_algo->hexsz;
+	unsigned int len = prefix_len > hexsz ? hexsz : prefix_len;
+
+	/* Search loose objects */
+	{
+		struct oidtree *tree = odb_source_loose_cache(source, oid_prefix);
+		if (tree) {
+			struct abbrev_cb_data d = { cb, cb_data, 0 };
+			oidtree_each(tree, oid_prefix, prefix_len, abbrev_loose_cb, &d);
+			if (d.ret)
+				return d.ret;
+		}
+	}
+
+	/* Search multi-pack indices */
+	m = get_multi_pack_index(source);
+	for (; m; m = m->base_midx) {
+		uint32_t num, i, first = 0;
+
+		if (!m->num_objects)
+			continue;
+
+		num = m->num_objects + m->num_objects_in_base;
+		bsearch_one_midx(oid_prefix, m, &first);
+
+		for (i = first; i < num; i++) {
+			struct object_id oid;
+			const struct object_id *current;
+			int ret;
+
+			current = nth_midxed_object_oid(&oid, m, i);
+			if (!match_hash_prefix(len, oid_prefix->hash, current->hash))
+				break;
+			ret = cb(current, NULL, cb_data);
+			if (ret)
+				return ret;
+		}
+	}
+
+	/* Search packs not covered by MIDX */
+	for (entry = packfile_store_get_packs(files->packed); entry; entry = entry->next) {
+		struct packed_git *p = entry->pack;
+		uint32_t num, i, first = 0;
+
+		if (p->multi_pack_index)
+			continue;
+		if (open_pack_index(p) || !p->num_objects)
+			continue;
+
+		num = p->num_objects;
+		bsearch_pack(oid_prefix, p, &first);
+
+		for (i = first; i < num; i++) {
+			struct object_id oid;
+			int ret;
+
+			nth_packed_object_id(&oid, p, i);
+			if (!match_hash_prefix(len, oid_prefix->hash, oid.hash))
+				break;
+			ret = cb(&oid, NULL, cb_data);
+			if (ret)
+				return ret;
+		}
+	}
+
+	return 0;
+}
+
+static int odb_source_files_convert_object_id(struct odb_source *source,
+					      const struct object_id *src,
+					      const struct git_hash_algo *to,
+					      struct object_id *dest)
+{
+	struct odb_source_files *files = odb_source_files_downcast(source);
+	struct loose_object_map *map;
+	kh_oid_map_t *hash_map;
+	khiter_t pos;
+
+	if (!files->loose || !files->loose->map)
+		return -1;
+
+	map = files->loose->map;
+
+	if (to == source->odb->repo->compat_hash_algo)
+		hash_map = map->to_compat;
+	else if (to == source->odb->repo->hash_algo)
+		hash_map = map->to_storage;
+	else
+		return -1;
+
+	pos = kh_get_oid_map(hash_map, *src);
+	if (pos == kh_end(hash_map))
+		return -1;
+
+	oidcpy(dest, kh_value(hash_map, pos));
+	return 0;
+}
+
 struct odb_source_files *odb_source_files_new(struct object_database *odb,
 					      const char *path,
 					      bool local)
@@ -242,6 +498,8 @@ struct odb_source_files *odb_source_files_new(struct object_database *odb,
 	odb_source_init(&files->base, odb, ODB_SOURCE_FILES, path, local);
 	files->loose = odb_source_loose_new(&files->base);
 	files->packed = packfile_store_new(&files->base);
+	files->base.packed = files->packed;
+	files->base.loose = files->loose;
 
 	files->base.free = odb_source_files_free;
 	files->base.close = odb_source_files_close;
@@ -256,6 +514,9 @@ struct odb_source_files *odb_source_files_new(struct object_database *odb,
 	files->base.begin_transaction = odb_source_files_begin_transaction;
 	files->base.read_alternates = odb_source_files_read_alternates;
 	files->base.write_alternate = odb_source_files_write_alternate;
+	files->base.write_packfile = odb_source_files_write_packfile;
+	files->base.for_each_unique_abbrev = odb_source_files_for_each_unique_abbrev;
+	files->base.convert_object_id = odb_source_files_convert_object_id;
 
 	/*
 	 * Ideally, we would only ever store absolute paths in the source. This

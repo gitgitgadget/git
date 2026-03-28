@@ -32,6 +32,7 @@
 #include "packfile.h"
 #include "object-file.h"
 #include "odb.h"
+#include "odb/source.h"
 #include "odb/streaming.h"
 #include "replace-object.h"
 #include "dir.h"
@@ -1541,57 +1542,15 @@ static int have_duplicate_entry(const struct object_id *oid,
 
 static int want_cruft_object_mtime(struct repository *r,
 				   const struct object_id *oid,
-				   unsigned flags, uint32_t mtime)
+				   unsigned flags UNUSED, uint32_t mtime UNUSED)
 {
-	struct odb_source *source;
-
-	for (source = r->objects->sources; source; source = source->next) {
-		struct odb_source_files *files = odb_source_files_downcast(source);
-		struct packed_git **cache = packfile_store_get_kept_pack_cache(files->packed, flags);
-
-		for (; *cache; cache++) {
-			struct packed_git *p = *cache;
-			off_t ofs;
-			uint32_t candidate_mtime;
-
-			ofs = find_pack_entry_one(oid, p);
-			if (!ofs)
-				continue;
-
-			/*
-			 * We have a copy of the object 'oid' in a non-cruft
-			 * pack. We can avoid packing an additional copy
-			 * regardless of what the existing copy's mtime is since
-			 * it is outside of a cruft pack.
-			 */
-			if (!p->is_cruft)
-				return 0;
-
-			/*
-			 * If we have a copy of the object 'oid' in a cruft
-			 * pack, then either read the cruft pack's mtime for
-			 * that object, or, if that can't be loaded, assume the
-			 * pack's mtime itself.
-			 */
-			if (!load_pack_mtimes(p)) {
-				uint32_t pos;
-				if (offset_to_pack_pos(p, ofs, &pos) < 0)
-					continue;
-				candidate_mtime = nth_packed_mtime(p, pos);
-			} else {
-				candidate_mtime = p->mtime;
-			}
-
-			/*
-			 * We have a surviving copy of the object in a cruft
-			 * pack whose mtime is greater than or equal to the one
-			 * we are considering. We can thus avoid packing an
-			 * additional copy of that object.
-			 */
-			if (mtime <= candidate_mtime)
-				return 0;
-		}
-	}
+	/*
+	 * Check if the object exists in a kept source. Dispatches through
+	 * the vtable: files backends check kept packs, non-files backends
+	 * check their own kept tracking via OBJECT_INFO_KEPT_ONLY.
+	 */
+	if (odb_has_object_kept(r->objects, oid))
+		return 0;
 
 	return -1;
 }
@@ -1657,7 +1616,7 @@ static int want_found_object(const struct object_id *oid, int exclude,
 				return 0;
 			if (ignore_packed_keep_in_core && p->pack_keep_in_core)
 				return 0;
-			if (has_object_kept_pack(p->repo, oid, flags))
+			if (odb_has_object_kept(p->repo->objects, oid))
 				return 0;
 		} else {
 			/*
@@ -1726,8 +1685,6 @@ static int want_object_in_pack_mtime(const struct object_id *oid,
 				     uint32_t found_mtime)
 {
 	int want;
-	struct packfile_list_entry *e;
-	struct odb_source *source;
 
 	if (!exclude && local) {
 		/*
@@ -1757,25 +1714,18 @@ static int want_object_in_pack_mtime(const struct object_id *oid,
 
 	odb_prepare_alternates(the_repository->objects);
 
-	for (source = the_repository->objects->sources; source; source = source->next) {
-		struct multi_pack_index *m = get_multi_pack_index(source);
-		struct pack_entry e;
+	{
+		struct object_info oi = OBJECT_INFO_INIT;
 
-		if (m && fill_midx_entry(m, oid, &e)) {
-			want = want_object_in_pack_one(e.p, oid, exclude, found_pack, found_offset, found_mtime);
-			if (want != -1)
-				return want;
-		}
-	}
-
-	for (source = the_repository->objects->sources; source; source = source->next) {
-		struct odb_source_files *files = odb_source_files_downcast(source);
-
-		for (e = files->packed->packs.head; e; e = e->next) {
-			struct packed_git *p = e->pack;
-			want = want_object_in_pack_one(p, oid, exclude, found_pack, found_offset, found_mtime);
-			if (!exclude && want > 0)
-				packfile_list_prepend(&files->packed->packs, p);
+		if (!odb_read_object_info_extended(the_repository->objects,
+						    oid, &oi,
+						    OBJECT_INFO_QUICK) &&
+		    oi.whence == OI_PACKED) {
+			struct packed_git *p = oi.u.packed.pack;
+			want = want_object_in_pack_one(p, oid, exclude,
+						       found_pack,
+						       found_offset,
+						       found_mtime);
 			if (want != -1)
 				return want;
 		}
@@ -4065,7 +4015,7 @@ static void show_cruft_commit(struct commit *commit, void *data)
 
 static int cruft_include_check_obj(struct object *obj, void *data UNUSED)
 {
-	return !has_object_kept_pack(to_pack.repo, &obj->oid, KEPT_PACK_IN_CORE);
+	return !odb_has_object_kept(to_pack.repo->objects, &obj->oid);
 }
 
 static int cruft_include_check(struct commit *commit, void *data)
@@ -4365,17 +4315,15 @@ static void add_objects_in_unpacked_packs(void)
 
 	odb_prepare_alternates(to_pack.repo->objects);
 	for (source = to_pack.repo->objects->sources; source; source = source->next) {
-		struct odb_source_files *files = odb_source_files_downcast(source);
-
 		if (!source->local)
 			continue;
 
-		if (packfile_store_for_each_object(files->packed, &oi,
-						   add_object_in_unpacked_pack, NULL,
-						   ODB_FOR_EACH_OBJECT_PACK_ORDER |
-						   ODB_FOR_EACH_OBJECT_LOCAL_ONLY |
-						   ODB_FOR_EACH_OBJECT_SKIP_IN_CORE_KEPT_PACKS |
-						   ODB_FOR_EACH_OBJECT_SKIP_ON_DISK_KEPT_PACKS))
+		if (odb_source_for_each_object(source, &oi,
+					       add_object_in_unpacked_pack, NULL,
+					       ODB_FOR_EACH_OBJECT_PACK_ORDER |
+					       ODB_FOR_EACH_OBJECT_LOCAL_ONLY |
+					       ODB_FOR_EACH_OBJECT_SKIP_IN_CORE_KEPT_PACKS |
+					       ODB_FOR_EACH_OBJECT_SKIP_ON_DISK_KEPT_PACKS))
 			die(_("cannot open pack index"));
 	}
 }
