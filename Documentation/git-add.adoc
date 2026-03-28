@@ -11,7 +11,7 @@ SYNOPSIS
 git add [--verbose | -v] [--dry-run | -n] [--force | -f] [--interactive | -i] [--patch | -p]
 	[--edit | -e] [--[no-]all | -A | --[no-]ignore-removal | [--update | -u]] [--sparse]
 	[--intent-to-add | -N] [--refresh] [--ignore-errors] [--ignore-missing] [--renormalize]
-	[--chmod=(+|-)x] [--pathspec-from-file=<file> [--pathspec-file-nul]]
+	[--no-verify] [--chmod=(+|-)x] [--pathspec-from-file=<file> [--pathspec-file-nul]]
 	[--] [<pathspec>...]
 
 DESCRIPTION
@@ -42,9 +42,10 @@ use the `--force` option to add ignored files. If you specify the exact
 filename of an ignored file, `git add` will fail with a list of ignored
 files. Otherwise it will silently ignore the file.
 
+A `pre-add` hook can be used to reject `git add` (see linkgit:githooks[5]).
+
 Please see linkgit:git-commit[1] for alternative ways to add content to a
 commit.
-
 
 OPTIONS
 -------
@@ -165,6 +166,10 @@ for `git add --no-all <pathspec>...`, i.e. ignored removed files.
 `--refresh`::
 	Don't add the file(s), but only refresh their stat()
 	information in the index.
+
+`--no-verify`::
+	Bypass the `pre-add` hook if it exists. See linkgit:githooks[5] for
+	more information about hooks.
 
 `--ignore-errors`::
 	If some files could not be added because of errors indexing
@@ -454,6 +459,7 @@ linkgit:git-reset[1]
 linkgit:git-mv[1]
 linkgit:git-commit[1]
 linkgit:git-update-index[1]
+linkgit:githooks[5]
 
 GIT
 ---
