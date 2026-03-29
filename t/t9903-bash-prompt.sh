@@ -135,7 +135,7 @@ test_expect_success 'prompt - describe detached head - default' '
 test_expect_success 'prompt - inside .git directory' '
 	printf " (GIT_DIR!)" >expected &&
 	(
-		cd .git &&
+		cd .git && GIT_CONFIG_PARAMETERS="${SQ}safe.bareRepository=all${SQ}" && export GIT_CONFIG_PARAMETERS &&
 		__git_ps1 >"$actual"
 	) &&
 	test_cmp expected "$actual"
@@ -155,7 +155,7 @@ test_expect_success 'prompt - inside bare repository' '
 	git init --bare bare.git &&
 	test_when_finished "rm -rf bare.git" &&
 	(
-		cd bare.git &&
+		cd bare.git && GIT_CONFIG_PARAMETERS="${SQ}safe.bareRepository=all${SQ}" && export GIT_CONFIG_PARAMETERS &&
 		__git_ps1 >"$actual"
 	) &&
 	test_cmp expected "$actual"
@@ -374,7 +374,7 @@ test_expect_success 'prompt - dirty status indicator - not shown inside .git dir
 	test_when_finished "git reset --hard" &&
 	(
 		GIT_PS1_SHOWDIRTYSTATE=y &&
-		cd .git &&
+		cd .git && GIT_CONFIG_PARAMETERS="${SQ}safe.bareRepository=all${SQ}" && export GIT_CONFIG_PARAMETERS &&
 		__git_ps1 >"$actual"
 	) &&
 	test_cmp expected "$actual"
@@ -409,7 +409,7 @@ test_expect_success 'prompt - stash status indicator - not shown inside .git dir
 	test_when_finished "git stash drop" &&
 	(
 		GIT_PS1_SHOWSTASHSTATE=y &&
-		cd .git &&
+		cd .git && GIT_CONFIG_PARAMETERS="${SQ}safe.bareRepository=all${SQ}" && export GIT_CONFIG_PARAMETERS &&
 		__git_ps1 >"$actual"
 	) &&
 	test_cmp expected "$actual"
@@ -514,7 +514,7 @@ test_expect_success 'prompt - untracked files status indicator - not shown insid
 	printf " (GIT_DIR!)" >expected &&
 	(
 		GIT_PS1_SHOWUNTRACKEDFILES=y &&
-		cd .git &&
+		cd .git && GIT_CONFIG_PARAMETERS="${SQ}safe.bareRepository=all${SQ}" && export GIT_CONFIG_PARAMETERS &&
 		__git_ps1 >"$actual"
 	) &&
 	test_cmp expected "$actual"
@@ -619,7 +619,7 @@ test_expect_success 'prompt - bash color pc mode - inside .git directory' '
 	(
 		GIT_PS1_SHOWDIRTYSTATE=y &&
 		GIT_PS1_SHOWCOLORHINTS=y &&
-		cd .git &&
+		cd .git && GIT_CONFIG_PARAMETERS="${SQ}safe.bareRepository=all${SQ}" && export GIT_CONFIG_PARAMETERS &&
 		__git_ps1 "BEFORE:" ":AFTER" &&
 		printf "%s\\n%s" "$PS1" "${__git_ps1_branch_name}" >"$actual"
 	) &&
@@ -749,7 +749,7 @@ test_expect_success 'prompt - hide if pwd ignored - inside gitdir' '
 	printf " (GIT_DIR!)" >expected &&
 	(
 		GIT_PS1_HIDE_IF_PWD_IGNORED=y &&
-		cd .git &&
+		cd .git && GIT_CONFIG_PARAMETERS="${SQ}safe.bareRepository=all${SQ}" && export GIT_CONFIG_PARAMETERS &&
 		__git_ps1 >"$actual"
 	) &&
 	test_cmp expected "$actual"
