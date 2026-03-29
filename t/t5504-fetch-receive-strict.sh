@@ -362,7 +362,7 @@ test_expect_success \
 test_expect_success PERL_TEST_HELPERS 'badFilemode is not a strict error' '
 	git init --bare badmode.git &&
 	tree=$(
-		cd badmode.git &&
+		cd badmode.git && GIT_DIR=. && export GIT_DIR &&
 		blob=$(echo blob | git hash-object -w --stdin | hex2oct) &&
 		printf "123456 foo\0${blob}" |
 		git hash-object -t tree --stdin -w --literally

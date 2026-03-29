@@ -24,7 +24,7 @@ test_expect_success 'setup repository' '
 	git remote add public "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
 	git push public main:main &&
 
-	(cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
+	(cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" && GIT_DIR=. && export GIT_DIR &&
 	 git repack -a -d
 	) &&
 

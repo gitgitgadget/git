@@ -71,7 +71,7 @@ test_expect_success 'push to remote repository with packed refs' '
 	git commit -m path2 &&
 	HEAD=$(git rev-parse --verify HEAD) &&
 	git push &&
-	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git &&
+	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git && GIT_DIR=. && export GIT_DIR &&
 	 test $HEAD = $(git rev-parse --verify HEAD))
 '
 
@@ -80,12 +80,12 @@ test_expect_success 'push already up-to-date' '
 '
 
 test_expect_success 'push to remote repository with unpacked refs' '
-	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git &&
+	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git && GIT_DIR=. && export GIT_DIR &&
 	 rm packed-refs &&
 	 git update-ref refs/heads/main $ORIG_HEAD &&
 	 git --bare update-server-info) &&
 	git push &&
-	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git &&
+	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git && GIT_DIR=. && export GIT_DIR &&
 	 test $HEAD = $(git rev-parse --verify HEAD))
 '
 
@@ -112,7 +112,7 @@ test_expect_success 'http-push fetches packed objects' '
 	git clone $HTTPD_URL/dumb/test_repo_packed.git \
 		"$ROOT_PATH"/test_repo_clone_packed &&
 
-	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo_packed.git &&
+	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo_packed.git && GIT_DIR=. && export GIT_DIR &&
 	 git --bare repack &&
 	 git --bare prune-packed) &&
 

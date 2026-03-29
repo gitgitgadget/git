@@ -315,7 +315,7 @@ test_expect_success 'able to set-tree to a subdirectory' '
 
 test_expect_success 'git-svn works in a bare repository' '
 	mkdir bare-repo &&
-	( cd bare-repo &&
+	( cd bare-repo && GIT_DIR=. && export GIT_DIR &&
 	git init --bare &&
 	GIT_DIR=. git svn init "$svnrepo" &&
 	git svn fetch ) &&

@@ -48,7 +48,7 @@ EOF
 test_expect_success 'push to shallow repo via http' '
 	git clone --bare --no-local shallow "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
 	(
-	cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
+	cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" && GIT_DIR=. && export GIT_DIR &&
 	git config http.receivepack true
 	) &&
 	(
@@ -57,7 +57,7 @@ test_expect_success 'push to shallow repo via http' '
 	git push $HTTPD_URL/smart/repo.git +main:refs/remotes/top/main
 	) &&
 	(
-	cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
+	cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" && GIT_DIR=. && export GIT_DIR &&
 	git fsck &&
 	git log --format=%s top/main >actual &&
 	cat <<EOF >expect &&
@@ -73,13 +73,13 @@ test_expect_success 'push from shallow repo via http' '
 	mv "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" shallow-upstream.git &&
 	git clone --bare --no-local full "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
 	(
-	cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
+	cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" && GIT_DIR=. && export GIT_DIR &&
 	git config http.receivepack true
 	) &&
 	commit 10 &&
 	git push $HTTPD_URL/smart/repo.git +main:refs/remotes/top/main &&
 	(
-	cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
+	cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" && GIT_DIR=. && export GIT_DIR &&
 	git fsck &&
 	git log --format=%s top/main >actual &&
 	cat <<EOF >expect &&

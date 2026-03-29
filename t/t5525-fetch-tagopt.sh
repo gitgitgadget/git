@@ -7,7 +7,7 @@ test_description='tagopt variable affects "git fetch" and is overridden by comma
 setup_clone () {
 	git clone --mirror . $1 &&
 	git remote add remote_$1 $1 &&
-	(cd $1 &&
+	(cd $1 && GIT_DIR=. && export GIT_DIR &&
 	git tag tag_$1 &&
 	git branch branch_$1)
 }
@@ -28,7 +28,7 @@ test_expect_success "fetch with tagopt=--no-tags does not get tag" '
 
 test_expect_success "fetch --tags with tagopt=--no-tags gets tag" '
 	(
-		cd one &&
+		cd one && GIT_DIR=. && export GIT_DIR &&
 		git branch second_branch_one
 	) &&
 	git fetch --tags remote_one &&
@@ -44,7 +44,7 @@ test_expect_success "fetch --no-tags with tagopt=--tags does not get tag" '
 
 test_expect_success "fetch with tagopt=--tags gets tag" '
 	(
-		cd two &&
+		cd two && GIT_DIR=. && export GIT_DIR &&
 		git branch second_branch_two
 	) &&
 	git fetch remote_two &&

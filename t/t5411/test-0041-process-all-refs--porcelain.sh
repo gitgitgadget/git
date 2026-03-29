@@ -7,7 +7,7 @@ test_expect_success "config receive.procReceiveRefs = refs ($PROTOCOL/porcelain)
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "setup upstream branches ($PROTOCOL/porcelain)" '
 	(
-		cd "$upstream" &&
+		cd "$upstream" && GIT_DIR=. && export GIT_DIR &&
 		git update-ref refs/heads/main $B &&
 		git update-ref refs/heads/foo $A &&
 		git update-ref refs/heads/bar $A &&
@@ -105,7 +105,7 @@ test_expect_success "proc-receive: process all refs ($PROTOCOL/porcelain)" '
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "cleanup ($PROTOCOL/porcelain)" '
 	(
-		cd "$upstream" &&
+		cd "$upstream" && GIT_DIR=. && export GIT_DIR &&
 		git update-ref -d refs/heads/bar &&
 		git update-ref -d refs/heads/baz
 	)

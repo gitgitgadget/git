@@ -77,7 +77,7 @@ test_expect_success 'pulling from a repository using a ref namespace' '
 test_expect_success 'mirroring a repository using a ref namespace' '
 	git clone --mirror pushee mirror &&
 	(
-		cd mirror &&
+		cd mirror && GIT_DIR=. && export GIT_DIR &&
 		git for-each-ref refs/ >actual &&
 		printf "$commit1 commit\trefs/namespaces/namespace/refs/heads/main\n" >expected &&
 		printf "$commit0 commit\trefs/namespaces/namespace/refs/tags/0\n" >>expected &&

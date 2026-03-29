@@ -30,7 +30,7 @@ test_expect_success 'setup repository' '
 
 test_expect_success 'create http-accessible bare repository' '
 	mkdir "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
-	(cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
+	(cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" && GIT_DIR=. && export GIT_DIR &&
 	 git --bare init
 	) &&
 	git remote add public "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
@@ -398,7 +398,7 @@ create_tags () {
 
 test_expect_success 'create 2,000 tags in the repo' '
 	(
-		cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
+		cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" && GIT_DIR=. && export GIT_DIR &&
 		create_tags 1 2000
 	)
 '
@@ -482,12 +482,12 @@ test_expect_success 'test allowanysha1inwant with unreachable' '
 
 test_expect_success EXPENSIVE 'http can handle enormous ref negotiation' '
 	(
-		cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
+		cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" && GIT_DIR=. && export GIT_DIR &&
 		create_tags 2001 50000
 	) &&
 	git -C too-many-refs fetch -q --tags &&
 	(
-		cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
+		cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" && GIT_DIR=. && export GIT_DIR &&
 		create_tags 50001 100000
 	) &&
 	git -C too-many-refs fetch -q --tags &&
@@ -647,7 +647,7 @@ test_expect_success 'client falls back from v2 to v0 to match server' '
 
 test_expect_success 'create empty http-accessible SHA-256 repository' '
 	mkdir "$HTTPD_DOCUMENT_ROOT_PATH/sha256.git" &&
-	(cd "$HTTPD_DOCUMENT_ROOT_PATH/sha256.git" &&
+	(cd "$HTTPD_DOCUMENT_ROOT_PATH/sha256.git" && GIT_DIR=. && export GIT_DIR &&
 	 git --bare init --object-format=sha256
 	)
 '

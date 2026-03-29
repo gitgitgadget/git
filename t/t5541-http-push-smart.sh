@@ -58,7 +58,7 @@ test_expect_success 'push to remote repository (standard)' '
 	GIT_TRACE_CURL=true git push -v -v 2>err &&
 	! grep "Expect: 100-continue" err &&
 	grep "POST git-receive-pack ([0-9]* bytes)" err &&
-	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git &&
+	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git && GIT_DIR=. && export GIT_DIR &&
 	 test $HEAD = $(git rev-parse --verify HEAD))
 '
 
@@ -164,7 +164,7 @@ test_expect_success 'push (chunked)' '
 	test_config http.postbuffer 4 &&
 	git push -v -v origin $BRANCH 2>err &&
 	grep "POST git-receive-pack (chunked)" err &&
-	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git &&
+	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git && GIT_DIR=. && export GIT_DIR &&
 	 test $HEAD = $(git rev-parse --verify HEAD))
 '
 
@@ -416,7 +416,7 @@ test_expect_success GPG 'push with post-receive to inspect certificate' '
 		E_O_F
 	EOF
 	(
-		cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git &&
+		cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git && GIT_DIR=. && export GIT_DIR &&
 		git config receive.certnonceseed sekrit &&
 		git config receive.certnonceslop 30
 	) &&

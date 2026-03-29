@@ -262,7 +262,7 @@ test_expect_success 'http remote detects correct HEAD' '
 
 test_expect_success 'fetch packed objects' '
 	cp -R "$HTTPD_DOCUMENT_ROOT_PATH"/repo.git "$HTTPD_DOCUMENT_ROOT_PATH"/repo_pack.git &&
-	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/repo_pack.git &&
+	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/repo_pack.git && GIT_DIR=. && export GIT_DIR &&
 	 git --bare repack -a -d
 	) &&
 	git clone $HTTPD_URL/dumb/repo_pack.git
@@ -301,7 +301,7 @@ test_expect_success 'fetch notices corrupt pack' '
 	 printf %0256d 0 | dd of=$p bs=256 count=1 seek=1 conv=notrunc
 	) &&
 	mkdir repo_bad1.git &&
-	(cd repo_bad1.git &&
+	(cd repo_bad1.git && GIT_DIR=. && export GIT_DIR &&
 	 git --bare init &&
 	 test_must_fail git --bare fetch $HTTPD_URL/dumb/repo_bad1.git &&
 	 test 0 = $(ls objects/pack/pack-*.pack | wc -l)
@@ -324,7 +324,7 @@ test_expect_success 'fetch notices corrupt idx' '
 	 printf %0256d 0 | dd of=$p bs=256 count=1 seek=1 conv=notrunc
 	) &&
 	mkdir repo_bad2.git &&
-	(cd repo_bad2.git &&
+	(cd repo_bad2.git && GIT_DIR=. && export GIT_DIR &&
 	 git --bare init &&
 	 test_must_fail git --bare fetch $HTTPD_URL/dumb/repo_bad2.git &&
 	 test 0 = $(ls objects/pack | wc -l)

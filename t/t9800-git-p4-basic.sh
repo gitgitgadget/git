@@ -321,7 +321,7 @@ test_expect_success 'clone --bare should make a bare repository' '
 	git p4 clone --dest="$git" --bare //depot &&
 	test_when_finished cleanup_git &&
 	(
-		cd "$git" &&
+		cd "$git" && GIT_DIR=. && export GIT_DIR &&
 		test_path_is_missing .git &&
 		git config --get --bool core.bare true &&
 		git rev-parse --verify refs/remotes/p4/master &&

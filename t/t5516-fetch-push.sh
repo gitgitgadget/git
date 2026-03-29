@@ -1392,7 +1392,7 @@ test_expect_success 'pushing a specific ref applies remote.$name.push as refmap'
 		sed -e "s|refs/heads/|refs/remotes/src/|" >../dst/expect
 	) &&
 	(
-		cd dst &&
+		cd dst && GIT_DIR=. && export GIT_DIR &&
 		test_must_fail git show-ref refs/heads/next &&
 		test_must_fail git show-ref refs/heads/main &&
 		git show-ref refs/remotes/src/main >actual
@@ -1416,7 +1416,7 @@ test_expect_success 'with no remote.$name.push, it is not used as refmap' '
 		git show-ref refs/heads/main >../dst/expect
 	) &&
 	(
-		cd dst &&
+		cd dst && GIT_DIR=. && export GIT_DIR &&
 		test_must_fail git show-ref refs/heads/next &&
 		git show-ref refs/heads/main >actual
 	) &&
@@ -1445,7 +1445,7 @@ test_expect_success 'with no remote.$name.push, upstream mapping is used' '
 		sed -e "s|refs/heads/main|refs/heads/trunk|" >../dst/expect
 	) &&
 	(
-		cd dst &&
+		cd dst && GIT_DIR=. && export GIT_DIR &&
 		test_must_fail git show-ref refs/heads/main &&
 		test_must_fail git show-ref refs/heads/next &&
 		git show-ref refs/heads/trunk >actual
@@ -1471,7 +1471,7 @@ test_expect_success 'push does not follow tags by default' '
 		git push ../dst main
 	) &&
 	(
-		cd dst &&
+		cd dst && GIT_DIR=. && export GIT_DIR &&
 		git for-each-ref >../actual
 	) &&
 	test_cmp expect actual
@@ -1495,7 +1495,7 @@ test_expect_success 'push --follow-tags only pushes relevant tags' '
 		git push --follow-tags ../dst main
 	) &&
 	(
-		cd dst &&
+		cd dst && GIT_DIR=. && export GIT_DIR &&
 		git for-each-ref >../actual
 	) &&
 	test_cmp expect actual
@@ -1553,7 +1553,7 @@ test_expect_success 'fetch into bare respects core.logallrefupdates' '
 	test_when_finished "rm -rf dst.git" &&
 	git init --bare dst.git &&
 	(
-		cd dst.git &&
+		cd dst.git && GIT_DIR=. && export GIT_DIR &&
 		git config core.logallrefupdates true &&
 
 		# as above, we double-fetch to test both

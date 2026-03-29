@@ -1,6 +1,6 @@
 test_expect_success "config receive.procReceiveRefs with modifiers ($PROTOCOL)" '
 	(
-		cd "$upstream" &&
+		cd "$upstream" && GIT_DIR=. && export GIT_DIR &&
 		git config --unset-all receive.procReceiveRefs &&
 		git config --add receive.procReceiveRefs m:refs/heads/main &&
 		git config --add receive.procReceiveRefs ad:refs/heads &&

@@ -17,7 +17,7 @@ test_allow_var () {
 
 	test_expect_success "fetch $desc (enabled)" '
 		(
-			cd tmp.git &&
+			cd tmp.git && GIT_DIR=. && export GIT_DIR &&
 			GIT_ALLOW_PROTOCOL=$proto &&
 			export GIT_ALLOW_PROTOCOL &&
 			git fetch
@@ -26,7 +26,7 @@ test_allow_var () {
 
 	test_expect_success "push $desc (enabled)" '
 		(
-			cd tmp.git &&
+			cd tmp.git && GIT_DIR=. && export GIT_DIR &&
 			GIT_ALLOW_PROTOCOL=$proto &&
 			export GIT_ALLOW_PROTOCOL &&
 			git push origin HEAD:pushed
@@ -35,7 +35,7 @@ test_allow_var () {
 
 	test_expect_success "push $desc (disabled)" '
 		(
-			cd tmp.git &&
+			cd tmp.git && GIT_DIR=. && export GIT_DIR &&
 			GIT_ALLOW_PROTOCOL=none &&
 			export GIT_ALLOW_PROTOCOL &&
 			test_must_fail git push origin HEAD:pushed
@@ -44,7 +44,7 @@ test_allow_var () {
 
 	test_expect_success "fetch $desc (disabled)" '
 		(
-			cd tmp.git &&
+			cd tmp.git && GIT_DIR=. && export GIT_DIR &&
 			GIT_ALLOW_PROTOCOL=none &&
 			export GIT_ALLOW_PROTOCOL &&
 			test_must_fail git fetch
@@ -119,7 +119,7 @@ test_config () {
 
 	test_expect_success "push $desc (disabled)" '
 		(
-			cd tmp.git &&
+			cd tmp.git && GIT_DIR=. && export GIT_DIR &&
 			GIT_PROTOCOL_FROM_USER=0 &&
 			export GIT_PROTOCOL_FROM_USER &&
 			test_must_fail git -c protocol.$proto.allow=user push origin HEAD:pushed
@@ -128,7 +128,7 @@ test_config () {
 
 	test_expect_success "fetch $desc (disabled)" '
 		(
-			cd tmp.git &&
+			cd tmp.git && GIT_DIR=. && export GIT_DIR &&
 			GIT_PROTOCOL_FROM_USER=0 &&
 			export GIT_PROTOCOL_FROM_USER &&
 			test_must_fail git -c protocol.$proto.allow=user fetch

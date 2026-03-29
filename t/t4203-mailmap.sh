@@ -432,7 +432,7 @@ test_expect_success 'mailmap.blob defaults to off in non-bare repo' '
 test_expect_success 'mailmap.blob defaults to HEAD:.mailmap in bare repo' '
 	git clone --bare non-bare bare &&
 	(
-		cd bare &&
+		cd bare && GIT_DIR=. && export GIT_DIR &&
 		cat >expect <<-\EOF &&
 		     1	Fake Name
 		EOF

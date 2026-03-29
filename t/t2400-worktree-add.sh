@@ -177,7 +177,7 @@ test_expect_success '"add" from a bare repo' '
 
 test_expect_success 'checkout from a bare repo without "add"' '
 	(
-		cd bare &&
+		cd bare && GIT_DIR=. && export GIT_DIR &&
 		test_must_fail git checkout main
 	)
 '

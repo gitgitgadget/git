@@ -391,7 +391,7 @@ test_expect_success 'push unpushed submodules when not needed' '
 		git push --recurse-submodules=on-demand ../pub.git main
 	) &&
 	(
-		cd submodule.git &&
+		cd submodule.git && GIT_DIR=. && export GIT_DIR &&
 		git rev-parse main >../actual
 	) &&
 	test_cmp expected actual
@@ -399,7 +399,7 @@ test_expect_success 'push unpushed submodules when not needed' '
 
 test_expect_success 'push unpushed submodules when not needed 2' '
 	(
-		cd submodule.git &&
+		cd submodule.git && GIT_DIR=. && export GIT_DIR &&
 		git rev-parse main >../expected
 	) &&
 	(
@@ -416,7 +416,7 @@ test_expect_success 'push unpushed submodules when not needed 2' '
 		git push --recurse-submodules=on-demand ../pub.git main
 	) &&
 	(
-		cd submodule.git &&
+		cd submodule.git && GIT_DIR=. && export GIT_DIR &&
 		git rev-parse main >../actual
 	) &&
 	test_cmp expected actual
@@ -439,7 +439,7 @@ test_expect_success 'push unpushed submodules recursively' '
 		git push --recurse-submodules=on-demand ../pub.git main
 	) &&
 	(
-		cd submodule.git &&
+		cd submodule.git && GIT_DIR=. && export GIT_DIR &&
 		git rev-parse main >../actual
 	) &&
 	test_cmp expected actual
@@ -461,7 +461,7 @@ test_expect_success 'push unpushable submodule recursively fails' '
 		test_must_fail git push --recurse-submodules=on-demand ../pub.git main
 	) &&
 	(
-		cd submodule.git &&
+		cd submodule.git && GIT_DIR=. && export GIT_DIR &&
 		git rev-parse main >../actual
 	) &&
 	test_when_finished git -C work reset --hard main^ &&

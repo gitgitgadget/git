@@ -43,7 +43,7 @@ test_expect_success 'hard reset works with GIT_WORK_TREE' '
 
 test_expect_success 'setup bare' '
 	git clone --bare . bare.git &&
-	cd bare.git
+	cd bare.git && GIT_DIR=. && export GIT_DIR
 '
 
 test_expect_success '"hard" reset is not allowed in bare' '
