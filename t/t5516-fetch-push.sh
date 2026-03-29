@@ -1806,7 +1806,7 @@ test_expect_success 'denyCurrentBranch and worktrees' '
 test_expect_success 'denyCurrentBranch and bare repository worktrees' '
 	test_when_finished "rm -fr bare.git" &&
 	git clone --bare . bare.git &&
-	git -C bare.git worktree add wt &&
+	git --git-dir=bare.git worktree add bare.git/wt &&
 	test_commit grape &&
 	git -C bare.git config receive.denyCurrentBranch refuse &&
 	test_must_fail git push bare.git HEAD:wt &&
@@ -1827,7 +1827,7 @@ test_expect_success 'refuse fetch to current branch of worktree' '
 test_expect_success 'refuse fetch to current branch of bare repository worktree' '
 	test_when_finished "rm -fr bare.git" &&
 	git clone --bare . bare.git &&
-	git -C bare.git worktree add wt &&
+	git --git-dir=bare.git worktree add bare.git/wt &&
 	test_commit banana &&
 	test_must_fail git -C bare.git fetch .. HEAD:wt &&
 	git -C bare.git fetch -u .. HEAD:wt
