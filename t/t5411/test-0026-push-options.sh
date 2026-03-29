@@ -21,7 +21,7 @@ test_expect_success "proc-receive: not support push options ($PROTOCOL)" '
 	test_grep "fatal: the receiving end does not support push options" \
 		actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
@@ -68,7 +68,7 @@ test_expect_success "proc-receive: ignore push-options for version 0 ($PROTOCOL)
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	<COMMIT-A> refs/heads/next
 	EOF
@@ -120,7 +120,7 @@ test_expect_success "proc-receive: push with options ($PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	<COMMIT-A> refs/heads/next
 	EOF

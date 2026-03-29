@@ -34,7 +34,7 @@ test_expect_success "proc-receive: bad protocol (unknown version, $PROTOCOL)" '
 	EOF
 	test_cmp expect actual-error &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
@@ -65,7 +65,7 @@ test_expect_success "proc-receive: bad protocol (hook --die-read-version, $PROTO
 	grep "remote: fatal: die with the --die-read-version option" out-$test_count &&
 	grep "remote: error: fail to negotiate version with proc-receive hook" out-$test_count &&
 
-	test_cmp_refs -C "$upstream" <<-\EOF
+	test_cmp_refs --git-dir "$upstream" <<-\EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
@@ -96,7 +96,7 @@ test_expect_success "proc-receive: bad protocol (hook --die-write-version, $PROT
 	grep "remote: fatal: die with the --die-write-version option" out-$test_count &&
 	grep "remote: error: fail to negotiate version with proc-receive hook" out-$test_count &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
@@ -126,7 +126,7 @@ test_expect_success "proc-receive: bad protocol (hook --die-read-commands, $PROT
 	test_cmp expect actual &&
 	grep "remote: fatal: die with the --die-read-commands option" out-$test_count &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
@@ -158,7 +158,7 @@ test_expect_success "proc-receive: bad protocol (hook --die-read-push-options, $
 	test_cmp expect actual &&
 	grep "remote: fatal: die with the --die-read-push-options option" out-$test_count &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
@@ -188,7 +188,7 @@ test_expect_success "proc-receive: bad protocol (hook --die-write-report, $PROTO
 	test_cmp expect actual &&
 	grep "remote: fatal: die with the --die-write-report option" out-$test_count &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
@@ -222,7 +222,7 @@ test_expect_success "proc-receive: bad protocol (no report, $PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	<COMMIT-A> refs/heads/next
 	EOF
@@ -263,7 +263,7 @@ test_expect_success "proc-receive: bad protocol (no ref, $PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
@@ -296,7 +296,7 @@ test_expect_success "proc-receive: bad protocol (unknown status, $PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
