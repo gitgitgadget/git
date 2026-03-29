@@ -183,8 +183,8 @@ test_expect_success 'create a partial clone over HTTP' '
 	SERVER="$HTTPD_DOCUMENT_ROOT_PATH/server" &&
 	rm -rf "$SERVER" repo &&
 	git clone --bare "file://$(pwd)/src" "$SERVER" &&
-	test_config -C "$SERVER" uploadpack.allowfilter 1 &&
-	test_config -C "$SERVER" uploadpack.allowanysha1inwant 1 &&
+	test_config --git-dir "$SERVER" uploadpack.allowfilter 1 &&
+	test_config --git-dir "$SERVER" uploadpack.allowanysha1inwant 1 &&
 
 	git clone --no-checkout --filter=blob:none \
 		"$HTTPD_URL/smart/server" backfill-http

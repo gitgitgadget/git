@@ -320,7 +320,7 @@ test_expect_success 'no bitmaps created if .keep files present' '
 '
 
 test_expect_success 'auto-bitmaps do not complain if unavailable' '
-	test_config -C bare.git pack.packSizeLimit 1M &&
+	test_config --git-dir bare.git pack.packSizeLimit 1M &&
 	blob=$(test-tool genrandom big 1m |
 	       git -C bare.git hash-object -w --stdin) &&
 	git -C bare.git update-ref refs/tags/big $blob &&

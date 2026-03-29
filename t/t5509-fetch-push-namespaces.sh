@@ -114,25 +114,25 @@ test_expect_success 'hide full refs with transfer.hideRefs' '
 '
 
 test_expect_success 'try to update a hidden ref' '
-	test_config -C pushee transfer.hideRefs refs/heads/main &&
+	test_config --git-dir pushee transfer.hideRefs refs/heads/main &&
 	test_must_fail git -C original push pushee-namespaced main
 '
 
 test_expect_success 'try to update a ref that is not hidden' '
-	test_config -C pushee transfer.hideRefs refs/namespaces/namespace/refs/heads/main &&
+	test_config --git-dir pushee transfer.hideRefs refs/namespaces/namespace/refs/heads/main &&
 	git -C original push pushee-namespaced main
 '
 
 test_expect_success 'git-receive-pack(1) with transfer.hideRefs does not match unstripped refs during advertisement' '
 	git -C pushee update-ref refs/namespaces/namespace/refs/heads/foo/1 refs/namespaces/namespace/refs/heads/main &&
 	git -C pushee pack-refs --all &&
-	test_config -C pushee transfer.hideRefs refs/namespaces/namespace/refs/heads/foo &&
+	test_config --git-dir pushee transfer.hideRefs refs/namespaces/namespace/refs/heads/foo &&
 	GIT_TRACE_PACKET="$(pwd)/trace" git -C original push pushee-namespaced main &&
 	test_grep refs/heads/foo/1 trace
 '
 
 test_expect_success 'try to update a hidden full ref' '
-	test_config -C pushee transfer.hideRefs "^refs/namespaces/namespace/refs/heads/main" &&
+	test_config --git-dir pushee transfer.hideRefs "^refs/namespaces/namespace/refs/heads/main" &&
 	test_must_fail git -C original push pushee-namespaced main
 '
 

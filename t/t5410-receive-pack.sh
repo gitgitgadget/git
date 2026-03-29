@@ -26,7 +26,7 @@ test_expect_success 'with core.alternateRefsCommand' '
 			--format="%(objectname)" \
 			refs/heads/public/
 	EOF
-	test_config -C fork core.alternateRefsCommand ./alternate-refs &&
+	test_config --git-dir fork core.alternateRefsCommand ./alternate-refs &&
 	git rev-parse public/branch >expect &&
 	printf "0000" | git receive-pack fork >actual &&
 	extract_haves <actual >actual.haves &&
@@ -34,7 +34,7 @@ test_expect_success 'with core.alternateRefsCommand' '
 '
 
 test_expect_success 'with core.alternateRefsPrefixes' '
-	test_config -C fork core.alternateRefsPrefixes "refs/heads/private" &&
+	test_config --git-dir fork core.alternateRefsPrefixes "refs/heads/private" &&
 	git rev-parse private/branch >expect &&
 	printf "0000" | git receive-pack fork >actual &&
 	extract_haves <actual >actual.haves &&
