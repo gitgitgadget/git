@@ -8,24 +8,32 @@ export GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME
 . ./test-lib.sh
 
 print_all_reflog_entries () {
-	repo=$1 &&
-	test-tool -C "$repo" ref-store main for-each-reflog >reflogs &&
+	repo_flag=$1 &&
+	repo=$2 &&
+	test-tool "$repo_flag" "$repo" ref-store main for-each-reflog >reflogs &&
 	while read reflog
 	do
 		echo "REFLOG: $reflog" &&
-		test-tool -C "$repo" ref-store main for-each-reflog-ent "$reflog" ||
+		test-tool "$repo_flag" "$repo" ref-store main for-each-reflog-ent "$reflog" ||
 		return 1
 	done <reflogs
 }
 
 # Migrate the provided repository from one format to the other and
 # verify that the references and logs are migrated over correctly.
-# Usage: test_migration <repo> <format> [<skip_reflog_verify> [<options...>]]
+# Usage: test_migration [--git-dir] <repo> <format> [<skip_reflog_verify> [<options...>]]
+#   --git-dir: treat <repo> as a git directory (for bare repositories).
 #   <repo> is the relative path to the repo to be migrated.
 #   <format> is the ref format to be migrated to.
 #   <skip_reflog_verify> (default: false) whether to skip reflog verification.
 #   <options...> are other options be passed directly to 'git refs migrate'.
 test_migration () {
+	repo_flag=-C &&
+	if test "$1" = "--git-dir"
+	then
+		repo_flag=--git-dir &&
+		shift
+	fi &&
 	repo=$1 &&
 	format=$2 &&
 	shift 2 &&
@@ -35,25 +43,25 @@ test_migration () {
 		skip_reflog_verify=$1
 		shift
 	fi &&
-	git -C "$repo" for-each-ref --include-root-refs \
+	git "$repo_flag" "$repo" for-each-ref --include-root-refs \
 		--format='%(refname) %(objectname) %(symref)' >expect &&
 	if ! $skip_reflog_verify
 	then
-		print_all_reflog_entries "$repo" >expect_logs
+		print_all_reflog_entries "$repo_flag" "$repo" >expect_logs
 	fi &&
 
-	git -C "$repo" refs migrate --ref-format="$format" "$@" &&
+	git "$repo_flag" "$repo" refs migrate --ref-format="$format" "$@" &&
 
-	git -C "$repo" for-each-ref --include-root-refs \
+	git "$repo_flag" "$repo" for-each-ref --include-root-refs \
 		--format='%(refname) %(objectname) %(symref)' >actual &&
 	test_cmp expect actual &&
 	if ! $skip_reflog_verify
 	then
-		print_all_reflog_entries "$repo" >actual_logs &&
+		print_all_reflog_entries "$repo_flag" "$repo" >actual_logs &&
 		test_cmp expect_logs actual_logs
 	fi &&
 
-	git -C "$repo" rev-parse --show-ref-format >actual &&
+	git "$repo_flag" "$repo" rev-parse --show-ref-format >actual &&
 	echo "$format" >expect &&
 	test_cmp expect actual
 }
@@ -144,7 +152,7 @@ do
 			git init --ref-format=$from_format repo &&
 			test_commit -C repo initial &&
 			git clone --ref-format=$from_format --mirror repo repo.git &&
-			test_migration repo.git "$to_format"
+			test_migration --git-dir repo.git "$to_format"
 		'
 
 		test_expect_success "$from_format -> $to_format: dangling symref" '
