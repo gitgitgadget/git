@@ -991,8 +991,8 @@ test_expect_success 'check-rules cone mode' '
 	EOF
 
 	git -C bare ls-tree -r --name-only HEAD >all-files &&
-	git -C bare sparse-checkout check-rules --cone \
-		--rules-file ../rules >check-rules-file <all-files &&
+	git --git-dir=bare sparse-checkout check-rules --cone \
+		--rules-file rules >check-rules-file <all-files &&
 
 	git -C repo sparse-checkout set --cone --stdin <rules&&
 	git -C repo ls-files -t >out &&
@@ -1013,7 +1013,7 @@ test_expect_success 'check-rules non-cone mode' '
 	EOF
 
 	git -C bare ls-tree -r --name-only HEAD >all-files &&
-	git -C bare sparse-checkout check-rules --no-cone --rules-file ../rules\
+	git --git-dir=bare sparse-checkout check-rules --no-cone --rules-file rules\
 		>check-rules-file <all-files &&
 
 	git -C repo sparse-checkout set --no-cone --stdin <rules &&
@@ -1051,8 +1051,8 @@ test_expect_success 'check-rules cone mode is default' '
 	git -C repo sparse-checkout check-rules \
 		--rules-file ../rules >actual <all-files &&
 
-	git -C bare sparse-checkout check-rules \
-		--rules-file ../rules >actual-bare <all-files &&
+	git --git-dir=bare sparse-checkout check-rules \
+		--rules-file rules >actual-bare <all-files &&
 
 	test_cmp expect actual &&
 	test_cmp expect actual-bare

@@ -1035,7 +1035,7 @@ test_expect_success 'expand incremental bundle list' '
 
 		cp bundle-*.bundle "$HTTPD_DOCUMENT_ROOT_PATH/"
 	) &&
-	git -C "$HTTPD_DOCUMENT_ROOT_PATH/fetch.git" fetch origin +refs/heads/*:refs/heads/*
+	git --git-dir="$HTTPD_DOCUMENT_ROOT_PATH/fetch.git" fetch origin +refs/heads/*:refs/heads/*
 '
 
 test_expect_success 'creationToken heuristic with failed downloads (fetch)' '

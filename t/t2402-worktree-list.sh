@@ -211,7 +211,7 @@ test_expect_success 'bare repo setup' '
 
 test_expect_success '"list" all worktrees from bare main' '
 	test_when_finished "rm -rf there out actual expect && git -C bare1 worktree prune" &&
-	git -C bare1 worktree add --detach ../there main &&
+	git --git-dir=bare1 worktree add --detach there main &&
 	echo "$(pwd)/bare1 (bare)" >expect &&
 	echo "$(git -C there rev-parse --show-toplevel) $(git -C there rev-parse --short HEAD) (detached HEAD)" >>expect &&
 	git -C bare1 worktree list >out &&
@@ -221,7 +221,7 @@ test_expect_success '"list" all worktrees from bare main' '
 
 test_expect_success '"list" all worktrees --porcelain from bare main' '
 	test_when_finished "rm -rf there actual expect && git -C bare1 worktree prune" &&
-	git -C bare1 worktree add --detach ../there main &&
+	git --git-dir=bare1 worktree add --detach there main &&
 	echo "worktree $(pwd)/bare1" >expect &&
 	echo "bare" >>expect &&
 	echo >>expect &&
@@ -235,7 +235,7 @@ test_expect_success '"list" all worktrees --porcelain from bare main' '
 
 test_expect_success '"list" all worktrees from linked with a bare main' '
 	test_when_finished "rm -rf there out actual expect && git -C bare1 worktree prune" &&
-	git -C bare1 worktree add --detach ../there main &&
+	git --git-dir=bare1 worktree add --detach there main &&
 	echo "$(pwd)/bare1 (bare)" >expect &&
 	echo "$(git -C there rev-parse --show-toplevel) $(git -C there rev-parse --short HEAD) (detached HEAD)" >>expect &&
 	git -C there worktree list >out &&

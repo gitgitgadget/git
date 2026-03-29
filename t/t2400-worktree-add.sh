@@ -460,7 +460,7 @@ test_expect_success 'local clone from linked checkout' '
 '
 
 test_expect_success 'local clone --shared from linked checkout' '
-	git -C bare worktree add --detach ../baretree &&
+	git --git-dir=bare worktree add --detach baretree &&
 	git clone --local --shared baretree bare-clone &&
 	grep /bare/ bare-clone/.git/objects/info/alternates
 '
@@ -1125,7 +1125,7 @@ test_expect_success '"add" in bare repo invokes post-checkout hook' '
 		echo $(pwd)/goozy
 	} >hook.expect &&
 	post_checkout_hook --git-dir bare &&
-	git -C bare worktree add --detach ../goozy &&
+	git --git-dir=bare worktree add --detach goozy &&
 	test_cmp hook.expect goozy/hook.actual
 '
 

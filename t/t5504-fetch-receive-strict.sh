@@ -372,7 +372,7 @@ test_expect_success PERL_TEST_HELPERS 'badFilemode is not a strict error' '
 	git init --bare dst.git &&
 	git -C dst.git config transfer.fsckObjects true &&
 
-	git -C badmode.git push ../dst.git $tree:refs/tags/tree 2>err &&
+	git --git-dir=badmode.git push dst.git $tree:refs/tags/tree 2>err &&
 	grep "$tree: badFilemode" err
 '
 

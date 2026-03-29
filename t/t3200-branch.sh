@@ -406,7 +406,7 @@ test_expect_success 'bare main worktree has HEAD at branch deleted by secondary 
 	git init -b main nonbare &&
 	test_commit -C nonbare x &&
 	git clone --bare nonbare bare &&
-	git -C bare worktree add --detach ../secondary main &&
+	git --git-dir=bare worktree add --detach secondary main &&
 	git -C secondary branch -D main
 '
 
@@ -420,7 +420,7 @@ test_expect_success 'secondary worktrees recognize core.bare=true in main config
 	git -C bare_repo config unset core.bare &&
 	git -C bare_repo config --worktree core.bare true &&
 
-	git -C bare_repo worktree add ../secondary_worktree &&
+	git --git-dir=bare_repo worktree add secondary_worktree &&
 	git -C secondary_worktree checkout main
 '
 

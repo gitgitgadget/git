@@ -471,9 +471,9 @@ test_expect_success '--filter-to stores filtered out objects' '
 	test_stdout_line_count = 1 ls bare.git/objects/pack/*.pack &&
 
 	git init --bare filtered.git &&
-	git -C bare.git -c repack.writebitmaps=false repack -a -d \
+	git --git-dir=bare.git -c repack.writebitmaps=false repack -a -d \
 		--filter=blob:none \
-		--filter-to=../filtered.git/objects/pack/pack &&
+		--filter-to=filtered.git/objects/pack/pack &&
 	test_stdout_line_count = 1 ls bare.git/objects/pack/pack-*.pack &&
 	test_stdout_line_count = 1 ls filtered.git/objects/pack/pack-*.pack &&
 
