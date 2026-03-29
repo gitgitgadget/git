@@ -1380,7 +1380,7 @@ test_unpack_limit () {
 		git --bare init dest &&
 		git -C dest config fetch.unpacklimit $fetch_limit &&
 		git -C dest config transfer.unpacklimit $transfer_limit &&
-		git -C dest fetch .. onebranch &&
+		git --git-dir=dest fetch . onebranch &&
 		validate_store_type
 	'
 }

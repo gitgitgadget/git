@@ -1829,8 +1829,8 @@ test_expect_success 'refuse fetch to current branch of bare repository worktree'
 	git clone --bare . bare.git &&
 	git --git-dir=bare.git worktree add bare.git/wt &&
 	test_commit banana &&
-	test_must_fail git -C bare.git fetch .. HEAD:wt &&
-	git -C bare.git fetch -u .. HEAD:wt
+	test_must_fail git --git-dir=bare.git fetch . HEAD:wt &&
+	git --git-dir=bare.git fetch -u . HEAD:wt
 '
 
 test_expect_success 'refuse to push a hidden ref, and make sure do not pollute the repository' '

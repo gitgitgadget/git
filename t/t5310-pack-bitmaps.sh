@@ -247,7 +247,7 @@ test_bitmap_cases () {
 		git commit -m "commit with big file" &&
 		git -c pack.packSizeLimit=500k repack -adb &&
 		git init --bare no-bitmaps.git &&
-		git -C no-bitmaps.git fetch .. HEAD
+		git --git-dir=no-bitmaps.git fetch . HEAD
 	'
 
 	test_expect_success 'set up reusable pack' '
