@@ -83,7 +83,7 @@ test_expect_success "proc-receive: report status v1" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/for/main/topic1
 	<COMMIT-A> refs/heads/foo
 	<COMMIT-B> refs/heads/main

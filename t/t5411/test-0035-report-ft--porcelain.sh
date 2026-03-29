@@ -30,7 +30,7 @@ test_expect_success "proc-receive: fall through, let receive-pack to execute ($P
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-B> refs/for/main/topic
 	<COMMIT-A> refs/heads/main
 	EOF

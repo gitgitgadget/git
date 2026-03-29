@@ -51,7 +51,7 @@ test_expect_success "proc-receive: update branch and new tag ($PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
@@ -62,7 +62,7 @@ test_expect_success "setup upstream: create tags/v123 ($PROTOCOL)" '
 	git -C "$upstream" update-ref refs/heads/topic $A &&
 	git -C "$upstream" update-ref refs/tags/v123 $TAG &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	<COMMIT-A> refs/heads/topic
 	<TAG-v123> refs/tags/v123
@@ -122,7 +122,7 @@ test_expect_success "proc-receive: create/delete branch, and delete tag ($PROTOC
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	<COMMIT-B> refs/heads/topic
 	EOF
