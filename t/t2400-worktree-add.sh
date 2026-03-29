@@ -1068,7 +1068,7 @@ done
 post_checkout_hook () {
 	test_when_finished "rm -rf .git/hooks" &&
 	mkdir .git/hooks &&
-	test_hook -C "$1" post-checkout <<-\EOF
+	test_hook "$@" post-checkout <<-\EOF
 	{
 		echo $*
 		git rev-parse --git-dir --show-toplevel
@@ -1124,7 +1124,7 @@ test_expect_success '"add" in bare repo invokes post-checkout hook' '
 		echo $(pwd)/bare/worktrees/goozy &&
 		echo $(pwd)/goozy
 	} >hook.expect &&
-	post_checkout_hook bare &&
+	post_checkout_hook --git-dir bare &&
 	git -C bare worktree add --detach ../goozy &&
 	test_cmp hook.expect goozy/hook.actual
 '

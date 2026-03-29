@@ -652,6 +652,8 @@ write_script () {
 #
 #   -C <dir>:
 #	Run all git commands in directory <dir>
+#   --git-dir <dir>:
+#	Use <dir> as the git directory (for bare repositories)
 #   --setup
 #	Setup a hook for subsequent tests, i.e. don't remove it in a
 #	"test_when_finished"
@@ -669,11 +671,16 @@ test_hook () {
 	disable= &&
 	remove= &&
 	indir= &&
+	gitdir= &&
 	while test $# != 0
 	do
 		case "$1" in
 		-C)
 			indir="$2" &&
+			shift
+			;;
+		--git-dir)
+			gitdir="$2" &&
 			shift
 			;;
 		--setup)
@@ -698,7 +705,8 @@ test_hook () {
 		shift
 	done &&
 
-	git_dir=$(git -C "$indir" rev-parse --absolute-git-dir) &&
+	git_dir=$(git ${indir:+-C "$indir"} ${gitdir:+--git-dir="$gitdir"} \
+		rev-parse --absolute-git-dir) &&
 	hook_dir="$git_dir/hooks" &&
 	hook_file="$hook_dir/$1" &&
 	if test -n "$disable$remove"

@@ -32,7 +32,7 @@ test_expect_success 'packfile without repository does not crash' '
 '
 
 setup_post_update_server_info_hook () {
-	test_hook --setup -C "$1" post-update <<-\EOF &&
+	test_hook --setup --git-dir "$1" post-update <<-\EOF &&
 	exec git update-server-info
 	EOF
 	git -C "$1" update-server-info
