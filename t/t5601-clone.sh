@@ -168,7 +168,7 @@ test_expect_success 'clone with files ref format' '
 	test_when_finished "rm -rf ref-storage" &&
 	git clone --ref-format=files --mirror src ref-storage &&
 	echo files >expect &&
-	git -C ref-storage rev-parse --show-ref-format >actual &&
+	git --git-dir=ref-storage rev-parse --show-ref-format >actual &&
 	test_cmp expect actual
 '
 
@@ -646,7 +646,7 @@ test_expect_success 'GIT_TRACE_PACKFILE produces a usable pack' '
 	rm -rf dst.git &&
 	GIT_TRACE_PACKFILE=$PWD/tmp.pack git clone --no-local --bare src dst.git &&
 	git init --bare replay.git &&
-	git -C replay.git index-pack -v --stdin <tmp.pack
+	git --git-dir=replay.git index-pack -v --stdin <tmp.pack
 '
 
 test_expect_success PERL_TEST_HELPERS 'clone on case-insensitive fs' '
@@ -839,13 +839,13 @@ test_expect_success 'auto-discover bundle URI from HTTP clone' '
 	git -C src bundle create "$HTTPD_DOCUMENT_ROOT_PATH/everything.bundle" --all &&
 	git clone --bare --no-local src "$HTTPD_DOCUMENT_ROOT_PATH/repo2.git" &&
 
-	git -C "$HTTPD_DOCUMENT_ROOT_PATH/repo2.git" config \
+	git --git-dir="$HTTPD_DOCUMENT_ROOT_PATH/repo2.git" config \
 		uploadpack.advertiseBundleURIs true &&
-	git -C "$HTTPD_DOCUMENT_ROOT_PATH/repo2.git" config \
+	git --git-dir="$HTTPD_DOCUMENT_ROOT_PATH/repo2.git" config \
 		bundle.version 1 &&
-	git -C "$HTTPD_DOCUMENT_ROOT_PATH/repo2.git" config \
+	git --git-dir="$HTTPD_DOCUMENT_ROOT_PATH/repo2.git" config \
 		bundle.mode all &&
-	git -C "$HTTPD_DOCUMENT_ROOT_PATH/repo2.git" config \
+	git --git-dir="$HTTPD_DOCUMENT_ROOT_PATH/repo2.git" config \
 		bundle.everything.uri "$HTTPD_URL/everything.bundle" &&
 
 	GIT_TRACE2_EVENT="$(pwd)/trace.txt" \
@@ -865,16 +865,16 @@ test_expect_success 'auto-discover multiple bundles from HTTP clone' '
 	git -C src bundle create "$HTTPD_DOCUMENT_ROOT_PATH/new.bundle" HEAD~1..HEAD &&
 	git clone --bare --no-local src "$HTTPD_DOCUMENT_ROOT_PATH/repo3.git" &&
 
-	git -C "$HTTPD_DOCUMENT_ROOT_PATH/repo3.git" config \
+	git --git-dir="$HTTPD_DOCUMENT_ROOT_PATH/repo3.git" config \
 		uploadpack.advertiseBundleURIs true &&
-	git -C "$HTTPD_DOCUMENT_ROOT_PATH/repo3.git" config \
+	git --git-dir="$HTTPD_DOCUMENT_ROOT_PATH/repo3.git" config \
 		bundle.version 1 &&
-	git -C "$HTTPD_DOCUMENT_ROOT_PATH/repo3.git" config \
+	git --git-dir="$HTTPD_DOCUMENT_ROOT_PATH/repo3.git" config \
 		bundle.mode all &&
 
-	git -C "$HTTPD_DOCUMENT_ROOT_PATH/repo3.git" config \
+	git --git-dir="$HTTPD_DOCUMENT_ROOT_PATH/repo3.git" config \
 		bundle.everything.uri "$HTTPD_URL/everything.bundle" &&
-	git -C "$HTTPD_DOCUMENT_ROOT_PATH/repo3.git" config \
+	git --git-dir="$HTTPD_DOCUMENT_ROOT_PATH/repo3.git" config \
 		bundle.new.uri "$HTTPD_URL/new.bundle" &&
 
 	GIT_TRACE2_EVENT="$(pwd)/trace.txt" \

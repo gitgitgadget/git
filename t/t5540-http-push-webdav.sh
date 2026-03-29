@@ -139,7 +139,7 @@ test_expect_success 'create and delete remote branch' '
 
 test_expect_success 'non-force push fails if not up to date' '
 	git init --bare "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo_conflict.git &&
-	git -C "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo_conflict.git update-server-info &&
+	git --git-dir="$HTTPD_DOCUMENT_ROOT_PATH"/test_repo_conflict.git update-server-info &&
 	git clone $HTTPD_URL/dumb/test_repo_conflict.git "$ROOT_PATH"/c1 &&
 	git clone $HTTPD_URL/dumb/test_repo_conflict.git "$ROOT_PATH"/c2 &&
 	test_commit -C "$ROOT_PATH/c1" path1 &&

@@ -124,22 +124,22 @@ test_expect_success 'update-ref creates reflogs with --create-reflog' '
 '
 
 test_expect_success 'creates no reflog in bare repository' '
-	git -C $bare update-ref $m $bareA &&
-	git -C $bare rev-parse $bareA >expect &&
-	git -C $bare rev-parse $m >actual &&
+	git --git-dir=$bare update-ref $m $bareA &&
+	git --git-dir=$bare rev-parse $bareA >expect &&
+	git --git-dir=$bare rev-parse $m >actual &&
 	test_cmp expect actual &&
-	test_must_fail git -C $bare reflog exists $m
+	test_must_fail git --git-dir=$bare reflog exists $m
 '
 
 test_expect_success 'core.logAllRefUpdates=true creates reflog in bare repository' '
-	test_when_finished "git -C $bare config --unset core.logAllRefUpdates && \
+	test_when_finished "git --git-dir=$bare config --unset core.logAllRefUpdates && \
 		test-tool ref-store main delete-reflog $m" &&
-	git -C $bare config core.logAllRefUpdates true &&
-	git -C $bare update-ref $m $bareB &&
-	git -C $bare rev-parse $bareB >expect &&
-	git -C $bare rev-parse $m >actual &&
+	git --git-dir=$bare config core.logAllRefUpdates true &&
+	git --git-dir=$bare update-ref $m $bareB &&
+	git --git-dir=$bare rev-parse $bareB >expect &&
+	git --git-dir=$bare rev-parse $m >actual &&
 	test_cmp expect actual &&
-	git -C $bare reflog exists $m
+	git --git-dir=$bare reflog exists $m
 '
 
 test_expect_success 'core.logAllRefUpdates=true does not create reflog by default' '

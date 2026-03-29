@@ -30,7 +30,7 @@ setup_upstream_and_workbench () {
 			git remote add origin ../upstream.git &&
 			git push origin main &&
 			git update-ref refs/heads/main $A $B &&
-			git -C ../upstream.git update-ref \
+			git --git-dir=../upstream.git update-ref \
 				refs/heads/main $A $B
 		) &&
 		TAG=$(git -C workbench rev-parse v123) &&
@@ -105,7 +105,7 @@ setup_upstream_and_workbench
 # Refs of upstream : main(A)
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "setup for HTTP protocol" '
-	git -C upstream.git config http.receivepack true &&
+	git --git-dir=upstream.git config http.receivepack true &&
 	upstream="$HTTPD_DOCUMENT_ROOT_PATH/upstream.git" &&
 	mv upstream.git "$upstream" &&
 	git -C workbench remote set-url origin "$HTTPD_URL/auth-push/smart/upstream.git" &&

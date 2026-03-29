@@ -124,7 +124,7 @@ test_expect_success 'using replay to rebase two branches, one on top of other' '
 '
 
 test_expect_success 'using replay on bare repo to rebase two branches, one on top of other' '
-	git -C bare replay --ref-action=print --onto main topic1..topic2 >result-bare &&
+	git --git-dir=bare replay --ref-action=print --onto main topic1..topic2 >result-bare &&
 	test_cmp expect result-bare
 '
 
@@ -133,7 +133,7 @@ test_expect_success 'using replay to rebase with a conflict' '
 '
 
 test_expect_success 'using replay on bare repo to rebase with a conflict' '
-	test_expect_code 1 git -C bare replay --onto topic1 B..conflict
+	test_expect_code 1 git --git-dir=bare replay --onto topic1 B..conflict
 '
 
 test_expect_success 'using replay to perform basic cherry-pick' '
@@ -158,7 +158,7 @@ test_expect_success 'using replay to perform basic cherry-pick' '
 '
 
 test_expect_success 'using replay on bare repo to perform basic cherry-pick' '
-	git -C bare replay --ref-action=print --advance main topic1..topic2 >result-bare &&
+	git --git-dir=bare replay --ref-action=print --advance main topic1..topic2 >result-bare &&
 	test_cmp expect result-bare
 '
 
@@ -182,7 +182,7 @@ test_expect_success 'commits that become empty are dropped' '
 '
 
 test_expect_success 'replay on bare repo fails with both --advance and --onto' '
-	test_must_fail git -C bare replay --advance main --onto main topic1..topic2 >result-bare
+	test_must_fail git --git-dir=bare replay --advance main --onto main topic1..topic2 >result-bare
 '
 
 test_expect_success 'replay fails when both --advance and --onto are omitted' '
@@ -214,7 +214,7 @@ test_expect_success 'using replay to also rebase a contained branch' '
 '
 
 test_expect_success 'using replay on bare repo to also rebase a contained branch' '
-	git -C bare replay --ref-action=print --contained --onto main main..topic3 >result-bare &&
+	git --git-dir=bare replay --ref-action=print --contained --onto main main..topic3 >result-bare &&
 	test_cmp expect result-bare
 '
 
@@ -243,7 +243,7 @@ test_expect_success 'using replay to rebase multiple divergent branches' '
 '
 
 test_expect_success 'using replay on bare repo to rebase multiple divergent branches, including contained ones' '
-	git -C bare replay --ref-action=print --contained --onto main ^main topic2 topic3 topic4 >result &&
+	git --git-dir=bare replay --ref-action=print --contained --onto main ^main topic2 topic3 topic4 >result &&
 
 	test_line_count = 4 result &&
 	cut -f 3 -d " " result >new-branch-tips &&
@@ -253,7 +253,7 @@ test_expect_success 'using replay on bare repo to rebase multiple divergent bran
 	do
 		printf "update refs/heads/topic$i " >>expect &&
 		printf "%s " $(grep topic$i result | cut -f 3 -d " ") >>expect &&
-		git -C bare rev-parse topic$i >>expect || return 1
+		git --git-dir=bare rev-parse topic$i >>expect || return 1
 	done &&
 
 	test_cmp expect result &&
@@ -265,7 +265,7 @@ test_expect_success 'using replay on bare repo to rebase multiple divergent bran
 
 	for i in 1 2 3 4
 	do
-		git -C bare log --format=%s $(grep topic$i result | cut -f 3 -d " ") >actual &&
+		git --git-dir=bare log --format=%s $(grep topic$i result | cut -f 3 -d " ") >actual &&
 		test_cmp expect$i actual || return 1
 	done
 '
@@ -324,15 +324,15 @@ test_expect_success 'default atomic behavior updates refs directly' '
 
 test_expect_success 'atomic behavior in bare repository' '
 	# Store original state for cleanup
-	START=$(git -C bare rev-parse topic2) &&
-	test_when_finished "git -C bare update-ref refs/heads/topic2 $START" &&
+	START=$(git --git-dir=bare rev-parse topic2) &&
+	test_when_finished "git --git-dir=bare update-ref refs/heads/topic2 $START" &&
 
 	# Test atomic updates work in bare repo
-	git -C bare replay --onto main topic1..topic2 >output &&
+	git --git-dir=bare replay --onto main topic1..topic2 >output &&
 	test_must_be_empty output &&
 
 	# Verify ref was updated in bare repo
-	git -C bare log --format=%s topic2 >actual &&
+	git --git-dir=bare log --format=%s topic2 >actual &&
 	test_write_lines E D M L B A >expect &&
 	test_cmp expect actual
 '

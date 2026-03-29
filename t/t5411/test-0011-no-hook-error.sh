@@ -29,7 +29,7 @@ test_expect_success "proc-receive: no hook, fail to push special ref ($PROTOCOL)
 # Refs of upstream : main(A)             next(A)
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "cleanup ($PROTOCOL)" '
-	git -C "$upstream" update-ref -d refs/heads/next
+	git --git-dir="$upstream" update-ref -d refs/heads/next
 '
 
 # Refs of upstream : main(A)

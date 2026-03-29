@@ -210,17 +210,17 @@ test_expect_success 'bare repo setup' '
 '
 
 test_expect_success '"list" all worktrees from bare main' '
-	test_when_finished "rm -rf there out actual expect && git -C bare1 worktree prune" &&
+	test_when_finished "rm -rf there out actual expect && git --git-dir=bare1 worktree prune" &&
 	git --git-dir=bare1 worktree add --detach there main &&
 	echo "$(pwd)/bare1 (bare)" >expect &&
 	echo "$(git -C there rev-parse --show-toplevel) $(git -C there rev-parse --short HEAD) (detached HEAD)" >>expect &&
-	git -C bare1 worktree list >out &&
+	git --git-dir=bare1 worktree list >out &&
 	sed "s/  */ /g" <out >actual &&
 	test_cmp expect actual
 '
 
 test_expect_success '"list" all worktrees --porcelain from bare main' '
-	test_when_finished "rm -rf there actual expect && git -C bare1 worktree prune" &&
+	test_when_finished "rm -rf there actual expect && git --git-dir=bare1 worktree prune" &&
 	git --git-dir=bare1 worktree add --detach there main &&
 	echo "worktree $(pwd)/bare1" >expect &&
 	echo "bare" >>expect &&
@@ -229,12 +229,12 @@ test_expect_success '"list" all worktrees --porcelain from bare main' '
 	echo "HEAD $(git -C there rev-parse HEAD)" >>expect &&
 	echo "detached" >>expect &&
 	echo >>expect &&
-	git -C bare1 worktree list --porcelain >actual &&
+	git --git-dir=bare1 worktree list --porcelain >actual &&
 	test_cmp expect actual
 '
 
 test_expect_success '"list" all worktrees from linked with a bare main' '
-	test_when_finished "rm -rf there out actual expect && git -C bare1 worktree prune" &&
+	test_when_finished "rm -rf there out actual expect && git --git-dir=bare1 worktree prune" &&
 	git --git-dir=bare1 worktree add --detach there main &&
 	echo "$(pwd)/bare1 (bare)" >expect &&
 	echo "$(git -C there rev-parse --show-toplevel) $(git -C there rev-parse --short HEAD) (detached HEAD)" >>expect &&
@@ -314,7 +314,7 @@ test_expect_success 'linked worktrees with relative paths are shown with absolut
 
 test_expect_success 'worktree path when called in .git directory' '
 	git worktree list >list1 &&
-	git -C .git worktree list >list2 &&
+	git --git-dir=.git worktree list >list2 &&
 	test_cmp list1 list2
 '
 

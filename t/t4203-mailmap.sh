@@ -949,7 +949,7 @@ test_expect_success 'bare repo with --work-tree finds mailmap at top-level' '
 '
 
 test_expect_success 'bare repo does not look in current directory' '
-	git -C loc-bare log -1 --format=%aE >actual &&
+	git --git-dir=loc-bare log -1 --format=%aE >actual &&
 	echo orig@example.com >expect &&
 	test_cmp expect actual
 '

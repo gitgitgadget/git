@@ -83,8 +83,8 @@ test_expect_success 'add another remote' '
 
 test_expect_success 'setup bare clone for server' '
 	git clone --bare "file://$(pwd)/one" srv.bare &&
-	git -C srv.bare config --local uploadpack.allowfilter 1 &&
-	git -C srv.bare config --local uploadpack.allowanysha1inwant 1
+	git --git-dir=srv.bare config --local uploadpack.allowfilter 1 &&
+	git --git-dir=srv.bare config --local uploadpack.allowanysha1inwant 1
 '
 
 test_expect_success 'filters for promisor remotes are listed by git remote -v' '
@@ -1022,10 +1022,10 @@ test_expect_success 'rename handles remote without fetch refspec' '
 	git clone --bare one no-refspec.git &&
 	# confirm assumption that bare clone does not create refspec
 	test_expect_code 5 \
-		git -C no-refspec.git config --unset-all remote.origin.fetch &&
-	git -C no-refspec.git config remote.origin.url >expect &&
-	git -C no-refspec.git remote rename origin foo &&
-	git -C no-refspec.git config remote.foo.url >actual &&
+		git --git-dir=no-refspec.git config --unset-all remote.origin.fetch &&
+	git --git-dir=no-refspec.git config remote.origin.url >expect &&
+	git --git-dir=no-refspec.git remote rename origin foo &&
+	git --git-dir=no-refspec.git config remote.foo.url >actual &&
 	test_cmp expect actual
 '
 

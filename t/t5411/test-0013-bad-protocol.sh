@@ -142,7 +142,7 @@ test_expect_success "setup proc-receive hook (hook --die-read-push-options, $PRO
 # Refs of workbench: main(A)  tags/v123
 # git push         :                       refs/for/main/topic(A)
 test_expect_success "proc-receive: bad protocol (hook --die-read-push-options, $PROTOCOL)" '
-	git -C "$upstream" config receive.advertisePushOptions true &&
+	git --git-dir="$upstream" config receive.advertisePushOptions true &&
 	test_must_fail git -C workbench push origin \
 		-o reviewers=user1,user2 \
 		HEAD:refs/for/main/topic \
@@ -231,7 +231,7 @@ test_expect_success "proc-receive: bad protocol (no report, $PROTOCOL)" '
 # Refs of upstream : main(A)             next(A)
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "cleanup ($PROTOCOL)" '
-	git -C "$upstream" update-ref -d refs/heads/next
+	git --git-dir="$upstream" update-ref -d refs/heads/next
 
 '
 

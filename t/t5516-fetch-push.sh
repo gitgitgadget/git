@@ -1534,18 +1534,18 @@ test_expect_success 'pushing a tag pushes the tagged object' '
 test_expect_success 'push into bare respects core.logallrefupdates' '
 	test_when_finished "rm -rf dst.git" &&
 	git init --bare dst.git &&
-	git -C dst.git config core.logallrefupdates true &&
+	git --git-dir=dst.git config core.logallrefupdates true &&
 
 	# double push to test both with and without
 	# the actual pack transfer
 	git push dst.git main:one &&
 	echo "one@{0} push" >expect &&
-	git -C dst.git log -g --format="%gd %gs" one >actual &&
+	git --git-dir=dst.git log -g --format="%gd %gs" one >actual &&
 	test_cmp expect actual &&
 
 	git push dst.git main:two &&
 	echo "two@{0} push" >expect &&
-	git -C dst.git log -g --format="%gd %gs" two >actual &&
+	git --git-dir=dst.git log -g --format="%gd %gs" two >actual &&
 	test_cmp expect actual
 '
 
@@ -1808,9 +1808,9 @@ test_expect_success 'denyCurrentBranch and bare repository worktrees' '
 	git clone --bare . bare.git &&
 	git --git-dir=bare.git worktree add bare.git/wt &&
 	test_commit grape &&
-	git -C bare.git config receive.denyCurrentBranch refuse &&
+	git --git-dir=bare.git config receive.denyCurrentBranch refuse &&
 	test_must_fail git push bare.git HEAD:wt &&
-	git -C bare.git config receive.denyCurrentBranch updateInstead &&
+	git --git-dir=bare.git config receive.denyCurrentBranch updateInstead &&
 	git push bare.git HEAD:wt &&
 	test_path_exists bare.git/wt/grape.t &&
 	test_must_fail git push --delete bare.git wt

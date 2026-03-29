@@ -401,11 +401,11 @@ test_expect_success 'bare repo no longer defaults to reading .gitattributes from
 	git clone --bare test bare_with_gitattribute &&
 
 	echo "f/path: test: unspecified" >expect &&
-	git -C bare_with_gitattribute check-attr test -- f/path >actual &&
+	git --git-dir=bare_with_gitattribute check-attr test -- f/path >actual &&
 	test_cmp expect actual &&
 
 	echo "f/path: test: val" >expect &&
-	git -C bare_with_gitattribute -c attr.tree=HEAD \
+	git --git-dir=bare_with_gitattribute -c attr.tree=HEAD \
 		check-attr test -- f/path >actual &&
 	test_cmp expect actual
 '

@@ -365,8 +365,8 @@ test_expect_success 'transfer.hiderefs works over smart-http' '
 	git --git-dir="$HTTPD_DOCUMENT_ROOT_PATH/repo.git" \
 		config transfer.hiderefs refs/heads/a &&
 	git clone --bare "$HTTPD_URL/smart/repo.git" hidden.git &&
-	test_must_fail git -C hidden.git rev-parse --verify a &&
-	git -C hidden.git rev-parse --verify b
+	test_must_fail git --git-dir=hidden.git rev-parse --verify a &&
+	git --git-dir=hidden.git rev-parse --verify b
 '
 
 # create an arbitrary number of tags, numbered from tag-$1 to tag-$2
@@ -425,12 +425,12 @@ test_expect_success 'large fetch-pack requests can be sent using chunked encodin
 test_expect_success 'test allowreachablesha1inwant' '
 	test_when_finished "rm -rf test_reachable.git" &&
 	server="$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
-	main_sha=$(git -C "$server" rev-parse refs/heads/main) &&
-	git -C "$server" config uploadpack.allowreachablesha1inwant 1 &&
+	main_sha=$(git --git-dir="$server" rev-parse refs/heads/main) &&
+	git --git-dir="$server" config uploadpack.allowreachablesha1inwant 1 &&
 
 	git init --bare test_reachable.git &&
-	git -C test_reachable.git remote add origin "$HTTPD_URL/smart/repo.git" &&
-	git -C test_reachable.git fetch origin "$main_sha"
+	git --git-dir=test_reachable.git remote add origin "$HTTPD_URL/smart/repo.git" &&
+	git --git-dir=test_reachable.git fetch origin "$main_sha"
 '
 
 test_expect_success 'test allowreachablesha1inwant with unreachable' '
@@ -444,15 +444,15 @@ test_expect_success 'test allowreachablesha1inwant with unreachable' '
 	git push public :refs/heads/doomed &&
 
 	server="$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
-	main_sha=$(git -C "$server" rev-parse refs/heads/main) &&
-	git -C "$server" config uploadpack.allowreachablesha1inwant 1 &&
+	main_sha=$(git --git-dir="$server" rev-parse refs/heads/main) &&
+	git --git-dir="$server" config uploadpack.allowreachablesha1inwant 1 &&
 
 	git init --bare test_reachable.git &&
-	git -C test_reachable.git remote add origin "$HTTPD_URL/smart/repo.git" &&
+	git --git-dir=test_reachable.git remote add origin "$HTTPD_URL/smart/repo.git" &&
 	# Some protocol versions (e.g. 2) support fetching
 	# unadvertised objects, so restrict this test to v0.
 	test_must_fail env GIT_TEST_PROTOCOL_VERSION=0 \
-		git -C test_reachable.git fetch origin "$(git rev-parse HEAD)"
+		git --git-dir=test_reachable.git fetch origin "$(git rev-parse HEAD)"
 '
 
 test_expect_success 'test allowanysha1inwant with unreachable' '
@@ -466,18 +466,18 @@ test_expect_success 'test allowanysha1inwant with unreachable' '
 	git push public :refs/heads/doomed &&
 
 	server="$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
-	main_sha=$(git -C "$server" rev-parse refs/heads/main) &&
-	git -C "$server" config uploadpack.allowreachablesha1inwant 1 &&
+	main_sha=$(git --git-dir="$server" rev-parse refs/heads/main) &&
+	git --git-dir="$server" config uploadpack.allowreachablesha1inwant 1 &&
 
 	git init --bare test_reachable.git &&
-	git -C test_reachable.git remote add origin "$HTTPD_URL/smart/repo.git" &&
+	git --git-dir=test_reachable.git remote add origin "$HTTPD_URL/smart/repo.git" &&
 	# Some protocol versions (e.g. 2) support fetching
 	# unadvertised objects, so restrict this test to v0.
 	test_must_fail env GIT_TEST_PROTOCOL_VERSION=0 \
-		git -C test_reachable.git fetch origin "$(git rev-parse HEAD)" &&
+		git --git-dir=test_reachable.git fetch origin "$(git rev-parse HEAD)" &&
 
-	git -C "$server" config uploadpack.allowanysha1inwant 1 &&
-	git -C test_reachable.git fetch origin "$(git rev-parse HEAD)"
+	git --git-dir="$server" config uploadpack.allowanysha1inwant 1 &&
+	git --git-dir=test_reachable.git fetch origin "$(git rev-parse HEAD)"
 '
 
 test_expect_success EXPENSIVE 'http can handle enormous ref negotiation' '

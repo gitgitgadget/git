@@ -28,8 +28,8 @@ test_expect_success 'setup normal src repo' '
 # bare clone "src" giving "srv.bare" for use as our server.
 test_expect_success 'setup bare clone for server' '
 	git clone --bare "file://$(pwd)/src" srv.bare &&
-	git -C srv.bare config --local uploadpack.allowfilter 1 &&
-	git -C srv.bare config --local uploadpack.allowanysha1inwant 1
+	git --git-dir=srv.bare config --local uploadpack.allowfilter 1 &&
+	git --git-dir=srv.bare config --local uploadpack.allowanysha1inwant 1
 '
 
 # do basic partial clone from "srv.bare"
@@ -59,7 +59,7 @@ test_expect_success 'rev-list --missing=allow-promisor on partial clone' '
 test_expect_success 'verify that .promisor file contains refs fetched' '
 	ls pc1/.git/objects/pack/pack-*.promisor >promisorlist &&
 	test_line_count = 1 promisorlist &&
-	git -C srv.bare rev-parse --verify HEAD >headhash &&
+	git --git-dir=srv.bare rev-parse --verify HEAD >headhash &&
 	grep "$(cat headhash) HEAD" $(cat promisorlist) &&
 	grep "$(cat headhash) refs/heads/main" $(cat promisorlist)
 '
@@ -335,14 +335,14 @@ test_expect_success 'implicitly construct combine: filter with repeated flags' '
 		"file://$(pwd)/srv.bare" pc2 &&
 	grep "trace:.* git pack-objects .*--filter=combine:blob:none+tree:1" \
 		trace &&
-	git -C pc2 rev-list --objects --missing=allow-any HEAD >objects &&
+	git --git-dir=pc2 rev-list --objects --missing=allow-any HEAD >objects &&
 
 	# We should have gotten some root trees.
 	grep " $" objects &&
 	# Should not have gotten any non-root trees or blobs.
 	! grep " ." objects &&
 
-	xargs -n 1 git -C pc2 cat-file -t <objects >types &&
+	xargs -n 1 git --git-dir=pc2 cat-file -t <objects >types &&
 	sort -u types >unique_types.actual &&
 	test_write_lines commit tree >unique_types.expected &&
 	test_cmp unique_types.expected unique_types.actual
@@ -423,10 +423,10 @@ test_expect_success 'fetch what is specified on CLI even if already promised' '
 	git hash-object --stdin <src/foo.t >blob &&
 
 	git clone --bare --filter=blob:none "file://$(pwd)/src" dst.git &&
-	git -C dst.git rev-list --objects --quiet --missing=print HEAD >missing_before &&
+	git --git-dir=dst.git rev-list --objects --quiet --missing=print HEAD >missing_before &&
 	grep "?$(cat blob)" missing_before &&
-	git -C dst.git fetch origin $(cat blob) &&
-	git -C dst.git rev-list --objects --quiet --missing=print HEAD >missing_after &&
+	git --git-dir=dst.git fetch origin $(cat blob) &&
+	git --git-dir=dst.git rev-list --objects --quiet --missing=print HEAD >missing_after &&
 	! grep "?$(cat blob)" missing_after
 '
 
@@ -501,7 +501,7 @@ setup_triangle () {
 	# for this tree or blob.
 	test_commit -C promisor-remote one && # so that ref advertisement is not empty
 	git -C promisor-remote config --local uploadpack.allowanysha1inwant 1 &&
-	git -C client remote set-url origin "file://$(pwd)/promisor-remote"
+	git --git-dir=client remote set-url origin "file://$(pwd)/promisor-remote"
 }
 
 # NEEDSWORK: The tests beginning with "fetch lazy-fetches" below only
@@ -515,7 +515,7 @@ test_expect_success 'fetch lazy-fetches only to resolve deltas' '
 	# Exercise to make sure it works. Git will not fetch anything from the
 	# promisor remote other than for the big tree (because it needs to
 	# resolve the delta).
-	GIT_TRACE_PACKET="$(pwd)/trace" git -C client \
+	GIT_TRACE_PACKET="$(pwd)/trace" git --git-dir=client \
 		fetch "file://$(pwd)/server" main &&
 
 	# Verify the assumption that the client needed to fetch the delta base
@@ -528,13 +528,13 @@ test_expect_success 'fetch lazy-fetches only to resolve deltas, protocol v2' '
 	setup_triangle &&
 
 	git -C server config --local protocol.version 2 &&
-	git -C client config --local protocol.version 2 &&
+	git --git-dir=client config --local protocol.version 2 &&
 	git -C promisor-remote config --local protocol.version 2 &&
 
 	# Exercise to make sure it works. Git will not fetch anything from the
 	# promisor remote other than for the big blob (because it needs to
 	# resolve the delta).
-	GIT_TRACE_PACKET="$(pwd)/trace" git -C client \
+	GIT_TRACE_PACKET="$(pwd)/trace" git --git-dir=client \
 		fetch "file://$(pwd)/server" main &&
 
 	# Verify that protocol version 2 was used.
@@ -577,7 +577,7 @@ test_expect_success 'verify fetch succeeds when asking for new tags' '
 		test_commit -C src $i &&
 		git -C src branch $i || return 1
 	done &&
-	git -C srv.bare fetch --tags origin +refs/heads/*:refs/heads/* &&
+	git --git-dir=srv.bare fetch --tags origin +refs/heads/*:refs/heads/* &&
 	git -C tag-test -c protocol.version=2 fetch --tags origin
 '
 
@@ -591,7 +591,7 @@ test_expect_success 'verify fetch downloads only one pack when updating refs' '
 		test_commit -C src $i &&
 		git -C src branch $i || return 1
 	done &&
-	git -C srv.bare fetch origin +refs/heads/*:refs/heads/* &&
+	git --git-dir=srv.bare fetch origin +refs/heads/*:refs/heads/* &&
 	git -C pack-test fetch origin &&
 	ls pack-test/.git/objects/pack/*pack >pack-list &&
 	test_line_count = 3 pack-list
@@ -647,7 +647,7 @@ test_expect_success 'repack does not loosen promisor objects' '
 	rm -rf client trace &&
 	git clone --bare --filter=blob:none "file://$(pwd)/srv.bare" client &&
 	test_when_finished "rm -rf client trace" &&
-	GIT_TRACE2_PERF="$(pwd)/trace" git -C client repack -A -d &&
+	GIT_TRACE2_PERF="$(pwd)/trace" git --git-dir=client repack -A -d &&
 	grep "loosen_unused_packed_objects/loosened:0" trace
 '
 

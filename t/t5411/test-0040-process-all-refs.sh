@@ -1,6 +1,6 @@
 test_expect_success "config receive.procReceiveRefs = refs ($PROTOCOL)" '
-	git -C "$upstream" config --unset-all receive.procReceiveRefs &&
-	git -C "$upstream" config --add receive.procReceiveRefs refs
+	git --git-dir="$upstream" config --unset-all receive.procReceiveRefs &&
+	git --git-dir="$upstream" config --add receive.procReceiveRefs refs
 '
 
 # Refs of upstream : main(A)

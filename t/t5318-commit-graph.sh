@@ -278,7 +278,7 @@ graph_git_behavior --bare 'bare repo, commit 8 vs merge 1' bare commits/8 merge/
 graph_git_behavior --bare 'bare repo, commit 8 vs merge 2' bare commits/8 merge/2
 
 test_expect_success 'write graph in bare repo' '
-	git -C bare commit-graph write &&
+	git --git-dir=bare commit-graph write &&
 	test_path_is_file bare/objects/info/commit-graph &&
 	graph_read_expect --bare -C bare 11 "generation_data extra_edges"
 '

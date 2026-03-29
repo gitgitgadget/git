@@ -45,7 +45,7 @@ test_expect_success 'set up test repository' '
 
 test_expect_success 'set up bare repository' '
 	git init --bare bare.git &&
-	git -C bare.git --work-tree=. commit --allow-empty -m "bare commit"
+	git --git-dir=bare.git --work-tree=. commit --allow-empty -m "bare commit"
 '
 
 test_expect_success 'use t9700/test.pl to test Git.pm' '

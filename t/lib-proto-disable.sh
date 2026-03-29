@@ -83,19 +83,19 @@ test_config () {
 	'
 
 	test_expect_success "fetch $desc (enabled)" '
-		git -C tmp.git -c protocol.$proto.allow=always fetch
+		git --git-dir=tmp.git -c protocol.$proto.allow=always fetch
 	'
 
 	test_expect_success "push $desc (enabled)" '
-		git -C tmp.git -c protocol.$proto.allow=always  push origin HEAD:pushed
+		git --git-dir=tmp.git -c protocol.$proto.allow=always  push origin HEAD:pushed
 	'
 
 	test_expect_success "push $desc (disabled)" '
-		test_must_fail git -C tmp.git -c protocol.$proto.allow=never push origin HEAD:pushed
+		test_must_fail git --git-dir=tmp.git -c protocol.$proto.allow=never push origin HEAD:pushed
 	'
 
 	test_expect_success "fetch $desc (disabled)" '
-		test_must_fail git -C tmp.git -c protocol.$proto.allow=never fetch
+		test_must_fail git --git-dir=tmp.git -c protocol.$proto.allow=never fetch
 	'
 
 	test_expect_success "clone $desc (disabled)" '
@@ -110,11 +110,11 @@ test_config () {
 	'
 
 	test_expect_success "fetch $desc (enabled)" '
-		git -C tmp.git -c protocol.$proto.allow=user fetch
+		git --git-dir=tmp.git -c protocol.$proto.allow=user fetch
 	'
 
 	test_expect_success "push $desc (enabled)" '
-		git -C tmp.git -c protocol.$proto.allow=user push origin HEAD:pushed
+		git --git-dir=tmp.git -c protocol.$proto.allow=user push origin HEAD:pushed
 	'
 
 	test_expect_success "push $desc (disabled)" '
@@ -153,22 +153,22 @@ test_config () {
 
 	test_expect_success "fetch $desc (enabled)" '
 		test_config_global protocol.allow always &&
-		git -C tmp.git fetch
+		git --git-dir=tmp.git fetch
 	'
 
 	test_expect_success "push $desc (enabled)" '
 		test_config_global protocol.allow always &&
-		git -C tmp.git push origin HEAD:pushed
+		git --git-dir=tmp.git push origin HEAD:pushed
 	'
 
 	test_expect_success "push $desc (disabled)" '
 		test_config_global protocol.allow never &&
-		test_must_fail git -C tmp.git push origin HEAD:pushed
+		test_must_fail git --git-dir=tmp.git push origin HEAD:pushed
 	'
 
 	test_expect_success "fetch $desc (disabled)" '
 		test_config_global protocol.allow never &&
-		test_must_fail git -C tmp.git fetch
+		test_must_fail git --git-dir=tmp.git fetch
 	'
 
 	test_expect_success "clone $desc (disabled)" '

@@ -975,8 +975,8 @@ test_expect_success 'fetching deepen beyond merged branch' '
 		git merge --no-ff branch &&
 		cd - &&
 		git clone --bare --depth 3 "file://$(pwd)/shallow-deepen-merged" deepen.git &&
-		git -C deepen.git fetch origin --deepen=1 &&
-		git -C deepen.git rev-list --all >actual &&
+		git --git-dir=deepen.git fetch origin --deepen=1 &&
+		git --git-dir=deepen.git rev-list --all >actual &&
 		for commit in $(sed "/^$/d" deepen.git/shallow)
 		do
 			test_grep "$commit" actual || exit 1

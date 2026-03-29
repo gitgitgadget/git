@@ -31,7 +31,7 @@ test_cmp_failed_rev_parse () {
 	rev=$2
 
 	cat >expect &&
-	test_must_fail git -C "$dir" rev-parse "$rev" 2>actual.raw &&
+	test_must_fail git --git-dir="$dir" rev-parse "$rev" 2>actual.raw &&
 	sed "s/\($rev\)[0-9a-f]*/\1.../" <actual.raw >actual &&
 	test_cmp expect actual
 }
@@ -50,7 +50,7 @@ test_expect_success 'ambiguous blob output' '
 		echo 1bbfctrkc | git hash-object -w --stdin
 	) &&
 
-	test_must_fail git -C blob.prefix rev-parse dead &&
+	test_must_fail git --git-dir=blob.prefix rev-parse dead &&
 	test_cmp_failed_rev_parse blob.prefix beef <<-\EOF
 	error: short object ID beef... is ambiguous
 	hint: The candidates are:

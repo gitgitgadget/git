@@ -39,5 +39,5 @@ test_expect_success "proc-receive: fall through, let receive-pack to execute ($P
 # Refs of upstream : main(A)             refs/for/main/topic(A)
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "cleanup ($PROTOCOL/porcelain)" '
-	git -C "$upstream" update-ref -d refs/for/main/topic
+	git --git-dir="$upstream" update-ref -d refs/for/main/topic
 '

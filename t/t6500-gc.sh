@@ -190,10 +190,10 @@ test_expect_success 'one of gc.reflogExpire{Unreachable,}=never does not skip "e
 test_expect_success 'gc.repackFilter launches repack with a filter' '
 	git clone --no-local --bare . bare.git &&
 
-	git -C bare.git -c gc.cruftPacks=false gc &&
+	git --git-dir=bare.git -c gc.cruftPacks=false gc &&
 	test_stdout_line_count = 1 ls bare.git/objects/pack/*.pack &&
 
-	GIT_TRACE=$(pwd)/trace.out git -C bare.git -c gc.repackFilter=blob:none \
+	GIT_TRACE=$(pwd)/trace.out git --git-dir=bare.git -c gc.repackFilter=blob:none \
 		-c repack.writeBitmaps=false -c gc.cruftPacks=false gc &&
 	test_stdout_line_count = 2 ls bare.git/objects/pack/*.pack &&
 	grep -E "^trace: (built-in|exec|run_command): git repack .* --filter=blob:none ?.*" trace.out

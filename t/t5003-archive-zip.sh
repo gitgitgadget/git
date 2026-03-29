@@ -146,7 +146,7 @@ test_expect_success 'create bare clone' '
 	cp .git/info/attributes bare.git/info/attributes &&
 	# Recreate our changes to .git/config rather than just copying it, as
 	# we do not want to clobber core.bare or other settings.
-	git -C bare.git config diff.custom.binary true
+	git --git-dir=bare.git config diff.custom.binary true
 '
 
 test_expect_success \
@@ -284,7 +284,7 @@ start_httpd
 
 test_expect_success "setup for HTTP protocol" '
 	cp -R bare.git "$HTTPD_DOCUMENT_ROOT_PATH/bare.git" &&
-	git -C "$HTTPD_DOCUMENT_ROOT_PATH/bare.git" \
+	git --git-dir="$HTTPD_DOCUMENT_ROOT_PATH/bare.git" \
 		config http.uploadpack true &&
 	set_askpass user@host pass@host
 '

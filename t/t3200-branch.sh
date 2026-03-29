@@ -416,9 +416,9 @@ test_expect_success 'secondary worktrees recognize core.bare=true in main config
 	test_commit -C non_bare_repo x &&
 
 	git clone --bare non_bare_repo bare_repo &&
-	git -C bare_repo config extensions.worktreeConfig true &&
-	git -C bare_repo config unset core.bare &&
-	git -C bare_repo config --worktree core.bare true &&
+	git --git-dir=bare_repo config extensions.worktreeConfig true &&
+	git --git-dir=bare_repo config unset core.bare &&
+	git --git-dir=bare_repo config --worktree core.bare true &&
 
 	git --git-dir=bare_repo worktree add secondary_worktree &&
 	git -C secondary_worktree checkout main

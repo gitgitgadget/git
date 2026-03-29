@@ -1,5 +1,5 @@
 test_expect_success "setup proc-receive hook and disable push-options ($PROTOCOL/porcelain)" '
-	git -C "$upstream" config receive.advertisePushOptions false &&
+	git --git-dir="$upstream" config receive.advertisePushOptions false &&
 	test_hook --git-dir "$upstream" --clobber proc-receive <<-\EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
@@ -28,7 +28,7 @@ test_expect_success "proc-receive: not support push options ($PROTOCOL/porcelain
 '
 
 test_expect_success "enable push options ($PROTOCOL/porcelain)" '
-	git -C "$upstream" config receive.advertisePushOptions true
+	git --git-dir="$upstream" config receive.advertisePushOptions true
 '
 
 test_expect_success "setup version=0 for proc-receive hook ($PROTOCOL/porcelain)" '
@@ -88,7 +88,7 @@ test_expect_success "restore proc-receive hook ($PROTOCOL/porcelain)" '
 # Refs of upstream : main(A)             next(A)
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "cleanup ($PROTOCOL/porcelain)" '
-	git -C "$upstream" update-ref -d refs/heads/next
+	git --git-dir="$upstream" update-ref -d refs/heads/next
 '
 
 # Refs of upstream : main(A)
@@ -134,5 +134,5 @@ test_expect_success "proc-receive: push with options ($PROTOCOL/porcelain)" '
 # Refs of upstream : main(A)             next(A)
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "cleanup ($PROTOCOL/porcelain)" '
-	git -C "$upstream" update-ref -d refs/heads/next
+	git --git-dir="$upstream" update-ref -d refs/heads/next
 '
