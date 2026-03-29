@@ -1,3 +1,15 @@
+@media (prefers-color-scheme: dark)
+{
+    body
+    {
+        filter: invert(1) hue-rotate(180deg);
+        background-color: #090909!important;
+    }
+    img
+    {
+        filter:invert(1) hue-rotate(180deg);
+    }
+}
 body {
 	font-family: sans-serif;
 	font-size: small;
