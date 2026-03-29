@@ -107,7 +107,7 @@ test_expect_success 'create and delete remote branch' '
 '
 
 test_expect_success 'setup rejected update hook' '
-	test_hook --setup -C "$HTTPD_DOCUMENT_ROOT_PATH/test_repo.git" update <<-\EOF &&
+	test_hook --setup --git-dir "$HTTPD_DOCUMENT_ROOT_PATH/test_repo.git" update <<-\EOF &&
 	exit 1
 	EOF
 
@@ -175,7 +175,7 @@ test_expect_success 'push --atomic also prevents branch creation, reports collat
 	# Setup upstream repo - empty for now
 	d=$HTTPD_DOCUMENT_ROOT_PATH/atomic-branches.git &&
 	git init --bare "$d" &&
-	test_config -C "$d" http.receivepack true &&
+	test_config --git-dir "$d" http.receivepack true &&
 	up="$HTTPD_URL"/smart/atomic-branches.git &&
 
 	# Tell "$up" about three branches for now
@@ -229,7 +229,7 @@ test_expect_success 'push --atomic also prevents branch creation, reports collat
 test_expect_success 'push --atomic fails on server-side errors' '
 	# Use previously set up repository
 	d=$HTTPD_DOCUMENT_ROOT_PATH/atomic-branches.git &&
-	test_config -C "$d" http.receivepack true &&
+	test_config --git-dir "$d" http.receivepack true &&
 	up="$HTTPD_URL"/smart/atomic-branches.git &&
 
 	# Create d/f conflict to break ref updates for other on the remote site.
@@ -399,7 +399,7 @@ test_expect_success CMDLINE_LIMIT 'push 2000 tags over http' '
 '
 
 test_expect_success GPG 'push with post-receive to inspect certificate' '
-	test_hook -C "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git post-receive <<-\EOF &&
+	test_hook --git-dir "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git post-receive <<-\EOF &&
 		# discard the update list
 		cat >/dev/null
 		# record the push certificate

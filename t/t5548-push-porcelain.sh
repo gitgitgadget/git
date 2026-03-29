@@ -238,7 +238,7 @@ run_git_push_porcelain_output_test() {
 	test_expect_success ".. pre-receive hook declined ($PROTOCOL)" '
 		test_when_finished "rm -f \"$upstream/hooks/pre-receive\" &&
 			setup_upstream \"$upstream\"" &&
-		test_hook --setup -C "$upstream" pre-receive <<-EOF &&
+		test_hook --setup --git-dir "$upstream" pre-receive <<-EOF &&
 			exit 1
 		EOF
 		test_must_fail git -C workbench push --porcelain --force origin \
