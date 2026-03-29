@@ -304,7 +304,7 @@ test_expect_success "clone with promisor.sendFields" '
 	git -C server config remote.otherLop.stuff "baz" &&
 	git -C server config remote.otherLop.partialCloneFilter "blob:limit=10k" &&
 	test_when_finished "git -C server remote remove otherLop" &&
-	test_config -C server promisor.sendFields "partialCloneFilter, token" &&
+	test_config --git-dir server promisor.sendFields "partialCloneFilter, token" &&
 	test_when_finished "rm trace" &&
 
 	# Clone from server to create a client
@@ -335,7 +335,7 @@ test_expect_success "clone with promisor.checkFields" '
 	git -C server config remote.otherLop.stuff "baz" &&
 	git -C server config remote.otherLop.partialCloneFilter "blob:limit=10k" &&
 	test_when_finished "git -C server remote remove otherLop" &&
-	test_config -C server promisor.sendFields "partialCloneFilter, token" &&
+	test_config --git-dir server promisor.sendFields "partialCloneFilter, token" &&
 	test_when_finished "rm trace" &&
 
 	# Clone from server to create a client
@@ -373,7 +373,7 @@ test_expect_success "clone with promisor.storeFields=partialCloneFilter" '
 	git -C server config remote.lop.token "fooXXX" &&
 	git -C server config remote.lop.partialCloneFilter "blob:limit=8k" &&
 
-	test_config -C server promisor.sendFields "partialCloneFilter, token" &&
+	test_config --git-dir server promisor.sendFields "partialCloneFilter, token" &&
 	test_when_finished "rm trace" &&
 
 	# Clone from server to create a client
@@ -428,7 +428,7 @@ test_expect_success "clone and fetch with --filter=auto" '
 	test_when_finished "rm -rf client trace" &&
 
 	git -C server config remote.lop.partialCloneFilter "blob:limit=9500" &&
-	test_config -C server promisor.sendFields "partialCloneFilter" &&
+	test_config --git-dir server promisor.sendFields "partialCloneFilter" &&
 
 	GIT_TRACE_PACKET="$(pwd)/trace" GIT_NO_LAZY_FETCH=0 git clone \
 		-c remote.lop.promisor=true \
