@@ -943,7 +943,7 @@ test_expect_success 'set up mailmap location tests' '
 '
 
 test_expect_success 'bare repo with --work-tree finds mailmap at top-level' '
-	git -C loc-bare --work-tree=. log -1 --format=%aE >actual &&
+	git -C loc-bare --git-dir=. --work-tree=. log -1 --format=%aE >actual &&
 	echo new@example.com >expect &&
 	test_cmp expect actual
 '

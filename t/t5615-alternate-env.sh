@@ -48,9 +48,12 @@ test_expect_success 'access multiple alternates' '
 # bare paths are relative from $GIT_DIR
 test_expect_success 'access alternate via relative path (bare)' '
 	git init --bare bare.git &&
-	check_obj "../one.git/objects" -C bare.git <<-EOF
-	$one blob
-	EOF
+	(
+		cd bare.git && GIT_DIR=. && export GIT_DIR &&
+		check_obj "../one.git/objects" <<-EOF
+		$one blob
+		EOF
+	)
 '
 
 # non-bare paths are relative to top of worktree
