@@ -29,10 +29,10 @@ test_expect_success setup '
 	git checkout --orphan main &&
 	create_test_commits "" &&
 	mkdir $bare &&
-	cd $bare &&
+	cd $bare && GIT_DIR=. && export GIT_DIR &&
 	git init --bare -b main &&
 	create_test_commits "bare" &&
-	cd -
+	cd - && sane_unset GIT_DIR
 '
 
 test_expect_success "create $m" '

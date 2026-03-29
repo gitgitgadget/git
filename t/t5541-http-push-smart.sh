@@ -26,11 +26,11 @@ test_expect_success 'setup remote repository' '
 	git commit -m initial &&
 	cd - &&
 	git clone --bare test_repo test_repo.git &&
-	cd test_repo.git &&
+	cd test_repo.git && GIT_DIR=. && export GIT_DIR &&
 	git config http.receivepack true &&
 	git config core.logallrefupdates true &&
 	ORIG_HEAD=$(git rev-parse --verify HEAD) &&
-	cd - &&
+	cd - && sane_unset GIT_DIR &&
 	mv test_repo.git "$HTTPD_DOCUMENT_ROOT_PATH"
 '
 

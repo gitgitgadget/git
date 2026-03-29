@@ -533,9 +533,9 @@ test_expect_success 'server hooks expect stdout redirected to stderr' '
 	test_when_finished "rm -f stdout.actual stderr.actual" &&
 	git init --bare remote-server &&
 	git remote add origin-server remote-server &&
-	cd remote-server &&
+	cd remote-server && GIT_DIR=. && export GIT_DIR &&
 	setup_hooks pre-receive update post-receive post-update &&
-	cd .. &&
+	cd .. && sane_unset GIT_DIR &&
 	git push origin-server HEAD:new-branch >stdout.actual 2>stderr.actual &&
 	check_stdout_merged_to_stderr pre-receive update post-receive post-update
 '

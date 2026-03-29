@@ -198,7 +198,7 @@ test_expect_success '"add" default branch of a bare repo' '
 test_expect_success '"add" to bare repo with worktree config' '
 	(
 		git clone --bare . bare3 &&
-		cd bare3 &&
+		cd bare3 && GIT_DIR=. && export GIT_DIR &&
 		git config extensions.worktreeconfig true &&
 
 		# Add config values that are erroneous to have in
@@ -212,7 +212,7 @@ test_expect_success '"add" to bare repo with worktree config' '
 		git config --worktree bogus.key value &&
 		git config --unset core.bare &&
 		git worktree add ../there4 main &&
-		cd ../there4 &&
+		cd ../there4 && sane_unset GIT_DIR &&
 
 		# Simple check that a Git command does not
 		# immediately fail with the current setup
