@@ -1,6 +1,6 @@
 test_expect_success "config receive.procReceiveRefs with modifiers ($PROTOCOL)" '
 	(
-		cd "$upstream" &&
+		cd "$upstream" && GIT_DIR=. && export GIT_DIR &&
 		git config --unset-all receive.procReceiveRefs &&
 		git config --add receive.procReceiveRefs m:refs/heads/main &&
 		git config --add receive.procReceiveRefs ad:refs/heads &&
@@ -59,8 +59,8 @@ test_expect_success "proc-receive: update branch and new tag ($PROTOCOL)" '
 # Refs of upstream : main(A)
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "setup upstream: create tags/v123 ($PROTOCOL)" '
-	git -C "$upstream" update-ref refs/heads/topic $A &&
-	git -C "$upstream" update-ref refs/tags/v123 $TAG &&
+	git --git-dir="$upstream" update-ref refs/heads/topic $A &&
+	git --git-dir="$upstream" update-ref refs/tags/v123 $TAG &&
 
 	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main

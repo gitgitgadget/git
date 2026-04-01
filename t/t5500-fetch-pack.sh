@@ -454,11 +454,11 @@ test_expect_success 'fetch in shallow repo unreachable shallow objects' '
 	(
 		git clone --bare --branch B --single-branch "file://$(pwd)/." no-reflog &&
 		git clone --depth 1 "file://$(pwd)/no-reflog" shallow9 &&
-		cd no-reflog &&
+		cd no-reflog && GIT_DIR=. && export GIT_DIR &&
 		git tag -d TAGB1 TAGB2 &&
 		git update-ref refs/heads/B B~~ &&
 		git gc --prune=now &&
-		cd ../shallow9 &&
+		cd ../shallow9 && sane_unset GIT_DIR &&
 		git fetch origin &&
 		git fsck --no-dangling
 	)
@@ -975,8 +975,8 @@ test_expect_success 'fetching deepen beyond merged branch' '
 		git merge --no-ff branch &&
 		cd - &&
 		git clone --bare --depth 3 "file://$(pwd)/shallow-deepen-merged" deepen.git &&
-		git -C deepen.git fetch origin --deepen=1 &&
-		git -C deepen.git rev-list --all >actual &&
+		git --git-dir=deepen.git fetch origin --deepen=1 &&
+		git --git-dir=deepen.git rev-list --all >actual &&
 		for commit in $(sed "/^$/d" deepen.git/shallow)
 		do
 			test_grep "$commit" actual || exit 1

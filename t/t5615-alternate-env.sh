@@ -19,9 +19,9 @@ check_obj () {
 
 test_expect_success 'create alternate repositories' '
 	git init --bare one.git &&
-	one=$(echo one | git -C one.git hash-object -w --stdin) &&
+	one=$(echo one | git --git-dir=one.git hash-object -w --stdin) &&
 	git init --bare two.git &&
-	two=$(echo two | git -C two.git hash-object -w --stdin)
+	two=$(echo two | git --git-dir=two.git hash-object -w --stdin)
 '
 
 test_expect_success 'objects inaccessible without alternates' '

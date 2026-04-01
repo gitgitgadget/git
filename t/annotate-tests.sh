@@ -86,7 +86,7 @@ test_expect_success 'blame with --contents' '
 test_expect_success 'blame with --contents in a bare repo' '
 	git clone --bare . bare-contents.git &&
 	(
-		cd bare-contents.git &&
+		cd bare-contents.git && GIT_DIR=. && export GIT_DIR &&
 		echo "1A quick brown fox jumps over the" >contents &&
 		check_count --contents=contents A 1
 	)
@@ -101,7 +101,7 @@ test_expect_success 'blame with --contents changed' '
 test_expect_success 'blame in a bare repo without starting commit' '
 	git clone --bare . bare.git &&
 	(
-		cd bare.git &&
+		cd bare.git && GIT_DIR=. && export GIT_DIR &&
 		check_count A 2
 	)
 '

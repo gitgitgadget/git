@@ -288,18 +288,18 @@ test_expect_success 'repacking fails when missing .pack actually means missing o
 test_expect_success 'bitmaps are created by default in bare repos' '
 	git clone --bare .git bare.git &&
 	rm -f bare.git/objects/pack/*.bitmap &&
-	git -C bare.git repack -ad &&
+	git --git-dir=bare.git repack -ad &&
 	bitmap=$(ls bare.git/objects/pack/*.bitmap) &&
 	test_path_is_file "$bitmap"
 '
 
 test_expect_success 'incremental repack does not complain' '
-	git -C bare.git repack -q 2>repack.err &&
+	git --git-dir=bare.git repack -q 2>repack.err &&
 	test_must_be_empty repack.err
 '
 
 test_expect_success 'bitmaps can be disabled on bare repos' '
-	git -c repack.writeBitmaps=false -C bare.git repack -ad &&
+	git -c repack.writeBitmaps=false --git-dir=bare.git repack -ad &&
 	bitmap=$(ls bare.git/objects/pack/*.bitmap || :) &&
 	test -z "$bitmap"
 '
@@ -313,7 +313,7 @@ test_expect_success 'no bitmaps created if .keep files present' '
 
 	# Disable --name-hash-version test due to stderr comparison.
 	GIT_TEST_NAME_HASH_VERSION=1 \
-		git -C bare.git repack -ad 2>stderr &&
+		git --git-dir=bare.git repack -ad 2>stderr &&
 	test_must_be_empty stderr &&
 	find bare.git/objects/pack/ -type f -name "*.bitmap" >actual &&
 	test_must_be_empty actual
@@ -322,33 +322,33 @@ test_expect_success 'no bitmaps created if .keep files present' '
 test_expect_success 'auto-bitmaps do not complain if unavailable' '
 	test_config --git-dir bare.git pack.packSizeLimit 1M &&
 	blob=$(test-tool genrandom big 1m |
-	       git -C bare.git hash-object -w --stdin) &&
-	git -C bare.git update-ref refs/tags/big $blob &&
+	       git --git-dir=bare.git hash-object -w --stdin) &&
+	git --git-dir=bare.git update-ref refs/tags/big $blob &&
 
 	# Disable --name-hash-version test due to stderr comparison.
 	GIT_TEST_NAME_HASH_VERSION=1 \
-		git -C bare.git repack -ad 2>stderr &&
+		git --git-dir=bare.git repack -ad 2>stderr &&
 	test_must_be_empty stderr &&
 	find bare.git/objects/pack -type f -name "*.bitmap" >actual &&
 	test_must_be_empty actual
 '
 
 test_expect_success 'repacking with a filter works' '
-	git -C bare.git repack -a -d &&
+	git --git-dir=bare.git repack -a -d &&
 	test_stdout_line_count = 1 ls bare.git/objects/pack/*.pack &&
-	git -C bare.git -c repack.writebitmaps=false repack -a -d --filter=blob:none &&
+	git --git-dir=bare.git -c repack.writebitmaps=false repack -a -d --filter=blob:none &&
 	test_stdout_line_count = 2 ls bare.git/objects/pack/*.pack &&
-	commit_pack=$(test-tool -C bare.git find-pack -c 1 HEAD) &&
-	blob_pack=$(test-tool -C bare.git find-pack -c 1 HEAD:file1) &&
+	commit_pack=$(test-tool --git-dir=bare.git find-pack -c 1 HEAD) &&
+	blob_pack=$(test-tool --git-dir=bare.git find-pack -c 1 HEAD:file1) &&
 	test "$commit_pack" != "$blob_pack" &&
-	tree_pack=$(test-tool -C bare.git find-pack -c 1 HEAD^{tree}) &&
+	tree_pack=$(test-tool --git-dir=bare.git find-pack -c 1 HEAD^{tree}) &&
 	test "$tree_pack" = "$commit_pack" &&
-	blob_pack2=$(test-tool -C bare.git find-pack -c 1 HEAD:file2) &&
+	blob_pack2=$(test-tool --git-dir=bare.git find-pack -c 1 HEAD:file2) &&
 	test "$blob_pack2" = "$blob_pack"
 '
 
 test_expect_success '--filter fails with --write-bitmap-index' '
-	test_must_fail git -C bare.git repack -a -d --write-bitmap-index --filter=blob:none
+	test_must_fail git --git-dir=bare.git repack -a -d --write-bitmap-index --filter=blob:none
 '
 
 test_expect_success 'repacking with two filters works' '
@@ -362,7 +362,7 @@ test_expect_success 'repacking with two filters works' '
 	) &&
 	git clone --no-local --bare two-filters two-filters.git &&
 	(
-		cd two-filters.git &&
+		cd two-filters.git && GIT_DIR=. && export GIT_DIR &&
 		test_stdout_line_count = 1 ls objects/pack/*.pack &&
 		git -c repack.writebitmaps=false repack -a -d \
 			--filter=blob:none --filter=tree:1 &&
@@ -389,7 +389,7 @@ prepare_for_keep_packs () {
 	) &&
 	git clone --no-local --bare keep-packs keep-packs.git &&
 	(
-		cd keep-packs.git &&
+		cd keep-packs.git && GIT_DIR=. && export GIT_DIR &&
 
 		# Create two packs
 		# The first pack will contain all of the objects except one blob
@@ -408,7 +408,7 @@ prepare_for_keep_packs () {
 test_expect_success '--filter works with .keep packs' '
 	prepare_for_keep_packs &&
 	(
-		cd keep-packs.git &&
+		cd keep-packs.git && GIT_DIR=. && export GIT_DIR &&
 
 		foo_pack=$(test-tool find-pack -c 1 HEAD:foo.t) &&
 		bar_pack=$(test-tool find-pack -c 1 HEAD:bar.t) &&
@@ -438,7 +438,7 @@ test_expect_success '--filter works with --pack-kept-objects and .keep packs' '
 	rm -rf keep-packs keep-packs.git &&
 	prepare_for_keep_packs &&
 	(
-		cd keep-packs.git &&
+		cd keep-packs.git && GIT_DIR=. && export GIT_DIR &&
 
 		foo_pack=$(test-tool find-pack -c 1 HEAD:foo.t) &&
 		bar_pack=$(test-tool find-pack -c 1 HEAD:bar.t) &&
@@ -467,25 +467,25 @@ test_expect_success '--filter works with --pack-kept-objects and .keep packs' '
 '
 
 test_expect_success '--filter-to stores filtered out objects' '
-	git -C bare.git repack -a -d &&
+	git --git-dir=bare.git repack -a -d &&
 	test_stdout_line_count = 1 ls bare.git/objects/pack/*.pack &&
 
 	git init --bare filtered.git &&
-	git -C bare.git -c repack.writebitmaps=false repack -a -d \
+	git --git-dir=bare.git -c repack.writebitmaps=false repack -a -d \
 		--filter=blob:none \
-		--filter-to=../filtered.git/objects/pack/pack &&
+		--filter-to=filtered.git/objects/pack/pack &&
 	test_stdout_line_count = 1 ls bare.git/objects/pack/pack-*.pack &&
 	test_stdout_line_count = 1 ls filtered.git/objects/pack/pack-*.pack &&
 
-	commit_pack=$(test-tool -C bare.git find-pack -c 1 HEAD) &&
-	blob_pack=$(test-tool -C bare.git find-pack -c 0 HEAD:file1) &&
-	blob_hash=$(git -C bare.git rev-parse HEAD:file1) &&
+	commit_pack=$(test-tool --git-dir=bare.git find-pack -c 1 HEAD) &&
+	blob_pack=$(test-tool --git-dir=bare.git find-pack -c 0 HEAD:file1) &&
+	blob_hash=$(git --git-dir=bare.git rev-parse HEAD:file1) &&
 	test -n "$blob_hash" &&
-	blob_pack=$(test-tool -C filtered.git find-pack -c 1 $blob_hash) &&
+	blob_pack=$(test-tool --git-dir=filtered.git find-pack -c 1 $blob_hash) &&
 
 	echo $(pwd)/filtered.git/objects >bare.git/objects/info/alternates &&
-	blob_pack=$(test-tool -C bare.git find-pack -c 1 HEAD:file1) &&
-	blob_content=$(git -C bare.git show $blob_hash) &&
+	blob_pack=$(test-tool --git-dir=bare.git find-pack -c 1 HEAD:file1) &&
+	blob_content=$(git --git-dir=bare.git show $blob_hash) &&
 	test "$blob_content" = "content1"
 '
 
@@ -506,7 +506,7 @@ test_expect_success '--filter works with --max-pack-size' '
 	) &&
 	git clone --no-local --bare max-pack-size max-pack-size.git &&
 	(
-		cd max-pack-size.git &&
+		cd max-pack-size.git && GIT_DIR=. && export GIT_DIR &&
 		git -c repack.writebitmaps=false repack -a -d --filter=blob:none \
 			--max-pack-size=1M \
 			--filter-to=../filtered.git/objects/pack/pack &&

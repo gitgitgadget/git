@@ -13,7 +13,7 @@ test_expect_success 'create git-accessible repo' '
 	git --bare init "$bare" &&
 	git push "$bare" HEAD &&
 	>"$bare/git-daemon-export-ok" &&
-	git -C "$bare" config daemon.receivepack true
+	git --git-dir="$bare" config daemon.receivepack true
 '
 
 test_proto "git://" git "$GIT_DAEMON_URL/repo.git"

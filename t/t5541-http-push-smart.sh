@@ -26,11 +26,11 @@ test_expect_success 'setup remote repository' '
 	git commit -m initial &&
 	cd - &&
 	git clone --bare test_repo test_repo.git &&
-	cd test_repo.git &&
+	cd test_repo.git && GIT_DIR=. && export GIT_DIR &&
 	git config http.receivepack true &&
 	git config core.logallrefupdates true &&
 	ORIG_HEAD=$(git rev-parse --verify HEAD) &&
-	cd - &&
+	cd - && sane_unset GIT_DIR &&
 	mv test_repo.git "$HTTPD_DOCUMENT_ROOT_PATH"
 '
 
@@ -58,7 +58,7 @@ test_expect_success 'push to remote repository (standard)' '
 	GIT_TRACE_CURL=true git push -v -v 2>err &&
 	! grep "Expect: 100-continue" err &&
 	grep "POST git-receive-pack ([0-9]* bytes)" err &&
-	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git &&
+	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git && GIT_DIR=. && export GIT_DIR &&
 	 test $HEAD = $(git rev-parse --verify HEAD))
 '
 
@@ -164,7 +164,7 @@ test_expect_success 'push (chunked)' '
 	test_config http.postbuffer 4 &&
 	git push -v -v origin $BRANCH 2>err &&
 	grep "POST git-receive-pack (chunked)" err &&
-	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git &&
+	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git && GIT_DIR=. && export GIT_DIR &&
 	 test $HEAD = $(git rev-parse --verify HEAD))
 '
 
@@ -202,16 +202,16 @@ test_expect_success 'push --atomic also prevents branch creation, reports collat
 	test_must_fail git push --atomic "$up" main atomic collateral 2>output &&
 
 	# the new branch should not have been created upstream
-	test_must_fail git -C "$d" show-ref --verify refs/heads/atomic &&
+	test_must_fail git --git-dir="$d" show-ref --verify refs/heads/atomic &&
 
 	# upstream should still reflect atomic2, the last thing we pushed
 	# successfully
 	git rev-parse atomic2 >expected &&
 	# on main...
-	git -C "$d" rev-parse refs/heads/main >actual &&
+	git --git-dir="$d" rev-parse refs/heads/main >actual &&
 	test_cmp expected actual &&
 	# ...and collateral.
-	git -C "$d" rev-parse refs/heads/collateral >actual &&
+	git --git-dir="$d" rev-parse refs/heads/collateral >actual &&
 	test_cmp expected actual &&
 
 	# the failed refs should be indicated to the user
@@ -233,8 +233,8 @@ test_expect_success 'push --atomic fails on server-side errors' '
 	up="$HTTPD_URL"/smart/atomic-branches.git &&
 
 	# Create d/f conflict to break ref updates for other on the remote site.
-	git -C "$d" update-ref -d refs/heads/other &&
-	git -C "$d" update-ref refs/heads/other/conflict HEAD &&
+	git --git-dir="$d" update-ref -d refs/heads/other &&
+	git --git-dir="$d" update-ref refs/heads/other/conflict HEAD &&
 
 	# add the new commit to other
 	git branch -f other collateral &&
@@ -243,8 +243,8 @@ test_expect_success 'push --atomic fails on server-side errors' '
 	test_must_fail git push --atomic "$up" atomic other 2>output  &&
 
 	# The atomic and other branches should not be created upstream.
-	test_must_fail git -C "$d" show-ref --verify refs/heads/atomic &&
-	test_must_fail git -C "$d" show-ref --verify refs/heads/other &&
+	test_must_fail git --git-dir="$d" show-ref --verify refs/heads/atomic &&
+	test_must_fail git --git-dir="$d" show-ref --verify refs/heads/other &&
 
 	# the failed refs should be indicated to the user
 	grep "^ ! .*rejected.* other -> other .*atomic transaction failed" output &&
@@ -416,7 +416,7 @@ test_expect_success GPG 'push with post-receive to inspect certificate' '
 		E_O_F
 	EOF
 	(
-		cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git &&
+		cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git && GIT_DIR=. && export GIT_DIR &&
 		git config receive.certnonceseed sekrit &&
 		git config receive.certnonceslop 30
 	) &&

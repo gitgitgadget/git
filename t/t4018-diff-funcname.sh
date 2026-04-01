@@ -76,8 +76,8 @@ do
 		git add .gitattributes &&
 		git commit -am "changing gitattributes" &&
 		git clone --bare --no-local . bare.git &&
-		git -C bare.git symbolic-ref HEAD refs/heads/master &&
-		test_expect_code 1 git -C bare.git --attr-source=branchA \
+		git --git-dir=bare.git symbolic-ref HEAD refs/heads/master &&
+		test_expect_code 1 git --git-dir=bare.git --attr-source=branchA \
 			diff --exit-code HEAD:A.java HEAD:B.java 2>msg &&
 		test_grep ! fatal msg &&
 		test_grep ! error msg

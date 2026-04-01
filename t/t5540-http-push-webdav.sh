@@ -40,13 +40,13 @@ test_expect_success 'setup remote repository' '
 	git commit -m initial &&
 	cd - &&
 	git clone --bare test_repo test_repo.git &&
-	cd test_repo.git &&
+	cd test_repo.git && GIT_DIR=. && export GIT_DIR &&
 	git --bare update-server-info &&
 	test_hook --setup post-update <<-\EOF &&
 	exec git update-server-info
 	EOF
 	ORIG_HEAD=$(git rev-parse --verify HEAD) &&
-	cd - &&
+	cd - && sane_unset GIT_DIR &&
 	mv test_repo.git "$HTTPD_DOCUMENT_ROOT_PATH"
 '
 
@@ -71,7 +71,7 @@ test_expect_success 'push to remote repository with packed refs' '
 	git commit -m path2 &&
 	HEAD=$(git rev-parse --verify HEAD) &&
 	git push &&
-	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git &&
+	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git && GIT_DIR=. && export GIT_DIR &&
 	 test $HEAD = $(git rev-parse --verify HEAD))
 '
 
@@ -80,12 +80,12 @@ test_expect_success 'push already up-to-date' '
 '
 
 test_expect_success 'push to remote repository with unpacked refs' '
-	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git &&
+	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git && GIT_DIR=. && export GIT_DIR &&
 	 rm packed-refs &&
 	 git update-ref refs/heads/main $ORIG_HEAD &&
 	 git --bare update-server-info) &&
 	git push &&
-	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git &&
+	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo.git && GIT_DIR=. && export GIT_DIR &&
 	 test $HEAD = $(git rev-parse --verify HEAD))
 '
 
@@ -112,7 +112,7 @@ test_expect_success 'http-push fetches packed objects' '
 	git clone $HTTPD_URL/dumb/test_repo_packed.git \
 		"$ROOT_PATH"/test_repo_clone_packed &&
 
-	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo_packed.git &&
+	(cd "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo_packed.git && GIT_DIR=. && export GIT_DIR &&
 	 git --bare repack &&
 	 git --bare prune-packed) &&
 
@@ -139,7 +139,7 @@ test_expect_success 'create and delete remote branch' '
 
 test_expect_success 'non-force push fails if not up to date' '
 	git init --bare "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo_conflict.git &&
-	git -C "$HTTPD_DOCUMENT_ROOT_PATH"/test_repo_conflict.git update-server-info &&
+	git --git-dir="$HTTPD_DOCUMENT_ROOT_PATH"/test_repo_conflict.git update-server-info &&
 	git clone $HTTPD_URL/dumb/test_repo_conflict.git "$ROOT_PATH"/c1 &&
 	git clone $HTTPD_URL/dumb/test_repo_conflict.git "$ROOT_PATH"/c2 &&
 	test_commit -C "$ROOT_PATH/c1" path1 &&

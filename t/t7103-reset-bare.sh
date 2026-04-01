@@ -13,26 +13,26 @@ test_expect_success 'setup non-bare' '
 '
 
 test_expect_success '"hard" reset requires a worktree' '
-	(cd .git &&
+	(cd .git && GIT_CONFIG_PARAMETERS="${SQ}safe.bareRepository=all${SQ}" && export GIT_CONFIG_PARAMETERS &&
 	 test_must_fail git reset --hard)
 '
 
 test_expect_success '"merge" reset requires a worktree' '
-	(cd .git &&
+	(cd .git && GIT_CONFIG_PARAMETERS="${SQ}safe.bareRepository=all${SQ}" && export GIT_CONFIG_PARAMETERS &&
 	 test_must_fail git reset --merge)
 '
 
 test_expect_success '"keep" reset requires a worktree' '
-	(cd .git &&
+	(cd .git && GIT_CONFIG_PARAMETERS="${SQ}safe.bareRepository=all${SQ}" && export GIT_CONFIG_PARAMETERS &&
 	 test_must_fail git reset --keep)
 '
 
 test_expect_success '"mixed" reset is ok' '
-	(cd .git && git reset)
+	(cd .git && GIT_CONFIG_PARAMETERS="${SQ}safe.bareRepository=all${SQ}" && export GIT_CONFIG_PARAMETERS && git reset)
 '
 
 test_expect_success '"soft" reset is ok' '
-	(cd .git && git reset --soft)
+	(cd .git && GIT_CONFIG_PARAMETERS="${SQ}safe.bareRepository=all${SQ}" && export GIT_CONFIG_PARAMETERS && git reset --soft)
 '
 
 test_expect_success 'hard reset works with GIT_WORK_TREE' '
@@ -43,7 +43,7 @@ test_expect_success 'hard reset works with GIT_WORK_TREE' '
 
 test_expect_success 'setup bare' '
 	git clone --bare . bare.git &&
-	cd bare.git
+	cd bare.git && GIT_DIR=. && export GIT_DIR
 '
 
 test_expect_success '"hard" reset is not allowed in bare' '

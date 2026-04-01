@@ -28,7 +28,7 @@ test_expect_success 'clone can recurse submodule' '
 test_expect_success 'fsck accepts protected dash' '
 	test_when_finished "rm -rf dst" &&
 	git init --bare dst &&
-	git -C dst config transfer.fsckObjects true &&
+	git --git-dir=dst config transfer.fsckObjects true &&
 	git push dst HEAD
 '
 
@@ -47,7 +47,7 @@ test_expect_success 'clone rejects unprotected dash' '
 test_expect_success 'fsck rejects unprotected dash' '
 	test_when_finished "rm -rf dst" &&
 	git init --bare dst &&
-	git -C dst config transfer.fsckObjects true &&
+	git --git-dir=dst config transfer.fsckObjects true &&
 	test_must_fail git push dst HEAD 2>err &&
 	grep gitmodulesUrl err
 '
@@ -77,7 +77,7 @@ test_expect_success 'fsck rejects missing URL scheme' '
 	git commit -m "gitmodules with missing URL scheme" &&
 	test_when_finished "rm -rf dst" &&
 	git init --bare dst &&
-	git -C dst config transfer.fsckObjects true &&
+	git --git-dir=dst config transfer.fsckObjects true &&
 	test_must_fail git push dst HEAD 2>err &&
 	grep gitmodulesUrl err
 '
@@ -93,7 +93,7 @@ test_expect_success 'fsck rejects relative URL resolving to missing scheme' '
 	git commit -m "gitmodules with relative URL that strips off scheme" &&
 	test_when_finished "rm -rf dst" &&
 	git init --bare dst &&
-	git -C dst config transfer.fsckObjects true &&
+	git --git-dir=dst config transfer.fsckObjects true &&
 	test_must_fail git push dst HEAD 2>err &&
 	grep gitmodulesUrl err
 '
@@ -109,7 +109,7 @@ test_expect_success 'fsck rejects empty URL scheme' '
 	git commit -m "gitmodules with empty URL scheme" &&
 	test_when_finished "rm -rf dst" &&
 	git init --bare dst &&
-	git -C dst config transfer.fsckObjects true &&
+	git --git-dir=dst config transfer.fsckObjects true &&
 	test_must_fail git push dst HEAD 2>err &&
 	grep gitmodulesUrl err
 '
@@ -125,7 +125,7 @@ test_expect_success 'fsck rejects relative URL resolving to empty scheme' '
 	git commit -m "relative gitmodules URL resolving to empty scheme" &&
 	test_when_finished "rm -rf dst" &&
 	git init --bare dst &&
-	git -C dst config transfer.fsckObjects true &&
+	git --git-dir=dst config transfer.fsckObjects true &&
 	test_must_fail git push dst HEAD 2>err &&
 	grep gitmodulesUrl err
 '
@@ -141,7 +141,7 @@ test_expect_success 'fsck rejects empty hostname' '
 	git commit -m "gitmodules with extra slashes" &&
 	test_when_finished "rm -rf dst" &&
 	git init --bare dst &&
-	git -C dst config transfer.fsckObjects true &&
+	git --git-dir=dst config transfer.fsckObjects true &&
 	test_must_fail git push dst HEAD 2>err &&
 	grep gitmodulesUrl err
 '
@@ -157,7 +157,7 @@ test_expect_success 'fsck rejects relative url that produced empty hostname' '
 	git commit -m "gitmodules abusing relative_path" &&
 	test_when_finished "rm -rf dst" &&
 	git init --bare dst &&
-	git -C dst config transfer.fsckObjects true &&
+	git --git-dir=dst config transfer.fsckObjects true &&
 	test_must_fail git push dst HEAD 2>err &&
 	grep gitmodulesUrl err
 '
@@ -172,7 +172,7 @@ test_expect_success 'fsck permits embedded newline with unrecognized scheme' '
 	git commit -m "gitmodules with unrecognized scheme" &&
 	test_when_finished "rm -rf dst" &&
 	git init --bare dst &&
-	git -C dst config transfer.fsckObjects true &&
+	git --git-dir=dst config transfer.fsckObjects true &&
 	git push dst HEAD
 '
 
@@ -187,7 +187,7 @@ test_expect_success 'fsck rejects embedded newline in url' '
 	git commit -m "gitmodules with newline" &&
 	test_when_finished "rm -rf dst" &&
 	git init --bare dst &&
-	git -C dst config transfer.fsckObjects true &&
+	git --git-dir=dst config transfer.fsckObjects true &&
 	test_must_fail git push dst HEAD 2>err &&
 	grep gitmodulesUrl err
 '
@@ -202,7 +202,7 @@ test_expect_success 'fsck rejects embedded newline in relative url' '
 	git commit -m "relative url with newline" &&
 	test_when_finished "rm -rf dst" &&
 	git init --bare dst &&
-	git -C dst config transfer.fsckObjects true &&
+	git --git-dir=dst config transfer.fsckObjects true &&
 	test_must_fail git push dst HEAD 2>err &&
 	grep gitmodulesUrl err
 '
@@ -217,7 +217,7 @@ test_expect_success 'fsck rejects embedded newline in git url' '
 	git commit -m "git url with newline" &&
 	test_when_finished "rm -rf dst" &&
 	git init --bare dst &&
-	git -C dst config transfer.fsckObjects true &&
+	git --git-dir=dst config transfer.fsckObjects true &&
 	test_must_fail git push dst HEAD 2>err &&
 	grep gitmodulesUrl err
 '

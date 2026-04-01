@@ -432,7 +432,7 @@ test_expect_success 'mailmap.blob defaults to off in non-bare repo' '
 test_expect_success 'mailmap.blob defaults to HEAD:.mailmap in bare repo' '
 	git clone --bare non-bare bare &&
 	(
-		cd bare &&
+		cd bare && GIT_DIR=. && export GIT_DIR &&
 		cat >expect <<-\EOF &&
 		     1	Fake Name
 		EOF
@@ -949,7 +949,7 @@ test_expect_success 'bare repo with --work-tree finds mailmap at top-level' '
 '
 
 test_expect_success 'bare repo does not look in current directory' '
-	git -C loc-bare log -1 --format=%aE >actual &&
+	git --git-dir=loc-bare log -1 --format=%aE >actual &&
 	echo orig@example.com >expect &&
 	test_cmp expect actual
 '

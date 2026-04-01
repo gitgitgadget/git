@@ -67,7 +67,7 @@ test_expect_success 'updating a ref from quarantine is forbidden' '
 	exit 1
 	EOF
 	test_must_fail git push update.git HEAD &&
-	git -C update.git fsck
+	git --git-dir=update.git fsck
 '
 
 test_done

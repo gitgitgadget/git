@@ -66,7 +66,7 @@ test_expect_success 'bob fetches from alice, works and pushes' '
 	# Check that the second commit by Alice is not sent
 	# to ../bob-pub
 	(
-		cd bob-pub &&
+		cd bob-pub && GIT_DIR=. && export GIT_DIR &&
 		second=$(git rev-parse HEAD^) &&
 		rm -f objects/info/alternates &&
 		test_must_fail git cat-file -t $second &&
@@ -124,7 +124,7 @@ test_expect_success 'alice works and pushes yet again' '
 
 test_expect_success 'bob works and pushes again' '
 	(
-		cd alice-pub &&
+		cd alice-pub && GIT_DIR=. && export GIT_DIR &&
 		git cat-file commit main >../bob-work/commit
 	) &&
 	(

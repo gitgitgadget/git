@@ -119,15 +119,15 @@ test_expect_success 'fsck detects evil superproject' '
 test_expect_success 'transfer.fsckObjects detects evil superproject (unpack)' '
 	rm -rf dst.git &&
 	git init --bare dst.git &&
-	git -C dst.git config transfer.fsckObjects true &&
+	git --git-dir=dst.git config transfer.fsckObjects true &&
 	test_must_fail git push dst.git HEAD
 '
 
 test_expect_success 'transfer.fsckObjects detects evil superproject (index)' '
 	rm -rf dst.git &&
 	git init --bare dst.git &&
-	git -C dst.git config transfer.fsckObjects true &&
-	git -C dst.git config transfer.unpackLimit 1 &&
+	git --git-dir=dst.git config transfer.fsckObjects true &&
+	git --git-dir=dst.git config transfer.unpackLimit 1 &&
 	test_must_fail git push dst.git HEAD
 '
 
@@ -151,20 +151,20 @@ test_expect_success 'create oddly ordered pack' '
 test_expect_success 'transfer.fsckObjects handles odd pack (unpack)' '
 	rm -rf dst.git &&
 	git init --bare dst.git &&
-	test_must_fail git -C dst.git unpack-objects --strict <odd.pack
+	test_must_fail git --git-dir=dst.git unpack-objects --strict <odd.pack
 '
 
 test_expect_success 'transfer.fsckObjects handles odd pack (index)' '
 	rm -rf dst.git &&
 	git init --bare dst.git &&
-	test_must_fail git -C dst.git index-pack --strict --stdin <odd.pack
+	test_must_fail git --git-dir=dst.git index-pack --strict --stdin <odd.pack
 '
 
 test_expect_success 'index-pack --strict works for non-repo pack' '
 	rm -rf dst.git &&
 	git init --bare dst.git &&
 	cp odd.pack dst.git &&
-	test_must_fail git -C dst.git index-pack --strict odd.pack 2>output &&
+	test_must_fail git --git-dir=dst.git index-pack --strict odd.pack 2>output &&
 	# Make sure we fail due to bad gitmodules content, not because we
 	# could not read the blob in the first place.
 	grep gitmodulesName output

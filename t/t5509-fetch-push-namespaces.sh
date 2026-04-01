@@ -77,7 +77,7 @@ test_expect_success 'pulling from a repository using a ref namespace' '
 test_expect_success 'mirroring a repository using a ref namespace' '
 	git clone --mirror pushee mirror &&
 	(
-		cd mirror &&
+		cd mirror && GIT_DIR=. && export GIT_DIR &&
 		git for-each-ref refs/ >actual &&
 		printf "$commit1 commit\trefs/namespaces/namespace/refs/heads/main\n" >expected &&
 		printf "$commit0 commit\trefs/namespaces/namespace/refs/tags/0\n" >>expected &&
@@ -95,7 +95,7 @@ test_expect_success 'hide namespaced refs with transfer.hideRefs' '
 '
 
 test_expect_success 'check that transfer.hideRefs does not match unstripped refs' '
-	git -C pushee pack-refs --all &&
+	git --git-dir=pushee pack-refs --all &&
 	GIT_NAMESPACE=namespace \
 		git -C pushee --git-dir=. -c transfer.hideRefs=refs/namespaces/namespace/refs/tags \
 		ls-remote "ext::git %s ." >actual &&
@@ -124,8 +124,8 @@ test_expect_success 'try to update a ref that is not hidden' '
 '
 
 test_expect_success 'git-receive-pack(1) with transfer.hideRefs does not match unstripped refs during advertisement' '
-	git -C pushee update-ref refs/namespaces/namespace/refs/heads/foo/1 refs/namespaces/namespace/refs/heads/main &&
-	git -C pushee pack-refs --all &&
+	git --git-dir=pushee update-ref refs/namespaces/namespace/refs/heads/foo/1 refs/namespaces/namespace/refs/heads/main &&
+	git --git-dir=pushee pack-refs --all &&
 	test_config --git-dir pushee transfer.hideRefs refs/namespaces/namespace/refs/heads/foo &&
 	GIT_TRACE_PACKET="$(pwd)/trace" git -C original push pushee-namespaced main &&
 	test_grep refs/heads/foo/1 trace

@@ -79,7 +79,7 @@ test_expect_success "proc-receive: report update of mixed refs ($PROTOCOL/porcel
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "cleanup ($PROTOCOL/porcelain)" '
 	(
-		cd "$upstream" &&
+		cd "$upstream" && GIT_DIR=. && export GIT_DIR &&
 		git update-ref refs/heads/main $A &&
 		git update-ref -d refs/heads/foo &&
 		git update-ref -d refs/heads/bar &&

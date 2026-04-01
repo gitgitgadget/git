@@ -1,13 +1,13 @@
 test_expect_success "config receive.procReceiveRefs = refs ($PROTOCOL)" '
-	git -C "$upstream" config --unset-all receive.procReceiveRefs &&
-	git -C "$upstream" config --add receive.procReceiveRefs refs
+	git --git-dir="$upstream" config --unset-all receive.procReceiveRefs &&
+	git --git-dir="$upstream" config --add receive.procReceiveRefs refs
 '
 
 # Refs of upstream : main(A)
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "setup upstream branches ($PROTOCOL)" '
 	(
-		cd "$upstream" &&
+		cd "$upstream" && GIT_DIR=. && export GIT_DIR &&
 		git update-ref refs/heads/main $B &&
 		git update-ref refs/heads/foo $A &&
 		git update-ref refs/heads/bar $A &&
@@ -104,7 +104,7 @@ test_expect_success "proc-receive: process all refs ($PROTOCOL)" '
 # Refs of workbench: main(A)  tags/v123
 test_expect_success "cleanup ($PROTOCOL)" '
 	(
-		cd "$upstream" &&
+		cd "$upstream" && GIT_DIR=. && export GIT_DIR &&
 		git update-ref -d refs/heads/bar &&
 		git update-ref -d refs/heads/baz
 	)

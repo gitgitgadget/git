@@ -83,8 +83,8 @@ test_expect_success 'add another remote' '
 
 test_expect_success 'setup bare clone for server' '
 	git clone --bare "file://$(pwd)/one" srv.bare &&
-	git -C srv.bare config --local uploadpack.allowfilter 1 &&
-	git -C srv.bare config --local uploadpack.allowanysha1inwant 1
+	git --git-dir=srv.bare config --local uploadpack.allowfilter 1 &&
+	git --git-dir=srv.bare config --local uploadpack.allowanysha1inwant 1
 '
 
 test_expect_success 'filters for promisor remotes are listed by git remote -v' '
@@ -569,7 +569,7 @@ test_expect_success 'add --mirror && prune' '
 		git branch -m side2 side
 	) &&
 	(
-		cd mirror &&
+		cd mirror && GIT_DIR=. && export GIT_DIR &&
 		git rev-parse --verify refs/heads/side2 &&
 		test_must_fail git rev-parse --verify refs/heads/side &&
 		git fetch origin &&
@@ -593,7 +593,7 @@ test_expect_success 'non-mirror fetch does not interfere with mirror' '
 	test_when_finished rm -rf headnotmain &&
 	(
 		git init --bare -b notmain headnotmain &&
-		cd headnotmain &&
+		cd headnotmain && GIT_DIR=. && export GIT_DIR &&
 		git remote add -f other ../two &&
 		test "$(git symbolic-ref HEAD)" = "refs/heads/notmain"
 	)
@@ -608,7 +608,7 @@ test_expect_success 'add --mirror=fetch' '
 	) &&
 	git init --bare mirror-fetch/child &&
 	(
-		cd mirror-fetch/child &&
+		cd mirror-fetch/child && GIT_DIR=. && export GIT_DIR &&
 		git remote add --mirror=fetch -f parent ../parent
 	)
 '
@@ -620,7 +620,7 @@ test_expect_success 'fetch mirrors act as mirrors during fetch' '
 		git branch -m main renamed
 	) &&
 	(
-		cd mirror-fetch/child &&
+		cd mirror-fetch/child && GIT_DIR=. && export GIT_DIR &&
 		git fetch parent &&
 		git rev-parse --verify refs/heads/new &&
 		git rev-parse --verify refs/heads/renamed
@@ -629,7 +629,7 @@ test_expect_success 'fetch mirrors act as mirrors during fetch' '
 
 test_expect_success 'fetch mirrors can prune' '
 	(
-		cd mirror-fetch/child &&
+		cd mirror-fetch/child && GIT_DIR=. && export GIT_DIR &&
 		git remote prune parent &&
 		test_must_fail git rev-parse --verify refs/heads/main
 	)
@@ -641,7 +641,7 @@ test_expect_success 'fetch mirrors do not act as mirrors during push' '
 		git checkout HEAD^0
 	) &&
 	(
-		cd mirror-fetch/child &&
+		cd mirror-fetch/child && GIT_DIR=. && export GIT_DIR &&
 		git branch -m renamed renamed2 &&
 		git push parent :
 	) &&
@@ -655,14 +655,14 @@ test_expect_success 'fetch mirrors do not act as mirrors during push' '
 test_expect_success 'add fetch mirror with specific branches' '
 	git init --bare mirror-fetch/track &&
 	(
-		cd mirror-fetch/track &&
+		cd mirror-fetch/track && GIT_DIR=. && export GIT_DIR &&
 		git remote add --mirror=fetch -t heads/new parent ../parent
 	)
 '
 
 test_expect_success 'fetch mirror respects specific branches' '
 	(
-		cd mirror-fetch/track &&
+		cd mirror-fetch/track && GIT_DIR=. && export GIT_DIR &&
 		git fetch parent &&
 		git rev-parse --verify refs/heads/new &&
 		test_must_fail git rev-parse --verify refs/heads/renamed
@@ -697,7 +697,7 @@ test_expect_success 'push mirrors act as mirrors during push' '
 
 test_expect_success 'push mirrors do not act as mirrors during fetch' '
 	(
-		cd mirror-push/public &&
+		cd mirror-push/public && GIT_DIR=. && export GIT_DIR &&
 		git branch -m renamed renamed2 &&
 		git symbolic-ref HEAD refs/heads/renamed2
 	) &&
@@ -1022,10 +1022,10 @@ test_expect_success 'rename handles remote without fetch refspec' '
 	git clone --bare one no-refspec.git &&
 	# confirm assumption that bare clone does not create refspec
 	test_expect_code 5 \
-		git -C no-refspec.git config --unset-all remote.origin.fetch &&
-	git -C no-refspec.git config remote.origin.url >expect &&
-	git -C no-refspec.git remote rename origin foo &&
-	git -C no-refspec.git config remote.foo.url >actual &&
+		git --git-dir=no-refspec.git config --unset-all remote.origin.fetch &&
+	git --git-dir=no-refspec.git config remote.origin.url >expect &&
+	git --git-dir=no-refspec.git remote rename origin foo &&
+	git --git-dir=no-refspec.git config remote.foo.url >actual &&
 	test_cmp expect actual
 '
 
@@ -1292,7 +1292,7 @@ test_expect_success 'remote set-branches with --mirror' '
 	echo "+refs/heads/main:refs/heads/main" >expect.replace &&
 	git clone --mirror .git/ setbranches-mirror &&
 	(
-		cd setbranches-mirror &&
+		cd setbranches-mirror && GIT_DIR=. && export GIT_DIR &&
 		git remote rename origin scratch &&
 		git config --get-all remote.scratch.fetch >../actual.initial &&
 

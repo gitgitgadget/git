@@ -51,7 +51,7 @@ test_expect_success 'git merge-index git-merge-one-file resolves' '
 
 test_expect_success 'setup bare merge' '
 	git clone --bare . bare.git &&
-	(cd bare.git &&
+	(cd bare.git && GIT_DIR=. && export GIT_DIR &&
 	 GIT_INDEX_FILE=$PWD/merge.index &&
 	 export GIT_INDEX_FILE &&
 	 git read-tree -i -m base ten two
@@ -59,7 +59,7 @@ test_expect_success 'setup bare merge' '
 '
 
 test_expect_success 'merge-one-file fails without a work tree' '
-	(cd bare.git &&
+	(cd bare.git && GIT_DIR=. && export GIT_DIR &&
 	 GIT_INDEX_FILE=$PWD/merge.index &&
 	 export GIT_INDEX_FILE &&
 	 test_must_fail git merge-index git-merge-one-file -a
@@ -67,7 +67,7 @@ test_expect_success 'merge-one-file fails without a work tree' '
 '
 
 test_expect_success 'merge-one-file respects GIT_WORK_TREE' '
-	(cd bare.git &&
+	(cd bare.git && GIT_DIR=. && export GIT_DIR &&
 	 mkdir work &&
 	 GIT_WORK_TREE=$PWD/work &&
 	 export GIT_WORK_TREE &&
