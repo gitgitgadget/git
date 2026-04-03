@@ -46,13 +46,13 @@ int cmd_psuh(int argc, const char **argv,
 	if (repo_config_get_string_tmp(repo, "user.name", &config_name))
 		printf(_("No name is found in config\n"));
 	else
-		printf(_("Your name: %s\n"), config_name);	
+		printf(_("Your name: %s\n"), config_name);
 
 	printf(_("Your current branch: %s\n"), status.branch);
 
 	c = lookup_commit_reference_by_name("refs/heads/psuh");
 
-	if (c != NULL) {
+	if (c) {
 		pp_commit_easy(CMIT_FMT_ONELINE, c, &commitline);
 		printf(_("Current commit: %s\n"), commitline.buf);
 	}

@@ -1114,6 +1114,7 @@ integration_tests = [
   't9901-git-web--browse.sh',
   't9902-completion.sh',
   't9903-bash-prompt.sh',
+  't9999-psuh-tutorial.sh',
 ]
 
 benchmarks = [
