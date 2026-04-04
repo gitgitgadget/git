@@ -101,9 +101,10 @@ static int midx_read_object_offsets(const unsigned char *chunk_start,
 
 struct multi_pack_index *get_multi_pack_index(struct odb_source *source)
 {
-	struct odb_source_files *files = odb_source_files_downcast(source);
-	packfile_store_prepare(files->packed);
-	return files->packed->midx;
+	if (!source->packed)
+		return NULL;
+	packfile_store_prepare(source->packed);
+	return source->packed->midx;
 }
 
 static struct multi_pack_index *load_multi_pack_index_one(struct odb_source *source,

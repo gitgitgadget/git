@@ -20,6 +20,7 @@
 #include "packfile.h"
 #include "pretty.h"
 #include "object-file.h"
+#include "odb/source.h"
 #include "read-cache-ll.h"
 #include "repo-settings.h"
 #include "repository.h"
@@ -111,13 +112,28 @@ static enum cb_next match_prefix(const struct object_id *oid, void *arg)
 	return ds->ambiguous ? CB_BREAK : CB_CONTINUE;
 }
 
+static int disambiguate_cb(const struct object_id *oid,
+			   struct object_info *oi UNUSED, void *data)
+{
+	struct disambiguate_state *ds = data;
+	update_candidates(ds, oid);
+	return ds->ambiguous ? 1 : 0;
+}
+
 static void find_short_object_filename(struct disambiguate_state *ds)
 {
 	struct odb_source *source;
 
-	for (source = ds->repo->objects->sources; source && !ds->ambiguous; source = source->next)
-		oidtree_each(odb_source_loose_cache(source, &ds->bin_pfx),
-				&ds->bin_pfx, ds->len, match_prefix, ds);
+	for (source = ds->repo->objects->sources; source && !ds->ambiguous; source = source->next) {
+		if (source->for_each_unique_abbrev) {
+			odb_source_for_each_unique_abbrev(
+				source, &ds->bin_pfx, ds->len,
+				disambiguate_cb, ds);
+		} else {
+			oidtree_each(odb_source_loose_cache(source, &ds->bin_pfx),
+					&ds->bin_pfx, ds->len, match_prefix, ds);
+		}
+	}
 }
 
 static int match_hash(unsigned len, const unsigned char *a, const unsigned char *b)
@@ -208,15 +224,23 @@ static void find_short_packed_object(struct disambiguate_state *ds)
 
 	odb_prepare_alternates(ds->repo->objects);
 	for (source = ds->repo->objects->sources; source && !ds->ambiguous; source = source->next) {
-		struct multi_pack_index *m = get_multi_pack_index(source);
-		if (m)
-			unique_in_midx(m, ds);
+		if (source->for_each_unique_abbrev) {
+			odb_source_for_each_unique_abbrev(
+				source, &ds->bin_pfx, ds->len,
+				disambiguate_cb, ds);
+		} else {
+			struct multi_pack_index *m = get_multi_pack_index(source);
+			if (m)
+				unique_in_midx(m, ds);
+		}
 	}
 
-	repo_for_each_pack(ds->repo, p) {
-		if (ds->ambiguous)
-			break;
-		unique_in_pack(p, ds);
+	if (!ds->repo->objects->sources->for_each_unique_abbrev) {
+		repo_for_each_pack(ds->repo, p) {
+			if (ds->ambiguous)
+				break;
+			unique_in_pack(p, ds);
+		}
 	}
 }
 
@@ -796,19 +820,38 @@ static void find_abbrev_len_for_pack(struct packed_git *p,
 	mad->init_len = mad->cur_len;
 }
 
+static int abbrev_len_cb(const struct object_id *oid,
+			 struct object_info *oi UNUSED, void *data)
+{
+	struct min_abbrev_data *mad = data;
+	extend_abbrev_len(oid, mad);
+	return 0;
+}
+
 static void find_abbrev_len_packed(struct min_abbrev_data *mad)
 {
-	struct packed_git *p;
-
 	odb_prepare_alternates(mad->repo->objects);
-	for (struct odb_source *source = mad->repo->objects->sources; source; source = source->next) {
-		struct multi_pack_index *m = get_multi_pack_index(source);
-		if (m)
-			find_abbrev_len_for_midx(m, mad);
+
+	for (struct odb_source *source = mad->repo->objects->sources;
+	     source; source = source->next) {
+		if (source->for_each_unique_abbrev) {
+			mad->init_len = 0;
+			odb_source_for_each_unique_abbrev(
+				source, mad->oid, mad->cur_len,
+				abbrev_len_cb, mad);
+			mad->init_len = mad->cur_len;
+		} else {
+			struct multi_pack_index *m = get_multi_pack_index(source);
+			if (m)
+				find_abbrev_len_for_midx(m, mad);
+		}
 	}
 
-	repo_for_each_pack(mad->repo, p)
-		find_abbrev_len_for_pack(p, mad);
+	if (!mad->repo->objects->sources->for_each_unique_abbrev) {
+		struct packed_git *p;
+		repo_for_each_pack(mad->repo, p)
+			find_abbrev_len_for_pack(p, mad);
+	}
 }
 
 void strbuf_repo_add_unique_abbrev(struct strbuf *sb, struct repository *repo,
