@@ -9,9 +9,10 @@
  */
 
 #define BANNED(func) sorry_##func##_is_a_banned_function
+#define BANNED_EXPL(func, expl) sorry_##func##_is_a_banned_funcion_because_##expl##.
 
 #undef strcpy
-#define strcpy(x,y) BANNED(strcpy)
+#define strcpy(x,y) BANNED_EXPL(strcpy, buffer_overflow_risk)
 #undef strcat
 #define strcat(x,y) BANNED(strcat)
 #undef strncpy
