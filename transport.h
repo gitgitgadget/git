@@ -49,6 +49,12 @@ struct git_transport_options {
 	struct oid_array *negotiation_tips;
 
 	/*
+	 * If non-empty, ref patterns whose tips should always be sent
+	 * as "have" lines during negotiation.
+	 */
+	const struct string_list *must_have;
+
+	/*
 	 * If allocated, whenever transport_fetch_refs() is called, add known
 	 * common commits to this oidset instead of fetching any packfiles.
 	 */
