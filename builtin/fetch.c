@@ -1607,6 +1607,9 @@ static struct transport *prepare_transport(struct remote *remote, int deepen,
 			transport->smart_options->must_have = &must_have;
 		else
 			warning(_("ignoring %s because the protocol does not support it"), "--must-have");
+	} else if (remote->must_have.nr) {
+		if (transport->smart_options)
+			transport->smart_options->must_have = &remote->must_have;
 	}
 	return transport;
 }
