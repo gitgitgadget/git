@@ -254,6 +254,21 @@ test_expect_success 'push with negotiation does not attempt to fetch submodules'
 	! grep "Fetching submodule" err
 '
 
+test_expect_success 'push with negotiation and remote.<name>.mustHave' '
+	test_when_finished rm -rf musthave &&
+	mk_empty musthave &&
+	git push musthave $the_first_commit:refs/remotes/origin/first_commit &&
+	test_commit -C musthave unrelated_commit &&
+	git -C musthave config receive.hideRefs refs/remotes/origin/first_commit &&
+	test_when_finished "rm event" &&
+	GIT_TRACE2_EVENT="$(pwd)/event" \
+		git -c protocol.version=2 -c push.negotiate=1 \
+		-c remote.musthave.mustHave=refs/heads/main \
+		push musthave refs/heads/main:refs/remotes/origin/main &&
+	test_grep \"key\":\"total_rounds\" event &&
+	grep_wrote 2 event # 1 commit, 1 tree
+'
+
 test_expect_success 'push without wildcard' '
 	mk_empty testrepo &&
 

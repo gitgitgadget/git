@@ -18,6 +18,7 @@ struct repository;
 
 struct send_pack_args {
 	const char *url;
+	const struct string_list *must_have;
 	unsigned verbose:1,
 		quiet:1,
 		porcelain:1,

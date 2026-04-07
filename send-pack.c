@@ -433,6 +433,7 @@ static void reject_invalid_nonce(const char *nonce, int len)
 
 static void get_commons_through_negotiation(struct repository *r,
 					    const char *url,
+					    const struct string_list *must_have,
 					    const struct ref *remote_refs,
 					    struct oid_array *commons)
 {
@@ -452,6 +453,14 @@ static void get_commons_through_negotiation(struct repository *r,
 			nr_negotiation_tip++;
 		}
 	}
+
+	if (must_have) {
+		struct string_list_item *item;
+		for_each_string_list_item(item, must_have)
+			strvec_pushf(&child.args, "--must-have=%s",
+				     item->string);
+	}
+
 	strvec_push(&child.args, url);
 
 	if (!nr_negotiation_tip) {
@@ -528,7 +537,8 @@ int send_pack(struct repository *r,
 	repo_config_get_bool(r, "push.negotiate", &push_negotiate);
 	if (push_negotiate) {
 		trace2_region_enter("send_pack", "push_negotiate", r);
-		get_commons_through_negotiation(r, args->url, remote_refs, &commons);
+		get_commons_through_negotiation(r, args->url, args->must_have,
+					       remote_refs, &commons);
 		trace2_region_leave("send_pack", "push_negotiate", r);
 	}
 
