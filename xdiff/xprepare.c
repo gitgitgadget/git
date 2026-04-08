@@ -336,24 +336,44 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 	 */
 	xdf1->nreff = 0;
 	for (i = xdf1->dstart; i <= xdf1->dend; i++) {
-		if (action1[i] == KEEP ||
-		    (action1[i] == INVESTIGATE && !xdl_clean_mmatch(action1, i, xdf1->dstart, xdf1->dend))) {
+		uint8_t action = action1[i];
+
+		if (action == INVESTIGATE) {
+			if (!xdl_clean_mmatch(action1, i, xdf1->dstart, xdf1->dend))
+				action = KEEP;
+			else
+				action = DISCARD;
+		}
+
+		if (action == KEEP) {
 			xdf1->reference_index[xdf1->nreff++] = i;
-			/* changed[i] remains false, i.e. keep */
-		} else
+			/* changed[i] remains false */
+		} else if (action == DISCARD) {
 			xdf1->changed[i] = true;
-			/* i.e. discard */
+		} else {
+			BUG("Illegal state for action");
+		}
 	}
 
 	xdf2->nreff = 0;
 	for (i = xdf2->dstart; i <= xdf2->dend; i++) {
-		if (action2[i] == KEEP ||
-		    (action2[i] == INVESTIGATE && !xdl_clean_mmatch(action2, i, xdf2->dstart, xdf2->dend))) {
+		uint8_t action = action2[i];
+
+		if (action == INVESTIGATE) {
+			if (!xdl_clean_mmatch(action2, i, xdf2->dstart, xdf2->dend))
+				action = KEEP;
+			else
+				action = DISCARD;
+		}
+
+		if (action == KEEP) {
 			xdf2->reference_index[xdf2->nreff++] = i;
-			/* changed[i] remains false, i.e. keep */
-		} else
+			/* changed[i] remains false */
+		} else if (action == DISCARD) {
 			xdf2->changed[i] = true;
-			/* i.e. discard */
+		} else {
+			BUG("Illegal state for action");
+		}
 	}
 
 cleanup:
