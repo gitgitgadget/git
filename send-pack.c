@@ -447,7 +447,7 @@ static void get_commons_through_negotiation(struct repository *r,
 	strvec_pushl(&child.args, "fetch", "--negotiate-only", NULL);
 	for (ref = remote_refs; ref; ref = ref->next) {
 		if (!is_null_oid(&ref->new_oid)) {
-			strvec_pushf(&child.args, "--negotiation-tip=%s",
+			strvec_pushf(&child.args, "--negotiation-restrict=%s",
 				     oid_to_hex(&ref->new_oid));
 			nr_negotiation_tip++;
 		}
