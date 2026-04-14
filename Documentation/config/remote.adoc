@@ -122,6 +122,9 @@ command-line option.  If `--negotiation-restrict` (or its synonym
 `--negotiation-tip`) is specified on the command line, then the config
 values are not used.
 +
+These values also influence negotiation during `git push` if
+`push.negotiate` is enabled.
++
 Blank values signal to ignore all previous values, allowing a reset of
 the list from broader config scenarios.
 
@@ -148,6 +151,9 @@ but the refs matching `remote.<name>.negotiationInclude` are sent
 unconditionally on top of those heuristically selected commits.  This
 option is also used during push negotiation when `push.negotiate` is
 enabled.
++
+These values also influence negotiation during `git push` if
+`push.negotiate` is enabled.
 +
 Blank values signal to ignore all previous values, allowing a reset of
 the list from broader config scenarios.
