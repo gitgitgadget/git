@@ -3093,8 +3093,17 @@ static void show_stats(struct diffstat_t *data, struct diff_options *options)
 			if (len < 0)
 				len = 0;
 
-			while (name_len > len)
-				name_len -= utf8_width((const char**)&name, NULL);
+			while (name_len > len && *name) {
+				int w = utf8_width((const char **)&name, NULL);
+				if (!name) { /* Invalid UTF-8 */
+					name = file->print_name;
+					name_len = utf8_strwidth(name);
+					break;
+				}
+				if (w < 0)  /* control character */
+					break;
+				name_len -= w;
+			}
 
 			slash = strchr(name, '/');
 			if (slash)
