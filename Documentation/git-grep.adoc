@@ -54,8 +54,8 @@ OPTIONS
 	or by ignoring that the current directory is managed by Git.  This
 	is rather similar to running the regular `grep(1)` utility with its
 	`-r` option specified, but with some additional benefits, such as
-	using pathspec patterns to limit paths;  see the 'pathspec' entry
-	in linkgit:gitglossary[7] for more information.
+	using pathspec patterns to limit paths;  see linkgit:gitpathspecs[7]
+	for more information.
 +
 This option cannot be used together with `--cached` or `--untracked`.
 See also `grep.fallbackToNoIndex` in 'CONFIGURATION' below.
@@ -316,8 +316,7 @@ question doesn't support them.
 	If given, limit the search to paths matching at least one pattern.
 	Both leading paths match and glob(7) patterns are supported.
 +
-For more details about the <pathspec> syntax, see the 'pathspec' entry
-in linkgit:gitglossary[7].
+For more details about the <pathspec> syntax, see linkgit:gitpathspecs[7].
 
 EXAMPLES
 --------
