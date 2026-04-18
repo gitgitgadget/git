@@ -186,7 +186,8 @@ static void write_promisor_file_after_repack(struct repository *repo,
 static void finish_repacking_promisor_objects(struct repository *repo,
 					      struct child_process *cmd,
 					      struct string_list *names,
-					      const char *packtmp)
+					      const char *packtmp,
+					      struct strset *not_repacked_basenames)
 {
 	struct strbuf line = STRBUF_INIT;
 	FILE *out;
@@ -196,7 +197,6 @@ static void finish_repacking_promisor_objects(struct repository *repo,
 	out = xfdopen(cmd->out, "r");
 	while (strbuf_getline_lf(&line, out) != EOF) {
 		struct string_list_item *item;
-		char *promisor_name;
 
 		if (line.len != repo->hash_algo->hexsz)
 			die(_("repack: Expecting full hex object ID lines only from pack-objects."));
@@ -204,22 +204,16 @@ static void finish_repacking_promisor_objects(struct repository *repo,
 
 		/*
 		 * pack-objects creates the .pack and .idx files, but not the
-		 * .promisor file. Create the .promisor file, which is empty.
-		 *
-		 * NEEDSWORK: fetch-pack sometimes generates non-empty
-		 * .promisor files containing the ref names and associated
-		 * hashes at the point of generation of the corresponding
-		 * packfile, but this would not preserve their contents. Maybe
-		 * concatenate the contents of all .promisor files instead of
-		 * just creating a new empty file.
+		 * ".promisor" file. To create the "".promisor" file, we don't use the
+		 * helper function write_promisor_file(), but instead we use the
+		 * specific function write_promisor_file_after_repack(), which creates
+		 * the file and appropriately fills it with the content of the
+		 * ".promisor" files used for the repack.
 		 */
-		promisor_name = mkpathdup("%s-%s.promisor", packtmp,
-					  line.buf);
-		write_promisor_file(promisor_name, NULL, 0);
+		write_promisor_file_after_repack(repo, line.buf, packtmp,
+						not_repacked_basenames);
 
 		item->util = generated_pack_populate(item->string, packtmp);
-
-		free(promisor_name);
 	}
 
 	fclose(out);
@@ -256,7 +250,7 @@ void repack_promisor_objects(struct repository *repo,
 		return;
 	}
 
-	finish_repacking_promisor_objects(repo, &cmd, names, packtmp);
+	finish_repacking_promisor_objects(repo, &cmd, names, packtmp, NULL);
 }
 
 void pack_geometry_repack_promisors(struct repository *repo,
@@ -267,6 +261,7 @@ void pack_geometry_repack_promisors(struct repository *repo,
 {
 	struct child_process cmd = CHILD_PROCESS_INIT;
 	FILE *in;
+	struct strset not_repacked_basenames = STRSET_INIT;
 
 	if (!geometry->promisor_split)
 		return;
@@ -280,9 +275,15 @@ void pack_geometry_repack_promisors(struct repository *repo,
 	in = xfdopen(cmd.in, "w");
 	for (size_t i = 0; i < geometry->promisor_split; i++)
 		fprintf(in, "%s\n", pack_basename(geometry->promisor_pack[i]));
-	for (size_t i = geometry->promisor_split; i < geometry->promisor_pack_nr; i++)
-		fprintf(in, "^%s\n", pack_basename(geometry->promisor_pack[i]));
+	for (size_t i = geometry->promisor_split; i < geometry->promisor_pack_nr; i++) {
+		const char *name = pack_basename(geometry->promisor_pack[i]);
+		fprintf(in, "^%s\n", name);
+		strset_add(&not_repacked_basenames, name);
+	}
 	fclose(in);
 
-	finish_repacking_promisor_objects(repo, &cmd, names, packtmp);
+	finish_repacking_promisor_objects(repo, &cmd, names, packtmp,
+			strset_get_size(&not_repacked_basenames) ? &not_repacked_basenames : NULL);
+
+	strset_clear(&not_repacked_basenames);
 }
