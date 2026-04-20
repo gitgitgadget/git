@@ -1008,18 +1008,20 @@ static int traverse_trees_wrapper(struct index_state *istate,
 	info->traverse_path = renames->callback_data_traverse_path;
 	info->fn = old_fn;
 	for (i = old_offset; i < renames->callback_data_nr; ++i) {
-		info->fn(n,
-			 renames->callback_data[i].mask,
-			 renames->callback_data[i].dirmask,
-			 renames->callback_data[i].names,
-			 info);
+		ret = info->fn(n,
+			       renames->callback_data[i].mask,
+			       renames->callback_data[i].dirmask,
+			       renames->callback_data[i].names,
+			       info);
+		if (ret < 0)
+			break;
 	}
 
 	renames->callback_data_nr = old_offset;
 	free(renames->callback_data_traverse_path);
 	renames->callback_data_traverse_path = old_callback_data_traverse_path;
 	info->traverse_path = NULL;
-	return 0;
+	return ret < 0 ? ret : 0;
 }
 
 static void setup_path_info(struct merge_options *opt,
