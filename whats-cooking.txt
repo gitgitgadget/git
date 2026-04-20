@@ -1,10 +1,10 @@
 To: git@vger.kernel.org
-Subject: What's cooking in git.git (Apr 2026, #06)
+Subject: What's cooking in git.git (Apr 2026, #07)
 X-master-at: 94f057755b7941b321fd11fec1b2e3ca5313a4e0
-X-next-at: f703ff30bc5e33a20cacd2b6ec9f4b2e71eee37e
+X-next-at: 6539524ca2a07762a89180718112132867e16309
 Bcc: lwn@lwn.net, gitster@pobox.com
 
-What's cooking in git.git (Apr 2026, #06)
+What's cooking in git.git (Apr 2026, #07)
 -----------------------------------------
 
 Here are the topics that have been cooking in my tree.  Commits
@@ -17,13 +17,13 @@ A topic without enough support may be discarded after a long period
 of no activity (of course they can be resubmitted when new interests
 arise).
 
-Git 2.54 (final) has been tagged.  Thank you, everybody, for
-participating.  I will go offline for a couple of weeks starting
-this evening, hopefully after updating 'next' and possibly also
-pushing out the first batch of the new cycle.  There is no
-designated interim maintainer this time, but I trust that the
-community can self organize if the shape of the release and the tree
-turns out to be super bad ;-).
+Git 2.54 has been released, and the tip of 'next' has acquired a
+handful more topics, but no update to 'master' yet to kick off the
+new cycle has happened (yet).  I will go offline for a couple of
+weeks starting this evening.  There is no designated interim
+maintainer this time, but I trust that the community can self
+organize if the shape of the release and the tree turns out to be
+super bad ;-).
 
 Copies of the source code to Git live in many repositories, and the
 following is a list of the ones I push into or their mirrors.  Some
@@ -54,16 +54,31 @@ Release tarballs are available at:
 	https://www.kernel.org/pub/software/scm/git/
 
 --------------------------------------------------
+[New Topics]
+
+* pw/status-rebase-todo (2026-04-20) 2 commits
+ - status: improve rebase todo list parsing
+ - sequencer: factor out parsing of todo commands
+
+ The display of the rebase todo list in "git status" has been
+ improved to correctly abbreviate object IDs for more commands and
+ avoid misinterpreting refs as object IDs.
+
+ Needs review.
+ source: <cover.1776697483.git.phillip.wood@dunelm.org.uk>
+
+--------------------------------------------------
 [Cooking]
 
 * sb/userdiff-lisp-family (2026-04-14) 2 commits
- - userdiff: extend Scheme support to cover other Lisp dialects
- - userdiff: tighten word-diff test case of the scheme driver
+  (merged to 'next' on 2026-04-20 at 5897c04899)
+ + userdiff: extend Scheme support to cover other Lisp dialects
+ + userdiff: tighten word-diff test case of the scheme driver
 
  The userdiff driver for the Scheme language has been extended to
  cover other Lisp dialects.
 
- Will merge to 'next'.
+ Will merge to 'master'.
  source: <pull.2000.v4.git.1776220063.gitgitgadget@gmail.com>
 
 
@@ -126,16 +141,17 @@ Release tarballs are available at:
 
 
 * mc/http-emptyauth-negotiate-fix (2026-04-16) 3 commits
- - t5563: add tests for http.emptyAuth with Negotiate
- - http: attempt Negotiate auth in http.emptyAuth=auto mode
- - http: extract http_reauth_prepare() from retry paths
+  (merged to 'next' on 2026-04-20 at 6539524ca2)
+ + t5563: add tests for http.emptyAuth with Negotiate
+ + http: attempt Negotiate auth in http.emptyAuth=auto mode
+ + http: extract http_reauth_prepare() from retry paths
 
  The 'http.emptyAuth=auto' configuration now correctly attempts
  Negotiate authentication before falling back to manual credentials.
  This allows seamless Kerberos ticket-based authentication without
  requiring users to explicitly set 'http.emptyAuth=true'.
 
- Will merge to 'next'.
+ Will merge to 'master'.
  source: <pull.2087.git.1776331259.gitgitgadget@gmail.com>
 
 
@@ -153,7 +169,7 @@ Release tarballs are available at:
  source: <pull.2089.v2.git.1776472347.gitgitgadget@gmail.com>
 
 
-* en/diffstat-utf8-truncation-fix (2026-04-17) 1 commit
+* en/diffstat-utf8-truncation-fix (2026-04-20) 1 commit
  - diff: fix out-of-bounds reads and NULL deref in diffstat UTF-8 truncation
 
  The computation to shorten the filenames shown in diffstat measured
@@ -161,8 +177,8 @@ Release tarballs are available at:
  into account error cases (e.g., an invalid UTF-8 sequence, or a
  control character).
 
- Will merge to 'next' and then to 'master'?
- source: <pull.2093.v2.git.1776465910538.gitgitgadget@gmail.com>
+ Will merge to 'next'?
+ source: <pull.2093.v3.git.1776699778177.gitgitgadget@gmail.com>
 
 
 * sp/refs-reduce-the-repository (2026-04-04) 3 commits
@@ -174,7 +190,7 @@ Release tarballs are available at:
  Code clean-up to use the right instance of a repository instance in
  calls inside refs subsystem.
 
- Will cook in 'next'.
+ Will merge to 'master'.
  source: <20260404135914.61195-1-shreyanshpaliwalcmsmn@gmail.com>
 
 
@@ -208,15 +224,16 @@ Release tarballs are available at:
 
 
 * jc/doc-timestamps-in-stat (2026-04-10) 1 commit
- - CodingGuidelines: st_mtimespec vs st_mtim vs st_mtime
+  (merged to 'next' on 2026-04-20 at 0680260012)
+ + CodingGuidelines: st_mtimespec vs st_mtim vs st_mtime
 
  Doc update.
 
- Will merge to 'next'.
+ Will merge to 'master'.
  source: <xmqqzf3aofdj.fsf_-_@gitster.g>
 
 
-* ps/test-set-e-clean (2026-04-17) 12 commits
+* ps/test-set-e-clean (2026-04-20) 12 commits
  - t: detect errors outside of test cases
  - t9902: fix use of `read` with `set -e`
  - t6002: fix use of `expr` with `set -e`
@@ -234,9 +251,8 @@ Release tarballs are available at:
  updated to work correctly when 'set -e' is in effect, which helps
  detect misspelled test commands.
 
- Expecting a (hopefully final) reroll.
- cf. <aeXTcZ7K9a6kUIbk@pks.im>
- source: <20260417-b4-pks-tests-with-set-e-v4-0-44d43efdafb1@pks.im>
+ Will merge to 'next'.
+ source: <20260420-b4-pks-tests-with-set-e-v5-0-7d3d68292f6b@pks.im>
 
 
 * js/adjust-tests-to-explicitly-access-bare-repo (2026-04-02) 17 commits
@@ -288,7 +304,7 @@ Release tarballs are available at:
  Rust support is enabled by default (but still allows opting out) in
  some future version of Git.
 
- Will merge to 'next' after Git 2.54 final gets tagged.
+ Will merge to 'next'.
  source: <20260409224434.1861422-1-sandals@crustytoothpaste.net>
 
 
@@ -323,7 +339,7 @@ Release tarballs are available at:
  is fully ready to write out a tree object was broken, which has
  been corrected.
 
- Will cook in 'next'.
+ Will merge to 'master'.
  source: <20260406192711.68870-1-davidlin@stripe.com>
 
 
@@ -336,7 +352,7 @@ Release tarballs are available at:
 
  Doc mark-up updates.
 
- Will cook in 'next'.
+ Will merge to 'master'.
  source: <pull.2077.git.1775322767.gitgitgadget@gmail.com>
 
 
@@ -434,7 +450,7 @@ Release tarballs are available at:
  source: <pull.2258.v2.git.git.1774971267.gitgitgadget@gmail.com>
 
 
-* ps/setup-wo-the-repository (2026-03-30) 18 commits
+* ps/setup-wo-the-repository (2026-04-20) 18 commits
  - setup: stop using `the_repository` in `init_db()`
  - setup: stop using `the_repository` in `create_reference_database()`
  - setup: stop using `the_repository` in `initialize_repository_version()`
@@ -458,7 +474,7 @@ Release tarballs are available at:
  appropriate struct repository instance in setup.c codepath.
 
  Needs review.
- source: <20260330-pks-setup-wo-the-repository-v1-0-0d2e822837aa@pks.im>
+ source: <20260420-pks-setup-wo-the-repository-v1-0-f4a81c4988e8@pks.im>
 
 
 * kh/doc-trailers (2026-04-13) 9 commits
@@ -508,7 +524,7 @@ Release tarballs are available at:
  Promisor remote handling has been refactored and fixed in
  preparation for auto-configuration of advertised remotes.
 
- Will cook in 'next'.
+ Will merge to 'master'.
  source: <20260407115243.358642-1-christian.couder@gmail.com>
 
 
@@ -691,7 +707,7 @@ Release tarballs are available at:
  + config: add a repo_config_get_uint() helper
  + repository: fix repo_init() memleak due to missing _clear()
 
- Will cook in 'next'.
+ Will merge to 'master'.
  source: <20260410090608.75283-1-adrian.ratiu@collabora.com>
 
 
