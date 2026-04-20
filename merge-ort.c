@@ -728,6 +728,8 @@ static void clear_or_reinit_internal_opts(struct merge_options_internal *opti,
 		strintmap_clear_func(&renames->deferred[i].possible_trivial_merges);
 		strset_clear_func(&renames->deferred[i].target_dirs);
 		renames->deferred[i].trivial_merges_okay = 1; /* 1 == maybe */
+		free(renames->pairs[i].queue);
+		diff_queue_init(&renames->pairs[i]);
 	}
 	renames->cached_pairs_valid_side = 0;
 	renames->dir_rename_mask = 0;
