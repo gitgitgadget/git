@@ -1740,7 +1740,6 @@ static int collect_merge_info(struct merge_options *opt,
 	setup_traverse_info(&info, opt->priv->toplevel_dir);
 	info.fn = collect_merge_info_callback;
 	info.data = opt;
-	info.show_all_errors = 1;
 
 	if (repo_parse_tree(opt->repo, merge_base) < 0 ||
 	    repo_parse_tree(opt->repo, side1) < 0 ||
