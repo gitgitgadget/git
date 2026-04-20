@@ -271,6 +271,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
 		compat/strdup.c)
 	set(NO_UNIX_SOCKETS 1)
 
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+	list(APPEND compat_SOURCES
+		compat/osxmmap.c)
+
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 	add_compile_definitions(PROCFS_EXECUTABLE_PATH="/proc/self/exe" HAVE_DEV_TTY )
 	list(APPEND compat_SOURCES unix-socket.c unix-stream-server.c compat/linux/procinfo.c)
