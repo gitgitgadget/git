@@ -296,6 +296,7 @@ libgit_sources = [
   'blob.c',
   'bloom.c',
   'branch.c',
+  'branch-suggestions.c',
   'bundle-uri.c',
   'bundle.c',
   'cache-tree.c',
