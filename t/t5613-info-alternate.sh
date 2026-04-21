@@ -115,7 +115,7 @@ test_expect_success 'relative duplicates are eliminated' '
 	alternate: $(pwd)/B/.git/objects
 	alternate: $(pwd)/A/.git/objects
 	EOF
-	git -C deep/subdir/duplicate.git count-objects -v >actual &&
+	git --git-dir=deep/subdir/duplicate.git count-objects -v >actual &&
 	grep ^alternate: actual >actual.alternates &&
 	test_cmp expect actual.alternates
 '
@@ -132,7 +132,7 @@ test_expect_success CASE_INSENSITIVE_FS 'dup finding can be case-insensitive' '
 	alternate: $(pwd)/B/.git/objects
 	alternate: $(pwd)/A/.git/objects
 	EOF
-	git -C insensitive.git count-objects -v >actual &&
+	git --git-dir=insensitive.git count-objects -v >actual &&
 	grep ^alternate: actual >actual.alternates &&
 	test_cmp expect actual.alternates
 '

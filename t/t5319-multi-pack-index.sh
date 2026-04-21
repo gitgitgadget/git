@@ -274,7 +274,7 @@ test_expect_success 'midx picks objects from preferred pack' '
 	test_when_finished rm -rf preferred.git &&
 	git init --bare preferred.git &&
 	(
-		cd preferred.git &&
+		cd preferred.git && GIT_DIR=. && export GIT_DIR &&
 
 		a=$(echo "a" | git hash-object -w --stdin) &&
 		b=$(echo "b" | git hash-object -w --stdin) &&

@@ -228,7 +228,7 @@ test_expect_success FAKENC 'hostname interpolation works after LF-stripping' '
 	# just pick out the value of main, which avoids any protocol
 	# particulars
 	perl -lne "print \$1 if m{^(\\S+) refs/heads/main}" <output.raw >actual &&
-	git -C "$repo" rev-parse main >expect &&
+	git --git-dir="$repo" rev-parse main >expect &&
 	test_cmp expect actual
 '
 

@@ -147,7 +147,7 @@ test_expect_success 'send-pack --all sends all branches' '
 	git init --bare all.git &&
 	git send-pack --all all.git &&
 	git for-each-ref refs/heads >expect &&
-	git -C all.git for-each-ref refs/heads >actual &&
+	git --git-dir=all.git for-each-ref refs/heads >actual &&
 	test_cmp expect actual
 '
 

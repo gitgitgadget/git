@@ -15,12 +15,12 @@ delete_refs() {
 	do
 		echo "delete ${arg}" >>deletes
 	done
-	git -C $dir update-ref --stdin < deletes
+	git --git-dir=$dir update-ref --stdin < deletes
 }
 
 test_expect_success 'setup bare remote' '
 	git init --bare remote-1 &&
-	git -C remote-1 config gc.auto 0 &&
+	git --git-dir=remote-1 config gc.auto 0 &&
 	test_commit one &&
 	git push remote-1 HEAD
 '
@@ -48,10 +48,10 @@ test_expect_success '--all and --branches have the same behavior' '
 	$commit refs/heads/main
 	EOF
 
-	git -C remote-1 show-ref --heads >actual.all &&
+	git --git-dir=remote-1 show-ref --heads >actual.all &&
 	delete_refs remote-1 refs/heads/branch-1 refs/heads/branch-2 &&
 	git push remote-1 --branches &&
-	git -C remote-1 show-ref --heads >actual.branches &&
+	git --git-dir=remote-1 show-ref --heads >actual.branches &&
 	test_cmp actual.all actual.branches &&
 	test_cmp expect actual.all
 '
@@ -92,7 +92,7 @@ test_expect_success '--all or --branches combines with --follow-tags have same b
 			   refs/tags/annotated-1 \
 			   refs/tags/annotated-2" &&
 	git push remote-1 --all --follow-tags &&
-	git -C remote-1 show-ref > actual.all &&
+	git --git-dir=remote-1 show-ref > actual.all &&
 	cat >expect <<-EOF &&
 	$commit refs/heads/branch-1
 	$commit refs/heads/branch-2
@@ -107,7 +107,7 @@ test_expect_success '--all or --branches combines with --follow-tags have same b
 		    refs/tags/annotated-1 \
 		    refs/tags/annotated-2 &&
 	git push remote-1 --branches --follow-tags &&
-	git -C remote-1 show-ref >actual.branches &&
+	git --git-dir=remote-1 show-ref >actual.branches &&
 	test_cmp actual.all actual.branches &&
 	test_cmp expect actual.all
 '

@@ -207,7 +207,7 @@ basic_bitmap_tests () {
 		rm -fr partial-clone.git &&
 		git clone --no-local --bare --filter=blob:none . partial-clone.git &&
 		(
-			cd partial-clone.git &&
+			cd partial-clone.git && GIT_DIR=. && export GIT_DIR &&
 			pack=$(echo objects/pack/*.pack) &&
 			git verify-pack -v "$pack" >have &&
 			awk "/blob/ { print \$1 }" <have >blobs &&

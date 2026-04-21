@@ -16,10 +16,10 @@ test_expect_success 'preparing origin repository' '
 	git clone --bare . a.git &&
 	git clone --bare . x &&
 	echo true >expect &&
-	git -C a.git config --bool core.bare >actual &&
+	git --git-dir=a.git config --bool core.bare >actual &&
 	test_cmp expect actual &&
 	echo true >expect &&
-	git -C x config --bool core.bare >actual &&
+	git --git-dir=x config --bool core.bare >actual &&
 	test_cmp expect actual &&
 	git bundle create b1.bundle --all &&
 	git bundle create b2.bundle main &&
@@ -65,7 +65,7 @@ test_expect_success 'Even without -l, local will make a hardlink' '
 '
 
 test_expect_success 'local clone of repo with nonexistent ref in HEAD' '
-	git -C a.git symbolic-ref HEAD refs/heads/nonexistent &&
+	git --git-dir=a.git symbolic-ref HEAD refs/heads/nonexistent &&
 	git clone a d &&
 	(cd d &&
 	git fetch &&

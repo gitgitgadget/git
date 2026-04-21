@@ -23,14 +23,14 @@ test_expect_success setup '
 	git update-ref refs/heads/main $commit1 &&
 	git update-ref refs/heads/tofail $commit0 &&
 
-	test_hook --setup -C victim.git pre-receive <<-\EOF &&
+	test_hook --setup --git-dir victim.git pre-receive <<-\EOF &&
 	printf %s "$@" >>$GIT_DIR/pre-receive.args
 	cat - >$GIT_DIR/pre-receive.stdin
 	echo STDOUT pre-receive
 	echo STDERR pre-receive >&2
 	EOF
 
-	test_hook --setup -C victim.git update <<-\EOF &&
+	test_hook --setup --git-dir victim.git update <<-\EOF &&
 	echo "$@" >>$GIT_DIR/update.args
 	read x; printf %s "$x" >$GIT_DIR/update.stdin
 	echo STDOUT update $1
@@ -38,14 +38,14 @@ test_expect_success setup '
 	test "$1" = refs/heads/main || exit
 	EOF
 
-	test_hook --setup -C victim.git post-receive <<-\EOF &&
+	test_hook --setup --git-dir victim.git post-receive <<-\EOF &&
 	printf %s "$@" >>$GIT_DIR/post-receive.args
 	cat - >$GIT_DIR/post-receive.stdin
 	echo STDOUT post-receive
 	echo STDERR post-receive >&2
 	EOF
 
-	test_hook --setup -C victim.git post-update <<-\EOF
+	test_hook --setup --git-dir victim.git post-update <<-\EOF
 	echo "$@" >>$GIT_DIR/post-update.args
 	read x; printf %s "$x" >$GIT_DIR/post-update.stdin
 	echo STDOUT post-update
@@ -129,7 +129,7 @@ test_expect_success 'send-pack stderr contains hook messages' '
 '
 
 test_expect_success 'pre-receive hook that forgets to read its input' '
-	test_hook --clobber -C victim.git pre-receive <<-\EOF &&
+	test_hook --clobber --git-dir victim.git pre-receive <<-\EOF &&
 	exit 0
 	EOF
 	rm -f victim.git/hooks/update victim.git/hooks/post-update &&

@@ -11,7 +11,7 @@ test_expect_success 'setup a bare and non-bare repository' '
 
 test_expect_success 'log and ls-files in a bare repository' '
 	(
-		cd bare &&
+		cd bare && GIT_DIR=. && export GIT_DIR &&
 		test_must_fail git log -- .. >out 2>err &&
 		test_must_be_empty out &&
 		test_grep "outside repository" err &&
@@ -24,7 +24,7 @@ test_expect_success 'log and ls-files in a bare repository' '
 
 test_expect_success 'log and ls-files in .git directory' '
 	(
-		cd .git &&
+		cd .git && GIT_DIR=. && export GIT_DIR &&
 		test_must_fail git log -- .. >out 2>err &&
 		test_must_be_empty out &&
 		test_grep "outside repository" err &&

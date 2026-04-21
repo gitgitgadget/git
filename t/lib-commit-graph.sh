@@ -22,16 +22,28 @@ graph_git_two_modes() {
 # NOTE: it is a bug to call this function with <directory> containing
 # any characters in $IFS.
 graph_git_behavior() {
+	BARE=
+	if test "$1" = "--bare"
+	then
+		BARE=t
+		shift
+	fi
 	MSG=$1
 	DIR=$2
 	BRANCH=$3
 	COMPARE=$4
 	test_expect_success "check normal git operations: $MSG" '
-		graph_git_two_modes "${DIR:+-C $DIR} log --oneline $BRANCH" &&
-		graph_git_two_modes "${DIR:+-C $DIR} log --topo-order $BRANCH" &&
-		graph_git_two_modes "${DIR:+-C $DIR} log --graph $COMPARE..$BRANCH" &&
-		graph_git_two_modes "${DIR:+-C $DIR} branch -vv" &&
-		graph_git_two_modes "${DIR:+-C $DIR} merge-base -a $BRANCH $COMPARE"
+		if test -n "$BARE"
+		then
+			DIR_ARGS="${DIR:+--git-dir=$DIR}"
+		else
+			DIR_ARGS="${DIR:+-C $DIR}"
+		fi &&
+		graph_git_two_modes "$DIR_ARGS log --oneline $BRANCH" &&
+		graph_git_two_modes "$DIR_ARGS log --topo-order $BRANCH" &&
+		graph_git_two_modes "$DIR_ARGS log --graph $COMPARE..$BRANCH" &&
+		graph_git_two_modes "$DIR_ARGS branch -vv" &&
+		graph_git_two_modes "$DIR_ARGS merge-base -a $BRANCH $COMPARE"
 	'
 }
 
@@ -39,6 +51,12 @@ graph_read_expect() {
 	OPTIONAL=""
 	NUM_CHUNKS=3
 	DIR="."
+	BARE=
+	if test "$1" = "--bare"
+	then
+		BARE=t
+		shift
+	fi
 	if test "$1" = -C
 	then
 		shift
@@ -68,6 +86,10 @@ graph_read_expect() {
 	EOF
 	(
 		cd "$DIR" &&
+		if test -n "$BARE"
+		then
+			GIT_DIR=. && export GIT_DIR
+		fi &&
 		test-tool read-graph >output &&
 		test_cmp expect output
 	)

@@ -15,7 +15,7 @@ make_tree() {
 
 make_bare() {
 	git init --bare "$1" &&
-	(cd "$1" &&
+	(cd "$1" && GIT_DIR=. && export GIT_DIR &&
 	 tree=$(git hash-object -w -t tree /dev/null) &&
 	 commit=$(echo "$1" | git commit-tree $tree) &&
 	 git update-ref HEAD $commit
@@ -24,13 +24,13 @@ make_bare() {
 
 get() {
 	git init --bare fetch &&
-	(cd fetch && git fetch "../$1") &&
+	(cd fetch && GIT_DIR=. && export GIT_DIR && git fetch "../$1") &&
 	git clone "$1" clone
 }
 
 check() {
 	echo "$1" >expect &&
-	(cd fetch && git log -1 --format=%s FETCH_HEAD) >actual.fetch &&
+	(cd fetch && GIT_DIR=. && export GIT_DIR && git log -1 --format=%s FETCH_HEAD) >actual.fetch &&
 	(cd clone && git log -1 --format=%s HEAD) >actual.clone &&
 	test_cmp expect actual.fetch &&
 	test_cmp expect actual.clone

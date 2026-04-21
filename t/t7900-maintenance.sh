@@ -1397,7 +1397,7 @@ test_expect_success 'register and unregister bare repo' '
 	test_might_fail git config --global --unset-all maintenance.repo &&
 	git init --bare barerepo &&
 	(
-		cd barerepo &&
+		cd barerepo && GIT_DIR=. && export GIT_DIR &&
 		git maintenance register &&
 		git config --get --global --fixed-value maintenance.repo "$(pwd)" &&
 		git maintenance unregister &&

@@ -205,7 +205,7 @@ test_expect_success '--single-branch with explicit --branch with tag fetches upd
 
 test_expect_success '--single-branch with --mirror' '
 	(
-		cd dir_mirror &&
+		cd dir_mirror && GIT_DIR=. && export GIT_DIR &&
 		git fetch &&
 		git for-each-ref refs > ../actual
 	) &&
@@ -215,7 +215,7 @@ test_expect_success '--single-branch with --mirror' '
 
 test_expect_success '--single-branch with explicit --branch and --mirror' '
 	(
-		cd dir_mirror_side &&
+		cd dir_mirror_side && GIT_DIR=. && export GIT_DIR &&
 		git fetch &&
 		git for-each-ref refs > ../actual
 	) &&

@@ -9,7 +9,7 @@ test_description='check receive input limits'
 # When the limit is 10000, `git receive-pack` will call `git unpack-objects`.
 
 validate_store_type () {
-	git -C dest count-objects -v >actual &&
+	git --git-dir=dest count-objects -v >actual &&
 	case "$store_type" in
 	index)
 		grep "^count: 0$" actual ;;

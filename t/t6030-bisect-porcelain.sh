@@ -818,7 +818,7 @@ test_expect_success 'erroring out when using bad path arguments' '
 test_expect_success 'test bisection on bare repo - --no-checkout specified' '
 	git clone --bare . bare.nocheckout &&
 	(
-		cd bare.nocheckout &&
+		cd bare.nocheckout && GIT_DIR=. && export GIT_DIR &&
 		git bisect start --no-checkout &&
 		git bisect good $HASH1 &&
 		git bisect bad $HASH4 &&
@@ -833,7 +833,7 @@ test_expect_success 'test bisection on bare repo - --no-checkout specified' '
 test_expect_success 'test bisection on bare repo - --no-checkout defaulted' '
 	git clone --bare . bare.defaulted &&
 	(
-		cd bare.defaulted &&
+		cd bare.defaulted && GIT_DIR=. && export GIT_DIR &&
 		git bisect start &&
 		git bisect good $HASH1 &&
 		git bisect bad $HASH4 &&

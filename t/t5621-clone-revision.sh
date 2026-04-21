@@ -82,12 +82,12 @@ test_expect_success 'clone with --revision and --bare' '
 	test_when_finished "rm -rf dst" &&
 	git clone --revision=refs/heads/main --bare . dst &&
 	oid=$(git rev-parse refs/heads/main) &&
-	git -C dst cat-file -t $oid >actual &&
+	git --git-dir=dst cat-file -t $oid >actual &&
 	echo "commit" >expect &&
 	test_cmp expect actual &&
-	git -C dst for-each-ref refs >expect &&
+	git --git-dir=dst for-each-ref refs >expect &&
 	test_must_be_empty expect &&
-	test_must_fail git -C dst config remote.origin.fetch
+	test_must_fail git --git-dir=dst config remote.origin.fetch
 '
 
 test_expect_success 'clone with --revision being a short raw commit hash' '

@@ -27,7 +27,7 @@ test_expect_success 'clone rejects unprotected dash' '
 test_expect_success 'fsck rejects unprotected dash' '
 	test_when_finished "rm -rf dst" &&
 	git init --bare dst &&
-	git -C dst config transfer.fsckObjects true &&
+	git --git-dir=dst config transfer.fsckObjects true &&
 	test_must_fail git push dst HEAD 2>err &&
 	grep gitmodulesPath err
 '

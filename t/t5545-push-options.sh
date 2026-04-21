@@ -261,7 +261,7 @@ test_expect_success 'push options work properly across http' '
 
 	test_commit -C test_http_clone one &&
 	git -C test_http_clone push origin main &&
-	git -C "$HTTPD_DOCUMENT_ROOT_PATH"/upstream.git rev-parse --verify main >expect &&
+	git --git-dir="$HTTPD_DOCUMENT_ROOT_PATH"/upstream.git rev-parse --verify main >expect &&
 	git -C test_http_clone rev-parse --verify main >actual &&
 	test_cmp expect actual &&
 
@@ -271,7 +271,7 @@ test_expect_success 'push options work properly across http' '
 	test_cmp expect "$HTTPD_DOCUMENT_ROOT_PATH"/upstream.git/hooks/pre-receive.push_options &&
 	test_cmp expect "$HTTPD_DOCUMENT_ROOT_PATH"/upstream.git/hooks/post-receive.push_options &&
 
-	git -C "$HTTPD_DOCUMENT_ROOT_PATH"/upstream.git rev-parse --verify main >expect &&
+	git --git-dir="$HTTPD_DOCUMENT_ROOT_PATH"/upstream.git rev-parse --verify main >expect &&
 	git -C test_http_clone rev-parse --verify main >actual &&
 	test_cmp expect actual
 '

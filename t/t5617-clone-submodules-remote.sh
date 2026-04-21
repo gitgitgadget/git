@@ -32,8 +32,8 @@ test_expect_success 'setup' '
 # bare clone giving "srv.bare" for use as our server.
 test_expect_success 'setup bare clone for server' '
 	git clone --bare "file://$(pwd)/." srv.bare &&
-	git -C srv.bare config --local uploadpack.allowfilter 1 &&
-	git -C srv.bare config --local uploadpack.allowanysha1inwant 1
+	git --git-dir=srv.bare config --local uploadpack.allowfilter 1 &&
+	git --git-dir=srv.bare config --local uploadpack.allowanysha1inwant 1
 '
 
 test_expect_success 'clone with --no-remote-submodules' '

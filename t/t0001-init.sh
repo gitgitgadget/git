@@ -20,8 +20,8 @@ check_config () {
 		return 1
 	fi
 
-	bare=$(cd "$1" && git config --bool core.bare)
-	worktree=$(cd "$1" && git config core.worktree) ||
+	bare=$(git --git-dir="$1" config --bool core.bare)
+	worktree=$(git --git-dir="$1" config core.worktree) ||
 	worktree=unset
 
 	test "$bare" = "$2" && test "$worktree" = "$3" || {
@@ -77,6 +77,7 @@ test_expect_success 'plain nested through aliased command' '
 '
 
 test_expect_success 'plain nested in bare through aliased command' '
+	test_config_global safe.bareRepository all &&
 	(
 		git init --bare bare-ancestor-aliased.git &&
 		cd bare-ancestor-aliased.git &&
@@ -346,7 +347,7 @@ test_expect_success 'bare & --separate-git-dir incompatible within worktree' '
 	test_when_finished "rm -rf bare.git linkwt seprepo" &&
 	test_commit gumby &&
 	git clone --bare . bare.git &&
-	git -C bare.git worktree add --detach ../linkwt &&
+	git --git-dir=bare.git worktree add --detach linkwt &&
 	test_must_fail git -C linkwt init --separate-git-dir seprepo 2>err &&
 	test_grep "incompatible" err
 '

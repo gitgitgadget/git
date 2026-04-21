@@ -131,14 +131,14 @@ EOF
 	'
 
 	test_expect_success "diff from attributes with bare repo with source" '
-		git -C bare.git --attr-source=branchA -c diff.driver.algorithm=myers \
+		git --git-dir=bare.git --attr-source=branchA -c diff.driver.algorithm=myers \
 			-c diff.driverA.algorithm=$STRATEGY \
 			diff HEAD:file1 HEAD:file2 >output &&
 		test_cmp expect output
 	'
 
 	test_expect_success "diff from attributes with bare repo with invalid source" '
-		test_must_fail git -C bare.git --attr-source=invalid-branch diff \
+		test_must_fail git --git-dir=bare.git --attr-source=invalid-branch diff \
 			HEAD:file1 HEAD:file2
 	'
 

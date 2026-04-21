@@ -12,7 +12,7 @@ test_expect_success 'create git-accessible repo' '
 	test_commit one &&
 	git --bare init "$bare" &&
 	git push "$bare" HEAD &&
-	git -C "$bare" config http.receivepack true
+	git --git-dir="$bare" config http.receivepack true
 '
 
 test_proto "smart http" http "$HTTPD_URL/smart/repo.git"

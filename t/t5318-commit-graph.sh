@@ -274,17 +274,17 @@ test_expect_success 'setup bare repo' '
 	git clone --bare --no-local full bare
 '
 
-graph_git_behavior 'bare repo, commit 8 vs merge 1' bare commits/8 merge/1
-graph_git_behavior 'bare repo, commit 8 vs merge 2' bare commits/8 merge/2
+graph_git_behavior --bare 'bare repo, commit 8 vs merge 1' bare commits/8 merge/1
+graph_git_behavior --bare 'bare repo, commit 8 vs merge 2' bare commits/8 merge/2
 
 test_expect_success 'write graph in bare repo' '
-	git -C bare commit-graph write &&
+	git --git-dir=bare commit-graph write &&
 	test_path_is_file bare/objects/info/commit-graph &&
-	graph_read_expect -C bare 11 "generation_data extra_edges"
+	graph_read_expect --bare -C bare 11 "generation_data extra_edges"
 '
 
-graph_git_behavior 'bare repo with graph, commit 8 vs merge 1' bare commits/8 merge/1
-graph_git_behavior 'bare repo with graph, commit 8 vs merge 2' bare commits/8 merge/2
+graph_git_behavior --bare 'bare repo with graph, commit 8 vs merge 1' bare commits/8 merge/1
+graph_git_behavior --bare 'bare repo with graph, commit 8 vs merge 2' bare commits/8 merge/2
 
 test_expect_success 'perform fast-forward merge in full repo' '
 	git -C full checkout -b merge-5-to-8 commits/5 &&

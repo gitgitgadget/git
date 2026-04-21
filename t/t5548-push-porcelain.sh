@@ -83,7 +83,7 @@ setup_upstream () {
 	# The upstream repository provides services using the HTTP protocol.
 	if ! test "$1" = "upstream.git"
 	then
-		git -C "$1" config http.receivepack true
+		git --git-dir="$1" config http.receivepack true
 	fi
 }
 
@@ -153,7 +153,7 @@ run_git_push_porcelain_output_test() {
 		EOF
 		test_cmp expect actual &&
 
-		git -C "$upstream" show-ref >out &&
+		git --git-dir="$upstream" show-ref >out &&
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-EOF &&
 		<COMMIT-B> refs/heads/bar
@@ -187,7 +187,7 @@ run_git_push_porcelain_output_test() {
 		EOF
 		test_cmp expect actual &&
 
-		git -C "$upstream" show-ref >out &&
+		git --git-dir="$upstream" show-ref >out &&
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-EOF &&
 		<COMMIT-B> refs/heads/bar
@@ -221,7 +221,7 @@ run_git_push_porcelain_output_test() {
 		EOF
 		test_cmp expect actual &&
 
-		git -C "$upstream" show-ref >out &&
+		git --git-dir="$upstream" show-ref >out &&
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-EOF &&
 		<COMMIT-A> refs/heads/bar
@@ -238,7 +238,7 @@ run_git_push_porcelain_output_test() {
 	test_expect_success ".. pre-receive hook declined ($PROTOCOL)" '
 		test_when_finished "rm -f \"$upstream/hooks/pre-receive\" &&
 			setup_upstream \"$upstream\"" &&
-		test_hook --setup -C "$upstream" pre-receive <<-EOF &&
+		test_hook --setup --git-dir "$upstream" pre-receive <<-EOF &&
 			exit 1
 		EOF
 		test_must_fail git -C workbench push --porcelain --force origin \
@@ -259,7 +259,7 @@ run_git_push_porcelain_output_test() {
 		EOF
 		test_cmp expect actual &&
 
-		git -C "$upstream" show-ref >out &&
+		git --git-dir="$upstream" show-ref >out &&
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-EOF &&
 		<COMMIT-A> refs/heads/bar
@@ -290,7 +290,7 @@ run_git_push_porcelain_output_test() {
 		EOF
 		test_cmp expect actual &&
 
-		git -C "$upstream" show-ref >out &&
+		git --git-dir="$upstream" show-ref >out &&
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-EOF &&
 		<COMMIT-A> refs/heads/bar
@@ -324,7 +324,7 @@ run_git_push_porcelain_output_test() {
 		EOF
 		test_cmp expect actual &&
 
-		git -C "$upstream" show-ref >out &&
+		git --git-dir="$upstream" show-ref >out &&
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-EOF &&
 		<COMMIT-B> refs/heads/bar
@@ -370,7 +370,7 @@ run_git_push_dry_run_porcelain_output_test() {
 		EOF
 		test_cmp expect actual &&
 
-		git -C "$upstream" show-ref >out &&
+		git --git-dir="$upstream" show-ref >out &&
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-EOF &&
 		<COMMIT-A> refs/heads/bar
@@ -403,7 +403,7 @@ run_git_push_dry_run_porcelain_output_test() {
 		EOF
 		test_cmp expect actual &&
 
-		git -C "$upstream" show-ref >out &&
+		git --git-dir="$upstream" show-ref >out &&
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-EOF &&
 		<COMMIT-A> refs/heads/bar
@@ -436,7 +436,7 @@ run_git_push_dry_run_porcelain_output_test() {
 		EOF
 		test_cmp expect actual &&
 
-		git -C "$upstream" show-ref >out &&
+		git --git-dir="$upstream" show-ref >out &&
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-EOF &&
 		<COMMIT-A> refs/heads/bar
@@ -469,7 +469,7 @@ run_git_push_dry_run_porcelain_output_test() {
 		EOF
 		test_cmp expect actual &&
 
-		git -C "$upstream" show-ref >out &&
+		git --git-dir="$upstream" show-ref >out &&
 		make_user_friendly_and_stable_output <out >actual &&
 		cat >expect <<-EOF &&
 		<COMMIT-A> refs/heads/bar

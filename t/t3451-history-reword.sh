@@ -150,7 +150,7 @@ test_expect_success 'can reword in a bare repo' '
 	test_commit -C repo first &&
 	git clone --bare repo repo.git &&
 	(
-		cd repo.git &&
+		cd repo.git && GIT_DIR=. && export GIT_DIR &&
 		reword_with_message HEAD <<-EOF &&
 		reworded
 		EOF

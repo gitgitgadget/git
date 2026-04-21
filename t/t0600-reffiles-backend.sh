@@ -428,14 +428,14 @@ test_expect_success SYMLINKS 'git branch -m with symlinked .git/refs' '
 	ln -s ../.git/objects subdir/objects &&
 	ln -s ../.git/packed-refs subdir/packed-refs &&
 
-	git -C subdir rev-parse --absolute-git-dir >subdir.dir &&
+	git --git-dir=subdir rev-parse --absolute-git-dir >subdir.dir &&
 	git rev-parse --absolute-git-dir >our.dir &&
 	! test_cmp subdir.dir our.dir &&
 
-	git -C subdir log &&
-	git -C subdir branch rename-src &&
+	git --git-dir=subdir log &&
+	git --git-dir=subdir branch rename-src &&
 	git rev-parse rename-src >expect &&
-	git -C subdir branch -m rename-src rename-dest &&
+	git --git-dir=subdir branch -m rename-src rename-dest &&
 	git rev-parse rename-dest >actual &&
 	test_cmp expect actual &&
 	git branch -D rename-dest

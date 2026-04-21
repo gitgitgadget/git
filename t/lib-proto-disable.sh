@@ -17,7 +17,7 @@ test_allow_var () {
 
 	test_expect_success "fetch $desc (enabled)" '
 		(
-			cd tmp.git &&
+			cd tmp.git && GIT_DIR=. && export GIT_DIR &&
 			GIT_ALLOW_PROTOCOL=$proto &&
 			export GIT_ALLOW_PROTOCOL &&
 			git fetch
@@ -26,7 +26,7 @@ test_allow_var () {
 
 	test_expect_success "push $desc (enabled)" '
 		(
-			cd tmp.git &&
+			cd tmp.git && GIT_DIR=. && export GIT_DIR &&
 			GIT_ALLOW_PROTOCOL=$proto &&
 			export GIT_ALLOW_PROTOCOL &&
 			git push origin HEAD:pushed
@@ -35,7 +35,7 @@ test_allow_var () {
 
 	test_expect_success "push $desc (disabled)" '
 		(
-			cd tmp.git &&
+			cd tmp.git && GIT_DIR=. && export GIT_DIR &&
 			GIT_ALLOW_PROTOCOL=none &&
 			export GIT_ALLOW_PROTOCOL &&
 			test_must_fail git push origin HEAD:pushed
@@ -44,7 +44,7 @@ test_allow_var () {
 
 	test_expect_success "fetch $desc (disabled)" '
 		(
-			cd tmp.git &&
+			cd tmp.git && GIT_DIR=. && export GIT_DIR &&
 			GIT_ALLOW_PROTOCOL=none &&
 			export GIT_ALLOW_PROTOCOL &&
 			test_must_fail git fetch
@@ -83,19 +83,19 @@ test_config () {
 	'
 
 	test_expect_success "fetch $desc (enabled)" '
-		git -C tmp.git -c protocol.$proto.allow=always fetch
+		git --git-dir=tmp.git -c protocol.$proto.allow=always fetch
 	'
 
 	test_expect_success "push $desc (enabled)" '
-		git -C tmp.git -c protocol.$proto.allow=always  push origin HEAD:pushed
+		git --git-dir=tmp.git -c protocol.$proto.allow=always  push origin HEAD:pushed
 	'
 
 	test_expect_success "push $desc (disabled)" '
-		test_must_fail git -C tmp.git -c protocol.$proto.allow=never push origin HEAD:pushed
+		test_must_fail git --git-dir=tmp.git -c protocol.$proto.allow=never push origin HEAD:pushed
 	'
 
 	test_expect_success "fetch $desc (disabled)" '
-		test_must_fail git -C tmp.git -c protocol.$proto.allow=never fetch
+		test_must_fail git --git-dir=tmp.git -c protocol.$proto.allow=never fetch
 	'
 
 	test_expect_success "clone $desc (disabled)" '
@@ -110,16 +110,16 @@ test_config () {
 	'
 
 	test_expect_success "fetch $desc (enabled)" '
-		git -C tmp.git -c protocol.$proto.allow=user fetch
+		git --git-dir=tmp.git -c protocol.$proto.allow=user fetch
 	'
 
 	test_expect_success "push $desc (enabled)" '
-		git -C tmp.git -c protocol.$proto.allow=user push origin HEAD:pushed
+		git --git-dir=tmp.git -c protocol.$proto.allow=user push origin HEAD:pushed
 	'
 
 	test_expect_success "push $desc (disabled)" '
 		(
-			cd tmp.git &&
+			cd tmp.git && GIT_DIR=. && export GIT_DIR &&
 			GIT_PROTOCOL_FROM_USER=0 &&
 			export GIT_PROTOCOL_FROM_USER &&
 			test_must_fail git -c protocol.$proto.allow=user push origin HEAD:pushed
@@ -128,7 +128,7 @@ test_config () {
 
 	test_expect_success "fetch $desc (disabled)" '
 		(
-			cd tmp.git &&
+			cd tmp.git && GIT_DIR=. && export GIT_DIR &&
 			GIT_PROTOCOL_FROM_USER=0 &&
 			export GIT_PROTOCOL_FROM_USER &&
 			test_must_fail git -c protocol.$proto.allow=user fetch
@@ -153,22 +153,22 @@ test_config () {
 
 	test_expect_success "fetch $desc (enabled)" '
 		test_config_global protocol.allow always &&
-		git -C tmp.git fetch
+		git --git-dir=tmp.git fetch
 	'
 
 	test_expect_success "push $desc (enabled)" '
 		test_config_global protocol.allow always &&
-		git -C tmp.git push origin HEAD:pushed
+		git --git-dir=tmp.git push origin HEAD:pushed
 	'
 
 	test_expect_success "push $desc (disabled)" '
 		test_config_global protocol.allow never &&
-		test_must_fail git -C tmp.git push origin HEAD:pushed
+		test_must_fail git --git-dir=tmp.git push origin HEAD:pushed
 	'
 
 	test_expect_success "fetch $desc (disabled)" '
 		test_config_global protocol.allow never &&
-		test_must_fail git -C tmp.git fetch
+		test_must_fail git --git-dir=tmp.git fetch
 	'
 
 	test_expect_success "clone $desc (disabled)" '

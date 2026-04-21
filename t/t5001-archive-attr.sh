@@ -127,12 +127,12 @@ test_expect_exists	worktree2/ignored-by-tree
 test_expect_missing	worktree2/ignored-by-worktree
 
 test_expect_success 'git archive vs. bare' '
-	(cd bare && git archive HEAD) >bare-archive.tar &&
+	(cd bare && GIT_DIR=. && export GIT_DIR && git archive HEAD) >bare-archive.tar &&
 	test_cmp_bin archive.tar bare-archive.tar
 '
 
 test_expect_success 'git archive with worktree attributes, bare' '
-	(cd bare &&
+	(cd bare && GIT_DIR=. && export GIT_DIR &&
 	git -c attr.tree=HEAD archive --worktree-attributes HEAD) >bare-worktree.tar &&
 	(mkdir bare-worktree && cd bare-worktree && "$TAR" xf -) <bare-worktree.tar
 '

@@ -1005,7 +1005,7 @@ test_expect_success 'push sub dir/ with --rejoin from scratch' '
 		git init --bare "sub proj.git" &&
 		git subtree push --prefix="sub dir" --rejoin ./"sub proj.git" from-mainline &&
 		test "$(last_commit_subject)" = "Split '\''sub dir/'\'' into commit '\''$split_hash'\''" &&
-		test "$split_hash" = "$(git -C "sub proj.git" rev-parse --verify refs/heads/from-mainline)"
+		test "$split_hash" = "$(git --git-dir="sub proj.git" rev-parse --verify refs/heads/from-mainline)"
 	)
 '
 

@@ -171,9 +171,9 @@ check_unpack () {
 	test_when_finished "rm -rf git2" &&
 	git $git_config init --bare git2 &&
 	(
-		git $git_config -C git2 unpack-objects -n <"$packname".pack &&
-		git $git_config -C git2 unpack-objects <"$packname".pack &&
-		git $git_config -C git2 cat-file --batch-check="%(objectname)"
+		git $git_config --git-dir=git2 unpack-objects -n <"$packname".pack &&
+		git $git_config --git-dir=git2 unpack-objects <"$packname".pack &&
+		git $git_config --git-dir=git2 cat-file --batch-check="%(objectname)"
 	) <"$object_list" >current &&
 	cmp "$object_list" current
 }
@@ -227,7 +227,7 @@ check_use_objects () {
 	git init --bare git2 &&
 	cp "$1".pack "$1".idx git2/objects/pack &&
 	(
-		cd git2 &&
+		cd git2 && GIT_DIR=. && export GIT_DIR &&
 		git diff-tree --root -p $commit &&
 		while read object
 		do

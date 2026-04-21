@@ -50,15 +50,15 @@ check_verify_failure () {
 		rm -rf bad-tag &&
 
 		git init --bare bad-tag &&
-		bad_tag=$(git -C bad-tag hash-object -t tag -w --stdin --literally <tag.sig)
+		bad_tag=$(git --git-dir=bad-tag hash-object -t tag -w --stdin --literally <tag.sig)
 	'
 
 	test_expect_success "hash-object & fsck unreachable: $subject" '
 		if test -n "$fsck_obj_ok"
 		then
-			git -C bad-tag fsck
+			git --git-dir=bad-tag fsck
 		else
-			test_must_fail git -C bad-tag fsck
+			test_must_fail git --git-dir=bad-tag fsck
 		fi
 	'
 
@@ -68,38 +68,38 @@ check_verify_failure () {
 
 		# The update-ref of the bad content will fail, do it
 		# anyway to see if it segfaults
-		test_might_fail git -C bad-tag update-ref "$tag_ref" "$bad_tag" &&
+		test_might_fail git --git-dir=bad-tag update-ref "$tag_ref" "$bad_tag" &&
 
 		# Manually create the broken, we cannot do it with
 		# update-ref
-		test-tool -C bad-tag ref-store main delete-refs 0 msg "$tag_ref" &&
-		test-tool -C bad-tag ref-store main update-ref msg "$tag_ref" $bad_tag $ZERO_OID REF_SKIP_OID_VERIFICATION &&
+		test-tool --git-dir=bad-tag ref-store main delete-refs 0 msg "$tag_ref" &&
+		test-tool --git-dir=bad-tag ref-store main update-ref msg "$tag_ref" $bad_tag $ZERO_OID REF_SKIP_OID_VERIFICATION &&
 
 		# Unlike fsck-ing unreachable content above, this
 		# will always fail.
-		test_must_fail git -C bad-tag fsck
+		test_must_fail git --git-dir=bad-tag fsck
 	'
 
 	test_expect_success "for-each-ref: $subject" '
 		# Make sure the earlier test created it for us
 		git rev-parse "$bad_tag" &&
 
-		test-tool -C bad-tag ref-store main delete-refs 0 msg "$tag_ref" &&
-		test-tool -C bad-tag ref-store main update-ref msg "$tag_ref" $bad_tag $ZERO_OID REF_SKIP_OID_VERIFICATION &&
+		test-tool --git-dir=bad-tag ref-store main delete-refs 0 msg "$tag_ref" &&
+		test-tool --git-dir=bad-tag ref-store main update-ref msg "$tag_ref" $bad_tag $ZERO_OID REF_SKIP_OID_VERIFICATION &&
 
 		printf "%s tag\t%s\n" "$bad_tag" "$tag_ref" >expected &&
-		git -C bad-tag for-each-ref "$tag_ref" >actual &&
+		git --git-dir=bad-tag for-each-ref "$tag_ref" >actual &&
 		test_cmp expected actual &&
 
-		test_must_fail git -C bad-tag for-each-ref --format="%(*objectname)"
+		test_must_fail git --git-dir=bad-tag for-each-ref --format="%(*objectname)"
 	'
 
 	test_expect_success "fast-export & fast-import: $subject" '
 		# Make sure the earlier test created it for us
 		git rev-parse "$bad_tag" &&
 
-		test_must_fail git -C bad-tag fast-export --all &&
-		test_must_fail git -C bad-tag fast-export "$bad_tag"
+		test_must_fail git --git-dir=bad-tag fast-export --all &&
+		test_must_fail git --git-dir=bad-tag fast-export "$bad_tag"
 	'
 }
 

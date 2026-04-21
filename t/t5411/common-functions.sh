@@ -59,15 +59,20 @@ format_and_save_expect () {
 
 test_cmp_refs () {
 	indir=
+	gitdir=
 	if test "$1" = "-C"
 	then
 		shift
 		indir="$1"
 		shift
+	elif test "$1" = "--git-dir"
+	then
+		shift
+		gitdir="$1"
+		shift
 	fi
-	indir=${indir:+"$indir"/}
 	cat >show-ref.expect &&
-	git ${indir:+ -C "$indir"} show-ref >show-ref.pristine &&
+	git ${indir:+ -C "$indir"} ${gitdir:+ --git-dir="$gitdir"} show-ref >show-ref.pristine &&
 	make_user_friendly_and_stable_output <show-ref.pristine >show-ref.filtered &&
 	test_cmp show-ref.expect show-ref.filtered
 }

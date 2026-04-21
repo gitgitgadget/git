@@ -53,7 +53,7 @@ remove_object () {
 test_expect_success 'object with hash mismatch' '
 	git init --bare hash-mismatch &&
 	(
-		cd hash-mismatch &&
+		cd hash-mismatch && GIT_DIR=. && export GIT_DIR &&
 
 		oid=$(echo blob | git hash-object -w --stdin) &&
 		oldoid=$oid &&
@@ -75,7 +75,7 @@ test_expect_success 'object with hash mismatch' '
 test_expect_success 'zlib corrupt loose object output ' '
 	git init --bare corrupt-loose-output &&
 	(
-		cd corrupt-loose-output &&
+		cd corrupt-loose-output && GIT_DIR=. && export GIT_DIR &&
 		oid=$(git hash-object -w --stdin --literally </dev/null) &&
 		oidf=objects/$(test_oid_to_path "$oid") &&
 		chmod +w $oidf &&
@@ -1064,7 +1064,7 @@ test_expect_success PERL_TEST_HELPERS 'detect corrupt index file in fsck' '
 test_expect_success 'fsck error and recovery on invalid object type' '
 	git init --bare garbage-type &&
 	(
-		cd garbage-type &&
+		cd garbage-type && GIT_DIR=. && export GIT_DIR &&
 
 		garbage_blob=$(loose_obj objects garbage </dev/null) &&
 

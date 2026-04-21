@@ -30,11 +30,11 @@ test_expect_success 'setup: create bare "server" repository' '
 	git clone --bare --no-local template server &&
 	mv server/objects/pack/pack-* . &&
 	packfile=$(ls pack-*.pack) &&
-	git -C server unpack-objects --strict <"$packfile"
+	git --git-dir=server unpack-objects --strict <"$packfile"
 '
 
 check_missing_objects () {
-	git -C "$1" rev-list --objects --all --missing=print > all.txt &&
+	git --git-dir="$1" rev-list --objects --all --missing=print > all.txt &&
 	perl -ne 'print if s/^[?]//' all.txt >missing.txt &&
 	test_line_count = "$2" missing.txt &&
 	if test "$2" -lt 2
@@ -53,13 +53,13 @@ initialize_server () {
 	missing_oids="$2"
 
 	# Repack everything first
-	git -C server -c repack.writebitmaps=false repack -a -d &&
+	git --git-dir=server -c repack.writebitmaps=false repack -a -d &&
 
 	# Remove promisor file in case they exist, useful when reinitializing
 	rm -rf server/objects/pack/*.promisor &&
 
 	# Repack without the largest object and create a promisor pack on server
-	git -C server -c repack.writebitmaps=false repack -a -d \
+	git --git-dir=server -c repack.writebitmaps=false repack -a -d \
 	    --filter=blob:limit=5k --filter-to="$(pwd)/pack" &&
 	promisor_file=$(ls server/objects/pack/*.pack | sed "s/\.pack/.promisor/") &&
 	>"$promisor_file" &&
@@ -82,23 +82,23 @@ test_expect_success "setup for testing promisor remote advertisement" '
 
 	# Copy the largest object from server to lop
 	obj="HEAD:foo" &&
-	oid="$(git -C server rev-parse $obj)" &&
+	oid="$(git --git-dir=server rev-parse $obj)" &&
 	copy_to_lop "$oid" &&
 
 	initialize_server 1 "$oid" &&
 
 	# Configure lop as promisor remote for server
-	git -C server remote add lop "file://$(pwd)/lop" &&
-	git -C server config remote.lop.promisor true &&
+	git --git-dir=server remote add lop "file://$(pwd)/lop" &&
+	git --git-dir=server config remote.lop.promisor true &&
 
-	git -C lop config uploadpack.allowFilter true &&
-	git -C lop config uploadpack.allowAnySHA1InWant true &&
-	git -C server config uploadpack.allowFilter true &&
-	git -C server config uploadpack.allowAnySHA1InWant true
+	git --git-dir=lop config uploadpack.allowFilter true &&
+	git --git-dir=lop config uploadpack.allowAnySHA1InWant true &&
+	git --git-dir=server config uploadpack.allowFilter true &&
+	git --git-dir=server config uploadpack.allowAnySHA1InWant true
 '
 
 test_expect_success "clone with promisor.advertise set to 'true'" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client" &&
 
 	# Clone from server to create a client
@@ -113,7 +113,7 @@ test_expect_success "clone with promisor.advertise set to 'true'" '
 '
 
 test_expect_success "clone with promisor.advertise set to 'false'" '
-	git -C server config promisor.advertise false &&
+	git --git-dir=server config promisor.advertise false &&
 	test_when_finished "rm -rf client" &&
 
 	# Clone from server to create a client
@@ -131,7 +131,7 @@ test_expect_success "clone with promisor.advertise set to 'false'" '
 '
 
 test_expect_success "clone with promisor.acceptfromserver set to 'None'" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client" &&
 
 	# Clone from server to create a client
@@ -149,7 +149,7 @@ test_expect_success "clone with promisor.acceptfromserver set to 'None'" '
 '
 
 test_expect_success "init + fetch with promisor.advertise set to 'true'" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client" &&
 
 	mkdir client &&
@@ -167,7 +167,7 @@ test_expect_success "init + fetch with promisor.advertise set to 'true'" '
 '
 
 test_expect_success "clone with promisor.acceptfromserver set to 'KnownName'" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client" &&
 
 	# Clone from server to create a client
@@ -182,7 +182,7 @@ test_expect_success "clone with promisor.acceptfromserver set to 'KnownName'" '
 '
 
 test_expect_success "clone with 'KnownName' and different remote names" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client" &&
 
 	# Clone from server to create a client
@@ -200,7 +200,7 @@ test_expect_success "clone with 'KnownName' and different remote names" '
 '
 
 test_expect_success "clone with 'KnownName' and missing URL in the config" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client" &&
 
 	# Clone from server to create a client
@@ -219,7 +219,7 @@ test_expect_success "clone with 'KnownName' and missing URL in the config" '
 '
 
 test_expect_success "clone with promisor.acceptfromserver set to 'KnownUrl'" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client" &&
 
 	# Clone from server to create a client
@@ -236,7 +236,7 @@ test_expect_success "clone with promisor.acceptfromserver set to 'KnownUrl'" '
 test_expect_success "clone with 'KnownUrl' and different remote urls" '
 	ln -s lop serverTwo &&
 
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client" &&
 
 	# Clone from server to create a client
@@ -254,11 +254,11 @@ test_expect_success "clone with 'KnownUrl' and different remote urls" '
 '
 
 test_expect_success "clone with 'KnownUrl' and url not configured on the server" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client" &&
 
-	test_when_finished "git -C server config set remote.lop.url \"file://$(pwd)/lop\"" &&
-	git -C server config unset remote.lop.url &&
+	test_when_finished "git --git-dir=server config set remote.lop.url \"file://$(pwd)/lop\"" &&
+	git --git-dir=server config unset remote.lop.url &&
 
 	# Clone from server to create a client
 	# It should fail because the client will reject the LOP as URLs are
@@ -275,11 +275,11 @@ test_expect_success "clone with 'KnownUrl' and url not configured on the server"
 '
 
 test_expect_success "clone with 'KnownUrl' and empty url, so not advertised" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client" &&
 
-	test_when_finished "git -C server config set remote.lop.url \"file://$(pwd)/lop\"" &&
-	git -C server config set remote.lop.url "" &&
+	test_when_finished "git --git-dir=server config set remote.lop.url \"file://$(pwd)/lop\"" &&
+	git --git-dir=server config set remote.lop.url "" &&
 
 	# Clone from server to create a client
 	# It should fail because the client will reject the LOP as an empty URL is
@@ -296,15 +296,15 @@ test_expect_success "clone with 'KnownUrl' and empty url, so not advertised" '
 '
 
 test_expect_success "clone with promisor.sendFields" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client" &&
 
-	git -C server remote add otherLop "https://invalid.invalid"  &&
-	git -C server config remote.otherLop.token "fooBar" &&
-	git -C server config remote.otherLop.stuff "baz" &&
-	git -C server config remote.otherLop.partialCloneFilter "blob:limit=10k" &&
-	test_when_finished "git -C server remote remove otherLop" &&
-	test_config -C server promisor.sendFields "partialCloneFilter, token" &&
+	git --git-dir=server remote add otherLop "https://invalid.invalid"  &&
+	git --git-dir=server config remote.otherLop.token "fooBar" &&
+	git --git-dir=server config remote.otherLop.stuff "baz" &&
+	git --git-dir=server config remote.otherLop.partialCloneFilter "blob:limit=10k" &&
+	test_when_finished "git --git-dir=server remote remove otherLop" &&
+	test_config --git-dir server promisor.sendFields "partialCloneFilter, token" &&
 	test_when_finished "rm trace" &&
 
 	# Clone from server to create a client
@@ -327,15 +327,15 @@ test_expect_success "clone with promisor.sendFields" '
 '
 
 test_expect_success "clone with promisor.checkFields" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client" &&
 
-	git -C server remote add otherLop "https://invalid.invalid"  &&
-	git -C server config remote.otherLop.token "fooBar" &&
-	git -C server config remote.otherLop.stuff "baz" &&
-	git -C server config remote.otherLop.partialCloneFilter "blob:limit=10k" &&
-	test_when_finished "git -C server remote remove otherLop" &&
-	test_config -C server promisor.sendFields "partialCloneFilter, token" &&
+	git --git-dir=server remote add otherLop "https://invalid.invalid"  &&
+	git --git-dir=server config remote.otherLop.token "fooBar" &&
+	git --git-dir=server config remote.otherLop.stuff "baz" &&
+	git --git-dir=server config remote.otherLop.partialCloneFilter "blob:limit=10k" &&
+	test_when_finished "git --git-dir=server remote remove otherLop" &&
+	test_config --git-dir server promisor.sendFields "partialCloneFilter, token" &&
 	test_when_finished "rm trace" &&
 
 	# Clone from server to create a client
@@ -361,19 +361,19 @@ test_expect_success "clone with promisor.checkFields" '
 '
 
 test_expect_success "clone with promisor.storeFields=partialCloneFilter" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client" &&
 
-	git -C server remote add otherLop "https://invalid.invalid"  &&
-	git -C server config remote.otherLop.token "fooBar" &&
-	git -C server config remote.otherLop.stuff "baz" &&
-	git -C server config remote.otherLop.partialCloneFilter "blob:limit=10k" &&
-	test_when_finished "git -C server remote remove otherLop" &&
+	git --git-dir=server remote add otherLop "https://invalid.invalid"  &&
+	git --git-dir=server config remote.otherLop.token "fooBar" &&
+	git --git-dir=server config remote.otherLop.stuff "baz" &&
+	git --git-dir=server config remote.otherLop.partialCloneFilter "blob:limit=10k" &&
+	test_when_finished "git --git-dir=server remote remove otherLop" &&
 
-	git -C server config remote.lop.token "fooXXX" &&
-	git -C server config remote.lop.partialCloneFilter "blob:limit=8k" &&
+	git --git-dir=server config remote.lop.token "fooXXX" &&
+	git --git-dir=server config remote.lop.partialCloneFilter "blob:limit=8k" &&
 
-	test_config -C server promisor.sendFields "partialCloneFilter, token" &&
+	test_config --git-dir server promisor.sendFields "partialCloneFilter, token" &&
 	test_when_finished "rm trace" &&
 
 	# Clone from server to create a client
@@ -409,7 +409,7 @@ test_expect_success "clone with promisor.storeFields=partialCloneFilter" '
 	check_missing_objects server 1 "$oid" &&
 
 	# Change the configuration on the server and fetch from the client
-	git -C server config remote.lop.partialCloneFilter "blob:limit=7k" &&
+	git --git-dir=server config remote.lop.partialCloneFilter "blob:limit=7k" &&
 	GIT_NO_LAZY_FETCH=0 git -C client fetch \
 		--filter="blob:limit=5k" ../server 2>err &&
 
@@ -424,11 +424,11 @@ test_expect_success "clone with promisor.storeFields=partialCloneFilter" '
 '
 
 test_expect_success "clone and fetch with --filter=auto" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 	test_when_finished "rm -rf client trace" &&
 
-	git -C server config remote.lop.partialCloneFilter "blob:limit=9500" &&
-	test_config -C server promisor.sendFields "partialCloneFilter" &&
+	git --git-dir=server config remote.lop.partialCloneFilter "blob:limit=9500" &&
+	test_config --git-dir server promisor.sendFields "partialCloneFilter" &&
 
 	GIT_TRACE_PACKET="$(pwd)/trace" GIT_NO_LAZY_FETCH=0 git clone \
 		-c remote.lop.promisor=true \
@@ -448,7 +448,7 @@ test_expect_success "clone and fetch with --filter=auto" '
 	check_missing_objects server 1 "$oid" &&
 
 	# Now change the filter on the server
-	git -C server config remote.lop.partialCloneFilter "blob:limit=5678" &&
+	git --git-dir=server config remote.lop.partialCloneFilter "blob:limit=5678" &&
 
 	# Get a new commit on the server to ensure "git fetch" actually runs fetch-pack
 	test_commit -C template new-commit &&
@@ -465,7 +465,7 @@ test_expect_success "clone and fetch with --filter=auto" '
 	check_missing_objects server 1 "$oid" &&
 
 	# Change the filter on the server again
-	git -C server config remote.lop.partialCloneFilter "blob:limit=5432" &&
+	git --git-dir=server config remote.lop.partialCloneFilter "blob:limit=5432" &&
 
 	# Get yet a new commit on the server to ensure fetch-pack runs
 	test_commit -C template yet-a-new-commit &&
@@ -484,7 +484,7 @@ test_expect_success "clone and fetch with --filter=auto" '
 '
 
 test_expect_success "clone with promisor.advertise set to 'true' but don't delete the client" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 
 	# Clone from server to create a client
 	GIT_NO_LAZY_FETCH=0 git clone -c remote.lop.promisor=true \
@@ -504,9 +504,9 @@ test_expect_success "setup for subsequent fetches" '
 	git -C template commit -m bar &&
 
 	# Fetch new commit with large blob
-	git -C server fetch origin &&
-	git -C server update-ref HEAD FETCH_HEAD &&
-	git -C server rev-parse HEAD >expected_head &&
+	git --git-dir=server fetch origin &&
+	git --git-dir=server update-ref HEAD FETCH_HEAD &&
+	git --git-dir=server rev-parse HEAD >expected_head &&
 
 	# Repack everything twice and remove .promisor files before
 	# each repack. This makes sure everything gets repacked
@@ -515,19 +515,19 @@ test_expect_success "setup for subsequent fetches" '
 	# packfile and its associated .promisor file.
 
 	rm -f server/objects/pack/*.promisor &&
-	git -C server -c repack.writebitmaps=false repack -a -d &&
+	git --git-dir=server -c repack.writebitmaps=false repack -a -d &&
 	rm -f server/objects/pack/*.promisor &&
-	git -C server -c repack.writebitmaps=false repack -a -d &&
+	git --git-dir=server -c repack.writebitmaps=false repack -a -d &&
 
 	# Unpack everything
 	rm pack-* &&
 	mv server/objects/pack/pack-* . &&
 	packfile=$(ls pack-*.pack) &&
-	git -C server unpack-objects --strict <"$packfile" &&
+	git --git-dir=server unpack-objects --strict <"$packfile" &&
 
 	# Copy new large object to lop
 	obj_bar="HEAD:bar" &&
-	oid_bar="$(git -C server rev-parse $obj_bar)" &&
+	oid_bar="$(git --git-dir=server rev-parse $obj_bar)" &&
 	copy_to_lop "$oid_bar" &&
 
 	# Reinitialize server so that the 2 largest objects are missing
@@ -539,7 +539,7 @@ test_expect_success "setup for subsequent fetches" '
 '
 
 test_expect_success "subsequent fetch from a client when promisor.advertise is true" '
-	git -C server config promisor.advertise true &&
+	git --git-dir=server config promisor.advertise true &&
 
 	GIT_NO_LAZY_FETCH=0 git -C client pull origin &&
 
@@ -552,7 +552,7 @@ test_expect_success "subsequent fetch from a client when promisor.advertise is t
 '
 
 test_expect_success "subsequent fetch from a client when promisor.advertise is false" '
-	git -C server config promisor.advertise false &&
+	git --git-dir=server config promisor.advertise false &&
 
 	GIT_NO_LAZY_FETCH=0 git -C client2 pull origin &&
 

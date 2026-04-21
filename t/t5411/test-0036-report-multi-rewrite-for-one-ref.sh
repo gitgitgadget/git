@@ -14,7 +14,7 @@ test_expect_success "setup git config for remote-tracking of special refs" '
 '
 
 test_expect_success "setup proc-receive hook (multiple rewrites for one ref, no refname for the 1st rewrite, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok refs/for/main/topic" \
@@ -66,7 +66,7 @@ test_expect_success "proc-receive: multiple rewrite for one ref, no refname for 
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
@@ -87,7 +87,7 @@ test_expect_success "proc-receive: check remote-tracking #1 ($PROTOCOL)" '
 '
 
 test_expect_success "setup proc-receive hook (multiple rewrites for one ref, no refname for the 2nd rewrite, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok refs/for/main/topic" \
@@ -141,7 +141,7 @@ test_expect_success "proc-receive: multiple rewrites for one ref, no refname for
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
@@ -162,7 +162,7 @@ test_expect_success "proc-receive: check remote-tracking #2 ($PROTOCOL)" '
 '
 
 test_expect_success "setup proc-receive hook (multiple rewrites for one ref, $PROTOCOL)" '
-	test_hook -C "$upstream" --clobber proc-receive <<-EOF
+	test_hook --git-dir "$upstream" --clobber proc-receive <<-EOF
 	printf >&2 "# proc-receive hook\n"
 	test-tool proc-receive -v \
 		-r "ok refs/for/main/topic" \
@@ -202,7 +202,7 @@ test_expect_success "proc-receive: multiple rewrites for one ref ($PROTOCOL)" '
 	EOF
 	test_cmp expect actual &&
 
-	test_cmp_refs -C "$upstream" <<-EOF
+	test_cmp_refs --git-dir "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
 	EOF
 '
