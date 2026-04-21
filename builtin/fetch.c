@@ -99,6 +99,7 @@ static struct transport *gsecondary;
 static struct refspec refmap = REFSPEC_INIT_FETCH;
 static struct string_list server_options = STRING_LIST_INIT_DUP;
 static struct string_list negotiation_restrict = STRING_LIST_INIT_NODUP;
+static struct string_list negotiation_include = STRING_LIST_INIT_NODUP;
 
 struct fetch_config {
 	enum display_format display_format;
@@ -1547,10 +1548,14 @@ static void add_negotiation_restrict_tips(struct git_transport_options *smart_op
 		int old_nr;
 		if (!has_glob_specials(s)) {
 			struct object_id oid;
+
+			/* Ignore missing reference. */
 			if (repo_get_oid(the_repository, s, &oid))
-				die(_("%s is not a valid object"), s);
+				continue;
+			/* Fail on missing object pointed by ref. */
 			if (!odb_has_object(the_repository->objects, &oid, 0))
 				die(_("the object %s does not exist"), s);
+
 			oid_array_append(oids, &oid);
 			continue;
 		}
@@ -1614,6 +1619,13 @@ static struct transport *prepare_transport(struct remote *remote, int deepen,
 				config_name.buf);
 			strbuf_release(&config_name);
 		}
+	}
+	if (negotiation_include.nr) {
+		if (transport->smart_options)
+			transport->smart_options->negotiation_include = &negotiation_include;
+		else
+			warning(_("ignoring %s because the protocol does not support it"),
+				"--negotiation-include");
 	}
 	return transport;
 }
@@ -2582,6 +2594,8 @@ int cmd_fetch(int argc,
 		OPT_STRING_LIST(0, "negotiation-restrict", &negotiation_restrict, N_("revision"),
 				N_("report that we have only objects reachable from this object")),
 		OPT_ALIAS(0, "negotiation-tip", "negotiation-restrict"),
+		OPT_STRING_LIST(0, "negotiation-include", &negotiation_include, N_("revision"),
+				N_("ensure this ref is always sent as a negotiation have")),
 		OPT_BOOL(0, "negotiate-only", &negotiate_only,
 			 N_("do not fetch a packfile; instead, print ancestors of negotiation tips")),
 		OPT_PARSE_LIST_OBJECTS_FILTER(&filter_options),
