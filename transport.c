@@ -464,6 +464,7 @@ static int fetch_refs_via_pack(struct transport *transport,
 	args.stateless_rpc = transport->stateless_rpc;
 	args.server_options = transport->server_options;
 	args.negotiation_restrict_tips = data->options.negotiation_restrict_tips;
+	args.negotiation_include_tips = data->options.negotiation_include_tips;
 	args.reject_shallow_remote = transport->smart_options->reject_shallow;
 
 	if (!data->finished_handshake) {
@@ -495,7 +496,8 @@ static int fetch_refs_via_pack(struct transport *transport,
 					      transport->server_options,
 					      transport->stateless_rpc,
 					      data->fd,
-					      data->options.acked_commits);
+					      data->options.acked_commits,
+					      data->options.negotiation_include_tips);
 			ret = 0;
 		}
 		goto cleanup;
@@ -982,6 +984,10 @@ static int disconnect_git(struct transport *transport)
 	if (data->options.negotiation_restrict_tips) {
 		oid_array_clear(data->options.negotiation_restrict_tips);
 		free(data->options.negotiation_restrict_tips);
+	}
+	if (data->options.negotiation_include_tips) {
+		oid_array_clear(data->options.negotiation_include_tips);
+		free(data->options.negotiation_include_tips);
 	}
 	list_objects_filter_release(&data->options.filter_options);
 	oid_array_clear(&data->extra_have);
