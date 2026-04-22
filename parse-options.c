@@ -633,7 +633,10 @@ static void check_typos(const char *arg, const struct option *options)
 		if (!options->long_name)
 			continue;
 		if (starts_with(options->long_name, arg)) {
-			error(_("did you mean `--%s` (with two dashes)?"), arg);
+			if (options->type == OPTION_SUBCOMMAND)
+				error(_("did you mean `%s` (with no dash)?"), arg);
+			else
+				error(_("did you mean `--%s` (with two dashes)?"), arg);
 			exit(129);
 		}
 	}
