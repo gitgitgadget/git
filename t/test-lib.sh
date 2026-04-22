@@ -1597,6 +1597,12 @@ cd -P "$TRASH_DIRECTORY" || BAIL_OUT "cannot cd -P to \"$TRASH_DIRECTORY\""
 TRASH_DIRECTORY=$(pwd)
 HOME="$TRASH_DIRECTORY"
 
+if test -n "$WITH_BREAKING_CHANGES"
+then
+	git config --global safe.bareRepository all &&
+	echo "/.gitconfig" >>.git/info/exclude
+fi
+
 start_test_output "$0"
 
 # Convenience
