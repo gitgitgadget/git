@@ -6,6 +6,8 @@
 #include "strbuf.h"
 #include "string-list.h"
 #include "utf8.h"
+#include "autocorrect.h"
+#include "levenshtein.h"
 
 static int disallow_abbreviated_options;
 
@@ -622,13 +624,98 @@ static int parse_subcommand(const char *arg, const struct option *options)
 	return -1;
 }
 
+static void find_subcommands(struct string_list *list,
+			     const struct option *options)
+{
+	for (; options->type != OPTION_END; options++) {
+		if (options->type == OPTION_SUBCOMMAND)
+			string_list_append(list, options->long_name);
+	}
+}
+
+static int levenshtein_compare(const void *p1, const void *p2)
+{
+	const struct string_list_item *i1 = p1, *i2 = p2;
+	const char *s1 = i1->string, *s2 = i2->string;
+	int l1 = (intptr_t)i1->util;
+	int l2 = (intptr_t)i2->util;
+
+	return l1 != l2 ? l1 - l2 : strcmp(s1, s2);
+}
+
+static const char *autocorrect_subcommand(const char *cmd,
+					  struct string_list *cmds)
+{
+	struct autocorrect autocorrect = { 0 };
+	unsigned int n = 0, best = 0;
+	struct string_list_item *cand;
+
+	autocorrect_resolve(&autocorrect);
+
+	if (autocorrect.mode == AUTOCORRECT_NEVER)
+		return NULL;
+
+	for_each_string_list_item(cand, cmds) {
+		if (starts_with(cand->string, cmd)) {
+			cand->util = 0;
+		} else {
+			int edit = levenshtein(cmd, cand->string,
+					       0, 2, 1, 3) + 1;
+
+			cand->util = (void *)(intptr_t)edit;
+		}
+	}
+
+	QSORT(cmds->items, cmds->nr, levenshtein_compare);
+
+	/* Match help.c:help_unknown_cmd */
+	for (; n < cmds->nr && !cmds->items[n].util; n++);
+
+	if (n == cmds->nr)
+		/* prefix matches with every subcommands */
+		best = AUTOCORRECT_SIMILARITY_FLOOR + 1;
+	else
+		for (best = (intptr_t)cmds->items[n++].util;
+		     (n < cmds->nr && best == (intptr_t)cmds->items[n].util);
+		     n++);
+
+	if (autocorrect.mode != AUTOCORRECT_HINT &&  n == 1 &&
+	    AUTOCORRECT_SIMILAR_ENOUGH(best)) {
+		fprintf_ln(stderr,
+			   _("WARNING: You called a subcommand named '%s', which does not exist."),
+			   cmd);
+
+		autocorrect_confirm(&autocorrect, cmds->items[0].string);
+		return cmds->items[0].string;
+	}
+
+	if (AUTOCORRECT_SIMILAR_ENOUGH(best)) {
+		error(_("'%s' is not a subcommand."), cmd);
+
+		fprintf_ln(stderr,
+			   Q_("\nThe most similar subcommand is",
+			      "\nThe most similar subcommands are",
+			   n));
+
+		for (unsigned int i = 0; i < n; i++)
+			fprintf(stderr, "\t%s\n", cmds->items[i].string);
+
+		exit(129);
+	}
+
+	return NULL;
+}
+
 static enum parse_opt_result handle_subcommand(struct parse_opt_ctx_t *ctx,
 					       const char *arg,
 					       const struct option *options,
 					       const char * const usagestr[])
 {
-	int err = parse_subcommand(arg, options);
+	int err;
+	const char *assumed;
+	struct string_list cmds = STRING_LIST_INIT_NODUP;
 
+	err = parse_subcommand(arg, options);
 	if (!err)
 		return PARSE_OPT_SUBCOMMAND;
 
@@ -641,8 +728,17 @@ static enum parse_opt_result handle_subcommand(struct parse_opt_ctx_t *ctx,
 	if (ctx->flags & PARSE_OPT_SUBCOMMAND_OPTIONAL)
 		return PARSE_OPT_DONE;
 
-	error(_("unknown subcommand: `%s'"), arg);
-	usage_with_options(usagestr, options);
+	find_subcommands(&cmds, options);
+	assumed = autocorrect_subcommand(arg, &cmds);
+
+	if (!assumed) {
+		error(_("unknown subcommand: `%s'"), arg);
+		usage_with_options(usagestr, options);
+	}
+
+	string_list_clear(&cmds, 0);
+	parse_subcommand(assumed, options);
+	return PARSE_OPT_SUBCOMMAND;
 }
 
 static void check_typos(const char *arg, const struct option *options)

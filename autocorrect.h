@@ -1,6 +1,10 @@
 #ifndef AUTOCORRECT_H
 #define AUTOCORRECT_H
 
+/* An empirically derived magic number */
+#define AUTOCORRECT_SIMILARITY_FLOOR 7
+#define AUTOCORRECT_SIMILAR_ENOUGH(x) ((x) < AUTOCORRECT_SIMILARITY_FLOOR)
+
 enum autocorrect_mode {
 	AUTOCORRECT_HINT,
 	AUTOCORRECT_NEVER,

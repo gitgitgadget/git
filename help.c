@@ -580,10 +580,6 @@ static void add_cmd_list(struct cmdnames *cmds, struct cmdnames *old)
 	old->cnt = 0;
 }
 
-/* An empirically derived magic number */
-#define SIMILARITY_FLOOR 7
-#define SIMILAR_ENOUGH(x) ((x) < SIMILARITY_FLOOR)
-
 static const char bad_interpreter_advice[] =
 	N_("'%s' appears to be a git command, but we were not\n"
 	"able to execute it. Maybe git-%s is broken?");
@@ -659,7 +655,7 @@ char *help_unknown_cmd(const char *cmd)
 
 	if (main_cmds.cnt <= n) {
 		/* prefix matches with everything? that is too ambiguous */
-		best_similarity = SIMILARITY_FLOOR + 1;
+		best_similarity = AUTOCORRECT_SIMILARITY_FLOOR + 1;
 	} else {
 		/* count all the most similar ones */
 		for (best_similarity = main_cmds.names[n++]->len;
@@ -670,7 +666,7 @@ char *help_unknown_cmd(const char *cmd)
 	}
 
 	if (autocorrect.mode != AUTOCORRECT_HINT && n == 1 &&
-	    SIMILAR_ENOUGH(best_similarity)) {
+	    AUTOCORRECT_SIMILAR_ENOUGH(best_similarity)) {
 		char *assumed = xstrdup(main_cmds.names[0]->name);
 
 		fprintf_ln(stderr,
@@ -687,11 +683,10 @@ char *help_unknown_cmd(const char *cmd)
 
 	fprintf_ln(stderr, _("git: '%s' is not a git command. See 'git --help'."), cmd);
 
-	if (SIMILAR_ENOUGH(best_similarity)) {
+	if (AUTOCORRECT_SIMILAR_ENOUGH(best_similarity)) {
 		fprintf_ln(stderr,
 			   Q_("\nThe most similar command is",
-			      "\nThe most similar commands are",
-			   n));
+			      "\nThe most similar commands are", n));
 
 		for (i = 0; i < n; i++)
 			fprintf(stderr, "\t%s\n", main_cmds.names[i]->name);
