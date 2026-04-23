@@ -1,10 +1,10 @@
 To: git@vger.kernel.org
-Subject: What's cooking in git.git (Apr 2026, #07)
+Subject: What's cooking in git.git (Apr 2026, #08)
 X-master-at: 94f057755b7941b321fd11fec1b2e3ca5313a4e0
-X-next-at: 6539524ca2a07762a89180718112132867e16309
+X-next-at: 4f69b47b940100b02630f745a52f9d9850f122b2
 Bcc: lwn@lwn.net, gitster@pobox.com
 
-What's cooking in git.git (Apr 2026, #07)
+What's cooking in git.git (Apr 2026, #08)
 -----------------------------------------
 
 Here are the topics that have been cooking in my tree.  Commits
@@ -19,11 +19,9 @@ arise).
 
 Git 2.54 has been released, and the tip of 'next' has acquired a
 handful more topics, but no update to 'master' yet to kick off the
-new cycle has happened (yet).  I will go offline for a couple of
-weeks starting this evening.  There is no designated interim
-maintainer this time, but I trust that the community can self
-organize if the shape of the release and the tree turns out to be
-super bad ;-).
+new cycle has happened (yet).  I am still mostly offline for a
+couple of weeks, but just had a chance to pick up updates to a
+handful of topics.
 
 Copies of the source code to Git live in many repositories, and the
 following is a list of the ones I push into or their mirrors.  Some
@@ -56,6 +54,70 @@ Release tarballs are available at:
 --------------------------------------------------
 [New Topics]
 
+* en/ort-cached-rename-with-trivial-resolution (2026-04-20) 1 commit
+ - merge-ort: handle cached rename & trivial resolution interaction better
+
+ "ort" merge backend improvements.
+
+ Will merge to 'next'.
+ source: <pull.2095.git.1776724214171.gitgitgadget@gmail.com>
+
+
+* en/ort-harden-against-corrupt-trees (2026-04-20) 5 commits
+ - cache-tree: fix verify_cache() to catch non-adjacent D/F conflicts
+ - merge-ort: abort merge when trees have duplicate entries
+ - merge-ort: free diff pairs queue in clear_or_reinit_internal_opts()
+ - merge-ort: drop unnecessary show_all_errors from collect_merge_info()
+ - merge-ort: propagate callback errors from traverse_trees_wrapper()
+
+ "ort" merge backend handles merging corrupt trees better by
+ aborting when it should.
+
+ Needs review.
+ source: <pull.2096.git.1776731171.gitgitgadget@gmail.com>
+
+
+* jk/revert-aa-reap-transport-child-processes (2026-04-22) 1 commit
+ - Revert "transport-helper, connect: use clean_on_exit to reap children on abnormal exit"
+
+ Revert a recent change that introduced a regression to help mksh users.
+
+ Will merge to 'next'.
+ source: <20260422230020.GA1839627@coredump.intra.peff.net>
+
+
+* js/ci-github-actions-update (2026-04-21) 4 commits
+ - ci: bump actions/checkout from v5 to v6
+ - ci: bump actions/github-script from v8 to v9
+ - ci: bump actions/{upload,download}-artifact to v7 and v8
+ - ci: bump microsoft/setup-msbuild from v2 to v3
+
+ Update various GitHub Actions versions.
+
+ Will merge to 'next'.
+ source: <pull.2097.git.1776775319.gitgitgadget@gmail.com>
+
+
+* mf/format-patch-cover-letter-format-docfix (2026-04-22) 1 commit
+ - Fix docs for format.commitListFormat
+
+ Docfix.
+
+ Will merge to 'next'.
+ source: <576d29f15e016889e02c253713656cd8cbf1f04c.1776894255.git.mroik@delayed.space>
+
+
+* sg/t6112-unwanted-tilde-expansion-fix (2026-04-21) 1 commit
+ - t6112: avoid tilde expansion
+
+ Test fix.
+
+ Will merge to 'next'?
+ source: <20260421192132.51172-1-szeder.dev@gmail.com>
+
+--------------------------------------------------
+[Cooking]
+
 * pw/status-rebase-todo (2026-04-20) 2 commits
  - status: improve rebase todo list parsing
  - sequencer: factor out parsing of todo commands
@@ -67,8 +129,6 @@ Release tarballs are available at:
  Needs review.
  source: <cover.1776697483.git.phillip.wood@dunelm.org.uk>
 
---------------------------------------------------
-[Cooking]
 
 * sb/userdiff-lisp-family (2026-04-14) 2 commits
   (merged to 'next' on 2026-04-20 at 5897c04899)
@@ -82,20 +142,21 @@ Release tarballs are available at:
  source: <pull.2000.v4.git.1776220063.gitgitgadget@gmail.com>
 
 
-* ss/t7004-unhide-git-failures (2026-04-14) 3 commits
+* ss/t7004-unhide-git-failures (2026-04-20) 3 commits
  - t7004: avoid subshells to capture git exit codes
  - t7004: dynamically grab expected state in tests
- - t7004: drop hardcoded tag count in invalid name test
+ - t7004: drop hardcoded tag count for state verification
 
  Test clean-up.
 
- Expecting a (hopefully trivial) reroll?
- cf. <aeXTcZ7K9a6kUIbk@pks.im>
- source: <20260414141828.27576-1-r.siddharth.shrimali@gmail.com>
+ Will merge to 'next'.
+ cf. <aecNc-BNwaqFlg5c@pks.im>
+ source: <20260421053334.5414-1-r.siddharth.shrimali@gmail.com>
 
 
-* tb/pseudo-merge-bugfixes (2026-04-13) 8 commits
+* tb/pseudo-merge-bugfixes (2026-04-21) 9 commits
  - pack-bitmap: prevent pattern leak on pseudo-merge re-assignment
+ - Documentation: fix broken `sampleRate` in gitpacking(7)
  - pack-bitmap: reject pseudo-merge "sampleRate" of 0
  - pack-bitmap: parse commits in `find_pseudo_merge_group_for_ref()`
  - pack-bitmap: fix pseudo-merge lookup for shared commits
@@ -104,15 +165,17 @@ Release tarballs are available at:
  - t5333: demonstrate various pseudo-merge bugs
  - t/helper: add 'test-tool bitmap write' subcommand
 
- Expecting a reroll.
- cf. <ad60PJ/pM/wG3krQ@nand.local>
- source: <cover.1776124588.git.me@ttaylorr.com>
+ Fixes many bugs in pseudo-merge code.
+
+ Expecting (hopefully minor and final) reroll.
+ cf. <CABPp-BGkfavqezk2SV3+K6iF8MLm8j_=ijHiPDLmv_U_o_Ykgg@mail.gmail.com>
+ source: <cover.1776801694.git.me@ttaylorr.com>
 
 
-* ds/fetch-negotiation-options (2026-04-15) 7 commits
+* ds/fetch-negotiation-options (2026-04-22) 7 commits
  - send-pack: pass negotiation config in push
- - remote: add negotiationRequire config as default for --negotiation-require
- - fetch: add --negotiation-require option for negotiation
+ - remote: add remote.*.negotiationInclude config
+ - fetch: add --negotiation-include option for negotiation
  - remote: add remote.*.negotiationRestrict config
  - transport: rename negotiation_tips
  - fetch: add --negotiation-restrict option
@@ -123,7 +186,7 @@ Release tarballs are available at:
  restrict negotiation to a specific set of refs.
 
  Needs review.
- source: <pull.2085.v2.git.1776266066.gitgitgadget@gmail.com>
+ source: <pull.2085.v3.git.1776871546.gitgitgadget@gmail.com>
 
 
 * en/backfill-fixes-and-edges (2026-04-15) 3 commits
@@ -233,26 +296,27 @@ Release tarballs are available at:
  source: <xmqqzf3aofdj.fsf_-_@gitster.g>
 
 
-* ps/test-set-e-clean (2026-04-20) 12 commits
- - t: detect errors outside of test cases
- - t9902: fix use of `read` with `set -e`
- - t6002: fix use of `expr` with `set -e`
- - t1301: don't fail in case setfacl(1) doesn't exist or fails
- - t0008: silence error in subshell when using `grep -v`
- - t: prepare `test_when_finished ()`/`test_atexit()` for `set -e`
- - t: prepare execution of potentially failing commands for `set -e`
- - t: prepare conditional test execution for `set -e`
- - t: prepare `git config --unset` calls for `set -e`
- - t: prepare `stop_git_daemon ()` for `set -e`
- - t: prepare `test_must_fail ()` for `set -e`
- - t: prepare `test_match_signal ()` calls for `set -e`
+* ps/test-set-e-clean (2026-04-21) 12 commits
+  (merged to 'next' on 2026-04-23 at 4f69b47b94)
+ + t: detect errors outside of test cases
+ + t9902: fix use of `read` with `set -e`
+ + t6002: fix use of `expr` with `set -e`
+ + t1301: don't fail in case setfacl(1) doesn't exist or fails
+ + t0008: silence error in subshell when using `grep -v`
+ + t: prepare `test_when_finished ()`/`test_atexit()` for `set -e`
+ + t: prepare execution of potentially failing commands for `set -e`
+ + t: prepare conditional test execution for `set -e`
+ + t: prepare `git config --unset` calls for `set -e`
+ + t: prepare `stop_git_daemon ()` for `set -e`
+ + t: prepare `test_must_fail ()` for `set -e`
+ + t: prepare `test_match_signal ()` calls for `set -e`
 
  The test suite harness and many individual test scripts have been
  updated to work correctly when 'set -e' is in effect, which helps
  detect misspelled test commands.
 
- Will merge to 'next'.
- source: <20260420-b4-pks-tests-with-set-e-v5-0-7d3d68292f6b@pks.im>
+ Will merge to 'master'.
+ source: <20260421-b4-pks-tests-with-set-e-v6-0-26330e3061ab@pks.im>
 
 
 * js/adjust-tests-to-explicitly-access-bare-repo (2026-04-02) 17 commits
@@ -296,15 +360,16 @@ Release tarballs are available at:
 
 
 * bc/rust-by-default (2026-04-09) 4 commits
- - Enable Rust by default
- - Linux: link against libdl
- - ci: install cargo on Alpine
- - docs: update version with default Rust support
+  (merged to 'next' on 2026-04-23 at fb9310bfae)
+ + Enable Rust by default
+ + Linux: link against libdl
+ + ci: install cargo on Alpine
+ + docs: update version with default Rust support
 
  Rust support is enabled by default (but still allows opting out) in
  some future version of Git.
 
- Will merge to 'next'.
+ Will merge to 'master'.
  source: <20260409224434.1861422-1-sandals@crustytoothpaste.net>
 
 
@@ -581,7 +646,7 @@ Release tarballs are available at:
  source: <V2_CV_name-rev_--format.51b@msgid.xyz>
 
 
-* js/parseopt-subcommand-autocorrection (2026-03-16) 10 commits
+* js/parseopt-subcommand-autocorrection (2026-04-22) 10 commits
  - doc: document autocorrect API
  - parseopt: add tests for subcommand autocorrection
  - parseopt: enable subcommand autocorrection for git-remote and git-notes
@@ -596,9 +661,8 @@ Release tarballs are available at:
  The parse-options library learned to auto-correct misspelled
  subcommand names.
 
- Expecting review responses.
- cf. <xmqqse9zo93p.fsf@gitster.g>
- source: <SY0P300MB080186A23FB9582AD793F0D1CE40A@SY0P300MB0801.AUSP300.PROD.OUTLOOK.COM>
+ Comments?
+ source: <SY0P300MB0801AE56F740AD087D22B35ACE2D2@SY0P300MB0801.AUSP300.PROD.OUTLOOK.COM>
 
 
 * ab/clone-default-object-filter (2026-03-14) 1 commit
