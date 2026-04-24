@@ -616,11 +616,6 @@ struct emit_callback {
  * the requested ranges.  Contiguous in-range lines are collected into
  * range hunks and flushed with a synthetic @@ header so that
  * fn_out_consume() sees well-formed unified-diff fragments.
- *
- * Removal lines ('-') cannot be classified by post-image position, so
- * they are buffered in pending_rm until the next '+' or ' ' line
- * reveals whether they precede an in-range line (flush into range hunk) or
- * an out-of-range line (discard).
  */
 struct line_range_callback {
 	xdiff_emit_line_fn orig_line_fn;
@@ -645,11 +640,6 @@ struct line_range_callback {
 	long rhunk_new_begin, rhunk_new_count;
 	int rhunk_active;
 	int rhunk_has_changes;		/* any '+' or '-' lines? */
-
-	/* Removal lines not yet known to be in-range */
-	struct strbuf pending_rm;
-	int pending_rm_count;
-	long pending_rm_pre_begin;	/* pre-image line of first pending */
 
 	int ret;			/* latched error from orig_line_fn */
 };
@@ -2539,12 +2529,6 @@ static int quick_consume(void *priv, char *line UNUSED, unsigned long len UNUSED
 	return 1;
 }
 
-static void discard_pending_rm(struct line_range_callback *s)
-{
-	strbuf_reset(&s->pending_rm);
-	s->pending_rm_count = 0;
-}
-
 static void flush_rhunk(struct line_range_callback *s)
 {
 	struct strbuf hdr = STRBUF_INIT;
@@ -2552,14 +2536,6 @@ static void flush_rhunk(struct line_range_callback *s)
 
 	if (!s->rhunk_active || s->ret)
 		return;
-
-	/* Drain any pending removal lines into the range hunk */
-	if (s->pending_rm_count) {
-		strbuf_addbuf(&s->rhunk, &s->pending_rm);
-		s->rhunk_old_count += s->pending_rm_count;
-		s->rhunk_has_changes = 1;
-		discard_pending_rm(s);
-	}
 
 	/*
 	 * Suppress context-only hunks: they contain no actual changes
@@ -2615,11 +2591,6 @@ static void line_range_hunk_fn(void *data,
 	 * When count > 0, begin is 1-based.  When count == 0, begin is
 	 * adjusted down by 1 by xdl_emit_hunk_hdr(), but no lines of
 	 * that type will arrive, so the value is unused.
-	 *
-	 * Any pending removal lines from the previous xdiff hunk are
-	 * intentionally left in pending_rm: the line callback will
-	 * flush or discard them when the next content line reveals
-	 * whether the removals precede in-range content.
 	 */
 	s->lno_post = new_begin;
 	s->lno_pre = old_begin;
@@ -2635,88 +2606,75 @@ static void line_range_hunk_fn(void *data,
 static int line_range_line_fn(void *priv, char *line, unsigned long len)
 {
 	struct line_range_callback *s = priv;
-	const struct range *cur;
-	long lno_0, cur_pre;
+	long lno_0;
+	int in_range;
 
 	if (s->ret)
 		return s->ret;
 
-	if (line[0] == '-') {
-		if (!s->pending_rm_count)
-			s->pending_rm_pre_begin = s->lno_pre;
-		s->lno_pre++;
-		strbuf_add(&s->pending_rm, line, len);
-		s->pending_rm_count++;
-		return s->ret;
-	}
-
 	if (line[0] == '\\') {
-		if (s->pending_rm_count)
-			strbuf_add(&s->pending_rm, line, len);
-		else if (s->rhunk_active)
+		if (s->rhunk_active)
 			strbuf_add(&s->rhunk, line, len);
-		/* otherwise outside tracked range; drop silently */
 		return s->ret;
 	}
 
-	if (line[0] != '+' && line[0] != ' ')
+	if (line[0] != '+' && line[0] != ' ' && line[0] != '-')
 		BUG("unexpected diff line type '%c'", line[0]);
 
+	/*
+	 * Compute post-image position.  '+' and ' ' lines advance
+	 * lno_post; '-' lines do not (they occupy no post-image space).
+	 */
 	lno_0 = s->lno_post - 1;
-	cur_pre = s->lno_pre;	/* save before advancing for context lines */
-	s->lno_post++;
-	if (line[0] == ' ')
-		s->lno_pre++;
+	if (line[0] != '-')
+		s->lno_post++;
 
-	/* Advance past ranges we've passed */
+	/*
+	 * Advance past any ranges we've moved beyond.  Emit the
+	 * accumulated range hunk for the range we're leaving.
+	 */
 	while (s->cur_range < s->ranges->nr &&
 	       lno_0 >= s->ranges->ranges[s->cur_range].end) {
 		if (s->rhunk_active)
 			flush_rhunk(s);
-		discard_pending_rm(s);
 		s->cur_range++;
 	}
 
-	/* Past all ranges */
-	if (s->cur_range >= s->ranges->nr) {
-		discard_pending_rm(s);
+	in_range = s->cur_range < s->ranges->nr &&
+		   lno_0 >= s->ranges->ranges[s->cur_range].start &&
+		   lno_0 < s->ranges->ranges[s->cur_range].end;
+
+	if (!in_range) {
+		if (line[0] != '+')
+			s->lno_pre++;
 		return s->ret;
 	}
 
-	cur = &s->ranges->ranges[s->cur_range];
-
-	/* Before current range */
-	if (lno_0 < cur->start) {
-		discard_pending_rm(s);
-		return s->ret;
-	}
-
-	/* In range so start a new range hunk if needed */
+	/* Start a new range hunk if this is the first in-range line */
 	if (!s->rhunk_active) {
 		s->rhunk_active = 1;
 		s->rhunk_has_changes = 0;
 		s->rhunk_new_begin = lno_0 + 1;
-		s->rhunk_old_begin = s->pending_rm_count
-			? s->pending_rm_pre_begin : cur_pre;
+		s->rhunk_old_begin = s->lno_pre;
 		s->rhunk_old_count = 0;
 		s->rhunk_new_count = 0;
 		strbuf_reset(&s->rhunk);
 	}
 
-	/* Flush pending removals into range hunk */
-	if (s->pending_rm_count) {
-		strbuf_addbuf(&s->rhunk, &s->pending_rm);
-		s->rhunk_old_count += s->pending_rm_count;
-		s->rhunk_has_changes = 1;
-		discard_pending_rm(s);
-	}
-
+	/* Append line to the range hunk */
 	strbuf_add(&s->rhunk, line, len);
-	s->rhunk_new_count++;
-	if (line[0] == '+')
-		s->rhunk_has_changes = 1;
-	else
+	if (line[0] == '-') {
 		s->rhunk_old_count++;
+		s->rhunk_has_changes = 1;
+		s->lno_pre++;
+	} else if (line[0] == '+') {
+		s->rhunk_new_count++;
+		s->rhunk_has_changes = 1;
+	} else {
+		s->rhunk_old_count++;
+		s->rhunk_new_count++;
+		s->lno_pre++;
+	}
 
 	return s->ret;
 }
@@ -4072,7 +4030,6 @@ static void builtin_diff(const char *name_a,
 			lr_state.orig_cb_data = &ecbdata;
 			lr_state.ranges = line_ranges;
 			strbuf_init(&lr_state.rhunk, 0);
-			strbuf_init(&lr_state.pending_rm, 0);
 
 			/*
 			 * Inflate ctxlen so that all changes within
@@ -4107,7 +4064,6 @@ static void builtin_diff(const char *name_a,
 				die("unable to generate diff for %s",
 				    one->path);
 			strbuf_release(&lr_state.rhunk);
-			strbuf_release(&lr_state.pending_rm);
 		} else if (xdi_diff_outf(&mf1, &mf2, NULL, fn_out_consume,
 					 &ecbdata, &xpp, &xecfg))
 			die("unable to generate diff for %s", one->path);
