@@ -201,6 +201,17 @@ linkgit:git-config[1].
 The default behavior can be set via the `checkout.guess` configuration
 variable.
 
+`--fetch`::
+`--no-fetch`::
+	If _<start-point>_ refers to a remote-tracking branch, fetch
+	from that remote before resolving it. When _<start-point>_ is
+	in _<remote>/<branch>_ form, only that branch is updated; when
+	it is a bare remote name (e.g. `origin`), the whole remote is
+	fetched. If the fetch fails, the checkout is aborted.
++
+The default behavior can be set via the `checkout.fetch` configuration
+variable.
+
 `-l`::
 	Create the new branch's reflog; see linkgit:git-branch[1] for
 	details.
