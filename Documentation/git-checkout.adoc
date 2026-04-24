@@ -201,6 +201,17 @@ linkgit:git-config[1].
 The default behavior can be set via the `checkout.guess` configuration
 variable.
 
+`--fetch`::
+`--no-fetch`::
+	If _<start-point>_ names a configured remote -- either bare,
+	like `origin` (which resolves to the remote's default branch),
+	or in _<remote>/<branch>_ form -- run `git fetch` on that
+	remote before resolving _<start-point>_. If the fetch fails,
+	the checkout is aborted and no local branch is created.
++
+The default behavior can be set via the `checkout.fetch` configuration
+variable.
+
 `-l`::
 	Create the new branch's reflog; see linkgit:git-branch[1] for
 	details.

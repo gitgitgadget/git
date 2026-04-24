@@ -110,6 +110,17 @@ ambiguous but exists on the 'origin' remote. See also
 The default behavior can be set via the `checkout.guess` configuration
 variable.
 
+`--fetch`::
+`--no-fetch`::
+	If _<start-point>_ names a configured remote -- either bare,
+	like `origin` (which resolves to the remote's default branch),
+	or in _<remote>/<branch>_ form -- run `git fetch` on that
+	remote before resolving _<start-point>_. If the fetch fails,
+	the switch is aborted and no local branch is created.
++
+The default behavior can be set via the `checkout.fetch` configuration
+variable.
+
 `-f`::
 `--force`::
 	An alias for `--discard-changes`.
