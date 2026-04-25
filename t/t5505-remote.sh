@@ -81,6 +81,14 @@ test_expect_success 'add another remote' '
 	)
 '
 
+test_expect_success 'add remote with --set-head implies --fetch and sets HEAD' '
+	test_when_finished "git -C test remote remove third" &&
+	git -C test remote add --set-head third ../two &&
+	echo refs/remotes/third/main >expect &&
+	git -C test symbolic-ref refs/remotes/third/HEAD >actual &&
+	test_cmp expect actual
+'
+
 test_expect_success 'setup bare clone for server' '
 	git clone --bare "file://$(pwd)/one" srv.bare &&
 	git -C srv.bare config --local uploadpack.allowfilter 1 &&

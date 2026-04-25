@@ -23,7 +23,7 @@
 
 static const char * const builtin_remote_usage[] = {
 	"git remote [-v | --verbose]",
-	N_("git remote add [-t <branch>] [-m <master>] [-f] [--tags | --no-tags] [--mirror=<fetch|push>] <name> <url>"),
+	N_("git remote add [-t <branch>] [-m <master>] [-f] [--set-head] [--tags | --no-tags] [--mirror=<fetch|push>] <name> <url>"),
 	N_("git remote rename [--[no-]progress] <old> <new>"),
 	N_("git remote remove <name>"),
 	N_("git remote set-head <name> (-a | --auto | -d | --delete | <branch>)"),
@@ -174,10 +174,21 @@ static int check_remote_collision(struct remote *remote, void *data)
 	return 0;
 }
 
+static int set_head_auto_for_remote(const char *name)
+{
+	struct child_process cmd = CHILD_PROCESS_INIT;
+
+	strvec_pushl(&cmd.args, "remote", "set-head", "--auto", name, NULL);
+	cmd.git_cmd = 1;
+	if (run_command(&cmd))
+		return error(_("Could not set up HEAD for %s"), name);
+	return 0;
+}
+
 static int add(int argc, const char **argv, const char *prefix,
 	       struct repository *repo UNUSED)
 {
-	int fetch = 0, fetch_tags = TAGS_DEFAULT;
+	int fetch = 0, fetch_tags = TAGS_DEFAULT, set_head_auto = 0;
 	unsigned mirror = MIRROR_NONE;
 	struct string_list track = STRING_LIST_INIT_NODUP;
 	const char *master = NULL;
@@ -195,6 +206,8 @@ static int add(int argc, const char **argv, const char *prefix,
 		OPT_STRING_LIST('t', "track", &track, N_("branch"),
 				N_("branch(es) to track")),
 		OPT_STRING('m', "master", &master, N_("branch"), N_("master branch")),
+		OPT_BOOL(0, "set-head", &set_head_auto,
+			 N_("set refs/remotes/<name>/HEAD according to remote (implies --fetch)")),
 		OPT_CALLBACK_F(0, "mirror", &mirror, "(push|fetch)",
 			N_("set up remote as a mirror to push to or fetch from"),
 			PARSE_OPT_OPTARG | PARSE_OPT_COMP_ARG, parse_mirror_opt),
@@ -211,6 +224,12 @@ static int add(int argc, const char **argv, const char *prefix,
 		die(_("specifying a master branch makes no sense with --mirror"));
 	if (mirror && !(mirror & MIRROR_FETCH) && track.nr)
 		die(_("specifying branches to track makes sense only with fetch mirrors"));
+	if (set_head_auto && master)
+		die(_("--set-head and --master are mutually exclusive"));
+	if (set_head_auto && mirror && !(mirror & MIRROR_FETCH))
+		die(_("--set-head makes no sense with a push mirror"));
+	if (set_head_auto)
+		fetch = 1;
 
 	name = argv[0];
 	url = argv[1];
@@ -268,6 +287,9 @@ static int add(int argc, const char **argv, const char *prefix,
 		if (refs_update_symref(get_main_ref_store(the_repository), buf.buf, buf2.buf, "remote add"))
 			result = error(_("Could not setup master '%s'"), master);
 	}
+
+	if (set_head_auto && set_head_auto_for_remote(name))
+		result = 1;
 
 out:
 	strbuf_release(&buf);
