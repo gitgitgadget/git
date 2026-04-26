@@ -860,6 +860,15 @@ int xdl_change_compact(xdfile_t *xdf, xdfile_t *xdfo, long flags) {
 
 		if (g.end == earliest_end) {
 			/* no shifting was possible */
+		} else if (flags & XDF_SLIDE_DOWN) {
+			/*
+			 * --slide-down: the group is already at the
+			 * furthest-down position. Leave it there.
+			 * This produces diffs where ambiguous hunks
+			 * (e.g., duplicate delimiter lines) appear
+			 * as appended after existing context rather
+			 * than inserted before it.
+			 */
 		} else if (end_matching_other != -1) {
 			/*
 			 * Move the possibly merged group of changes back to
