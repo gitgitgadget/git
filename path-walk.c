@@ -10,6 +10,7 @@
 #include "hex.h"
 #include "list-objects.h"
 #include "list-objects-filter-options.h"
+#include "odb.h"
 #include "object.h"
 #include "oid-array.h"
 #include "path.h"
@@ -327,13 +328,35 @@ static int walk_path(struct path_walk_context *ctx,
 	/*
 	 * Evaluate function pointer on this data, if requested.
 	 * Ignore object type filters for tagged objects (path starts
-	 * with `/`).
+	 * with `/`), first for blobs and then other types.
 	 */
-	if ((list->type == OBJ_TREE && (ctx->info->trees || path_is_for_direct_objects(path))) ||
-	    (list->type == OBJ_BLOB && (ctx->info->blobs || path_is_for_direct_objects(path))) ||
-	    (list->type == OBJ_TAG && ctx->info->tags))
+	if (list->type == OBJ_BLOB &&
+	    ctx->info->blob_limit &&
+	    !path_is_for_direct_objects(path)) {
+		struct oid_array filtered = OID_ARRAY_INIT;
+
+		for (size_t i = 0; i < list->oids.nr; i++) {
+			unsigned long size;
+
+			if (odb_read_object_info(ctx->repo->objects,
+						 &list->oids.oid[i],
+						 &size) != OBJ_BLOB ||
+				size < ctx->info->blob_limit)
+				oid_array_append(&filtered,
+						 &list->oids.oid[i]);
+		}
+
+		if (filtered.nr)
+			ret = ctx->info->path_fn(path, &filtered, list->type,
+						 ctx->info->path_fn_data);
+		oid_array_clear(&filtered);
+	} else if (path_is_for_direct_objects(path) ||
+		   (list->type == OBJ_TREE && ctx->info->trees) ||
+		   (list->type == OBJ_BLOB && ctx->info->blobs) ||
+		   (list->type == OBJ_TAG && ctx->info->tags)) {
 		ret = ctx->info->path_fn(path, &list->oids, list->type,
 					ctx->info->path_fn_data);
+	}
 
 	/* Expand data for children. */
 	if (list->type == OBJ_TREE) {
@@ -506,6 +529,16 @@ static int prepare_filters(struct path_walk_info *info,
 	case LOFC_BLOB_NONE:
 		if (info) {
 			info->blobs = 0;
+			list_objects_filter_release(options);
+		}
+		return 1;
+
+	case LOFC_BLOB_LIMIT:
+		if (info) {
+			if (!options->blob_limit_value)
+				info->blobs = 0;
+			else
+				info->blob_limit = options->blob_limit_value;
 			list_objects_filter_release(options);
 		}
 		return 1;
