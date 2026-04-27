@@ -155,8 +155,45 @@ test_expect_success '-p shows the default patch output' '
 	test_cmp expect actual
 '
 
-test_expect_success '--raw is forbidden' '
-	test_must_fail git log -L1,24:b.c --raw
+test_expect_success '--raw shows mode, oid, status and path' '
+	git log -L1,24:b.c --raw --format= >actual &&
+	test_grep "^:100644 100644 [0-9a-f]\{7\} [0-9a-f]\{7\} M	b.c$" actual &&
+	test_grep ! "^diff --git" actual &&
+	test_grep ! "^@@" actual
+'
+
+test_expect_success '--name-only shows path' '
+	git log -L1,24:b.c --name-only --format= >actual &&
+	test_grep "^b.c$" actual &&
+	test_grep ! "^diff --git" actual &&
+	test_grep ! "^@@" actual
+'
+
+test_expect_success '--name-status shows status and path' '
+	git log -L1,24:b.c --name-status --format= >actual &&
+	test_grep "^M	b.c$" actual &&
+	test_grep ! "^diff --git" actual &&
+	test_grep ! "^@@" actual
+'
+
+test_expect_success '--stat is not yet supported with -L' '
+	test_must_fail git log -L1,24:b.c --stat 2>err &&
+	test_grep "does not yet support" err
+'
+
+test_expect_success '--numstat is not yet supported with -L' '
+	test_must_fail git log -L1,24:b.c --numstat 2>err &&
+	test_grep "does not yet support" err
+'
+
+test_expect_success '--shortstat is not yet supported with -L' '
+	test_must_fail git log -L1,24:b.c --shortstat 2>err &&
+	test_grep "does not yet support" err
+'
+
+test_expect_success '--dirstat is not yet supported with -L' '
+	test_must_fail git log -L1,24:b.c --dirstat 2>err &&
+	test_grep "does not yet support" err
 '
 
 test_expect_success 'setup for checking fancy rename following' '
@@ -736,6 +773,12 @@ test_expect_success '-L --oneline has no extra blank line before diff' '
 	# Oneline header on line 1, diff starts immediately on line 2
 	sed -n 2p actual >line2 &&
 	test_grep "^diff --git" line2
+'
+
+test_expect_success '--summary shows new file on root commit' '
+	git checkout parent-oids &&
+	git log -L:func2:file.c --summary --format= >actual &&
+	test_grep "create mode 100644 file.c" actual
 '
 
 test_done
