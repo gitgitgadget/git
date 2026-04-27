@@ -91,13 +91,18 @@ static int fill_commit_message(struct repository *repo,
 	return 0;
 }
 
-static int commit_tree_with_edited_message_ext(struct repository *repo,
-					       const char *action,
-					       struct commit *commit_with_message,
-					       const struct commit_list *parents,
-					       const struct object_id *old_tree,
-					       const struct object_id *new_tree,
-					       struct commit **out)
+enum commit_tree_flags {
+	COMMIT_TREE_EDIT_MESSAGE = (1 << 0),
+};
+
+static int commit_tree_ext(struct repository *repo,
+			   const char *action,
+			   struct commit *commit_with_message,
+			   const struct commit_list *parents,
+			   const struct object_id *old_tree,
+			   const struct object_id *new_tree,
+			   struct commit **out,
+			   enum commit_tree_flags flags)
 {
 	const char *exclude_gpgsig[] = {
 		/* We reencode the message, so the encoding needs to be stripped. */
@@ -122,10 +127,14 @@ static int commit_tree_with_edited_message_ext(struct repository *repo,
 		original_author = xmemdupz(ptr, len);
 	find_commit_subject(original_message, &original_body);
 
-	ret = fill_commit_message(repo, old_tree, new_tree,
-				  original_body, action, &commit_message);
-	if (ret < 0)
-		goto out;
+	if (flags & COMMIT_TREE_EDIT_MESSAGE) {
+		ret = fill_commit_message(repo, old_tree, new_tree,
+					  original_body, action, &commit_message);
+		if (ret < 0)
+			goto out;
+	} else {
+		strbuf_addstr(&commit_message, original_body);
+	}
 
 	original_extra_headers = read_commit_extra_headers(commit_with_message,
 							   exclude_gpgsig);
@@ -168,8 +177,8 @@ static int commit_tree_with_edited_message(struct repository *repo,
 		oidcpy(&parent_tree_oid, repo->hash_algo->empty_tree);
 	}
 
-	return commit_tree_with_edited_message_ext(repo, action, original, original->parents,
-						   &parent_tree_oid, tree_oid, out);
+	return commit_tree_ext(repo, action, original, original->parents,
+			       &parent_tree_oid, tree_oid, out, COMMIT_TREE_EDIT_MESSAGE);
 }
 
 enum ref_action {
@@ -616,9 +625,8 @@ static int split_commit(struct repository *repo,
 	 * The first commit is constructed from the split-out tree. The base
 	 * that shall be diffed against is the parent of the original commit.
 	 */
-	ret = commit_tree_with_edited_message_ext(repo, "split-out", original,
-						  original->parents, &parent_tree_oid,
-						  &split_tree->object.oid, &first_commit);
+	ret = commit_tree_ext(repo, "split-out", original, original->parents, &parent_tree_oid,
+			      &split_tree->object.oid, &first_commit, COMMIT_TREE_EDIT_MESSAGE);
 	if (ret < 0) {
 		ret = error(_("failed writing first commit"));
 		goto out;
@@ -634,9 +642,8 @@ static int split_commit(struct repository *repo,
 	old_tree_oid = &repo_get_commit_tree(repo, first_commit)->object.oid;
 	new_tree_oid = &repo_get_commit_tree(repo, original)->object.oid;
 
-	ret = commit_tree_with_edited_message_ext(repo, "split-out", original,
-						  parents, old_tree_oid,
-						  new_tree_oid, &second_commit);
+	ret = commit_tree_ext(repo, "split-out", original, parents, old_tree_oid,
+			      new_tree_oid, &second_commit, COMMIT_TREE_EDIT_MESSAGE);
 	if (ret < 0) {
 		ret = error(_("failed writing second commit"));
 		goto out;
