@@ -43,6 +43,14 @@ struct path_walk_info {
 	int tags;
 
 	/**
+	 * If non-zero, specifies a maximum blob size. Blobs with a
+	 * size equal to or greater than this limit will be omitted
+	 * from the walk. Blobs smaller than the limit (or blobs
+	 * whose size cannot be determined) are still visited.
+	 */
+	unsigned long blob_limit;
+
+	/**
 	 * When 'prune_all_uninteresting' is set and a path has all objects
 	 * marked as UNINTERESTING, then the path-walk will not visit those
 	 * objects. It will not call path_fn on those objects and will not

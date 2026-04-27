@@ -10,6 +10,7 @@
 #include "hex.h"
 #include "list-objects.h"
 #include "list-objects-filter-options.h"
+#include "odb.h"
 #include "object.h"
 #include "oid-array.h"
 #include "path.h"
@@ -315,9 +316,29 @@ static int walk_path(struct path_walk_context *ctx,
 	/* Evaluate function pointer on this data, if requested. */
 	if ((list->type == OBJ_TREE && ctx->info->trees) ||
 	    (list->type == OBJ_BLOB && ctx->info->blobs) ||
-	    (list->type == OBJ_TAG && ctx->info->tags))
-		ret = ctx->info->path_fn(path, &list->oids, list->type,
-					ctx->info->path_fn_data);
+	    (list->type == OBJ_TAG && ctx->info->tags)) {
+		struct oid_array *oids = &list->oids;
+		struct oid_array filtered = OID_ARRAY_INIT;
+
+		if (list->type == OBJ_BLOB && ctx->info->blob_limit) {
+			for (size_t i = 0; i < list->oids.nr; i++) {
+				unsigned long size;
+
+				if (odb_read_object_info(ctx->repo->objects,
+							 &list->oids.oid[i],
+							 &size) != OBJ_BLOB ||
+				    size < ctx->info->blob_limit)
+					oid_array_append(&filtered,
+							 &list->oids.oid[i]);
+			}
+			oids = &filtered;
+		}
+
+		if (oids->nr)
+			ret = ctx->info->path_fn(path, oids, list->type,
+						 ctx->info->path_fn_data);
+		oid_array_clear(&filtered);
+	}
 
 	/* Expand data for children. */
 	if (list->type == OBJ_TREE) {
@@ -496,6 +517,17 @@ static int prepare_filters(struct path_walk_info *info,
 	case LOFC_BLOB_NONE:
 		if (info) {
 			info->blobs = 0;
+			list_objects_filter_release(options);
+		}
+		return 1;
+
+	case LOFC_BLOB_LIMIT:
+		if (info) {
+			if (!options->blob_limit_value) {
+				info->blobs = 0;
+			} else {
+				info->blob_limit = options->blob_limit_value;
+			}
 			list_objects_filter_release(options);
 		}
 		return 1;
