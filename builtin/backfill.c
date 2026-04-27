@@ -144,6 +144,8 @@ int cmd_backfill(int argc, const char **argv, const char *prefix, struct reposit
 
 	if (argc > 1)
 		die(_("unrecognized argument: %s"), argv[1]);
+	if (!path_walk_filter_compatible(&ctx.revs.filter))
+		die(_("cannot backfill with these filter options"));
 
 	repo_config(repo, git_default_config, NULL);
 
