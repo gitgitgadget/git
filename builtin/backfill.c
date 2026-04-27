@@ -146,6 +146,8 @@ int cmd_backfill(int argc, const char **argv, const char *prefix, struct reposit
 		die(_("unrecognized argument: %s"), argv[1]);
 	if (!path_walk_filter_compatible(&ctx.revs.filter))
 		die(_("cannot backfill with these filter options"));
+	if (ctx.revs.filter.blob_limit_value)
+		die(_("cannot backfill with blob size limits"));
 
 	repo_config(repo, git_default_config, NULL);
 
