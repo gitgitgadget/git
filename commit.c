@@ -1637,12 +1637,12 @@ static int find_invalid_utf8(const char *buf, int len)
 }
 
 /*
- * This verifies that the buffer is in proper utf8 format.
+ * This ensures that the buffer is in proper utf8 format.
  *
  * If it isn't, it assumes any non-utf8 characters are Latin1,
  * and does the conversion.
  */
-static int verify_utf8(struct strbuf *buf)
+static int ensure_utf8(struct strbuf *buf)
 {
 	int ok = 1;
 	long pos = 0;
@@ -1819,7 +1819,7 @@ int commit_tree_extended(const char *msg, size_t msg_len,
 	}
 
 	/* And check the encoding. */
-	if (encoding_is_utf8 && (!verify_utf8(&buffer) || !verify_utf8(&compat_buffer)))
+	if (encoding_is_utf8 && (!ensure_utf8(&buffer) || !ensure_utf8(&compat_buffer)))
 		fprintf(stderr, _(commit_utf8_warn));
 
 	if (r->compat_hash_algo) {
