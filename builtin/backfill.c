@@ -96,9 +96,8 @@ static void reject_unsupported_rev_list_options(struct rev_info *revs)
 	if (revs->explicit_diff_merges)
 		die(_("'%s' cannot be used with 'git backfill'"),
 		    "--diff-merges");
-	if (revs->filter.choice)
-		die(_("'%s' cannot be used with 'git backfill'"),
-		    "--filter");
+	if (!path_walk_filter_compatible(&revs->filter))
+		die(_("cannot backfill with these filter options"));
 }
 
 static int do_backfill(struct backfill_context *ctx)
