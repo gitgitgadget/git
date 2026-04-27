@@ -647,7 +647,8 @@ static const char *autocorrect_subcommand(const char *cmd,
 					  struct string_list *cmds)
 {
 	struct autocorrect autocorrect = { 0 };
-	unsigned int n = 0, best = 0;
+	unsigned int n = 0;
+	int best = 0;
 	struct string_list_item *cand;
 
 	autocorrect_resolve(&autocorrect);
@@ -657,7 +658,7 @@ static const char *autocorrect_subcommand(const char *cmd,
 
 	for_each_string_list_item(cand, cmds) {
 		if (starts_with(cand->string, cmd)) {
-			cand->util = 0;
+			cand->util = NULL;
 		} else {
 			int edit = levenshtein(cmd, cand->string,
 					       0, 2, 1, 3) + 1;
