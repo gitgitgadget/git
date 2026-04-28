@@ -3181,6 +3181,8 @@ int setup_revisions(int argc, const char **argv, struct rev_info *revs, struct s
 	if (revs->line_level_traverse &&
 	    (revs->diffopt.output_format & ~(DIFF_FORMAT_PATCH | DIFF_FORMAT_NO_OUTPUT)))
 		die(_("-L does not yet support diff formats besides -p and -s"));
+	if (revs->line_level_traverse && revs->full_diff)
+		die(_("-L is not compatible with --full-diff"));
 
 	if (revs->expand_tabs_in_log < 0)
 		revs->expand_tabs_in_log = revs->expand_tabs_in_log_default;
