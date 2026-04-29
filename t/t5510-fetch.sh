@@ -386,6 +386,90 @@ test_expect_success REFFILES 'fetch --prune fails to delete branches' '
 	)
 '
 
+test_expect_success 'fetch.pruneBranches: setup parent' '
+	git init -b main prune-branches-parent &&
+	test_commit -C prune-branches-parent base
+'
+
+test_expect_success 'fetch.pruneBranches=safe deletes merged local branch' '
+	git -C prune-branches-parent branch doomed base &&
+	git clone prune-branches-parent prune-branches-safe &&
+	git -C prune-branches-safe checkout -b doomed --track origin/doomed &&
+	git -C prune-branches-safe checkout -b stay &&
+	git -C prune-branches-parent branch -D doomed &&
+	git -C prune-branches-safe -c fetch.pruneBranches=safe fetch --prune origin &&
+	test_must_fail git -C prune-branches-safe rev-parse refs/remotes/origin/doomed &&
+	test_must_fail git -C prune-branches-safe rev-parse refs/heads/doomed
+'
+
+test_expect_success 'fetch.pruneBranches=safe keeps unmerged local branch' '
+	git -C prune-branches-parent branch doomed base &&
+	git clone prune-branches-parent prune-branches-safe-unmerged &&
+	git -C prune-branches-safe-unmerged checkout -b doomed --track origin/doomed &&
+	test_commit -C prune-branches-safe-unmerged local-only &&
+	git -C prune-branches-safe-unmerged checkout -b stay &&
+	git -C prune-branches-parent branch -D doomed &&
+	git -C prune-branches-safe-unmerged -c fetch.pruneBranches=safe fetch --prune origin 2>err &&
+	test_must_fail git -C prune-branches-safe-unmerged rev-parse refs/remotes/origin/doomed &&
+	git -C prune-branches-safe-unmerged rev-parse refs/heads/doomed &&
+	test_grep "not fully merged" err
+'
+
+test_expect_success 'fetch.pruneBranches=force deletes unmerged local branch' '
+	git -C prune-branches-parent branch doomed base &&
+	git clone prune-branches-parent prune-branches-force &&
+	git -C prune-branches-force checkout -b doomed --track origin/doomed &&
+	test_commit -C prune-branches-force local-only-force &&
+	git -C prune-branches-force checkout -b stay &&
+	git -C prune-branches-parent branch -D doomed &&
+	git -C prune-branches-force -c fetch.pruneBranches=force fetch --prune origin &&
+	test_must_fail git -C prune-branches-force rev-parse refs/remotes/origin/doomed &&
+	test_must_fail git -C prune-branches-force rev-parse refs/heads/doomed
+'
+
+test_expect_success 'fetch.pruneBranches=force never deletes checked-out branch' '
+	git -C prune-branches-parent branch doomed base &&
+	git clone prune-branches-parent prune-branches-checked-out &&
+	git -C prune-branches-checked-out checkout -b doomed --track origin/doomed &&
+	git -C prune-branches-parent branch -D doomed &&
+	git -C prune-branches-checked-out -c fetch.pruneBranches=force fetch --prune origin &&
+	test_must_fail git -C prune-branches-checked-out rev-parse refs/remotes/origin/doomed &&
+	git -C prune-branches-checked-out rev-parse refs/heads/doomed
+'
+
+test_expect_success '--prune-branches deletes merged local branch' '
+	git -C prune-branches-parent branch doomed base &&
+	git clone prune-branches-parent prune-branches-cli &&
+	git -C prune-branches-cli checkout -b doomed --track origin/doomed &&
+	git -C prune-branches-cli checkout -b stay &&
+	git -C prune-branches-parent branch -D doomed &&
+	git -C prune-branches-cli fetch --prune --prune-branches origin &&
+	test_must_fail git -C prune-branches-cli rev-parse refs/heads/doomed
+'
+
+test_expect_success '--no-prune-branches overrides fetch.pruneBranches' '
+	git -C prune-branches-parent branch doomed base &&
+	git clone prune-branches-parent prune-branches-no-cli &&
+	git -C prune-branches-no-cli checkout -b doomed --track origin/doomed &&
+	git -C prune-branches-no-cli checkout -b stay &&
+	git -C prune-branches-no-cli config fetch.pruneBranches force &&
+	git -C prune-branches-parent branch -D doomed &&
+	git -C prune-branches-no-cli fetch --prune --no-prune-branches origin &&
+	git -C prune-branches-no-cli rev-parse refs/heads/doomed
+'
+
+test_expect_success 'remote.<name>.pruneBranches overrides fetch.pruneBranches' '
+	git -C prune-branches-parent branch doomed base &&
+	git clone prune-branches-parent prune-branches-per-remote &&
+	git -C prune-branches-per-remote checkout -b doomed --track origin/doomed &&
+	git -C prune-branches-per-remote checkout -b stay &&
+	git -C prune-branches-per-remote config fetch.pruneBranches force &&
+	git -C prune-branches-per-remote config remote.origin.pruneBranches false &&
+	git -C prune-branches-parent branch -D doomed &&
+	git -C prune-branches-per-remote fetch --prune origin &&
+	git -C prune-branches-per-remote rev-parse refs/heads/doomed
+'
+
 test_expect_success 'fetch --atomic works with a single branch' '
 	test_when_finished "rm -rf atomic" &&
 

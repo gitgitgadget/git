@@ -185,6 +185,15 @@ See the PRUNING section below for more details.
 +
 See the PRUNING section below for more details.
 
+`--prune-branches[=(safe|force)]`::
+	When pruning, also delete local branches whose configured
+	upstream (`branch.<name>.merge`) is one of the remote-tracking
+	refs being pruned. With no value or `safe`, refuse to delete a
+	branch with unpushed commits; with `force`, delete it
+	regardless. The currently checked-out branch is never
+	deleted. See `fetch.pruneBranches` in linkgit:git-config[1] for
+	details.
+
 endif::git-pull[]
 
 ifndef::git-pull[]

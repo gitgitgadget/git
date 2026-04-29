@@ -87,6 +87,13 @@ remote.<name>.pruneTags::
 See also `remote.<name>.prune` and the PRUNING section of
 linkgit:git-fetch[1].
 
+remote.<name>.pruneBranches::
+	When pruning is active for this remote and this is set to `safe`
+	or `force`, also delete local branches whose upstream
+	remote-tracking ref is being pruned. Overrides
+	`fetch.pruneBranches` settings, if any. See `fetch.pruneBranches`
+	for the meaning of the values.
+
 remote.<name>.promisor::
 	When set to true, this remote will be used to fetch promisor
 	objects.

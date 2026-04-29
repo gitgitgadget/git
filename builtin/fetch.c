@@ -82,6 +82,21 @@ static int prune = -1; /* unspecified */
 static int prune_tags = -1; /* unspecified */
 #define PRUNE_TAGS_BY_DEFAULT 0 /* do we prune tags by default? */
 
+static int prune_branches = PRUNE_BRANCHES_UNSPECIFIED;
+
+static int parse_prune_branches_opt(const struct option *opt,
+				    const char *arg, int unset)
+{
+	int *v = opt->value;
+	if (unset)
+		*v = PRUNE_BRANCHES_OFF;
+	else if (arg)
+		*v = parse_prune_branches_value(opt->long_name, arg);
+	else
+		*v = PRUNE_BRANCHES_SAFE;
+	return 0;
+}
+
 static int append, dry_run, force, keep, update_head_ok;
 static int write_fetch_head = 1;
 static int verbosity, deepen_relative, set_upstream, refetch;
@@ -105,6 +120,7 @@ struct fetch_config {
 	int all;
 	int prune;
 	int prune_tags;
+	enum prune_branches_mode prune_branches;
 	int show_forced_updates;
 	int recurse_submodules;
 	int parallel;
@@ -128,6 +144,11 @@ static int git_fetch_config(const char *k, const char *v,
 
 	if (!strcmp(k, "fetch.prunetags")) {
 		fetch_config->prune_tags = git_config_bool(k, v);
+		return 0;
+	}
+
+	if (!strcmp(k, "fetch.prunebranches")) {
+		fetch_config->prune_branches = parse_prune_branches_value(k, v);
 		return 0;
 	}
 
@@ -1445,7 +1466,8 @@ out:
 static int prune_refs(struct display_state *display_state,
 		      struct refspec *rs,
 		      struct ref_transaction *transaction,
-		      struct ref *ref_map)
+		      struct ref *ref_map,
+		      struct ref **stale_refs_out)
 {
 	int result = 0;
 	struct ref *ref, *stale_refs = get_stale_heads(rs, ref_map);
@@ -1487,7 +1509,126 @@ static int prune_refs(struct display_state *display_state,
 cleanup:
 	string_list_clear(&refnames, 0);
 	strbuf_release(&err);
-	free_refs(stale_refs);
+	if (!result && stale_refs_out)
+		*stale_refs_out = stale_refs;
+	else
+		free_refs(stale_refs);
+	return result;
+}
+
+struct prune_branches_cb {
+	struct string_list *pruned_refs;
+	struct string_list *to_delete;
+	struct string_list *skipped_unmerged;
+	enum prune_branches_mode mode;
+};
+
+static int collect_branches_to_prune(const struct reference *ref, void *cb_data)
+{
+	struct prune_branches_cb *cb = cb_data;
+	const char *short_name = ref->name;
+	char *full_ref = xstrfmt("refs/heads/%s", short_name);
+	const char *upstream;
+	struct string_list_item *pruned;
+	int result = 0;
+
+	if (ref->flags & REF_ISSYMREF)
+		goto out;
+	if (branch_checked_out(full_ref))
+		goto out;
+
+	upstream = branch_get_upstream(branch_get(short_name), NULL);
+	if (!upstream)
+		goto out;
+
+	pruned = string_list_lookup(cb->pruned_refs, upstream);
+	if (!pruned)
+		goto out;
+
+	if (cb->mode == PRUNE_BRANCHES_SAFE) {
+		struct commit *local = lookup_commit_reference(the_repository,
+							       ref->oid);
+		struct commit *up = lookup_commit_reference(the_repository,
+							    pruned->util);
+		int reachable = local && up &&
+			repo_in_merge_bases(the_repository, local, up);
+
+		if (reachable < 0) {
+			result = -1;
+			goto out;
+		}
+		if (!reachable) {
+			string_list_append(cb->skipped_unmerged, short_name);
+			goto out;
+		}
+	}
+
+	string_list_append(cb->to_delete, full_ref);
+
+out:
+	free(full_ref);
+	return result;
+}
+
+static int do_prune_branches(struct display_state *display_state,
+			     struct ref *stale_refs,
+			     enum prune_branches_mode mode)
+{
+	struct string_list pruned_refs = STRING_LIST_INIT_NODUP;
+	struct string_list to_delete = STRING_LIST_INIT_DUP;
+	struct string_list skipped_unmerged = STRING_LIST_INIT_DUP;
+	struct prune_branches_cb cb = {
+		.pruned_refs = &pruned_refs,
+		.to_delete = &to_delete,
+		.skipped_unmerged = &skipped_unmerged,
+		.mode = mode,
+	};
+	struct ref *ref;
+	struct string_list_item *item;
+	int result = 0;
+
+	if (!stale_refs)
+		return 0;
+
+	for (ref = stale_refs; ref; ref = ref->next)
+		string_list_append(&pruned_refs, ref->name)->util = &ref->new_oid;
+	string_list_sort(&pruned_refs);
+
+	if (refs_for_each_branch_ref(get_main_ref_store(the_repository),
+				     collect_branches_to_prune, &cb)) {
+		result = -1;
+		goto cleanup;
+	}
+
+	if (!dry_run && to_delete.nr)
+		result = refs_delete_refs(get_main_ref_store(the_repository),
+					  "fetch: prune branches",
+					  &to_delete, REF_NO_DEREF);
+
+	if (verbosity >= 0) {
+		const struct object_id *zero = null_oid(the_repository->hash_algo);
+		for_each_string_list_item(item, &to_delete) {
+			const char *short_name;
+			if (skip_prefix(item->string, "refs/heads/", &short_name))
+				display_ref_update(display_state, '-',
+						   _("[deleted local]"), NULL,
+						   _("(none)"), short_name,
+						   zero, zero,
+						   transport_summary_width(NULL));
+		}
+	}
+	for_each_string_list_item(item, &skipped_unmerged)
+		warning(_("not deleting local branch '%s' that is not "
+			  "fully merged into its upstream;\n"
+			  "         set fetch.pruneBranches=force to "
+			  "delete anyway, or delete manually with "
+			  "'git branch -D %s'"),
+			item->string, item->string);
+
+cleanup:
+	string_list_clear(&pruned_refs, 0);
+	string_list_clear(&to_delete, 0);
+	string_list_clear(&skipped_unmerged, 0);
 	return result;
 }
 
@@ -1945,19 +2086,28 @@ static int do_fetch(struct transport *transport,
 	if (tags == TAGS_DEFAULT && autotags)
 		transport_set_option(transport, TRANS_OPT_FOLLOWTAGS, "1");
 	if (prune) {
+		struct ref *stale_refs = NULL;
+		struct ref **stale_refs_out = prune_branches != PRUNE_BRANCHES_OFF
+			? &stale_refs : NULL;
 		/*
 		 * We only prune based on refspecs specified
 		 * explicitly (via command line or configuration); we
 		 * don't care whether --tags was specified.
 		 */
 		if (rs->nr) {
-			retcode = prune_refs(&display_state, rs, transaction, ref_map);
+			retcode = prune_refs(&display_state, rs, transaction,
+					     ref_map, stale_refs_out);
 		} else {
 			retcode = prune_refs(&display_state, &transport->remote->fetch,
-					     transaction, ref_map);
+					     transaction, ref_map, stale_refs_out);
 		}
 		if (retcode != 0)
 			retcode = 1;
+		else if (stale_refs &&
+			 do_prune_branches(&display_state, stale_refs,
+					   prune_branches))
+			retcode = 1;
+		free_refs(stale_refs);
 	}
 
 	/*
@@ -2419,6 +2569,16 @@ static int fetch_one(struct remote *remote, int argc, const char **argv,
 			prune_tags = PRUNE_TAGS_BY_DEFAULT;
 	}
 
+	if (prune_branches == PRUNE_BRANCHES_UNSPECIFIED) {
+		/* no command line request */
+		if (remote->prune_branches >= 0)
+			prune_branches = remote->prune_branches;
+		else if (config->prune_branches >= 0)
+			prune_branches = config->prune_branches;
+		else
+			prune_branches = PRUNE_BRANCHES_OFF;
+	}
+
 	maybe_prune_tags = prune_tags_ok && prune_tags;
 	if (maybe_prune_tags && remote_via_config)
 		refspec_append(&remote->fetch, TAG_REFSPEC);
@@ -2469,6 +2629,7 @@ int cmd_fetch(int argc,
 		.display_format = DISPLAY_FORMAT_FULL,
 		.prune = -1,
 		.prune_tags = -1,
+		.prune_branches = PRUNE_BRANCHES_UNSPECIFIED,
 		.show_forced_updates = 1,
 		.recurse_submodules = RECURSE_SUBMODULES_DEFAULT,
 		.parallel = 1,
@@ -2520,6 +2681,9 @@ int cmd_fetch(int argc,
 			 N_("prune remote-tracking branches no longer on remote")),
 		OPT_BOOL('P', "prune-tags", &prune_tags,
 			 N_("prune local tags no longer on remote and clobber changed tags")),
+		OPT_CALLBACK_F(0, "prune-branches", &prune_branches, N_("mode"),
+			       N_("delete local branches whose upstream was pruned ('safe' or 'force')"),
+			       PARSE_OPT_OPTARG, parse_prune_branches_opt),
 		OPT_CALLBACK_F(0, "recurse-submodules", &recurse_submodules_cli, N_("on-demand"),
 			    N_("control recursive fetching of submodules"),
 			    PARSE_OPT_OPTARG, option_fetch_parse_recurse_submodules),

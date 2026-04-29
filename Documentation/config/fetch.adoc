@@ -50,6 +50,45 @@
 	refs. See also `remote.<name>.pruneTags` and the PRUNING
 	section of linkgit:git-fetch[1].
 
+`fetch.pruneBranches`::
+	When set in addition to `fetch.prune` (or `--prune`), also
+	delete local branches whose configured upstream
+	(`branch.<name>.merge`) is one of the remote-tracking refs
+	just removed by pruning. This is useful for cleaning up topic
+	branches whose upstream counterpart has been merged and then
+	removed. The same effect can be requested per-invocation with
+	`--prune-branches[=<mode>]`, or per-remote with
+	`remote.<name>.pruneBranches`.
++
+The currently checked-out branch (in any worktree) is never
+deleted. The value is one of:
++
+--
+`false` (the default);;
+	Do not delete any local branches. Equivalent to leaving
+	the option unset.
+`safe`;;
+	Delete a local branch only if its tip is an ancestor of
+	the upstream remote-tracking ref's last-known position.
+	In other words, only delete the branch if it contains no
+	commits that the upstream did not also have at the moment
+	it was deleted. This catches the common case of a branch
+	that was pushed and then squash- or rebase-merged
+	upstream (the local branch has no extra commits beyond
+	what was pushed), but preserves any branch with unpushed
+	local work.
+`force`;;
+	Delete the local branch unconditionally, even if it
+	contains unpushed commits. Use with care: if a remote
+	branch is deleted for any reason other than that its
+	contents were merged, the corresponding local commits
+	will only be retrievable through the reflog.
+--
++
+This option has no effect unless pruning is also enabled, since
+local branches are only considered for deletion when their
+upstream remote-tracking ref is being pruned in the same fetch.
+
 `fetch.all`::
 	If true, fetch will attempt to update all available remotes.
 	This behavior can be overridden by passing `--no-all` or by

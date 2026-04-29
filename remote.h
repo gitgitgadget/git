@@ -28,6 +28,15 @@ enum {
 #endif /* WITH_BREAKING_CHANGES */
 };
 
+enum prune_branches_mode {
+	PRUNE_BRANCHES_UNSPECIFIED = -1,
+	PRUNE_BRANCHES_OFF = 0,
+	PRUNE_BRANCHES_SAFE,
+	PRUNE_BRANCHES_FORCE,
+};
+
+int parse_prune_branches_value(const char *k, const char *v);
+
 struct rewrite {
 	const char *base;
 	size_t baselen;
@@ -102,6 +111,7 @@ struct remote {
 	int mirror;
 	int prune;
 	int prune_tags;
+	int prune_branches;
 
 	/**
 	 * The configured helper programs to run on the remote side, for

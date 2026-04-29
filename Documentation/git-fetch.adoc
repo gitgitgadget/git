@@ -179,6 +179,12 @@ It's reasonable to e.g. configure `fetch.pruneTags=true` in
 run, without making every invocation of `git fetch` without `--prune`
 an error.
 
+Local branches whose upstream remote-tracking ref is being pruned can
+also be deleted automatically with `--prune-branches[=<mode>]` (or its
+config equivalents `fetch.pruneBranches` and `remote.<name>.pruneBranches`).
+See linkgit:git-config[1] for the data-loss tradeoff between the
+`safe` and `force` modes.
+
 Pruning tags with `--prune-tags` also works when fetching a URL
 instead of a named remote. These will all prune tags not found on
 origin:

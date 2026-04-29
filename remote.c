@@ -148,6 +148,7 @@ static struct remote *make_remote(struct remote_state *remote_state,
 	CALLOC_ARRAY(ret, 1);
 	ret->prune = -1;  /* unspecified */
 	ret->prune_tags = -1;  /* unspecified */
+	ret->prune_branches = -1;  /* unspecified */
 	ret->name = xstrndup(name, len);
 	refspec_init_push(&ret->push);
 	refspec_init_fetch(&ret->fetch);
@@ -423,6 +424,19 @@ out:
 }
 #endif /* WITH_BREAKING_CHANGES */
 
+int parse_prune_branches_value(const char *k, const char *v)
+{
+	if (v) {
+		if (!strcasecmp(v, "safe"))
+			return PRUNE_BRANCHES_SAFE;
+		if (!strcasecmp(v, "force"))
+			return PRUNE_BRANCHES_FORCE;
+	}
+	if (git_parse_maybe_bool(v) == 0)
+		return PRUNE_BRANCHES_OFF;
+	die(_("invalid value for '%s': '%s'"), k, v);
+}
+
 static int handle_config(const char *key, const char *value,
 			 const struct config_context *ctx, void *cb)
 {
@@ -507,6 +521,8 @@ static int handle_config(const char *key, const char *value,
 		remote->prune = git_config_bool(key, value);
 	else if (!strcmp(subkey, "prunetags"))
 		remote->prune_tags = git_config_bool(key, value);
+	else if (!strcmp(subkey, "prunebranches"))
+		remote->prune_branches = parse_prune_branches_value(key, value);
 	else if (!strcmp(subkey, "url")) {
 		if (!value)
 			return config_error_nonbool(key);
