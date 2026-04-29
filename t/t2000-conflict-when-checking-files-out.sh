@@ -23,17 +23,6 @@ test_description='git conflicts when checking files out test.'
 
 . ./test-lib.sh
 
-show_files() {
-	# show filesystem files, just [-dl] for type and name
-	find path? -ls |
-	sed -e 's/^[0-9]* * [0-9]* * \([-bcdl]\)[^ ]* *[0-9]* *[^ ]* *[^ ]* *[0-9]* [A-Z][a-z][a-z] [0-9][0-9] [^ ]* /fs: \1 /'
-	# what's in the cache, just mode and name
-	git ls-files --stage |
-	sed -e 's/^\([0-9]*\) [0-9a-f]* [0-3] /ca: \1 /'
-	# what's in the tree, just mode and name.
-	git ls-tree -r "$1" |
-	sed -e 's/^\([0-9]*\)	[^ ]*	[0-9a-f]*	/tr: \1 /'
-}
 
 test_expect_success 'prepare files path0 and path1/file1' '
 	date >path0 &&
@@ -96,7 +85,6 @@ test_expect_success 'checkout-index -f resolves symlink conflict on leading path
 	git read-tree -m $tree1 &&
 	git checkout-index -f -a &&
 	test_ln_s_add path2 path3 &&
-	tree3=$(git write-tree) &&
 	git read-tree $tree2 &&
 	git checkout-index -f -a &&
 	test_path_is_dir_not_symlink path2 &&
