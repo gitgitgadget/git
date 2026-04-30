@@ -42,6 +42,9 @@ static const char incremental_bitmap_conflict_error[] = N_(
 "--no-write-bitmap-index or disable the pack.writeBitmaps configuration."
 );
 
+#define DEFAULT_MIDX_SPLIT_FACTOR 2
+#define DEFAULT_MIDX_NEW_LAYER_THRESHOLD 8
+
 struct repack_config_ctx {
 	struct pack_objects_args *po_args;
 	struct pack_objects_args *cruft_po_args;
@@ -555,6 +558,8 @@ int cmd_repack(int argc,
 			.show_progress = show_progress,
 			.write_bitmaps = write_bitmaps > 0,
 			.midx_must_contain_cruft = midx_must_contain_cruft,
+			.midx_split_factor = DEFAULT_MIDX_SPLIT_FACTOR,
+			.midx_new_layer_threshold = DEFAULT_MIDX_NEW_LAYER_THRESHOLD,
 			.mode = write_midx,
 		};
 
