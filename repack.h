@@ -34,7 +34,8 @@ void prepare_pack_objects(struct child_process *cmd,
 void pack_objects_args_release(struct pack_objects_args *args);
 
 void repack_remove_redundant_pack(struct repository *repo, const char *dir_name,
-				  const char *base_name);
+				  const char *base_name,
+				  bool wrote_incremental_midx);
 
 struct write_pack_opts {
 	struct pack_objects_args *po_args;
@@ -83,8 +84,10 @@ void existing_packs_retain_cruft(struct existing_packs *existing,
 				 struct packed_git *cruft);
 void existing_packs_mark_for_deletion(struct existing_packs *existing,
 				      struct string_list *names);
+void existing_packs_retain_midx_packs(struct existing_packs *existing);
 void existing_packs_remove_redundant(struct existing_packs *existing,
-				     const char *packdir);
+				     const char *packdir,
+				     bool wrote_incremental_midx);
 void existing_packs_release(struct existing_packs *existing);
 
 struct generated_pack;
@@ -129,7 +132,8 @@ struct packed_git *pack_geometry_preferred_pack(struct pack_geometry *geometry);
 void pack_geometry_remove_redundant(struct pack_geometry *geometry,
 				    struct string_list *names,
 				    struct existing_packs *existing,
-				    const char *packdir);
+				    const char *packdir,
+				    bool wrote_incremental_midx);
 void pack_geometry_release(struct pack_geometry *geometry);
 
 struct tempfile;
