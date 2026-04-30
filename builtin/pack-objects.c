@@ -4777,6 +4777,8 @@ static void get_object_list_path_walk(struct rev_info *revs)
 	result = walk_objects_by_path(&info);
 	trace2_region_leave("pack-objects", "path-walk", revs->repo);
 
+	path_walk_info_clear(&info);
+
 	if (result)
 		die(_("failed to pack objects via path-walk"));
 }

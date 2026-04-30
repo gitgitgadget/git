@@ -404,7 +404,8 @@ will be automatically changed to version `1`.
 +
 Incompatible with `--delta-islands`. The `--use-bitmap-index` option is
 ignored in the presence of `--path-walk`. Whe `--path-walk` option
-supports the `--filter=<spec>` form `blob:none` and `blob:limit=<n>`.
+supports the `--filter=<spec>` form `blob:none`, `blob:limit=<n>`, and
+`sparse:<oid>`.
 
 
 DELTA ISLANDS
