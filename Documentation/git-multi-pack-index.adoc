@@ -12,8 +12,10 @@ SYNOPSIS
 'git multi-pack-index' [<options>] write [--preferred-pack=<pack>]
 		         [--[no-]bitmap] [--[no-]incremental] [--[no-]stdin-packs]
 		         [--refs-snapshot=<path>] [--[no-]write-chain-file]
+			 [--base=<checksum>]
 'git multi-pack-index' [<options>] compact [--[no-]incremental]
-		         [--[no-]bitmap] [--[no-]write-chain-file] <from> <to>
+		         [--[no-]bitmap] [--base=<checksum>] [--[no-]write-chain-file]
+			 <from> <to>
 'git multi-pack-index' [<options>] verify
 'git multi-pack-index' [<options>] expire
 'git multi-pack-index' [<options>] repack [--batch-size=<size>]
@@ -90,6 +92,13 @@ marker).
 		The checksum of the new layer is printed to standard
 		output, allowing the caller to assemble and write the
 		chain itself. Requires `--incremental`.
+
+	--base=<checksum>::
+		Specify the checksum of an existing MIDX layer to use
+		as the base when writing a new incremental layer.
+		The special value `none` indicates that the new layer
+		should have no base (i.e., it becomes a root layer).
+		Requires `--no-write-chain-file`.
 --
 
 compact::
@@ -110,6 +119,12 @@ compact::
 		MIDX layer but do not update the multi-pack-index-chain
 		file. The checksum of the new layer is printed to
 		standard output. Requires `--incremental`.
+
+	--base=<checksum>::
+		Specify the checksum of an existing MIDX layer to use
+		as the base for the compacted result, instead of using
+		the immediate parent of `<from>`. The special value
+		`none` indicates that the result should have no base.
 --
 +
 Note that the compact command requires writing a version-2 midx that
