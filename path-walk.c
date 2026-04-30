@@ -10,6 +10,7 @@
 #include "hex.h"
 #include "list-objects.h"
 #include "list-objects-filter-options.h"
+#include "object-name.h"
 #include "odb.h"
 #include "object.h"
 #include "oid-array.h"
@@ -180,10 +181,6 @@ static int add_tree_entries(struct path_walk_context *ctx,
 			return -1;
 		}
 
-		/* Skip this object if already seen. */
-		if (o->flags & SEEN)
-			continue;
-
 		strbuf_setlen(&path, base_len);
 		strbuf_add(&path, entry.path, entry.pathlen);
 
@@ -193,6 +190,40 @@ static int add_tree_entries(struct path_walk_context *ctx,
 		 */
 		if (type == OBJ_TREE)
 			strbuf_addch(&path, '/');
+
+		if (o->flags & SEEN) {
+			/*
+			 * A tree with a shared OID may appear at multiple
+			 * paths. Even though we already added this tree to
+			 * the output at some other path, we still need to
+			 * walk into it at this in-cone path to discover
+			 * blobs that were not found at the earlier
+			 * out-of-cone path.
+			 *
+			 * Only do this for paths not yet in our map, to
+			 * avoid duplicate entries when the same tree OID
+			 * appears at the same path across multiple commits.
+			 */
+			if (type == OBJ_TREE && ctx->info->pl &&
+			    ctx->info->pl->use_cone_patterns &&
+			    !ctx->info->pl_sparse_trees &&
+			    !strmap_contains(&ctx->paths_to_lists, path.buf)) {
+				int dtype;
+				enum pattern_match_result m;
+				m = path_matches_pattern_list(path.buf, path.len,
+							      path.buf + base_len,
+							      &dtype,
+							      ctx->info->pl,
+							      ctx->repo->index);
+				if (m != NOT_MATCHED) {
+					add_path_to_list(ctx, path.buf, type,
+							 &entry.oid,
+							 !(o->flags & UNINTERESTING));
+					push_to_stack(ctx, path.buf);
+				}
+			}
+			continue;
+		}
 
 		if (ctx->info->pl) {
 			int dtype;
@@ -529,6 +560,48 @@ static int prepare_filters(struct path_walk_info *info,
 			} else {
 				info->blob_limit = options->blob_limit_value;
 			}
+			list_objects_filter_release(options);
+		}
+		return 1;
+
+	case LOFC_SPARSE_OID:
+		if (info) {
+			struct object_id sparse_oid;
+			struct repository *repo = info->revs->repo;
+
+			if (info->pl) {
+				warning(_("sparse filter cannot be combined with existing sparse patterns"));
+				return 0;
+			}
+
+			if (repo_get_oid_with_flags(repo,
+						    options->sparse_oid_name,
+						    &sparse_oid,
+						    GET_OID_BLOB)) {
+				error(_("unable to access sparse blob in '%s'"),
+				      options->sparse_oid_name);
+				return 0;
+			}
+
+			CALLOC_ARRAY(info->pl, 1);
+			info->pl->use_cone_patterns = 1;
+
+			if (add_patterns_from_blob_to_list(&sparse_oid, "", 0,
+							   info->pl) < 0) {
+				clear_pattern_list(info->pl);
+				FREE_AND_NULL(info->pl);
+				error(_("unable to parse sparse filter data in '%s'"),
+				      oid_to_hex(&sparse_oid));
+				return 0;
+			}
+
+			if (!info->pl->use_cone_patterns) {
+				clear_pattern_list(info->pl);
+				FREE_AND_NULL(info->pl);
+				warning(_("sparse filter is not cone-mode compatible"));
+				return 0;
+			}
+
 			list_objects_filter_release(options);
 		}
 		return 1;
