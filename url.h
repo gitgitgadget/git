@@ -24,15 +24,16 @@ void str_end_url_with_slash(const char *url, char **dest);
 int url_is_local_not_ssh(const char *url);
 
 enum url_scheme {
-	URL_SCHEME_LOCAL = 1,
+	URL_SCHEME_UNKNOWN = 0,
+	URL_SCHEME_LOCAL,
 	URL_SCHEME_FILE,
 	URL_SCHEME_SSH,
 	URL_SCHEME_GIT,
 };
 
 /*
- * Identify the URL scheme by name. Dies if the name does not match
- * any scheme that Git knows about.
+ * Identify the URL scheme by name. Returns URL_SCHEME_UNKNOWN
+ * if the name does not match any scheme that Git knows about.
  */
 enum url_scheme url_get_scheme(const char *name);
 
