@@ -1731,6 +1731,9 @@ static int write_midx_internal(struct write_midx_opts *opts)
 		FILE *chainf = fdopen_lock_file(&lk, "w");
 		struct strbuf final_midx_name = STRBUF_INIT;
 		struct multi_pack_index *m = ctx.base_midx;
+		struct multi_pack_index **layers = NULL;
+		size_t layers_nr = 0, layers_alloc = 0;
+		size_t j = 0;
 
 		if (!chainf) {
 			error_errno(_("unable to open multi-pack-index chain file"));
@@ -1751,46 +1754,49 @@ static int write_midx_internal(struct write_midx_opts *opts)
 		strbuf_release(&final_midx_name);
 
 		if (ctx.compact) {
-			struct multi_pack_index *m;
-			uint32_t num_layers_before_from = 0;
-			uint32_t i;
+			struct multi_pack_index *mp;
 
-			for (m = ctx.base_midx; m; m = m->base_midx)
-				num_layers_before_from++;
-
-			m = ctx.base_midx;
-			for (i = 0; i < num_layers_before_from; i++) {
-				uint32_t j = num_layers_before_from - i - 1;
-
-				keep_hashes[j] = xstrdup(midx_get_checksum_hex(m));
-				m = m->base_midx;
+			for (mp = ctx.base_midx; mp; mp = mp->base_midx) {
+				ALLOC_GROW(layers, layers_nr + 1, layers_alloc);
+				layers[layers_nr++] = mp;
 			}
+			while (layers_nr)
+				keep_hashes[j++] =
+					xstrdup(midx_get_checksum_hex(layers[--layers_nr]));
 
-			keep_hashes[i] = xstrdup(hash_to_hex_algop(midx_hash,
-								   r->hash_algo));
-
-			i = 0;
-			for (m = ctx.m;
-			     m && midx_hashcmp(m, ctx.compact_to, r->hash_algo);
-			     m = m->base_midx) {
-				keep_hashes[keep_hashes_nr - i - 1] =
-					xstrdup(midx_get_checksum_hex(m));
-				i++;
-			}
-		} else {
-			keep_hashes[ctx.num_multi_pack_indexes_before] =
+			keep_hashes[j++] =
 				xstrdup(hash_to_hex_algop(midx_hash,
 							  r->hash_algo));
 
-			for (uint32_t i = 0; i < ctx.num_multi_pack_indexes_before; i++) {
-				uint32_t j = ctx.num_multi_pack_indexes_before - i - 1;
-
-				keep_hashes[j] = xstrdup(midx_get_checksum_hex(m));
-				m = m->base_midx;
+			for (mp = ctx.m;
+			     mp && midx_hashcmp(mp, ctx.compact_to,
+						r->hash_algo);
+			     mp = mp->base_midx) {
+				ALLOC_GROW(layers, layers_nr + 1, layers_alloc);
+				layers[layers_nr++] = mp;
 			}
+			while (layers_nr)
+				keep_hashes[j++] =
+					xstrdup(midx_get_checksum_hex(layers[--layers_nr]));
+		} else {
+			for (; m; m = m->base_midx) {
+				ALLOC_GROW(layers, layers_nr + 1, layers_alloc);
+				layers[layers_nr++] = m;
+			}
+			while (layers_nr)
+				keep_hashes[j++] =
+					xstrdup(midx_get_checksum_hex(layers[--layers_nr]));
+
+			keep_hashes[j++] =
+				xstrdup(hash_to_hex_algop(midx_hash,
+							  r->hash_algo));
 		}
 
-		for (uint32_t i = 0; i < keep_hashes_nr; i++)
+		ASSERT(j == keep_hashes_nr);
+
+		free(layers);
+
+		for (uint32_t i = 0; i < j; i++)
 			fprintf(get_lock_file_fp(&lk), "%s\n", keep_hashes[i]);
 	} else {
 		keep_hashes[ctx.num_multi_pack_indexes_before] =
