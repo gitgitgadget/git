@@ -1,0 +1,86 @@
+#!/bin/sh
+
+usage () {
+	echo >&2 "usage: $0 [--stdin | <topics>...]"
+}
+
+stdin=
+while case "$1" in -*) ;; *) break; esac
+do
+	case "$1" in
+	--stdin)
+		stedin=stdin ;;
+	*)
+		usage
+		exit 1 ;;
+	esac
+	shift
+done
+
+section () {
+	printf >&3 "\033]0;%s %s\007" "$*"
+	printf >&3 "# %s %s\n" "$*"
+	printf >&2 "\n\n\n\n##### %s %s\n\n\n\n" "$*"
+}
+
+git checkout --quiet --detach
+
+logbase=./+log/$$
+mkdir -p "$logbase"
+
+exec 3>&2
+
+onetopic () {
+	topic="$1"
+	log="$logbase/$(echo "$topic" | tr '/' '-')"
+	exec >"$log" 2>&1
+	git reset --hard "$topic"
+	failed=
+
+	section "$topic - leaks" &&
+	(
+		export SANITIZE=leak GIT_TEST_PASSING_SANITIZE_LEAK=true &&
+		Meta/Make -j32  CC=clang test &&
+		Meta/Make -j32  CC=clang  >/dev/null 2>&1 distclean
+	) || failed="leaks"
+
+	section "$topic - sha256" &&
+	(
+		export GIT_TEST_DEFAULT_HASH=sha256 &&
+		Meta/Make -j32 test &&
+		Meta/Make >/dev/null 2>&1 distclean
+	) || failed="$failed${failed:+" "}sha256"
+
+	section "$topic - test" &&
+	(
+		Meta/Make -j32 test &&
+		Meta/Make >/dev/null 2>&1 distclean
+	) || failed="$failed${failed:+" "}test"
+
+	section "$topic - breaking" &&
+	(
+		Meta/Make $jobs WITH_BREAKING_CHANGES=YesPlease $T test &&
+		Meta/Make WITH_BREAKING_CHANGES=YesPlease >/dev/null 2>&1 distclean
+	) || failed="$failed${failed:+" "}breaking"
+
+	if test "$failed" = ""
+	then
+		rm -f "$log"
+	else
+		echo >&3 "failed ($failed) $topic"
+		echo >&2 "failed ($failed) $topic"
+	fi
+}
+
+if test "$stdin" = stdin
+then
+	while read topic
+	do
+		onetopic "$topic"
+	done
+else
+	for topic
+	do
+		onetopic "$topic"
+	done
+fi
