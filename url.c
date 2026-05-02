@@ -1,4 +1,5 @@
 #include "git-compat-util.h"
+#include "gettext.h"
 #include "hex-ll.h"
 #include "strbuf.h"
 #include "url.h"
@@ -139,4 +140,19 @@ int url_is_local_not_ssh(const char *url)
 	const char *slash = strchr(url, '/');
 	return !colon || (slash && slash < colon) ||
 		(has_dos_drive_prefix(url) && is_valid_path(url));
+}
+
+enum url_scheme url_get_scheme(const char *name)
+{
+	if (!strcmp(name, "ssh"))
+		return URL_SCHEME_SSH;
+	if (!strcmp(name, "git"))
+		return URL_SCHEME_GIT;
+	if (!strcmp(name, "git+ssh")) /* deprecated - do not use */
+		return URL_SCHEME_SSH;
+	if (!strcmp(name, "ssh+git")) /* deprecated - do not use */
+		return URL_SCHEME_SSH;
+	if (!strcmp(name, "file"))
+		return URL_SCHEME_FILE;
+	die(_("protocol '%s' is not supported"), name);
 }

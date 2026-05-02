@@ -700,13 +700,6 @@ int server_supports(const char *feature)
 	return !!server_feature_value(feature, NULL);
 }
 
-enum url_scheme {
-	URL_SCHEME_LOCAL = 1,
-	URL_SCHEME_FILE,
-	URL_SCHEME_SSH,
-	URL_SCHEME_GIT
-};
-
 static const char *url_scheme_name(enum url_scheme scheme)
 {
 	switch (scheme) {
@@ -720,21 +713,6 @@ static const char *url_scheme_name(enum url_scheme scheme)
 		default:
 			return "unknown protocol";
 	}
-}
-
-static enum url_scheme url_get_scheme(const char *name)
-{
-	if (!strcmp(name, "ssh"))
-		return URL_SCHEME_SSH;
-	if (!strcmp(name, "git"))
-		return URL_SCHEME_GIT;
-	if (!strcmp(name, "git+ssh")) /* deprecated - do not use */
-		return URL_SCHEME_SSH;
-	if (!strcmp(name, "ssh+git")) /* deprecated - do not use */
-		return URL_SCHEME_SSH;
-	if (!strcmp(name, "file"))
-		return URL_SCHEME_FILE;
-	die(_("protocol '%s' is not supported"), name);
 }
 
 static char *host_end(char **hoststart, int removebrackets)

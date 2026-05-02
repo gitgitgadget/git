@@ -23,6 +23,19 @@ void str_end_url_with_slash(const char *url, char **dest);
 
 int url_is_local_not_ssh(const char *url);
 
+enum url_scheme {
+	URL_SCHEME_LOCAL = 1,
+	URL_SCHEME_FILE,
+	URL_SCHEME_SSH,
+	URL_SCHEME_GIT,
+};
+
+/*
+ * Identify the URL scheme by name. Dies if the name does not match
+ * any scheme that Git knows about.
+ */
+enum url_scheme url_get_scheme(const char *name);
+
 /*
  * The set of unreserved characters as per STD66 (RFC3986) is
  * '[A-Za-z0-9-._~]'. These characters are safe to appear in URI
