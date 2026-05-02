@@ -1,5 +1,4 @@
 #include "git-compat-util.h"
-#include "gettext.h"
 #include "hex-ll.h"
 #include "strbuf.h"
 #include "url.h"
@@ -154,5 +153,5 @@ enum url_scheme url_get_scheme(const char *name)
 		return URL_SCHEME_SSH;
 	if (!strcmp(name, "file"))
 		return URL_SCHEME_FILE;
-	die(_("protocol '%s' is not supported"), name);
+	return URL_SCHEME_UNKNOWN;
 }

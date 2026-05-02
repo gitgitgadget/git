@@ -1071,6 +1071,8 @@ static enum url_scheme parse_connect_url(const char *url_orig, char **ret_host,
 	if (host) {
 		*host = '\0';
 		scheme = url_get_scheme(url);
+		if (scheme == URL_SCHEME_UNKNOWN)
+			die(_("protocol '%s' is not supported"), url);
 		host += 3;
 	} else {
 		host = url;
