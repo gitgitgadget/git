@@ -418,8 +418,8 @@ struct push_cas_option {
 		unsigned use_tracking:1;
 		char *refname;
 	} *entry;
-	int nr;
-	int alloc;
+	size_t nr;
+	size_t alloc;
 };
 
 int parseopt_push_cas_option(const struct option *, const char *arg, int unset);
