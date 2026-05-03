@@ -1,10 +1,10 @@
 To: git@vger.kernel.org
-Subject: What's cooking in git.git (Apr 2026, #08)
+Subject: What's cooking in git.git (May 2026, #01)
 X-master-at: 94f057755b7941b321fd11fec1b2e3ca5313a4e0
 X-next-at: 4f69b47b940100b02630f745a52f9d9850f122b2
 Bcc: lwn@lwn.net, gitster@pobox.com
 
-What's cooking in git.git (Apr 2026, #08)
+What's cooking in git.git (May 2026, #01)
 -----------------------------------------
 
 Here are the topics that have been cooking in my tree.  Commits
@@ -19,9 +19,9 @@ arise).
 
 Git 2.54 has been released, and the tip of 'next' has acquired a
 handful more topics, but no update to 'master' yet to kick off the
-new cycle has happened (yet).  I am still mostly offline for a
-couple of weeks, but just had a chance to pick up updates to a
-handful of topics.
+new cycle has happened (yet).  I am still mostly offline for another
+week, but just had a chance to pick up updates to a handful of
+topics.
 
 Copies of the source code to Git live in many repositories, and the
 following is a list of the ones I push into or their mirrors.  Some
@@ -53,6 +53,213 @@ Release tarballs are available at:
 
 --------------------------------------------------
 [New Topics]
+
+* jh/alias-i18n-fixes (2026-04-24) 1 commit
+ - alias: restore support for simple dotted aliases
+
+ Further update to the i18n alias support to avoid regressions.
+ source: <20260424161707.1514255-1-jonatan@jontes.page>
+
+
+* kn/refs-generic-helpers (2026-04-27) 9 commits
+ - refs: use peeled tag values in reference backends
+ - refs: add peeled object ID to the `ref_update` struct
+ - refs: move object parsing to the generic layer
+ - update-ref: handle rejections while adding updates
+ - update-ref: move `print_rejected_refs()` up
+ - refs: return `ref_transaction_error` from `ref_transaction_update()`
+ - refs: extract out reflog config to generic layer
+ - refs: introduce `ref_store_init_options`
+ - refs: remove unused typedef 'ref_transaction_commit_fn'
+
+ Refactor service routines in the ref subsystem backends.
+
+ Will merge to 'next'?
+ source: <20260427-refs-move-to-generic-layer-v3-0-e4638dfb7897@gmail.com>
+
+
+* ob/more-repo-config-values (2026-04-23) 8 commits
+ - env: move "warn_on_object_refname_ambiguity" into `struct repo_config_values`
+ - env: move "sparse_expect_files_outside_of_patterns" into `repo_config_values`
+ - env: move "core_sparse_checkout_cone" into `struct repo_config_values`
+ - environment: move "precomposed_unicode" into `struct repo_config_values`
+ - environment: move "pack_compression_level" into `struct repo_config_values`
+ - environment: move `zlib_compression_level` into `struct repo_config_values`
+ - environment: move "check_stat" into `struct repo_config_values`
+ - environment: move "trust_ctime" into `struct repo_config_values`
+
+ Expecting a reroll.
+ cf. <CAD=f0L8-_3sDGGkCzF4WA0xmUtaY_qiz__3zq5AemLgwTsqvsg@mail.gmail.com>
+ source: <20260423165432.143598-1-belkid98@gmail.com>
+
+
+* ps/history-fixup (2026-04-26) 3 commits
+ - builtin/history: introduce "fixup" subcommand
+ - builtin/history: generalize function to commit trees
+ - replay: allow callers to control what happens with empty commits
+
+ "git history" learned "fixup" command.
+
+ Comments?
+ source: <20260427-b4-pks-history-fixup-v3-0-cb908f06264b@pks.im>
+
+
+* rs/grep-column-only-match-fix (2026-04-24) 1 commit
+ - grep: fix --column --only-match for 2nd and later matches
+
+ "git grep" update.
+
+ Will merge to 'next'?
+ source: <9bd69678-f04b-41d2-ad74-a386820d34c8@web.de>
+
+
+* sb/unpack-index-pack-buffer-resize (2026-04-28) 1 commit
+ - index-pack, unpack-objects: increase input buffer from 4 KiB to 128 KiB
+
+ Use a larger buffer size in the code paths to ingest pack stream.
+
+ Will merge to 'next'?
+ source: <pull.2282.v4.git.git.1777387660841.gitgitgadget@gmail.com>
+
+
+* bc/sign-commit-with-custom-encoding (2026-04-27) 2 commits
+ - commit: sign commit after mutating buffer
+ - commit: name UTF-8 function appropriately
+
+ Signing commit with custom encoding was passing the data to be
+ signed at a wrong stage in the pipeline, which has been corrected.
+
+ Will merge to 'next'?
+ source: <20260427221834.1824543-1-sandals@crustytoothpaste.net>
+
+
+* cc/promisor-auto-config-url-more (2026-04-27) 9 commits
+ - doc: promisor: improve acceptFromServer entry
+ - promisor-remote: auto-configure unknown remotes
+ - promisor-remote: trust known remotes matching acceptFromServerUrl
+ - promisor-remote: introduce promisor.acceptFromServerUrl
+ - promisor-remote: add 'local_name' to 'struct promisor_info'
+ - urlmatch: add url_normalize_pattern() helper
+ - urlmatch: change 'allow_globs' arg to bool
+ - t5710: simplify 'mkdir X' followed by 'git -C X init'
+ - Merge branch 'cc/promisor-auto-config-url' into cc/promisor-auto-config-url-more
+ (this branch uses cc/promisor-auto-config-url.)
+
+ source: <20260427124108.3524129-1-christian.couder@gmail.com>
+
+
+* js/maintenance-fix-deadlock-on-win10 (2026-04-28) 2 commits
+ - maintenance(geometric): do release the `.idx` files before repacking
+ - mingw: optionally use legacy (non-POSIX) delete semantics
+
+ To help Windows 10 installations, avoid removing files whose
+ contents are still mmap()'ed.
+
+ Will merge to 'next'?
+ source: <pull.2103.git.1777380768.gitgitgadget@gmail.com>
+
+
+* js/objects-larger-than-4gb-on-windows (2026-04-28) 6 commits
+ - t5608: add regression test for >4GB object clone
+ - test-tool: add a helper to synthesize large packfiles
+ - delta, packfile: use size_t for delta header sizes
+ - odb, packfile: use size_t for streaming object sizes
+ - git-zlib: handle data streams larger than 4GB
+ - index-pack, unpack-objects: use size_t for object size
+
+ Update code paths that assumed "unsigned long" was long enough for
+ "size_t".
+
+ Expecting a reroll to mark EXPENSIVE tests as such.
+ source: <pull.2102.git.1777393580.gitgitgadget@gmail.com>
+
+
+* js/t5564-socks-use-short-path (2026-04-29) 1 commit
+ - t5564: use a short path for the SOCKS proxy socket
+
+ Avoid hitting the pathname limit for socks proxy socket during the
+ test..
+
+ Will merge to 'next'.
+ source: <pull.2100.v2.git.1777450974159.gitgitgadget@gmail.com>
+
+
+* kh/doc-log-decorate-list (2026-04-27) 2 commits
+ - doc: log: use the same delimiter in description list
+ - doc: log: fix --decorate description list
+
+ Doc update.
+
+ Comments?
+ source: <CV_doc_log_--decorate_list.626@msgid.xyz>
+
+
+* za/t2000-modernise-more (2026-04-29) 1 commit
+ - t2000: consolidate second scenario into a single test block
+
+ Test update.
+
+ Comments?
+ source: <20260429103607.406339-1-zakariyahali100@gmail.com>
+
+
+* hn/checkout-track-fetch (2026-04-28) 1 commit
+ - checkout: extend --track with a "fetch" mode to refresh start-point
+
+ "git checkout --track=..." learned to optionally fetch the branch
+ from the remote the new branch will work with.
+
+ Comments?
+ source: <pull.2281.v5.git.git.1777367012441.gitgitgadget@gmail.com>
+
+
+* mf/revision-max-count-oldest (2026-04-30) 1 commit
+ - revision.c: implement --max-count-oldest
+
+ "git rev-list" (and "git log" family of commands) learned a new "--max-count-oldest"
+ that picks oldest N commits in the range instead of the usual newest.
+
+ Comments?
+ source: <2f71a00b035e25b971641b77a6fa7626f1e2459c.1777578676.git.mroik@delayed.space>
+
+
+* mm/line-log-cleanup (2026-04-27) 3 commits
+ - line-log: allow non-patch diff formats with -L
+ - line-log: integrate -L output with the standard log-tree pipeline
+ - revision: move -L setup before output_format-to-diff derivation
+
+ Code clean-up.
+
+ Comments?
+ source: <pull.2094.git.1777349126.gitgitgadget@gmail.com>
+
+
+* pw/rename-to-get-current-worktree (2026-05-01) 1 commit
+ - worktree: rename get_worktree_from_repository()
+
+ Code clean-up.
+
+ Will merge to 'next'.
+ source: <bd48396137f8d1352d11b3bd2dca2848f24a347d.1777648798.git.phillip.wood@dunelm.org.uk>
+
+
+* ds/path-walk-filters (2026-05-02) 7 commits
+ - pack-objects: support sparse:oid filter with path-walk
+ - path-walk: add pl_sparse_trees to control tree pruning
+ - path-walk: support blob size limit filter
+ - backfill: die on incompatible filter options
+ - path-walk: support blobless filter
+ - t/perf: add pack-objects filter and path-walk benchmark
+ - pack-objects: pass --objects with --path-walk
+
+ The "git pack-objects --path-walk" traversal has been integrated
+ with several object filters, including blobless and sparse filters.
+
+ Comments?
+ source: <pull.2101.git.1777731354.gitgitgadget@gmail.com>
+
+--------------------------------------------------
+[Cooking]
 
 * en/ort-cached-rename-with-trivial-resolution (2026-04-20) 1 commit
  - merge-ort: handle cached rename & trivial resolution interaction better
@@ -86,7 +293,9 @@ Release tarballs are available at:
  source: <20260422230020.GA1839627@coredump.intra.peff.net>
 
 
-* js/ci-github-actions-update (2026-04-21) 4 commits
+* js/ci-github-actions-update (2026-04-30) 6 commits
+ - l10n: bump mshick/add-pr-comment from v2 to v3
+ - ci: bump git-for-windows/setup-git-for-windows-sdk from v1 to v2
  - ci: bump actions/checkout from v5 to v6
  - ci: bump actions/github-script from v8 to v9
  - ci: bump actions/{upload,download}-artifact to v7 and v8
@@ -95,7 +304,7 @@ Release tarballs are available at:
  Update various GitHub Actions versions.
 
  Will merge to 'next'.
- source: <pull.2097.git.1776775319.gitgitgadget@gmail.com>
+ source: <pull.2097.v3.git.1777534500.gitgitgadget@gmail.com>
 
 
 * mf/format-patch-cover-letter-format-docfix (2026-04-22) 1 commit
@@ -115,10 +324,8 @@ Release tarballs are available at:
  Will merge to 'next'?
  source: <20260421192132.51172-1-szeder.dev@gmail.com>
 
---------------------------------------------------
-[Cooking]
 
-* pw/status-rebase-todo (2026-04-20) 2 commits
+* pw/status-rebase-todo (2026-05-01) 2 commits
  - status: improve rebase todo list parsing
  - sequencer: factor out parsing of todo commands
 
@@ -127,7 +334,7 @@ Release tarballs are available at:
  avoid misinterpreting refs as object IDs.
 
  Needs review.
- source: <cover.1776697483.git.phillip.wood@dunelm.org.uk>
+ source: <cover.1777648598.git.phillip.wood@dunelm.org.uk>
 
 
 * sb/userdiff-lisp-family (2026-04-14) 2 commits
@@ -199,11 +406,13 @@ Release tarballs are available at:
  revision ranges, and includes blobs from boundary commits by default
  to improve performance of subsequent operations.
 
- Needs review.
+ Will merge to 'next'.
+ cf. <6e95b82a-19e3-460e-86f7-f899c2df261d@gmail.com>
  source: <pull.2088.git.1776297482.gitgitgadget@gmail.com>
 
 
-* mc/http-emptyauth-negotiate-fix (2026-04-16) 3 commits
+* mc/http-emptyauth-negotiate-fix (2026-04-30) 4 commits
+ - doc: clarify http.emptyAuth values
   (merged to 'next' on 2026-04-20 at 6539524ca2)
  + t5563: add tests for http.emptyAuth with Negotiate
  + http: attempt Negotiate auth in http.emptyAuth=auto mode
@@ -214,7 +423,8 @@ Release tarballs are available at:
  This allows seamless Kerberos ticket-based authentication without
  requiring users to explicitly set 'http.emptyAuth=true'.
 
- Will merge to 'master'.
+ Will merge to 'next' and then to 'master'.
+ source: <e0f236767f81ea60f90749d1bc00ab78081efd0e.1777546472.git.gitgitgadget@gmail.com>
  source: <pull.2087.git.1776331259.gitgitgadget@gmail.com>
 
 
@@ -319,32 +529,22 @@ Release tarballs are available at:
  source: <20260421-b4-pks-tests-with-set-e-v6-0-26330e3061ab@pks.im>
 
 
-* js/adjust-tests-to-explicitly-access-bare-repo (2026-04-02) 17 commits
- - git p4 clone --bare: need to be explicit about the gitdir
- - t9700: stop relying on implicit bare repo discovery
- - t9210: pass `safe.bareRepository=all` to `scalar register`
- - t6020: use `-C` for worktree, `--git-dir` for bare repository
- - t5619: wrap `test_commit_bulk` in `GIT_DIR` subshell for bare repo
- - t5540/t5541: avoid accessing a bare repository via `-C <dir>`
- - t5509: specify bare repository path explicitly
- - t5505: export `GIT_DIR` after `git init --bare`
- - t5503: avoid discovering a bare repository
- - t2406: use `--git-dir=.` for bare repository worktree repair
- - t2400: explicitly specify bare repo for `git worktree add`
- - t1900: avoid using `-C <dir>` for a bare repository
- - t1020: use `--git-dir` instead of subshell for bare repo
- - t0056: allow implicit bare repo discovery for `-C` work-tree tests
- - t0003: use `--git-dir` for bare repo attribute tests
- - t0001: replace `cd`+`git` with `git --git-dir` in `check_config`
- - t0001: allow implicit bare repo discovery for aliased-command test
+* js/adjust-tests-to-explicitly-access-bare-repo (2026-04-26) 8 commits
+ - safe.bareRepository: default to "explicit" with WITH_BREAKING_CHANGES
+ - status tests: filter `.gitconfig` from status output
+ - ls-files tests: filter `.gitconfig` from `--others` output
+ - t5601: restore `.gitconfig` after includeIf test
+ - t1305: use `--git-dir=.` for bare repo in include cycle test
+ - t1300: remove global config settings injected by test-lib.sh
+ - t7900: do not let `$HOME/.gitconfig` interfere with XDG tests
+ - test-lib: allow bare repository access when breaking changes are enabled
 
  Some tests assume that bare repository accesses are by default
  allowed; rewrite some of them to avoid the assumption, rewrite
  others to explicitly set safe.bareRepository to allow them.
 
- Waiting for review response.
- cf. <xmqq1pgsdrdw.fsf@gitster.g>
- source: <pull.2076.git.1775140403.gitgitgadget@gmail.com>
+ Will merge to 'next'?
+ source: <pull.2098.v2.git.1777214316.gitgitgadget@gmail.com>
 
 
 * cl/conditional-config-on-worktree-path (2026-04-03) 2 commits
@@ -373,7 +573,7 @@ Release tarballs are available at:
  source: <20260409224434.1861422-1-sandals@crustytoothpaste.net>
 
 
-* ps/shift-root-in-graph (2026-04-04) 1 commit
+* ps/shift-root-in-graph (2026-04-27) 1 commit
  - graph: add indentation for commits preceded by a parentless commit
 
  In a history with more than one root commit, "git log --graph
@@ -382,7 +582,7 @@ Release tarballs are available at:
  unavailable.
 
  Will merge to 'next'?
- source: <20260404092425.550346-2-pabloosabaterr@gmail.com>
+ source: <20260427102838.44867-2-pabloosabaterr@gmail.com>
 
 
 * jt/config-lock-timeout (2026-04-03) 1 commit
@@ -476,7 +676,7 @@ Release tarballs are available at:
  source: <20260416033250.4327-2-siddharthasthana31@gmail.com>
 
 
-* tb/incremental-midx-part-3.3 (2026-03-29) 16 commits
+* tb/incremental-midx-part-3.3 (2026-04-29) 16 commits
  - repack: allow `--write-midx=incremental` without `--geometric`
  - repack: introduce `--write-midx=incremental`
  - repack: implement incremental MIDX repacking
@@ -488,19 +688,18 @@ Release tarballs are available at:
  - midx: expose `midx_layer_contains_pack()`
  - repack: track the ODB source via existing_packs
  - midx: support custom `--base` for incremental MIDX writes
- - midx: introduce `--checksum-only` for incremental MIDX writes
+ - midx: introduce `--no-write-chain-file` for incremental MIDX writes
  - midx: use `strvec` for `keep_hashes`
- - strvec: introduce `strvec_init_alloc()`
- - midx: use `string_list` for retained MIDX files
+ - midx: build `keep_hashes` array in order
+ - midx: use `strset` for retained MIDX files
  - midx-write: handle noop writes when converting incremental chains
 
  The repacking code has been refactored and compaction of MIDX layers
  have been implemented, and incremental strategy that does not require
  all-into-one repacking has been introduced.
 
- Expecting a reroll.
- cf. <acxBUkHDolY9VCnR@nand.local>
- source: <cover.1774820449.git.me@ttaylorr.com>
+ Will merge to 'next'?
+ source: <cover.1777507303.git.me@ttaylorr.com>
 
 
 * jd/unpack-trees-wo-the-repository (2026-03-31) 2 commits
@@ -585,6 +784,7 @@ Release tarballs are available at:
  + promisor-remote: clarify that a remote is ignored
  + promisor-remote: pass config entry to all_fields_match() directly
  + promisor-remote: try accepted remotes before others in get_direct()
+ (this branch is used by cc/promisor-auto-config-url-more.)
 
  Promisor remote handling has been refactored and fixed in
  preparation for auto-configuration of advertised remotes.
@@ -604,21 +804,17 @@ Release tarballs are available at:
  source: <20260417-bisect-terms-v3-0-d659fa547261@schlaraffenlan.de>
 
 
-* ua/push-remote-group (2026-03-27) 3 commits
- - SQUASH??? - futureproof against the attack of the "main"
+* ua/push-remote-group (2026-04-27) 3 commits
+ - SQUASH??? -Werror=sign-compare workaround
  - push: support pushing to a remote group
  - remote: move remote group resolution to remote.c
 
  "git push" learned to take a "remote group" name to push to, which
  causes pushes to multiple places, just like "git fetch" would do.
-
- Expecting a reroll.
- cf. <xmqq7bqzu1xh.fsf@gitster.g>
- cf. <xmqqse9kj4rh.fsf@gitster.g>
- source: <20260325190906.1153080-1-usmanakinyemi202@gmail.com>
+ source: <20260427140530.856125-1-usmanakinyemi202@gmail.com>
 
 
-* hn/git-checkout-m-with-stash (2026-04-15) 5 commits
+* hn/git-checkout-m-with-stash (2026-04-28) 5 commits
  - checkout -m: autostash when switching branches
  - checkout: rollback lock on early returns in merge_working_tree
  - sequencer: teach autostash apply to take optional conflict marker labels
@@ -631,22 +827,28 @@ Release tarballs are available at:
  was taught to create a stash to save the local changes.
 
  Will merge to 'next'?
- source: <pull.2234.v14.git.git.1776270259.gitgitgadget@gmail.com>
+ source: <pull.2234.v16.git.git.1777401552.gitgitgadget@gmail.com>
 
 
-* kh/name-rev-custom-format (2026-03-20) 2 commits
- - name-rev: learn --format=<pretty>
- - name-rev: wrap both blocks in braces
+* kh/name-rev-custom-format (2026-04-30) 6 commits
+ . SQUASH???
+ . format-rev: introduce builtin for on-demand pretty formatting
+ . name-rev: make dedicated --annotate-stdin --name-only test
+ . name-rev: factor code for sharing with a new command
+ . name-rev: run clang-format before factoring code
+ . name-rev: wrap both blocks in braces
 
- "git name-rev" learned to use custom format instead of the object
- name in an extended SHA-1 expression form.
+ A new builtin "git format-rev" is introduced for pretty formatting
+ one revision expression per line or commit object names found in
+ running text.
 
- Expecting a reroll.
- cf. </1873f57e-76b4-48d0-8034-73f72f5fe93d@app.fastmail.com>
- source: <V2_CV_name-rev_--format.51b@msgid.xyz>
+ Breaks CI.
+ cf. <8cdfbf18-6137-47c0-8134-4cd9f767fa4f@app.fastmail.com>
+ source: <V3_CV_format-rev.66a@msgid.xyz>
 
 
-* js/parseopt-subcommand-autocorrection (2026-04-22) 10 commits
+* js/parseopt-subcommand-autocorrection (2026-04-27) 11 commits
+ - SQUASH???
  - doc: document autocorrect API
  - parseopt: add tests for subcommand autocorrection
  - parseopt: enable subcommand autocorrection for git-remote and git-notes
@@ -661,8 +863,8 @@ Release tarballs are available at:
  The parse-options library learned to auto-correct misspelled
  subcommand names.
 
- Comments?
- source: <SY0P300MB0801AE56F740AD087D22B35ACE2D2@SY0P300MB0801.AUSP300.PROD.OUTLOOK.COM>
+ Expecting a reroll.
+ source: <SY0P300MB0801677A2A1E0FD38D06A841CE2A2@SY0P300MB0801.AUSP300.PROD.OUTLOOK.COM>
 
 
 * ab/clone-default-object-filter (2026-03-14) 1 commit
@@ -775,32 +977,28 @@ Release tarballs are available at:
  source: <20260410090608.75283-1-adrian.ratiu@collabora.com>
 
 
-* pw/xdiff-shrink-memory-consumption (2026-04-02) 5 commits
- - xdiff: reduce the size of array
- - xprepare: simplify error handling
- - xdiff: cleanup xdl_clean_mmatch()
- - xdiff: reduce size of action arrays
- - Merge branch 'en/xdiff-cleanup-3' into pw/xdiff-shrink-memory-consumption
- (this branch uses en/xdiff-cleanup-3.)
+* pw/xdiff-shrink-memory-consumption (2026-04-02) 4 commits
+ . xdiff: reduce the size of array
+ . xprepare: simplify error handling
+ . xdiff: cleanup xdl_clean_mmatch()
+ . xdiff: reduce size of action arrays
 
  Shrink wasted memory in Myers diff that does not account for common
  prefix and suffix removal.
 
- On hold, waiting for the base topic.
+ Needs to be rebased on updated en/xdiff-cleanup-3.
  source: <cover.1775141855.git.phillip.wood@dunelm.org.uk>
 
 
-* en/xdiff-cleanup-3 (2026-04-08) 6 commits
- - xdiff/xdl_cleanup_records: put braces around the else clause
+* en/xdiff-cleanup-3 (2026-04-29) 6 commits
+ - xdiff/xdl_cleanup_records: make execution of action easier to follow
  - xdiff/xdl_cleanup_records: make setting action easier to follow
  - xdiff/xdl_cleanup_records: make limits more clear
  - xdiff/xdl_cleanup_records: use unambiguous types
  - xdiff: use unambiguous types in xdl_bogo_sqrt()
  - xdiff/xdl_cleanup_records: delete local recs pointer
- (this branch is used by pw/xdiff-shrink-memory-consumption.)
 
  Preparation of the xdiff/ codebase to work with Rust.
 
- Expecting a (hopefully small and final) reroll?
- cf. <32c34d0d-9358-43e3-9d58-5999b3ffd6c2@gmail.com>
- source: <pull.2156.v5.git.git.1775679988.gitgitgadget@gmail.com>
+ Will merge to 'next'?
+ source: <pull.2156.v6.git.git.1777500495.gitgitgadget@gmail.com>
