@@ -1531,13 +1531,11 @@ static enum ref_transaction_error write_with_updates(struct packed_ref_store *re
 			 */
 			i++;
 		} else {
-			struct object_id peeled;
-			int peel_error = peel_object(refs->base.repo, &update->new_oid,
-						     &peeled, PEEL_OBJECT_VERIFY_TAGGED_OBJECT_TYPE);
+			bool peeled = update->flags & REF_HAVE_PEELED;
 
 			if (write_packed_entry(out, update->refname,
 					       &update->new_oid,
-					       peel_error ? NULL : &peeled))
+					       peeled ? &update->peeled : NULL))
 				goto write_error;
 
 			i++;

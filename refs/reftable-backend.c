@@ -12,7 +12,6 @@
 #include "../hex.h"
 #include "../ident.h"
 #include "../iterator.h"
-#include "../object.h"
 #include "../parse.h"
 #include "../path.h"
 #include "../refs.h"
@@ -1584,17 +1583,13 @@ static int write_transaction_table(struct reftable_writer *writer, void *cb_data
 				goto done;
 		} else if (u->flags & REF_HAVE_NEW) {
 			struct reftable_ref_record ref = {0};
-			struct object_id peeled;
-			int peel_error;
 
 			ref.refname = (char *)u->refname;
 			ref.update_index = ts;
 
-			peel_error = peel_object(arg->refs->base.repo, &u->new_oid, &peeled,
-						 PEEL_OBJECT_VERIFY_TAGGED_OBJECT_TYPE);
-			if (!peel_error) {
+			if (u->flags & REF_HAVE_PEELED) {
 				ref.value_type = REFTABLE_REF_VAL2;
-				memcpy(ref.value.val2.target_value, peeled.hash, GIT_MAX_RAWSZ);
+				memcpy(ref.value.val2.target_value, u->peeled.hash, GIT_MAX_RAWSZ);
 				memcpy(ref.value.val2.value, u->new_oid.hash, GIT_MAX_RAWSZ);
 			} else if (!is_null_oid(&u->new_oid)) {
 				ref.value_type = REFTABLE_REF_VAL1;
