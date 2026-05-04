@@ -430,7 +430,7 @@ static int setup_pending_objects(struct path_walk_info *info,
 		CALLOC_ARRAY(tags, 1);
 	if (info->blobs)
 		CALLOC_ARRAY(tagged_blobs, 1);
-	if (info->trees)
+	if (info->trees || info->blobs)
 		root_tree_list = strmap_get(&ctx->paths_to_lists, root_path);
 
 	/*
@@ -475,7 +475,7 @@ static int setup_pending_objects(struct path_walk_info *info,
 
 		switch (obj->type) {
 		case OBJ_TREE:
-			if (!info->trees)
+			if (!info->trees && !info->blobs)
 				continue;
 			if (pending->path) {
 				char *path = *pending->path ? xstrfmt("%s/", pending->path)
@@ -573,6 +573,16 @@ static int prepare_filters(struct path_walk_info *info,
 		if (info) {
 			info->trees = 0;
 			info->blobs = 0;
+			list_objects_filter_release(options);
+		}
+		return 1;
+
+	case LOFC_OBJECT_TYPE:
+		if (info) {
+			info->commits &= options->object_type == OBJ_COMMIT;
+			info->tags &= options->object_type == OBJ_TAG;
+			info->trees &= options->object_type == OBJ_TREE;
+			info->blobs &= options->object_type == OBJ_BLOB;
 			list_objects_filter_release(options);
 		}
 		return 1;
@@ -683,9 +693,16 @@ int walk_objects_by_path(struct path_walk_info *info)
 	/*
 	 * Set these values before preparing the walk to catch
 	 * lightweight tags pointing to non-commits and indexed objects.
+	 *
+	 * Keep tree_objects set whenever blobs are wanted: blobs may
+	 * be reachable through trees that show up as pending objects
+	 * (e.g., via lightweight tags pointing to trees, or annotated
+	 * tags whose peeled target is a tree). Without tree_objects,
+	 * prepare_revision_walk() would discard those pending trees
+	 * and we would never descend into them.
 	 */
 	info->revs->blob_objects = info->blobs;
-	info->revs->tree_objects = info->trees;
+	info->revs->tree_objects = info->trees || info->blobs;
 
 	if (prepare_revision_walk(info->revs))
 		die(_("failed to setup revision walk"));
