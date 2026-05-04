@@ -564,6 +564,19 @@ static int prepare_filters(struct path_walk_info *info,
 		}
 		return 1;
 
+	case LOFC_TREE_DEPTH:
+		if (options->tree_exclude_depth) {
+			error(_("tree:%lu filter not supported by the path-walk API"),
+			      options->tree_exclude_depth);
+			return 0;
+		}
+		if (info) {
+			info->trees = 0;
+			info->blobs = 0;
+			list_objects_filter_release(options);
+		}
+		return 1;
+
 	case LOFC_SPARSE_OID:
 		if (info) {
 			struct object_id sparse_oid;
