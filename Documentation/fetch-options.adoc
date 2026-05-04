@@ -185,6 +185,14 @@ See the PRUNING section below for more details.
 +
 See the PRUNING section below for more details.
 
+`--prune-merged`::
+	After a successful fetch, run `git branch --prune-merged
+	<remote>` for the fetched remote, deleting local branches
+	that fork from this remote and whose tip is reachable from
+	their upstream remote-tracking branch. See linkgit:git-branch[1]
+	for the exact selection rules. The currently checked-out
+	branch is always preserved.
+
 endif::git-pull[]
 
 ifndef::git-pull[]
