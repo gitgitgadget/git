@@ -273,16 +273,19 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 	uint8_t *action1 = NULL, *action2 = NULL;
 	bool need_min = !!(cf->flags & XDF_NEED_MINIMAL);
 	int ret = 0;
+	ptrdiff_t off = xdf1->dstart;
+	ptrdiff_t len1 = xdf1->dend - off + 1;
+	ptrdiff_t len2 = xdf2->dend - off + 1;
 
 	/*
 	 * Create temporary arrays that will help us decide if
 	 * changed[i] should remain false, or become true.
 	 */
-	if (!XDL_CALLOC_ARRAY(action1, xdf1->nrec + 1)) {
+	if (!XDL_CALLOC_ARRAY(action1, len1)) {
 		ret = -1;
 		goto cleanup;
 	}
-	if (!XDL_CALLOC_ARRAY(action2, xdf2->nrec + 1)) {
+	if (!XDL_CALLOC_ARRAY(action2, len2)) {
 		ret = -1;
 		goto cleanup;
 	}
@@ -298,8 +301,8 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 		if (mlim1 > XDL_MAX_EQLIMIT)
 			mlim1 = XDL_MAX_EQLIMIT;
 	}
-	for (i = xdf1->dstart; i <= xdf1->dend; i++) {
-		size_t mph1 = xdf1->recs[i].minimal_perfect_hash;
+	for (i = 0; i < len1; i++) {
+		size_t mph1 = xdf1->recs[i + off].minimal_perfect_hash;
 		rcrec = cf->rcrecs[mph1];
 		nm = rcrec ? rcrec->len2 : 0;
 		if (nm == 0)
@@ -318,8 +321,8 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 		if (mlim2 > XDL_MAX_EQLIMIT)
 			mlim2 = XDL_MAX_EQLIMIT;
 	}
-	for (i = xdf2->dstart; i <= xdf2->dend; i++) {
-		size_t mph2 = xdf2->recs[i].minimal_perfect_hash;
+	for (i = 0; i < len2; i++) {
+		size_t mph2 = xdf2->recs[i + off].minimal_perfect_hash;
 		rcrec = cf->rcrecs[mph2];
 		nm = rcrec ? rcrec->len1 : 0;
 		if (nm == 0)
@@ -335,42 +338,42 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 	 * false, or become true.
 	 */
 	xdf1->nreff = 0;
-	for (i = xdf1->dstart; i <= xdf1->dend; i++) {
+	for (i = 0; i < len1; i++) {
 		uint8_t action = action1[i];
 
 		if (action == INVESTIGATE) {
-			if (!xdl_clean_mmatch(action1, i, xdf1->dstart, xdf1->dend))
+			if (!xdl_clean_mmatch(action1, i, 0, len1 - 1))
 				action = KEEP;
 			else
 				action = DISCARD;
 		}
 
 		if (action == KEEP) {
-			xdf1->reference_index[xdf1->nreff++] = i;
+			xdf1->reference_index[xdf1->nreff++] = i + off;
 			/* changed[i] remains false */
 		} else if (action == DISCARD) {
-			xdf1->changed[i] = true;
+			xdf1->changed[i + off] = true;
 		} else {
 			BUG("Illegal state for action");
 		}
 	}
 
 	xdf2->nreff = 0;
-	for (i = xdf2->dstart; i <= xdf2->dend; i++) {
+	for (i = 0; i < len2; i++) {
 		uint8_t action = action2[i];
 
 		if (action == INVESTIGATE) {
-			if (!xdl_clean_mmatch(action2, i, xdf2->dstart, xdf2->dend))
+			if (!xdl_clean_mmatch(action2, i, 0, len2 - 1))
 				action = KEEP;
 			else
 				action = DISCARD;
 		}
 
 		if (action == KEEP) {
-			xdf2->reference_index[xdf2->nreff++] = i;
+			xdf2->reference_index[xdf2->nreff++] = i + off;
 			/* changed[i] remains false */
 		} else if (action == DISCARD) {
-			xdf2->changed[i] = true;
+			xdf2->changed[i + off] = true;
 		} else {
 			BUG("Illegal state for action");
 		}
