@@ -48,6 +48,12 @@ struct path_walk_info {
 	int tags;
 
 	/**
+	 * If 'strict_types' is 0, then direct object requests will no longer
+	 * override the object type restrictions.
+	 */
+	int strict_types;
+
+	/**
 	 * If non-zero, specifies a maximum blob size. Blobs with a
 	 * size equal to or greater than this limit will not be
 	 * emitted unless included in 'pending'.
