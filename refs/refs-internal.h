@@ -40,6 +40,13 @@ struct ref_transaction;
 #define REF_LOG_ONLY (1 << 7)
 
 /*
+ * The reference contains a peeled object ID. This is used when the
+ * new_oid is pointing to a tag object and the reference backend
+ * wants to also store the peeled value for optimized retrieval.
+ */
+#define REF_HAVE_PEELED (1 << 15)
+
+/*
  * Return the length of time to retry acquiring a loose reference lock
  * before giving up, in milliseconds:
  */
@@ -91,6 +98,12 @@ struct ref_update {
 	 * `old_oid` is `null_oid`).
 	 */
 	struct object_id old_oid;
+
+	/*
+	 * If the new_oid points to a tag object, set this to the peeled
+	 * object ID for optimized retrieval without needed to hit the odb.
+	 */
+	struct object_id peeled;
 
 	/*
 	 * If set, point the reference to this value. This can also be
@@ -169,6 +182,7 @@ struct ref_update *ref_transaction_add_update(
 		const char *refname, unsigned int flags,
 		const struct object_id *new_oid,
 		const struct object_id *old_oid,
+		const struct object_id *peeled,
 		const char *new_target, const char *old_target,
 		const char *committer_info,
 		const char *msg);

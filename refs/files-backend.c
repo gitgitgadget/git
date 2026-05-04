@@ -1325,7 +1325,8 @@ static void prune_ref(struct files_ref_store *refs, struct ref_to_prune *r)
 	ref_transaction_add_update(
 			transaction, r->name,
 			REF_NO_DEREF | REF_HAVE_NEW | REF_HAVE_OLD | REF_IS_PRUNING,
-			null_oid(the_hash_algo), &r->oid, NULL, NULL, NULL, NULL);
+			null_oid(the_hash_algo), &r->oid, NULL, NULL, NULL,
+			NULL, NULL);
 	if (ref_transaction_commit(transaction, &err))
 		goto cleanup;
 
@@ -2468,7 +2469,7 @@ static enum ref_transaction_error split_head_update(struct ref_update *update,
 	new_update = ref_transaction_add_update(
 			transaction, "HEAD",
 			update->flags | REF_LOG_ONLY | REF_NO_DEREF | REF_LOG_VIA_SPLIT,
-			&update->new_oid, &update->old_oid,
+			&update->new_oid, &update->old_oid, &update->peeled,
 			NULL, NULL, update->committer_info, update->msg);
 	new_update->parent_update = update;
 
@@ -2530,8 +2531,8 @@ static enum ref_transaction_error split_symref_update(struct ref_update *update,
 			transaction, referent, new_flags,
 			update->new_target ? NULL : &update->new_oid,
 			update->old_target ? NULL : &update->old_oid,
-			update->new_target, update->old_target, NULL,
-			update->msg);
+			&update->peeled, update->new_target, update->old_target,
+			NULL, update->msg);
 
 	new_update->parent_update = update;
 
@@ -2994,7 +2995,7 @@ static int files_transaction_prepare(struct ref_store *ref_store,
 			ref_transaction_add_update(
 					packed_transaction, update->refname,
 					REF_HAVE_NEW | REF_NO_DEREF,
-					&update->new_oid, NULL,
+					&update->new_oid, NULL, NULL,
 					NULL, NULL, NULL, NULL);
 		}
 	}
@@ -3200,19 +3201,22 @@ static int files_transaction_finish_initial(struct files_ref_store *refs,
 			if (update->flags & REF_LOG_ONLY)
 				ref_transaction_add_update(loose_transaction, update->refname,
 							   update->flags, &update->new_oid,
-							   &update->old_oid, NULL, NULL,
+							   &update->old_oid, &update->peeled,
+							   NULL, NULL,
 							   update->committer_info, update->msg);
 			else
 				ref_transaction_add_update(loose_transaction, update->refname,
 							   update->flags & ~REF_HAVE_OLD,
 							   update->new_target ? NULL : &update->new_oid, NULL,
-							   update->new_target, NULL, update->committer_info,
+							   &update->peeled, update->new_target,
+							   NULL, update->committer_info,
 							   NULL);
 		} else {
 			ref_transaction_add_update(packed_transaction, update->refname,
 						   update->flags & ~REF_HAVE_OLD,
 						   &update->new_oid, &update->old_oid,
-						   NULL, NULL, update->committer_info, NULL);
+						   &update->peeled, NULL, NULL,
+						   update->committer_info, NULL);
 		}
 	}
 

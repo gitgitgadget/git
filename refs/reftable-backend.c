@@ -1107,8 +1107,8 @@ static enum ref_transaction_error prepare_single_update(struct reftable_ref_stor
 		ref_transaction_add_update(
 			transaction, "HEAD",
 			u->flags | REF_LOG_ONLY | REF_NO_DEREF,
-			&u->new_oid, &u->old_oid, NULL, NULL, NULL,
-			u->msg);
+			&u->new_oid, &u->old_oid, &u->peeled, NULL, NULL,
+			NULL, u->msg);
 	}
 
 	ret = reftable_backend_read_ref(be, rewritten_ref,
@@ -1194,7 +1194,7 @@ static enum ref_transaction_error prepare_single_update(struct reftable_ref_stor
 				transaction, referent->buf, new_flags,
 				u->new_target ? NULL : &u->new_oid,
 				u->old_target ? NULL : &u->old_oid,
-				u->new_target, u->old_target,
+				&u->peeled, u->new_target, u->old_target,
 				u->committer_info, u->msg);
 
 			new_update->parent_update = u;

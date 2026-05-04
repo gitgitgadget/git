@@ -1307,6 +1307,7 @@ struct ref_update *ref_transaction_add_update(
 		const char *refname, unsigned int flags,
 		const struct object_id *new_oid,
 		const struct object_id *old_oid,
+		const struct object_id *peeled,
 		const char *new_target, const char *old_target,
 		const char *committer_info,
 		const char *msg)
@@ -1339,6 +1340,8 @@ struct ref_update *ref_transaction_add_update(
 		update->committer_info = xstrdup_or_null(committer_info);
 		update->msg = normalize_reflog_message(msg);
 	}
+	if (flags & REF_HAVE_PEELED)
+		oidcpy(&update->peeled, peeled);
 
 	/*
 	 * This list is generally used by the backends to avoid duplicates.
@@ -1392,6 +1395,8 @@ enum ref_transaction_error ref_transaction_update(struct ref_transaction *transa
 						  unsigned int flags, const char *msg,
 						  struct strbuf *err)
 {
+	struct object_id peeled;
+
 	assert(err);
 
 	if ((flags & REF_FORCE_CREATE_REFLOG) &&
@@ -1432,10 +1437,16 @@ enum ref_transaction_error ref_transaction_update(struct ref_transaction *transa
 				    oid_to_hex(new_oid), refname);
 			return REF_TRANSACTION_ERROR_INVALID_NEW_VALUE;
 		}
+
+		if (o->type == OBJ_TAG) {
+			if (!peel_object(transaction->ref_store->repo, new_oid, &peeled,
+					 PEEL_OBJECT_VERIFY_TAGGED_OBJECT_TYPE))
+				flags |= REF_HAVE_PEELED;
+		}
 	}
 
 	ref_transaction_add_update(transaction, refname, flags,
-				   new_oid, old_oid, new_target,
+				   new_oid, old_oid, &peeled, new_target,
 				   old_target, NULL, msg);
 
 	return 0;
@@ -1462,7 +1473,7 @@ int ref_transaction_update_reflog(struct ref_transaction *transaction,
 		return -1;
 
 	update = ref_transaction_add_update(transaction, refname, flags,
-					    new_oid, old_oid, NULL, NULL,
+					    new_oid, old_oid, NULL, NULL, NULL,
 					    committer_info, msg);
 	update->index = index;
 
