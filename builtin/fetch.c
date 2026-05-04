@@ -82,6 +82,8 @@ static int prune = -1; /* unspecified */
 static int prune_tags = -1; /* unspecified */
 #define PRUNE_TAGS_BY_DEFAULT 0 /* do we prune tags by default? */
 
+static int prune_merged;
+
 static int append, dry_run, force, keep, update_head_ok;
 static int write_fetch_head = 1;
 static int verbosity, deepen_relative, set_upstream, refetch;
@@ -2189,6 +2191,8 @@ static void add_options_to_argv(struct strvec *argv,
 		strvec_push(argv, prune ? "--prune" : "--no-prune");
 	if (prune_tags != -1)
 		strvec_push(argv, prune_tags ? "--prune-tags" : "--no-prune-tags");
+	if (prune_merged)
+		strvec_push(argv, "--prune-merged");
 	if (update_head_ok)
 		strvec_push(argv, "--update-head-ok");
 	if (force)
@@ -2382,6 +2386,15 @@ static inline void fetch_one_setup_partial(struct remote *remote,
 	return;
 }
 
+static int prune_merged_for_remote(const struct remote *remote)
+{
+	struct child_process cmd = CHILD_PROCESS_INIT;
+
+	cmd.git_cmd = 1;
+	strvec_pushl(&cmd.args, "branch", "--prune-merged", remote->name, NULL);
+	return run_command(&cmd);
+}
+
 static int fetch_one(struct remote *remote, int argc, const char **argv,
 		     int prune_tags_ok, int use_stdin_refspecs,
 		     const struct fetch_config *config,
@@ -2457,6 +2470,11 @@ static int fetch_one(struct remote *remote, int argc, const char **argv,
 	refspec_clear(&rs);
 	transport_disconnect(gtransport);
 	gtransport = NULL;
+
+	if (!exit_code && prune_merged && remote_via_config &&
+	    prune_merged_for_remote(remote))
+		exit_code = 1;
+
 	return exit_code;
 }
 
@@ -2520,6 +2538,8 @@ int cmd_fetch(int argc,
 			 N_("prune remote-tracking branches no longer on remote")),
 		OPT_BOOL('P', "prune-tags", &prune_tags,
 			 N_("prune local tags no longer on remote and clobber changed tags")),
+		OPT_BOOL(0, "prune-merged", &prune_merged,
+			 N_("after pruning, also delete local branches forked from this remote whose tips are reachable from their upstream")),
 		OPT_CALLBACK_F(0, "recurse-submodules", &recurse_submodules_cli, N_("on-demand"),
 			    N_("control recursive fetching of submodules"),
 			    PARSE_OPT_OPTARG, option_fetch_parse_recurse_submodules),

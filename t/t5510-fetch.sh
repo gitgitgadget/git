@@ -386,6 +386,37 @@ test_expect_success REFFILES 'fetch --prune fails to delete branches' '
 	)
 '
 
+test_expect_success 'fetch --prune-merged: setup' '
+	git init -b main fetch-pm-parent &&
+	test_commit -C fetch-pm-parent base
+'
+
+test_expect_success 'fetch --prune-merged deletes merged local branches' '
+	test_when_finished "rm -rf fetch-pm-clone" &&
+	git -C fetch-pm-parent branch one base &&
+	git clone fetch-pm-parent fetch-pm-clone &&
+	git -C fetch-pm-clone branch one --track origin/one &&
+	git -C fetch-pm-parent branch -D one &&
+
+	git -C fetch-pm-clone fetch --prune --prune-merged origin &&
+
+	test_must_fail git -C fetch-pm-clone rev-parse --verify refs/heads/one
+'
+
+test_expect_success 'fetch --prune-merged skips unmerged local branches' '
+	test_when_finished "rm -rf fetch-pm-unmerged" &&
+	git -C fetch-pm-parent branch two base &&
+	git clone fetch-pm-parent fetch-pm-unmerged &&
+	git -C fetch-pm-unmerged checkout -b two --track origin/two &&
+	test_commit -C fetch-pm-unmerged unpushed &&
+	git -C fetch-pm-unmerged checkout - &&
+	git -C fetch-pm-parent branch -D two &&
+
+	git -C fetch-pm-unmerged fetch --prune --prune-merged origin 2>err &&
+	test_grep "not fully merged" err &&
+	git -C fetch-pm-unmerged rev-parse --verify refs/heads/two
+'
+
 test_expect_success 'fetch --atomic works with a single branch' '
 	test_when_finished "rm -rf atomic" &&
 
