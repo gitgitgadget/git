@@ -389,8 +389,8 @@ static int walk_path(struct path_walk_context *ctx,
 					ctx->info->path_fn_data);
 	}
 
-	/* Expand data for children. */
-	if (list->type == OBJ_TREE) {
+	/* Expand data for children, unless this is a direct-object path. */
+	if (list->type == OBJ_TREE && !path_is_for_direct_objects(path)) {
 		for (size_t i = 0; i < list->oids.nr; i++) {
 			ret |= add_tree_entries(ctx,
 					    path,
@@ -441,11 +441,14 @@ static int setup_pending_objects(struct path_walk_info *info,
 {
 	struct type_and_oid_list *tags = NULL;
 	struct type_and_oid_list *tagged_blobs = NULL;
+	struct type_and_oid_list *tagged_trees = NULL;
 	struct type_and_oid_list *root_tree_list = NULL;
 
 	if (info->tags)
 		CALLOC_ARRAY(tags, 1);
 	CALLOC_ARRAY(tagged_blobs, 1);
+	if (!info->trees)
+		CALLOC_ARRAY(tagged_trees, 1);
 	root_tree_list = strmap_get(&ctx->paths_to_lists, root_path);
 
 	/*
@@ -490,7 +493,15 @@ static int setup_pending_objects(struct path_walk_info *info,
 
 		switch (obj->type) {
 		case OBJ_TREE:
-			if (pending->path) {
+			if (tagged_trees) {
+				/*
+				 * Trees are disabled but pending trees
+				 * should still be emitted. Collect them
+				 * into a "/tagged-trees" list that
+				 * bypasses the object type filter.
+				 */
+				oid_array_append(&tagged_trees->oids, &obj->oid);
+			} else if (pending->path) {
 				char *path = *pending->path ? xstrfmt("%s/", pending->path)
 							    : xstrdup("");
 				add_path_to_list(ctx, path, OBJ_TREE, &obj->oid, 1);
@@ -534,6 +545,18 @@ static int setup_pending_objects(struct path_walk_info *info,
 			free(tagged_blobs);
 		}
 	}
+	if (tagged_trees) {
+		if (tagged_trees->oids.nr) {
+			const char *tagged_tree_path = "/tagged-trees";
+			tagged_trees->type = OBJ_TREE;
+			tagged_trees->maybe_interesting = 1;
+			strmap_put(&ctx->paths_to_lists, tagged_tree_path, tagged_trees);
+			push_to_stack(ctx, tagged_tree_path);
+		} else {
+			oid_array_clear(&tagged_trees->oids);
+			free(tagged_trees);
+		}
+	}
 	if (tags) {
 		if (tags->oids.nr) {
 			const char *tag_path = "/tags";
@@ -570,6 +593,19 @@ static int prepare_filters(struct path_walk_info *info,
 				info->blobs = 0;
 			else
 				info->blob_limit = options->blob_limit_value;
+			list_objects_filter_release(options);
+		}
+		return 1;
+
+	case LOFC_TREE_DEPTH:
+		if (options->tree_exclude_depth) {
+			error(_("tree:%lu filter not supported by the path-walk API"),
+			      options->tree_exclude_depth);
+			return 0;
+		}
+		if (info) {
+			info->trees = 0;
+			info->blobs = 0;
 			list_objects_filter_release(options);
 		}
 		return 1;
