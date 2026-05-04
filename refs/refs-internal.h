@@ -421,10 +421,6 @@ typedef int ref_transaction_abort_fn(struct ref_store *refs,
 				     struct ref_transaction *transaction,
 				     struct strbuf *err);
 
-typedef int ref_transaction_commit_fn(struct ref_store *refs,
-				      struct ref_transaction *transaction,
-				      struct strbuf *err);
-
 typedef int optimize_fn(struct ref_store *ref_store,
 			struct refs_optimize_opts *opts);
 
