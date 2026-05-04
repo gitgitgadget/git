@@ -24,8 +24,8 @@ git branch (-m|-M) [<old-branch>] <new-branch>
 git branch (-c|-C) [<old-branch>] <new-branch>
 git branch (-d|-D) [-r] <branch-name>...
 git branch --edit-description [<branch-name>]
-git branch --forked <remote>...
-git branch [-f] --prune-merged <remote>...
+git branch --forked (<remote>... | --all-remotes)
+git branch [-f] --prune-merged (<remote>... | --all-remotes)
 
 DESCRIPTION
 -----------
@@ -231,6 +231,11 @@ skipped and every branch in the candidate set is deleted. The
 currently checked-out branch in any worktree is always preserved,
 as is any branch with `branch.<name>.pruneMerged` set to `false`,
 and the local branch that mirrors _<remote>_'s default branch.
+
+`--all-remotes`::
+	With `--forked` or `--prune-merged`, act on every
+	configured remote in addition to any explicit _<remote>_
+	arguments.
 
 `-v`::
 `-vv`::
