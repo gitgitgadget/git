@@ -381,7 +381,7 @@ static int walk_path(struct path_walk_context *ctx,
 			ret = ctx->info->path_fn(path, &filtered, list->type,
 						 ctx->info->path_fn_data);
 		oid_array_clear(&filtered);
-	} else if (path_is_for_direct_objects(path) ||
+	} else if ((!ctx->info->strict_types && path_is_for_direct_objects(path)) ||
 		   (list->type == OBJ_TREE && ctx->info->trees) ||
 		   (list->type == OBJ_BLOB && ctx->info->blobs) ||
 		   (list->type == OBJ_TAG && ctx->info->tags)) {
@@ -606,6 +606,17 @@ static int prepare_filters(struct path_walk_info *info,
 		if (info) {
 			info->trees = 0;
 			info->blobs = 0;
+			list_objects_filter_release(options);
+		}
+		return 1;
+
+	case LOFC_OBJECT_TYPE:
+		if (info) {
+			info->commits &= options->object_type == OBJ_COMMIT;
+			info->tags &= options->object_type == OBJ_TAG;
+			info->trees &= options->object_type == OBJ_TREE;
+			info->blobs &= options->object_type == OBJ_BLOB;
+			info->strict_types = 1;
 			list_objects_filter_release(options);
 		}
 		return 1;
