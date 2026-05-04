@@ -24,8 +24,8 @@ git branch (-m|-M) [<old-branch>] <new-branch>
 git branch (-c|-C) [<old-branch>] <new-branch>
 git branch (-d|-D) [-r] <branch-name>...
 git branch --edit-description [<branch-name>]
-git branch --forked <remote>...
-git branch [-f] --prune-merged <remote>...
+git branch --forked (<remote>... | --all-remotes)
+git branch [-f] --prune-merged (<remote>... | --all-remotes)
 
 DESCRIPTION
 -----------
@@ -225,6 +225,11 @@ remote-tracking branch; branches with unpushed commits are refused.
 With `--force` (or `-f`), delete them regardless. The currently
 checked-out branch in any worktree is always preserved, as is
 any branch with `branch.<name>.pruneMerged` set to `false`.
+
+`--all-remotes`::
+	With `--forked` or `--prune-merged`, act on every
+	configured remote in addition to any explicit _<remote>_
+	arguments.
 
 `-v`::
 `-vv`::
