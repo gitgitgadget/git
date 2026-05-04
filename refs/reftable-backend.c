@@ -1081,25 +1081,6 @@ static enum ref_transaction_error prepare_single_update(struct reftable_ref_stor
 		return 0;
 	}
 
-	/* Verify that the new object ID is valid. */
-	if ((u->flags & REF_HAVE_NEW) && !is_null_oid(&u->new_oid) &&
-	    !(u->flags & REF_SKIP_OID_VERIFICATION) &&
-	    !(u->flags & REF_LOG_ONLY)) {
-		struct object *o = parse_object(refs->base.repo, &u->new_oid);
-		if (!o) {
-			strbuf_addf(err,
-				    _("trying to write ref '%s' with nonexistent object %s"),
-				    u->refname, oid_to_hex(&u->new_oid));
-			return REF_TRANSACTION_ERROR_INVALID_NEW_VALUE;
-		}
-
-		if (o->type != OBJ_COMMIT && is_branch(u->refname)) {
-			strbuf_addf(err, _("trying to write non-commit object %s to branch '%s'"),
-				    oid_to_hex(&u->new_oid), u->refname);
-			return REF_TRANSACTION_ERROR_INVALID_NEW_VALUE;
-		}
-	}
-
 	/*
 	 * When we update the reference that HEAD points to we enqueue
 	 * a second log-only update for HEAD so that its reflog is
