@@ -573,8 +573,8 @@ static int setup_pending_objects(struct path_walk_info *info,
 	return 0;
 }
 
-static int prepare_filters(struct path_walk_info *info,
-			   struct list_objects_filter_options *options)
+static int prepare_filters_one(struct path_walk_info *info,
+			       struct list_objects_filter_options *options)
 {
 	switch (options->choice) {
 	case LOFC_DISABLED:
@@ -591,7 +591,8 @@ static int prepare_filters(struct path_walk_info *info,
 		if (info) {
 			if (!options->blob_limit_value)
 				info->blobs = 0;
-			else
+			else if (!info->blob_limit ||
+				 info->blob_limit > options->blob_limit_value)
 				info->blob_limit = options->blob_limit_value;
 			list_objects_filter_release(options);
 		}
@@ -606,7 +607,6 @@ static int prepare_filters(struct path_walk_info *info,
 		if (info) {
 			info->trees = 0;
 			info->blobs = 0;
-			list_objects_filter_release(options);
 		}
 		return 1;
 
@@ -658,8 +658,13 @@ static int prepare_filters(struct path_walk_info *info,
 				warning(_("sparse filter is not cone-mode compatible"));
 				return 0;
 			}
+		}
+		return 1;
 
-			list_objects_filter_release(options);
+	case LOFC_COMBINE:
+		for (size_t i = 0; i < options->sub_nr; i++) {
+			if (!prepare_filters_one(info, &options->sub[i]))
+				return 0;
 		}
 		return 1;
 
@@ -668,6 +673,16 @@ static int prepare_filters(struct path_walk_info *info,
 		      list_objects_filter_spec(options));
 		return 0;
 	}
+}
+
+static int prepare_filters(struct path_walk_info *info,
+			   struct list_objects_filter_options *options)
+{
+	if (!prepare_filters_one(info, options))
+		return 0;
+	if (info)
+		list_objects_filter_release(options);
+	return 1;
 }
 
 int path_walk_filter_compatible(struct list_objects_filter_options *options)
