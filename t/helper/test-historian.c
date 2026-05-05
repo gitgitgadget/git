@@ -152,7 +152,7 @@ int cmd__historian(int argc, const char **argv UNUSED)
 	if (argc != 1)
 		die("usage: test-tool historian <input");
 
-	setup_git_directory();
+	setup_git_directory(the_repository);
 
 	strvec_pushl(&fi.args, "fast-import", "--quiet", "--force", NULL);
 	fi.git_cmd = 1;
