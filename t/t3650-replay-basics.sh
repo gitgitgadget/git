@@ -103,10 +103,48 @@ test_expect_success 'cannot advance target ... ordering would be ill-defined' '
 	test_cmp expect actual
 '
 
-test_expect_success 'replaying merge commits is not supported yet' '
-	echo "fatal: replaying merge commits is not supported yet!" >expect &&
-	test_must_fail git replay --advance=main main..topic-with-merge 2>actual &&
-	test_cmp expect actual
+test_expect_success 'using replay to rebase a 2-parent merge' '
+	# main..topic-with-merge contains a 2-parent merge (P) introduced
+	# via test_merge. Use --ref-action=print so this test does not
+	# mutate state for subsequent tests in this file.
+	git replay --ref-action=print --onto main main..topic-with-merge >result &&
+	test_line_count = 1 result &&
+
+	new_tip=$(cut -f 3 -d " " result) &&
+
+	# Result is still a 2-parent merge.
+	git cat-file -p $new_tip >cat &&
+	grep -c "^parent " cat >count &&
+	echo 2 >expect &&
+	test_cmp expect count &&
+
+	# Merge subject is preserved.
+	echo P >expect &&
+	git log -1 --format=%s $new_tip >actual &&
+	test_cmp expect actual &&
+
+	# The replayed merge sits on top of main: walking back via the
+	# first-parent chain reaches main.
+	git merge-base --is-ancestor main $new_tip
+'
+
+test_expect_success 'replaying an octopus merge is rejected' '
+	# Build an octopus side-branch so the rest of the test state stays
+	# untouched.
+	test_when_finished "git update-ref -d refs/heads/octopus-tip" &&
+	octopus_tip=$(git commit-tree -p topic4 -p topic1 -p topic3 \
+		-m "octopus" $(git rev-parse topic4^{tree})) &&
+	git update-ref refs/heads/octopus-tip "$octopus_tip" &&
+
+	test_must_fail git replay --ref-action=print --onto main \
+		topic4..octopus-tip 2>actual &&
+	test_grep "octopus merges" actual
+'
+
+test_expect_success 'reverting a merge commit is rejected' '
+	test_must_fail git replay --ref-action=print --revert=topic-with-merge \
+		topic4..topic-with-merge 2>actual &&
+	test_grep "reverting merge commits" actual
 '
 
 test_expect_success 'using replay to rebase two branches, one on top of other' '

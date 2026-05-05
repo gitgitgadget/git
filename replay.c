@@ -1,6 +1,7 @@
 #define USE_THE_REPOSITORY_VARIABLE
 
 #include "git-compat-util.h"
+#include "commit-reach.h"
 #include "environment.h"
 #include "hex.h"
 #include "merge-ort.h"
@@ -77,15 +78,21 @@ static void generate_revert_message(struct strbuf *msg,
 	repo_unuse_commit_buffer(repo, commit, message);
 }
 
+/*
+ * Build a new commit with the given tree and parent list, copying author,
+ * extra headers and (for pick mode) the commit message from `based_on`.
+ *
+ * Takes ownership of `parents`: it will be freed before returning, even on
+ * error. Parent order is preserved as supplied by the caller.
+ */
 static struct commit *create_commit(struct repository *repo,
 				    struct tree *tree,
 				    struct commit *based_on,
-				    struct commit *parent,
+				    struct commit_list *parents,
 				    enum replay_mode mode)
 {
 	struct object_id ret;
 	struct object *obj = NULL;
-	struct commit_list *parents = NULL;
 	char *author = NULL;
 	char *sign_commit = NULL; /* FIXME: cli users might want to sign again */
 	struct commit_extra_header *extra = NULL;
@@ -96,7 +103,6 @@ static struct commit *create_commit(struct repository *repo,
 	const char *orig_message = NULL;
 	const char *exclude_gpgsig[] = { "gpgsig", "gpgsig-sha256", NULL };
 
-	commit_list_insert(parent, &parents);
 	extra = read_commit_extra_headers(based_on, exclude_gpgsig);
 	if (mode == REPLAY_MODE_REVERT) {
 		generate_revert_message(&msg, based_on, repo);
@@ -273,6 +279,7 @@ static struct commit *pick_regular_commit(struct repository *repo,
 {
 	struct commit *base, *replayed_base;
 	struct tree *pickme_tree, *base_tree, *replayed_base_tree;
+	struct commit_list *parents = NULL;
 
 	if (pickme->parents) {
 		base = pickme->parents->item;
@@ -327,7 +334,143 @@ static struct commit *pick_regular_commit(struct repository *repo,
 	if (oideq(&replayed_base_tree->object.oid, &result->tree->object.oid) &&
 	    !oideq(&pickme_tree->object.oid, &base_tree->object.oid))
 		return replayed_base;
-	return create_commit(repo, result->tree, pickme, replayed_base, mode);
+	commit_list_insert(replayed_base, &parents);
+	return create_commit(repo, result->tree, pickme, parents, mode);
+}
+
+/*
+ * Replay a 2-parent merge commit by composing three calls into merge-ort:
+ *
+ *   R = recursive merge of pickme's two original parents (auto-remerge of
+ *       the original merge, accepting any conflicts)
+ *   N = recursive merge of the (possibly rewritten) parents
+ *   O = pickme's tree (the user's actual merge, including any manual
+ *       resolutions)
+ *
+ * The picked tree comes from a non-recursive merge using R as the base,
+ * O as side1 and N as side2. `git diff R O` is morally `git show
+ * --remerge-diff $oldmerge`, so this layers the user's original manual
+ * resolution on top of the freshly auto-merged rewritten parents (see
+ * `replay-design-notes.txt` on the `replay` branch of newren/git).
+ *
+ * If the outer 3-way merge is unclean, propagate the conflict status to
+ * the caller via `result->clean = 0` and return NULL. The two inner
+ * merges (R and N) being unclean is _not_ fatal: the conflict-markered
+ * trees they produce are valid inputs to the outer merge, and using
+ * identical labels for both inner merges keeps the marker text
+ * byte-equal between R and N so the user's resolution recorded in O
+ * collapses the conflict cleanly there. Octopus merges (more than two
+ * parents) and revert-of-merge are rejected by the caller before this
+ * function is invoked.
+ */
+static struct commit *pick_merge_commit(struct repository *repo,
+					struct commit *pickme,
+					kh_oid_map_t *replayed_commits,
+					struct merge_options *merge_opt,
+					struct merge_result *result)
+{
+	struct commit *parent1, *parent2;
+	struct commit *replayed_par1, *replayed_par2;
+	struct tree *pickme_tree;
+	struct merge_options remerge_opt = { 0 };
+	struct merge_options new_merge_opt = { 0 };
+	struct merge_result remerge_res = { 0 };
+	struct merge_result new_merge_res = { 0 };
+	struct commit_list *parent_bases = NULL;
+	struct commit_list *replayed_bases = NULL;
+	struct commit_list *parents;
+	struct commit *picked = NULL;
+	char *ancestor_name = NULL;
+
+	parent1 = pickme->parents->item;
+	parent2 = pickme->parents->next->item;
+
+	/*
+	 * Map the merge's parents to their replayed counterparts. With the
+	 * boundary commits pre-seeded into `replayed_commits`, every parent
+	 * either has an explicit mapping (rewritten or boundary -> onto) or
+	 * sits outside the rewrite range entirely; the latter must stay at
+	 * the original parent commit, so use `parent` itself as the fallback
+	 * for both sides.
+	 */
+	replayed_par1 = mapped_commit(replayed_commits, parent1, parent1);
+	replayed_par2 = mapped_commit(replayed_commits, parent2, parent2);
+
+	/*
+	 * R: auto-remerge of the original parents.
+	 *
+	 * Use the same branch labels for the inner merges that compute R
+	 * and N so conflict markers (if any) are textually identical
+	 * between the two; the outer non-recursive merge can then collapse
+	 * the manual resolution from O against them.
+	 */
+	init_basic_merge_options(&remerge_opt, repo);
+	remerge_opt.show_rename_progress = 0;
+	remerge_opt.branch1 = "ours";
+	remerge_opt.branch2 = "theirs";
+	if (repo_get_merge_bases(repo, parent1, parent2, &parent_bases) < 0) {
+		result->clean = -1;
+		goto out;
+	}
+	merge_incore_recursive(&remerge_opt, parent_bases,
+			       parent1, parent2, &remerge_res);
+	parent_bases = NULL; /* consumed by merge_incore_recursive */
+	if (remerge_res.clean < 0) {
+		result->clean = remerge_res.clean;
+		goto out;
+	}
+
+	/* N: fresh merge of the (possibly rewritten) parents. */
+	init_basic_merge_options(&new_merge_opt, repo);
+	new_merge_opt.show_rename_progress = 0;
+	new_merge_opt.branch1 = "ours";
+	new_merge_opt.branch2 = "theirs";
+	if (repo_get_merge_bases(repo, replayed_par1, replayed_par2,
+				 &replayed_bases) < 0) {
+		result->clean = -1;
+		goto out;
+	}
+	merge_incore_recursive(&new_merge_opt, replayed_bases,
+			       replayed_par1, replayed_par2, &new_merge_res);
+	replayed_bases = NULL; /* consumed by merge_incore_recursive */
+	if (new_merge_res.clean < 0) {
+		result->clean = new_merge_res.clean;
+		goto out;
+	}
+
+	/*
+	 * Outer non-recursive merge: base=R, side1=O (pickme), side2=N.
+	 */
+	pickme_tree = repo_get_commit_tree(repo, pickme);
+	ancestor_name = xstrfmt("auto-remerge of %s",
+				oid_to_hex(&pickme->object.oid));
+	merge_opt->ancestor = ancestor_name;
+	merge_opt->branch1 = short_commit_name(repo, pickme);
+	merge_opt->branch2 = "merge of replayed parents";
+	merge_incore_nonrecursive(merge_opt,
+				  remerge_res.tree,
+				  pickme_tree,
+				  new_merge_res.tree,
+				  result);
+	merge_opt->ancestor = NULL;
+	merge_opt->branch1 = NULL;
+	merge_opt->branch2 = NULL;
+	if (!result->clean)
+		goto out;
+
+	parents = NULL;
+	commit_list_insert(replayed_par2, &parents);
+	commit_list_insert(replayed_par1, &parents);
+	picked = create_commit(repo, result->tree, pickme, parents,
+			       REPLAY_MODE_PICK);
+
+out:
+	free(ancestor_name);
+	free_commit_list(parent_bases);
+	free_commit_list(replayed_bases);
+	merge_finalize(&remerge_opt, &remerge_res);
+	merge_finalize(&new_merge_opt, &new_merge_res);
+	return picked;
 }
 
 void replay_result_release(struct replay_result *result)
@@ -407,17 +550,63 @@ int replay_revisions(struct rev_info *revs,
 	merge_opt.show_rename_progress = 0;
 	last_commit = onto;
 	replayed_commits = kh_init_oid_map();
+
+	/*
+	 * Seed the rewritten-commit map with each negative-side ("BOTTOM")
+	 * cmdline entry pointing at `onto`. This matters for merge replay:
+	 * a 2-parent merge whose first parent is the boundary (e.g. the
+	 * commit being reworded) must replay onto the rewritten boundary,
+	 * yet pick_merge_commit uses a self fallback so the second parent
+	 * (a side branch outside the rewrite range) is preserved as-is.
+	 * Pre-seeding the boundary disambiguates the two: in the map ->
+	 * rewritten, missing -> kept as-is.
+	 *
+	 * Only do this for the pick path; revert mode chains reverts
+	 * through last_commit and a pre-seeded boundary would short-circuit
+	 * that chain.
+	 */
+	if (mode == REPLAY_MODE_PICK) {
+		for (size_t i = 0; i < revs->cmdline.nr; i++) {
+			struct rev_cmdline_entry *e = &revs->cmdline.rev[i];
+			struct commit *boundary;
+			khint_t pos;
+			int hr;
+
+			if (!(e->flags & BOTTOM))
+				continue;
+			boundary = lookup_commit_reference_gently(revs->repo,
+								  &e->item->oid, 1);
+			if (!boundary)
+				continue;
+			pos = kh_put_oid_map(replayed_commits,
+					     boundary->object.oid, &hr);
+			if (hr != 0)
+				kh_value(replayed_commits, pos) = onto;
+		}
+	}
+
 	while ((commit = get_revision(revs))) {
 		const struct name_decoration *decoration;
 		khint_t pos;
 		int hr;
 
-		if (commit->parents && commit->parents->next)
-			die(_("replaying merge commits is not supported yet!"));
-
-		last_commit = pick_regular_commit(revs->repo, commit, replayed_commits,
-						  mode == REPLAY_MODE_REVERT ? last_commit : onto,
-						  &merge_opt, &result, mode);
+		if (commit->parents && commit->parents->next) {
+			if (commit->parents->next->next) {
+				ret = error(_("replaying octopus merges is not supported"));
+				goto out;
+			}
+			if (mode == REPLAY_MODE_REVERT) {
+				ret = error(_("reverting merge commits is not supported"));
+				goto out;
+			}
+			last_commit = pick_merge_commit(revs->repo, commit,
+							replayed_commits,
+							&merge_opt, &result);
+		} else {
+			last_commit = pick_regular_commit(revs->repo, commit, replayed_commits,
+							  mode == REPLAY_MODE_REVERT ? last_commit : onto,
+							  &merge_opt, &result, mode);
+		}
 		if (!last_commit)
 			break;
 
