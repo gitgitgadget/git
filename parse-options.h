@@ -116,7 +116,10 @@ typedef int parse_opt_subcommand_fn(int argc, const char **argv,
  *   mask of parse_opt_option_flags.
  *   PARSE_OPT_OPTARG: says that the argument is optional (not for BOOLEANs)
  *   PARSE_OPT_NOARG: says that this option does not take an argument
- *   PARSE_OPT_NONEG: says that this option cannot be negated
+ *   PARSE_OPT_NONEG: says that this option cannot be negated (i.e.
+ *                   prevents --no-<option> boolean form). Does not reject
+ *                   negative numeric values like --option=-1. Use
+ *                   OPT_UNSIGNED for options that must be non-negative.
  *   PARSE_OPT_HIDDEN: this option is skipped in the default usage, and
  *                     shown only in the full usage.
  *   PARSE_OPT_LASTARG_DEFAULT: says that this option will take the default
