@@ -9,13 +9,18 @@ while case "$1" in -*) ;; *) break; esac
 do
 	case "$1" in
 	--stdin)
-		stedin=stdin ;;
+		stdin=stdin ;;
 	*)
 		usage
 		exit 1 ;;
 	esac
 	shift
 done
+
+case "$#,$stdin" in
+0,)
+	stdin=stdin ;;
+esac
 
 section () {
 	printf >&3 "\033]0;%s %s\007" "$*"
