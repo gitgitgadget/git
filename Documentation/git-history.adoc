@@ -40,13 +40,26 @@ at once.
 LIMITATIONS
 -----------
 
-This command does not (yet) work with histories that contain merges. You
-should use linkgit:git-rebase[1] with the `--rebase-merges` flag instead.
+This command supports two-parent merge commits in the rewrite path:
+the auto-remerged tree of the original parents, the merge commit
+itself, and the auto-merged tree of the rewritten parents are
+combined so that the user's manual conflict resolution (textual or
+semantic) is preserved through the replay. Octopus merges (more than
+two parents) are not supported and are rejected with an error.
 
-Furthermore, the command does not support operations that can result in merge
-conflicts. This limitation is by design as history rewrites are not intended to
-be stateful operations. The limitation can be lifted once (if) Git learns about
-first-class conflicts.
+The replay propagates the textual diffs the user actually made in
+the merge commit. It does _not_ extrapolate symbol-level intent: if
+rewriting the parents pulls in genuinely new content (for example, a
+new caller of a function that the merge renamed), that new content
+is _not_ rewritten by the replay and may need a follow-up edit.
+Symbol-aware refactoring is out of scope here, just as it is for
+plain rebase.
+
+The command does not support operations that can result in merge
+conflicts on the replayed merge itself. This limitation is by design
+as history rewrites are not intended to be stateful operations. Use
+linkgit:git-rebase[1] with the `--rebase-merges` flag when the
+rewrite is expected to require interactive conflict resolution.
 
 COMMANDS
 --------
