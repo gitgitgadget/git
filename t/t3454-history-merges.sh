@@ -39,7 +39,7 @@ build_clean_merge () {
 	EOF
 }
 
-test_expect_failure 'clean merge: both sides touch unrelated files' '
+test_expect_success 'clean merge: both sides touch unrelated files' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -75,7 +75,7 @@ build_textual_resolution () {
 	EOF
 }
 
-test_expect_failure 'non-trivial merge: textual manual resolution is preserved' '
+test_expect_success 'non-trivial merge: textual manual resolution is preserved' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -108,7 +108,7 @@ build_semantic_edit () {
 	EOF
 }
 
-test_expect_failure 'non-trivial merge: semantic edit outside conflict region is preserved' '
+test_expect_success 'non-trivial merge: semantic edit outside conflict region is preserved' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -135,7 +135,7 @@ build_octopus () {
 	EOF
 }
 
-test_expect_failure 'octopus merge in the rewrite path is rejected' '
+test_expect_success 'octopus merge in the rewrite path is rejected' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -188,7 +188,7 @@ build_with_boundary_other_than_onto () {
 # replayed merge would silently graft itself onto a different
 # ancestry than the author chose, which is far worse than a loud
 # failure.
-test_expect_failure 'merge whose first parent sits outside the rewrite range keeps that parent' '
+test_expect_success 'merge whose first parent sits outside the rewrite range keeps that parent' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -242,7 +242,7 @@ build_function_rename () {
 # ("rename every caller of harry").  This is a known and intentional
 # limitation. Symbol-aware refactoring is out of scope here, just as it is for
 # plain rebases.
-test_expect_failure 'preserves resolutions; does not extrapolate' '
+test_expect_success 'preserves resolutions; does not extrapolate' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -310,7 +310,7 @@ build_diverging_conflicts () {
 	EOF
 }
 
-test_expect_failure 'newly-introduced conflict in a replayed merge' '
+test_expect_success 'newly-introduced conflict in a replayed merge' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -324,9 +324,9 @@ test_expect_failure 'newly-introduced conflict in a replayed merge' '
 		# merges entirely" failure mode that earlier commits
 		# in this series exhibit: the test must fail because of
 		# a real content conflict on `b`, not for any other
-		# reason.
-		test_grep "CONFLICT (content)" err &&
-		test_grep "Merge conflict in b" err
+		# reason. merge-ort writes CONFLICT messages to stdout.
+		test_grep "CONFLICT (content)" out &&
+		test_grep "Merge conflict in a" out
 	)
 '
 
@@ -348,7 +348,7 @@ build_new_conflict_binary () {
 	EOF
 }
 
-test_expect_failure 'newly-introduced binary conflict is reported' '
+test_expect_success 'newly-introduced binary conflict is reported' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -362,8 +362,9 @@ test_expect_failure 'newly-introduced binary conflict is reported' '
 		# merges entirely" failure mode (no conflict message at
 		# all). The replay must fail because of a real content
 		# conflict on `bin`, not for any other reason.
-		test_grep "CONFLICT (content)" err &&
-		test_grep "Merge conflict in bin" err
+		# merge-ort writes CONFLICT messages to stdout.
+		test_grep "CONFLICT (content)" out &&
+		test_grep "Merge conflict in bin" out
 	)
 '
 
@@ -392,7 +393,7 @@ build_vanishing_conflict () {
 	EOF
 }
 
-test_expect_failure 'vanishing conflict in a replayed merge' '
+test_expect_success 'vanishing conflict in a replayed merge' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -437,7 +438,7 @@ build_fixture_with_marker_text () {
 	EOF
 }
 
-test_expect_failure 'file containing literal conflict-marker bytes survives a replay-merge' '
+test_expect_success 'file containing literal conflict-marker bytes survives a replay-merge' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
