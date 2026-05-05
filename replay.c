@@ -397,6 +397,64 @@ static struct commit *pick_merge_commit(struct repository *repo,
 	replayed_par2 = mapped_commit(replayed_commits, parent2, parent2);
 
 	/*
+	 * Compute both pairs of merge bases up front. The fast path below
+	 * needs them for the tree-equality check, and the slow path that
+	 * follows reuses them to avoid recomputing.
+	 */
+	if (repo_get_merge_bases(repo, parent1, parent2, &parent_bases) < 0 ||
+	    repo_get_merge_bases(repo, replayed_par1, replayed_par2,
+				 &replayed_bases) < 0) {
+		result->clean = -1;
+		goto out;
+	}
+
+	/*
+	 * Fast path: when both rewritten parents carry the same trees as
+	 * the originals AND every merge base does too (in order), the
+	 * auto-merges R and N would be tree-equal (their inputs match
+	 * content-wise), so the outer 3-way merge trivially yields the
+	 * original merge's tree. Skip the inner merges and write the new
+	 * merge commit directly.
+	 *
+	 * This is the common case for `git history reword`, which only
+	 * changes commit messages and so leaves every tree on the line
+	 * being replayed unchanged. The merge-base trees must be checked
+	 * too: tree-same parents over a tree-different base could still
+	 * produce a different auto-merge (a conflict region that did not
+	 * exist before, or vice versa), and the original resolution would
+	 * be inappropriate.
+	 */
+	if (oideq(&repo_get_commit_tree(repo, parent1)->object.oid,
+		  &repo_get_commit_tree(repo, replayed_par1)->object.oid) &&
+	    oideq(&repo_get_commit_tree(repo, parent2)->object.oid,
+		  &repo_get_commit_tree(repo, replayed_par2)->object.oid)) {
+		struct commit_list *bo, *bn;
+		int bases_match = 1;
+
+		for (bo = parent_bases, bn = replayed_bases;
+		     bo && bn;
+		     bo = bo->next, bn = bn->next) {
+			if (!oideq(&repo_get_commit_tree(repo, bo->item)->object.oid,
+				   &repo_get_commit_tree(repo, bn->item)->object.oid)) {
+				bases_match = 0;
+				break;
+			}
+		}
+		if (bo || bn)
+			bases_match = 0;
+
+		if (bases_match) {
+			pickme_tree = repo_get_commit_tree(repo, pickme);
+			parents = NULL;
+			commit_list_insert(replayed_par2, &parents);
+			commit_list_insert(replayed_par1, &parents);
+			picked = create_commit(repo, pickme_tree, pickme,
+					       parents, REPLAY_MODE_PICK);
+			goto out;
+		}
+	}
+
+	/*
 	 * R: auto-remerge of the original parents.
 	 *
 	 * Use the same branch labels for the inner merges that compute R
@@ -408,10 +466,6 @@ static struct commit *pick_merge_commit(struct repository *repo,
 	remerge_opt.show_rename_progress = 0;
 	remerge_opt.branch1 = "ours";
 	remerge_opt.branch2 = "theirs";
-	if (repo_get_merge_bases(repo, parent1, parent2, &parent_bases) < 0) {
-		result->clean = -1;
-		goto out;
-	}
 	merge_incore_recursive(&remerge_opt, parent_bases,
 			       parent1, parent2, &remerge_res);
 	parent_bases = NULL; /* consumed by merge_incore_recursive */
@@ -425,11 +479,6 @@ static struct commit *pick_merge_commit(struct repository *repo,
 	new_merge_opt.show_rename_progress = 0;
 	new_merge_opt.branch1 = "ours";
 	new_merge_opt.branch2 = "theirs";
-	if (repo_get_merge_bases(repo, replayed_par1, replayed_par2,
-				 &replayed_bases) < 0) {
-		result->clean = -1;
-		goto out;
-	}
 	merge_incore_recursive(&new_merge_opt, replayed_bases,
 			       replayed_par1, replayed_par2, &new_merge_res);
 	replayed_bases = NULL; /* consumed by merge_incore_recursive */
