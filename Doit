@@ -1,5 +1,11 @@
 #!/bin/sh
 
-Meta/Dothem --cocci --breaking --test-vars --san --leaks --sha256 "$@"
+Meta/Dothem --meson \
+	    --cocci \
+	    --san \
+	    --leaks \
+	    --sha256 \
+	    --test-vars \
+	    --breaking "$@"
 
 Meta/V
