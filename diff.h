@@ -294,7 +294,7 @@ struct diff_options {
 	enum git_colorbool use_color;
 
 	/* Number of context lines to generate in patch output. */
-	int context;
+	unsigned int context;
 
 	unsigned int interhunkcontext;
 
