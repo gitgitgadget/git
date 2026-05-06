@@ -36,6 +36,11 @@ struct path_walk_info {
 	/**
 	 * Initialize which object types the path_fn should be called on. This
 	 * could also limit the walk to skip blobs if not set.
+	 *
+	 * Note: even when 'blobs' or 'trees' is disabled, objects that are
+	 * directly requested as pending objects will still be emitted to
+	 * path_fn. Only objects discovered during the tree walk are filtered by
+	 * these flags.
 	 */
 	int commits;
 	int trees;
