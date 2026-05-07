@@ -7,19 +7,21 @@ struct string_list;
 struct worktree;
 
 /*
- * Translate Windows-style absolute paths (`<x>:/...` or `<x>:\...`) recorded
- * by git running on native Windows into the POSIX mount form used by the
- * current build:
+ * Translate worktree gitdir paths between native Windows and POSIX-mount
+ * forms, in the direction appropriate for the current build:
  *
- *   * Cygwin / MSYS:    `/cygdrive/<x>/...`
- *   * everything else:  `/mnt/<x>/...`  (suits WSL2, harmless elsewhere)
+ *   * Windows-native: `/mnt/<x>/`, `/cygdrive/<x>/`, or `/<x>/` -> `<x>:/...`
+ *   * MSYS:  `<x>:/` or `<x>:\` -> `/<x>/...`
+ *   * Cygwin:    `<x>:/` or `<x>:\` -> `/cygdrive/<x>/...`
+ *   * everything else (Linux/WSL/macOS/...): `<x>:/` or `<x>:\` -> `/mnt/<x>/...`
  *
- * Edits `path` in place; the strbuf may grow. Backslashes in the remainder
- * are converted to forward slashes. Returns 1 if a translation occurred,
- * 0 otherwise.
+ * `<x>` must be a single ASCII letter; multi-character segments
+ * (`/mnt/storage`) and digit-prefixed mounts pass through unchanged.
+ * Backslashes in the tail are normalised to forward slashes on the
+ * POSIX-direction translation.
  *
- * No-op on native Windows builds, where the input is already in the native
- * form.
+ * Edits `path` in place; may shrink (Windows direction) or grow (POSIX
+ * direction). Returns 1 if a translation occurred, 0 otherwise.
  */
 int translate_windows_path(struct strbuf *path);
 

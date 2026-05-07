@@ -20,8 +20,57 @@
 
 int translate_windows_path(struct strbuf *path)
 {
-#ifndef GIT_WINDOWS_NATIVE
-#ifdef __CYGWIN__
+#ifdef GIT_WINDOWS_NATIVE
+	/*
+	 * Windows-native: rewrite POSIX-mount paths (WSL `/mnt/<x>/`,
+	 * Cygwin `/cygdrive/<x>/`, MSYS `/<x>/`) to drive form `<x>:/...`.
+	 * The single-letter + separator check below is what stops
+	 * multi-character segments like `/mnt/storage` from matching.
+	 */
+	static const struct {
+		const char *prefix;
+		size_t      prefix_len;
+	} posix_prefixes[] = {
+		{ "/mnt/",      5 },  /* WSL */
+		{ "/cygdrive/", 10 }, /* Cygwin */
+		{ "/",          1 },  /* MSYS */
+	};
+	size_t i;
+
+	if (path->len == 0)
+		return 0;
+
+	for (i = 0; i < ARRAY_SIZE(posix_prefixes); i++) {
+		size_t pl = posix_prefixes[i].prefix_len;
+		char drive;
+
+		if (path->len < pl + 1)
+			continue;
+		if (memcmp(path->buf, posix_prefixes[i].prefix, pl) != 0)
+			continue;
+		drive = path->buf[pl];
+		if (!isalpha((unsigned char)drive))
+			continue;
+		if (path->len > pl + 1 && path->buf[pl + 1] != '/' && path->buf[pl + 1] != '\\')
+			continue;
+
+		/* "<prefix><drive>" (pl+1 bytes) -> "<drive>:" (2 bytes). */
+		path->buf[0] = drive;
+		path->buf[1] = ':';
+		memmove(path->buf + 2, path->buf + pl + 1, path->len - pl);
+		strbuf_setlen(path, path->len - (pl - 1));
+		return 1;
+	}
+	return 0;
+#else
+	/*
+	 * POSIX: rewrite Windows-form `<x>:/...` or `<x>:\...` to this
+	 * build's mount form (drive_prefix selected below), normalising
+	 * any backslashes in the tail.
+	 */
+#if defined(__MSYS__)
+	static const char drive_prefix[] = "/";
+#elif defined(__CYGWIN__)
 	static const char drive_prefix[] = "/cygdrive/";
 #else
 	static const char drive_prefix[] = "/mnt/";
@@ -42,8 +91,6 @@ int translate_windows_path(struct strbuf *path)
 
 	drive = tolower((unsigned char)path->buf[0]);
 
-	/* Rewrite "<letter>:" as "<drive_prefix><drive>", then convert any
-	 * backslashes in the remaining path to forward slashes. */
 	strbuf_grow(path, expansion);
 	memmove(path->buf + 2 + expansion, path->buf + 2, path->len - 2 + 1);
 	memcpy(path->buf, drive_prefix, drive_prefix_len);
@@ -55,9 +102,6 @@ int translate_windows_path(struct strbuf *path)
 			path->buf[i] = '/';
 	}
 	return 1;
-#else
-	(void)path;
-	return 0;
 #endif
 }
 

@@ -1010,7 +1010,6 @@ const char *read_gitfile_gently(const char *path, int *return_error_code)
 	buf[len] = '\0';
 	dir = buf + 8;
 
-#ifndef GIT_WINDOWS_NATIVE
 	{
 		struct strbuf translated = STRBUF_INIT;
 		strbuf_addstr(&translated, dir);
@@ -1023,7 +1022,6 @@ const char *read_gitfile_gently(const char *path, int *return_error_code)
 		}
 		strbuf_release(&translated);
 	}
-#endif
 
 	if (!is_absolute_path(dir) && (slash = strrchr(path, '/'))) {
 		size_t pathlen = slash+1 - path;
