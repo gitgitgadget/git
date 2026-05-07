@@ -18,6 +18,49 @@
 #include "lockfile.h"
 #include "exec-cmd.h"
 
+int translate_windows_path(struct strbuf *path)
+{
+#ifndef GIT_WINDOWS_NATIVE
+#ifdef __CYGWIN__
+	static const char drive_prefix[] = "/cygdrive/";
+#else
+	static const char drive_prefix[] = "/mnt/";
+#endif
+	const size_t drive_prefix_len = sizeof(drive_prefix) - 1;
+	const size_t expansion = drive_prefix_len + 1 - 2;
+	char drive;
+	size_t i;
+
+	if (path->len < 3)
+		return 0;
+	if (!isalpha((unsigned char)path->buf[0]))
+		return 0;
+	if (path->buf[1] != ':')
+		return 0;
+	if (path->buf[2] != '/' && path->buf[2] != '\\')
+		return 0;
+
+	drive = tolower((unsigned char)path->buf[0]);
+
+	/* Rewrite "<letter>:" as "<drive_prefix><drive>", then convert any
+	 * backslashes in the remaining path to forward slashes. */
+	strbuf_grow(path, expansion);
+	memmove(path->buf + 2 + expansion, path->buf + 2, path->len - 2 + 1);
+	memcpy(path->buf, drive_prefix, drive_prefix_len);
+	path->buf[drive_prefix_len] = drive;
+	path->len += expansion;
+
+	for (i = drive_prefix_len + 1; i < path->len; i++) {
+		if (path->buf[i] == '\\')
+			path->buf[i] = '/';
+	}
+	return 1;
+#else
+	(void)path;
+	return 0;
+#endif
+}
+
 static int get_st_mode_bits(const char *path, int *mode)
 {
 	struct stat st;

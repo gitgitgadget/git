@@ -7,6 +7,23 @@ struct string_list;
 struct worktree;
 
 /*
+ * Translate Windows-style absolute paths (`<x>:/...` or `<x>:\...`) recorded
+ * by git running on native Windows into the POSIX mount form used by the
+ * current build:
+ *
+ *   * Cygwin / MSYS:    `/cygdrive/<x>/...`
+ *   * everything else:  `/mnt/<x>/...`  (suits WSL2, harmless elsewhere)
+ *
+ * Edits `path` in place; the strbuf may grow. Backslashes in the remainder
+ * are converted to forward slashes. Returns 1 if a translation occurred,
+ * 0 otherwise.
+ *
+ * No-op on native Windows builds, where the input is already in the native
+ * form.
+ */
+int translate_windows_path(struct strbuf *path);
+
+/*
  * The result to all functions which return statically allocated memory may be
  * overwritten by another call to _any_ one of these functions. Consider using
  * the safer variants which operate on strbufs or return allocated memory.
