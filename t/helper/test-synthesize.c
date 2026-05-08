@@ -217,7 +217,7 @@ static int cmd__synthesize__pack(int argc, const char **argv,
 
 	setup_git_directory_gently(&non_git);
 	repo = the_repository;
-	algo = repo->hash_algo;
+	algo = unsafe_hash_algo(repo->hash_algo);
 
 	argc = parse_options(argc, argv, NULL, options, usage,
 			     PARSE_OPT_KEEP_ARGV0);
