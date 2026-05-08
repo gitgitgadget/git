@@ -305,4 +305,123 @@ test_expect_success 'merge-base --octopus --all for complex tree' '
 	test_cmp expected actual
 '
 
+# The following tests verify that "git merge-base" (without --all)
+# returns the same result with and without a commit-graph.
+# This exercises the early-exit optimisation in paint_down_to_common
+# that skips the STALE drain when generation numbers are available.
+
+test_expect_success 'setup for commit-graph tests' '
+	git init graph-repo &&
+	(
+		cd graph-repo &&
+
+		# Build a forked DAG:
+		#
+		#     L1---L2  (left)
+		#    /
+		#   S
+		#    \
+		#     R1---R2  (right)
+		#
+		test_commit GS &&
+		git checkout -b left &&
+		test_commit L1 &&
+		test_commit L2 &&
+		git checkout GS &&
+		git checkout -b right &&
+		test_commit GR1 &&
+		test_commit GR2
+	)
+'
+
+test_expect_success 'merge-base without commit-graph' '
+	(
+		cd graph-repo &&
+		rm -f .git/objects/info/commit-graph &&
+		git merge-base left right >actual &&
+		git rev-parse GS >expected &&
+		test_cmp expected actual
+	)
+'
+
+test_expect_success 'merge-base with commit-graph' '
+	(
+		cd graph-repo &&
+		git commit-graph write --reachable &&
+		git merge-base left right >actual &&
+		git rev-parse GS >expected &&
+		test_cmp expected actual
+	)
+'
+
+test_expect_success 'merge-base --all with commit-graph' '
+	(
+		cd graph-repo &&
+		git merge-base --all left right >actual &&
+		git rev-parse GS >expected &&
+		test_cmp expected actual
+	)
+'
+
+test_expect_success 'merge-base agrees with --all for single result' '
+	(
+		cd graph-repo &&
+		git commit-graph write --reachable &&
+		git merge-base left right >actual.single &&
+		git merge-base --all left right >actual.all &&
+		test_cmp actual.all actual.single
+	)
+'
+
+test_expect_success 'setup for deep chain commit-graph test' '
+	git init deep-repo &&
+	(
+		cd deep-repo &&
+
+		# Build a deep forked DAG:
+		#
+		#   L1--L2--...--L20  (left)
+		#  /
+		# S
+		#  \
+		#   R1--R2--...--R20  (right)
+		#
+		test_commit DS &&
+		git checkout -b left &&
+		for i in $(test_seq 1 20)
+		do
+			test_commit DL$i || return 1
+		done &&
+		git checkout DS &&
+		git checkout -b right &&
+		for i in $(test_seq 1 20)
+		do
+			test_commit DR$i || return 1
+		done
+	)
+'
+
+test_expect_success 'deep chain: merge-base matches with and without commit-graph' '
+	(
+		cd deep-repo &&
+		rm -f .git/objects/info/commit-graph &&
+		git merge-base left right >actual.no-graph &&
+		git rev-parse DS >expected &&
+		test_cmp expected actual.no-graph &&
+		git commit-graph write --reachable &&
+		git merge-base left right >actual.graph &&
+		test_cmp expected actual.graph
+	)
+'
+
+test_expect_success 'deep chain: --all and non---all agree with commit-graph' '
+	(
+		cd deep-repo &&
+		git commit-graph write --reachable &&
+		git merge-base left right >actual.single &&
+		git merge-base --all left right >actual.all &&
+		test_cmp actual.all actual.single
+	)
+'
+
 test_done
