@@ -55,14 +55,16 @@ static int paint_down_to_common(struct repository *r,
 				struct commit **twos,
 				timestamp_t min_generation,
 				int ignore_missing_commits,
+				int find_all,
 				struct commit_list **result)
 {
 	struct prio_queue queue = { compare_commits_by_gen_then_commit_date };
 	int i;
+	int has_gens = min_generation || corrected_commit_dates_enabled(r);
 	timestamp_t last_gen = GENERATION_NUMBER_INFINITY;
 	struct commit_list **tail = result;
 
-	if (!min_generation && !corrected_commit_dates_enabled(r))
+	if (!has_gens)
 		queue.compare = compare_commits_by_commit_date;
 
 	one->object.flags |= PARENT1;
@@ -97,6 +99,11 @@ static int paint_down_to_common(struct repository *r,
 			if (!(commit->object.flags & RESULT)) {
 				commit->object.flags |= RESULT;
 				tail = commit_list_append(commit, tail);
+				/* Generation-ordered queue: no later
+				 * commit can dominate this one. */
+				if (!find_all && has_gens &&
+				    generation < GENERATION_NUMBER_INFINITY)
+					break;
 			}
 			/* Mark parents of a found merge stale */
 			flags |= STALE;
@@ -136,6 +143,7 @@ static int paint_down_to_common(struct repository *r,
 static int merge_bases_many(struct repository *r,
 			    struct commit *one, int n,
 			    struct commit **twos,
+			    int find_all,
 			    struct commit_list **result)
 {
 	struct commit_list *list = NULL, **tail = result;
@@ -165,7 +173,7 @@ static int merge_bases_many(struct repository *r,
 				     oid_to_hex(&twos[i]->object.oid));
 	}
 
-	if (paint_down_to_common(r, one, n, twos, 0, 0, &list)) {
+	if (paint_down_to_common(r, one, n, twos, 0, 0, find_all, &list)) {
 		commit_list_free(list);
 		return -1;
 	}
@@ -246,7 +254,7 @@ static int remove_redundant_no_gen(struct repository *r,
 				min_generation = curr_generation;
 		}
 		if (paint_down_to_common(r, array[i], filled,
-					 work, min_generation, 0, &common)) {
+					 work, min_generation, 0, 1, &common)) {
 			clear_commit_marks(array[i], all_flags);
 			clear_commit_marks_many(filled, work, all_flags);
 			commit_list_free(common);
@@ -425,6 +433,7 @@ static int get_merge_bases_many_0(struct repository *r,
 				  size_t n,
 				  struct commit **twos,
 				  int cleanup,
+				  int find_all,
 				  struct commit_list **result)
 {
 	struct commit_list *list, **tail = result;
@@ -432,7 +441,7 @@ static int get_merge_bases_many_0(struct repository *r,
 	size_t cnt, i;
 	int ret;
 
-	if (merge_bases_many(r, one, n, twos, result) < 0)
+	if (merge_bases_many(r, one, n, twos, find_all, result) < 0)
 		return -1;
 	for (i = 0; i < n; i++) {
 		if (one == twos[i])
@@ -475,16 +484,17 @@ int repo_get_merge_bases_many(struct repository *r,
 			      struct commit **twos,
 			      struct commit_list **result)
 {
-	return get_merge_bases_many_0(r, one, n, twos, 1, result);
+	return get_merge_bases_many_0(r, one, n, twos, 1, 1, result);
 }
 
 int repo_get_merge_bases_many_dirty(struct repository *r,
 				    struct commit *one,
 				    size_t n,
 				    struct commit **twos,
+				    int find_all,
 				    struct commit_list **result)
 {
-	return get_merge_bases_many_0(r, one, n, twos, 0, result);
+	return get_merge_bases_many_0(r, one, n, twos, 0, find_all, result);
 }
 
 int repo_get_merge_bases(struct repository *r,
@@ -492,7 +502,7 @@ int repo_get_merge_bases(struct repository *r,
 			 struct commit *two,
 			 struct commit_list **result)
 {
-	return get_merge_bases_many_0(r, one, 1, &two, 1, result);
+	return get_merge_bases_many_0(r, one, 1, &two, 1, 1, result);
 }
 
 /*
@@ -555,7 +565,7 @@ int repo_in_merge_bases_many(struct repository *r, struct commit *commit,
 
 	if (paint_down_to_common(r, commit,
 				 nr_reference, reference,
-				 generation, ignore_missing_commits, &bases))
+				 generation, ignore_missing_commits, 1, &bases))
 		ret = -1;
 	else if (commit->object.flags & PARENT2)
 		ret = 1;
