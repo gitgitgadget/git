@@ -49,7 +49,7 @@ test_expect_success 'clone - with worktree, file:// protocol' '
 
 '
 
-test_expect_success SIZE_T_IS_64BIT 'set up repo with >4GB object' '
+test_expect_success SIZE_T_IS_64BIT,EXPENSIVE 'set up repo with >4GB object' '
 	large_blob_size=$((4*1024*1024*1024+1)) &&
 	git init --bare 4gb-repo &&
 	head_oid=$(test-tool synthesize pack \
@@ -60,7 +60,7 @@ test_expect_success SIZE_T_IS_64BIT 'set up repo with >4GB object' '
 	git -C 4gb-repo symbolic-ref HEAD refs/heads/main
 '
 
-test_expect_success SIZE_T_IS_64BIT 'clone >4GB object via unpack-objects' '
+test_expect_success SIZE_T_IS_64BIT,EXPENSIVE 'clone >4GB object via unpack-objects' '
 	# The synthesized pack has five objects, so a large unpack limit keeps
 	# fetch-pack on the unpack-objects path.
 	git -c fetch.unpackLimit=100 clone --bare \
@@ -76,7 +76,7 @@ test_expect_success SIZE_T_IS_64BIT 'clone >4GB object via unpack-objects' '
 	test "$source_blob" = "$clone_blob"
 '
 
-test_expect_success SIZE_T_IS_64BIT 'clone with >4GB object via index-pack' '
+test_expect_success SIZE_T_IS_64BIT,EXPENSIVE 'clone with >4GB object via index-pack' '
 	# Force fetch-pack to hand the pack to index-pack instead.
 	git -c fetch.unpackLimit=1 clone --bare \
 		"file://$(pwd)/4gb-repo" 4gb-clone-index &&
