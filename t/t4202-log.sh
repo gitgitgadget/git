@@ -1891,7 +1891,7 @@ test_expect_success 'log --max-count-oldest=3 --oneline' '
 
 test_expect_success 'log --max-count-oldest=3 --reverse --oneline' '
 	test_when_finished rm expect &&
-	git log --oneline | tail -n3 | tac >expect &&
+	git log --oneline --reverse | head -n3 >expect &&
 	git log --oneline --max-count-oldest=3 --reverse >actual &&
 	test_cmp expect actual
 '
