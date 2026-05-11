@@ -519,22 +519,22 @@ static void name_rev_line(char *p, struct name_ref_data *data)
 		if (!ishex(*p)) {
 			counter = 0;
 		} else if (++counter == hexsz &&
-			 !ishex(*(p+1))) {
+			   !ishex(*(p + 1))) {
 			struct object_id oid;
 			const char *name = NULL;
-			char c = *(p+1);
+			char c = *(p + 1);
 			int p_len = p - p_start + 1;
 
 			counter = 0;
 
-			*(p+1) = 0;
+			*(p + 1) = 0;
 			if (!repo_get_oid(the_repository, p - (hexsz - 1), &oid)) {
 				struct object *o =
 					lookup_object(the_repository, &oid);
 				if (o)
 					name = get_rev_name(o, &buf);
 			}
-			*(p+1) = c;
+			*(p + 1) = c;
 
 			if (!name)
 				continue;
@@ -571,9 +571,9 @@ int cmd_name_rev(int argc,
 		OPT_BOOL(0, "name-only", &data.name_only, N_("print only ref-based names (no object names)")),
 		OPT_BOOL(0, "tags", &data.tags_only, N_("only use tags to name the commits")),
 		OPT_STRING_LIST(0, "refs", &data.ref_filters, N_("pattern"),
-				   N_("only use refs matching <pattern>")),
+				N_("only use refs matching <pattern>")),
 		OPT_STRING_LIST(0, "exclude", &data.exclude_filters, N_("pattern"),
-				   N_("ignore refs matching <pattern>")),
+				N_("ignore refs matching <pattern>")),
 		OPT_GROUP(""),
 		OPT_BOOL(0, "all", &all, N_("list all commits reachable from all refs")),
 #ifndef WITH_BREAKING_CHANGES
@@ -585,10 +585,10 @@ int cmd_name_rev(int argc,
 #endif /* WITH_BREAKING_CHANGES */
 		OPT_BOOL(0, "annotate-stdin", &annotate_stdin, N_("annotate text from stdin")),
 		OPT_BOOL(0, "undefined", &allow_undefined, N_("allow to print `undefined` names (default)")),
-		OPT_BOOL(0, "always",     &always,
-			   N_("show abbreviated commit object as fallback")),
+		OPT_BOOL(0, "always", &always,
+			 N_("show abbreviated commit object as fallback")),
 		OPT_HIDDEN_BOOL(0, "peel-tag", &peel_tag,
-			   N_("dereference tags in the input (internal use)")),
+				N_("dereference tags in the input (internal use)")),
 		OPT_END(),
 	};
 
