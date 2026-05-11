@@ -14,7 +14,8 @@ static int show_merge_base(struct commit **rev, size_t rev_nr, int show_all)
 	struct commit_list *result = NULL, *r;
 
 	if (repo_get_merge_bases_many_dirty(the_repository, rev[0],
-					    rev_nr - 1, rev + 1, &result) < 0) {
+					    rev_nr - 1, rev + 1,
+					    0, &result) < 0) {
 		commit_list_free(result);
 		return -1;
 	}
