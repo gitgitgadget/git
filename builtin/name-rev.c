@@ -272,6 +272,24 @@ struct name_ref_data {
 	struct string_list exclude_filters;
 };
 
+enum command_type {
+	NAME_REV = 1,
+};
+
+struct command {
+	enum command_type type;
+	union {
+		int name_only;
+	} u;
+};
+
+static void init_name_rev_command(struct command *cmd,
+				  int name_only)
+{
+	cmd->type = NAME_REV;
+	cmd->u.name_only = name_only;
+}
+
 static struct tip_table {
 	struct tip_table_entry {
 		struct object_id oid;
@@ -507,7 +525,7 @@ static char const * const name_rev_usage[] = {
 	NULL
 };
 
-static void name_rev_line(char *p, struct name_ref_data *data)
+static void name_rev_line(char *p, struct command *cmd)
 {
 	struct strbuf buf = STRBUF_INIT;
 	int counter = 0;
@@ -524,25 +542,32 @@ static void name_rev_line(char *p, struct name_ref_data *data)
 			const char *name = NULL;
 			char c = *(p + 1);
 			int p_len = p - p_start + 1;
+			struct object *o = NULL;
+			int oid_ret = 1;
 
 			counter = 0;
 
 			*(p + 1) = 0;
-			if (!repo_get_oid(the_repository, p - (hexsz - 1), &oid)) {
-				struct object *o =
-					lookup_object(the_repository, &oid);
-				if (o)
-					name = get_rev_name(o, &buf);
-			}
+			oid_ret = repo_get_oid(the_repository, p - (hexsz - 1), &oid);
 			*(p + 1) = c;
 
-			if (!name)
-				continue;
+			switch (cmd->type) {
+			case NAME_REV:
+				if (!oid_ret)
+					o = lookup_object(the_repository, &oid);
+				if (o)
+					name = get_rev_name(o, &buf);
+				if (!name)
+					continue;
+				if (cmd->u.name_only)
+					printf("%.*s%s", p_len - hexsz, p_start, name);
+				else
+					printf("%.*s (%s)", p_len, p_start, name);
+				break;
+			default:
+				BUG("uncovered case: %d", cmd->type);
+			}
 
-			if (data->name_only)
-				printf("%.*s%s", p_len - hexsz, p_start, name);
-			else
-				printf("%.*s (%s)", p_len, p_start, name);
 			p_start = p + 1;
 		}
 	}
@@ -567,6 +592,7 @@ int cmd_name_rev(int argc,
 #endif
 	int all = 0, annotate_stdin = 0, allow_undefined = 1, always = 0, peel_tag = 0;
 	struct name_ref_data data = { 0, 0, STRING_LIST_INIT_NODUP, STRING_LIST_INIT_NODUP };
+	struct command cmd;
 	struct option opts[] = {
 		OPT_BOOL(0, "name-only", &data.name_only, N_("print only ref-based names (no object names)")),
 		OPT_BOOL(0, "tags", &data.tags_only, N_("only use tags to name the commits")),
@@ -596,6 +622,7 @@ int cmd_name_rev(int argc,
 	init_commit_rev_name(&rev_names);
 	repo_config(the_repository, git_default_config, NULL);
 	argc = parse_options(argc, argv, prefix, opts, name_rev_usage, 0);
+	init_name_rev_command(&cmd, data.name_only);
 
 #ifndef WITH_BREAKING_CHANGES
 	if (transform_stdin) {
@@ -663,7 +690,7 @@ int cmd_name_rev(int argc,
 
 		while (strbuf_getline(&sb, stdin) != EOF) {
 			strbuf_addch(&sb, '\n');
-			name_rev_line(sb.buf, &data);
+			name_rev_line(sb.buf, &cmd);
 		}
 		strbuf_release(&sb);
 	} else if (all) {
