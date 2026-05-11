@@ -1,0 +1,43 @@
+Git v2.55 Release Notes
+=======================
+
+UI, Workflows & Features
+------------------------
+
+ * Hook scripts defined via the configuration system can now be
+   configured to run in parallel.
+
+ * The userdiff driver for the Scheme language has been extended to
+   cover other Lisp dialects.
+
+
+Performance, Internal Implementation, Development Support etc.
+--------------------------------------------------------------
+
+ * Promisor remote handling has been refactored and fixed in
+   preparation for auto-configuration of advertised remotes.
+
+ * Rust support is enabled by default (but still allows opting out) in
+   some future version of Git.
+
+
+Fixes since v2.54
+-----------------
+
+ * Code clean-up to use the right instance of a repository instance in
+   calls inside refs subsystem.
+   (merge 57c590feb9 sp/refs-reduce-the-repository later to maint).
+
+ * The check that implements the logic to see if an in-core cache-tree
+   is fully ready to write out a tree object was broken, which has
+   been corrected.
+   (merge 521731213c dl/cache-tree-fully-valid-fix later to maint).
+
+ * The test suite harness and many individual test scripts have been
+   updated to work correctly when 'set -e' is in effect, which helps
+   detect misspelled test commands.
+   (merge ffe8005b9d ps/test-set-e-clean later to maint).
+
+ * Other code cleanup, docfix, build fix, etc.
+   (merge 80f4b802e9 ja/doc-difftool-synopsis-style later to maint).
+   (merge b96490241e jc/doc-timestamps-in-stat later to maint).
