@@ -175,7 +175,6 @@ no)
 			original_branch=
 			into=
 		fi
-
 	}
 
 	leave () {
@@ -327,8 +326,8 @@ show_merge () {
 		merge_hier=
 		;;
 	*)
-		echo 2>&1 "Huh?: $msg"
-		return
+		echo >&2 "unknown merge: $msg"
+		exit 1
 		;;
 	esac &&
 	tip=$(git rev-parse --verify "refs/$merge_hier$branch" 2>/dev/null) &&
