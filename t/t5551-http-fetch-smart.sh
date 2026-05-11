@@ -481,6 +481,7 @@ test_expect_success 'test allowanysha1inwant with unreachable' '
 '
 
 test_expect_success EXPENSIVE 'http can handle enormous ref negotiation' '
+	test_when_finished "rm -f tags" &&
 	(
 		cd "$HTTPD_DOCUMENT_ROOT_PATH/repo.git" &&
 		create_tags 2001 50000
