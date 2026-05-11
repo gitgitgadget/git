@@ -45,27 +45,36 @@ onetopic () {
 	section "$topic - leaks" &&
 	(
 		export SANITIZE=leak GIT_TEST_PASSING_SANITIZE_LEAK=true &&
-		Meta/Make -j32  CC=clang test &&
+		Meta/Make -j32  CC=clang test
+		st=$?
 		Meta/Make -j32  CC=clang  >/dev/null 2>&1 distclean
+		exit $st
 	) || failed="leaks"
 
 	section "$topic - sha256" &&
 	(
 		export GIT_TEST_DEFAULT_HASH=sha256 &&
-		Meta/Make -j32 test &&
+		Meta/Make -j32 test
+		st=$?
 		Meta/Make >/dev/null 2>&1 distclean
+		exit $st
 	) || failed="$failed${failed:+" "}sha256"
 
 	section "$topic - test" &&
 	(
-		Meta/Make -j32 test &&
+		: export GIT_TEST_LONG=YesPlease &&
+		Meta/Make -j32 test
+		st=$?
 		Meta/Make >/dev/null 2>&1 distclean
+		exit $st
 	) || failed="$failed${failed:+" "}test"
 
 	section "$topic - breaking" &&
 	(
-		Meta/Make $jobs WITH_BREAKING_CHANGES=YesPlease $T test &&
+		Meta/Make $jobs WITH_BREAKING_CHANGES=YesPlease $T test
+		st=$?
 		Meta/Make WITH_BREAKING_CHANGES=YesPlease >/dev/null 2>&1 distclean
+		exit $st
 	) || failed="$failed${failed:+" "}breaking"
 
 	if test "$failed" = ""
