@@ -2400,15 +2400,24 @@ static int validate_submodule_encoded_git_dir(char *git_dir, const char *submodu
 
 static int validate_submodule_legacy_git_dir(char *git_dir, const char *submodule_name)
 {
-	size_t len = strlen(git_dir), suffix_len = strlen(submodule_name);
-	char *p;
+	size_t len, suffix_len = strlen(submodule_name);
+	char *check_dir, *p;
+	char *wt_sep;
 	int ret = 0;
 
 	if (the_repository->repository_format_submodule_path_cfg)
 		BUG("validate_submodule_git_dir() must be called with "
 		    "extensions.submodulePathConfig disabled.");
 
-	if (len <= suffix_len || (p = git_dir + len - suffix_len)[-1] != '/' ||
+	/*
+	 * Per-worktree paths are modules/<name>/worktrees/<wt-id>/; strip the
+	 * suffix so the sibling-clash check applies to modules/<name>/ as usual.
+	 */
+	wt_sep = strstr(git_dir, "/worktrees/");
+	check_dir = wt_sep ? xmemdupz(git_dir, wt_sep - git_dir) : git_dir;
+	len = strlen(check_dir);
+
+	if (len <= suffix_len || (p = check_dir + len - suffix_len)[-1] != '/' ||
 	    strcmp(p, submodule_name))
 		BUG("submodule name '%s' not a suffix of git dir '%s'",
 		    submodule_name, git_dir);
@@ -2428,19 +2437,23 @@ static int validate_submodule_legacy_git_dir(char *git_dir, const char *submodul
 			char c = *p;
 
 			*p = '\0';
-			if (is_git_directory(git_dir))
+			if (is_git_directory(check_dir))
 				ret = -1;
 			*p = c;
 
-			if (ret < 0)
-				return error(_("submodule git dir '%s' is "
-					       "inside git dir '%.*s'"),
-					     git_dir,
-					     (int)(p - git_dir), git_dir);
+			if (ret < 0) {
+				error(_("submodule git dir '%s' is "
+					"inside git dir '%.*s'"),
+				      check_dir,
+				      (int)(p - check_dir), check_dir);
+				break;
+			}
 		}
 	}
 
-	return 0;
+	if (wt_sep)
+		free(check_dir);
+	return ret;
 }
 
 int validate_submodule_git_dir(char *git_dir, const char *submodule_name)
@@ -2737,10 +2750,19 @@ void submodule_name_to_gitdir(struct strbuf *buf, struct repository *r,
 {
 	if (!r->repository_format_submodule_path_cfg) {
 		/*
-		 * If extensions.submodulePathConfig is disabled,
-		 * continue to use the plain path.
+		 * In a linked worktree return $GIT_COMMON_DIR/modules/<name>/worktrees/<wt-id>/
+		 * so the per-worktree gitdir lives under the shared submodule repo's
+		 * worktrees/ tree and is visible to "git gc" via get_worktrees().
+		 * In the main worktree return $GIT_COMMON_DIR/modules/<name>/.
 		 */
-		repo_git_path_append(r, buf, "modules/%s", submodule_name);
+		if (r->different_commondir) {
+			const char *sep = find_last_dir_sep(r->gitdir);
+			const char *wt_id = sep ? sep + 1 : r->gitdir;
+			strbuf_addf(buf, "%s/modules/%s/worktrees/%s",
+				    r->commondir, submodule_name, wt_id);
+		} else {
+			repo_git_path_append(r, buf, "modules/%s", submodule_name);
+		}
 	} else {
 		const char *gitdir;
 		char *key;
@@ -2761,8 +2783,12 @@ void submodule_name_to_gitdir(struct strbuf *buf, struct repository *r,
 		strbuf_addstr(buf, gitdir);
 	}
 
-	/* validate because users might have modified the config */
-	if (validate_submodule_git_dir(buf->buf, submodule_name)) {
+	/*
+	 * The per-worktree path modules/<name>/worktrees/<wt-id>/ doesn't end
+	 * with <name>, but sibling clashes can't occur there; skip validation.
+	 */
+	if (!r->different_commondir &&
+	    validate_submodule_git_dir(buf->buf, submodule_name)) {
 		advise(_("enabling extensions.submodulePathConfig might fix the "
 			 "following error, if it's not already enabled."));
 		die(_("refusing to create/use '%s' in another submodule's "
