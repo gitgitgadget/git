@@ -1,10 +1,10 @@
 To: git@vger.kernel.org
-Subject: What's cooking in git.git (May 2026, #02)
-X-master-at: 8a101334b374889938403824af956cd92e47b84d
-X-next-at: b3efc6e59e31dfa0c917464e5e5ae3e0b7f5a886
+Subject: What's cooking in git.git (May 2026, #03)
+X-master-at: 29bd7ed5127255713c1ac2f43b7c6f257d7b4594
+X-next-at: 59709faab07346122d819453f4ad6f3ccdaf618e
 Bcc: lwn@lwn.net, gitster@pobox.com
 
-What's cooking in git.git (May 2026, #02)
+What's cooking in git.git (May 2026, #03)
 -----------------------------------------
 
 Here are the topics that have been cooking in my tree.  Commits
@@ -49,132 +49,112 @@ Release tarballs are available at:
 	https://www.kernel.org/pub/software/scm/git/
 
 --------------------------------------------------
-[Graduated to 'master']
+[New Topics]
 
-* ar/parallel-hooks (2026-04-10) 13 commits
-  (merged to 'next' on 2026-04-13 at 0a6acf0d17)
- + t1800: test SIGPIPE with parallel hooks
- + hook: allow hook.jobs=-1 to use all available CPU cores
- + hook: add hook.<event>.enabled switch
- + hook: move is_known_hook() to hook.c for wider use
- + hook: warn when hook.<friendly-name>.jobs is set
- + hook: add per-event jobs config
- + hook: add -j/--jobs option to git hook run
- + hook: mark non-parallelizable hooks
- + hook: allow pre-push parallel execution
- + hook: allow parallel hook execution
- + hook: parse the hook.jobs config
- + config: add a repo_config_get_uint() helper
- + repository: fix repo_init() memleak due to missing _clear()
+* sp/shallow-deepen-on-non-shallow-repo-fix (2026-05-11) 1 commit
+ - shallow: fix relative deepen on non-shallow repositories
 
- Hook scripts defined via the configuration system can now be
- configured to run in parallel.
- source: <20260410090608.75283-1-adrian.ratiu@collabora.com>
+ "git fetch --deepen=<n>" in a full clone truncated the history to <n>
+ commits deep, which has been corrected to be a no-op instead.
+
+ Will merge to 'next'.
+ source: <20260511192044.169557-1-samo_pogacnik@t-2.net>
 
 
-* bc/rust-by-default (2026-04-09) 4 commits
-  (merged to 'next' on 2026-04-23 at fb9310bfae)
- + Enable Rust by default
- + Linux: link against libdl
- + ci: install cargo on Alpine
- + docs: update version with default Rust support
+* ag/sequencer-remove-unused-struct-member (2026-05-11) 1 commit
+ - sequencer: remove todo_add_branch_context.commit
 
- Rust support is enabled by default (but still allows opting out) in
- some future version of Git.
- source: <20260409224434.1861422-1-sandals@crustytoothpaste.net>
+ Code clean-up.
+
+ Will merge to 'next'.
+ source: <pull.2111.git.1778502113485.gitgitgadget@gmail.com>
 
 
-* cc/promisor-auto-config-url (2026-04-07) 10 commits
-  (merged to 'next' on 2026-04-13 at 289fcba081)
- + t5710: use proper file:// URIs for absolute paths
- + promisor-remote: remove the 'accepted' strvec
- + promisor-remote: keep accepted promisor_info structs alive
- + promisor-remote: refactor accept_from_server()
- + promisor-remote: refactor has_control_char()
- + promisor-remote: refactor should_accept_remote() control flow
- + promisor-remote: reject empty name or URL in advertised remote
- + promisor-remote: clarify that a remote is ignored
- + promisor-remote: pass config entry to all_fields_match() directly
- + promisor-remote: try accepted remotes before others in get_direct()
- (this branch is used by cc/promisor-auto-config-url-more.)
+* ps/maintenance-daemonize-lockfix (2026-05-11) 2 commits
+ - run-command: honor "gc.auto" for auto-maintenance
+ - builtin/maintenance: fix locking with "--detach"
 
- Promisor remote handling has been refactored and fixed in
- preparation for auto-configuration of advertised remotes.
- source: <20260407115243.358642-1-christian.couder@gmail.com>
+ "git maintenance" that goes background did not use the lockfile to
+ prevent multiple maintenance processes from running at the same
+ time, which has been corrected..
 
-
-* dl/cache-tree-fully-valid-fix (2026-04-06) 1 commit
-  (merged to 'next' on 2026-04-13 at 68c82a9f37)
- + cache-tree: fix inverted object existence check in cache_tree_fully_valid
-
- The check that implements the logic to see if an in-core cache-tree
- is fully ready to write out a tree object was broken, which has
- been corrected.
- source: <20260406192711.68870-1-davidlin@stripe.com>
-
-
-* ja/doc-difftool-synopsis-style (2026-04-04) 4 commits
-  (merged to 'next' on 2026-04-13 at 0e6c98f313)
- + doc: convert git-describe manual page to synopsis style
- + doc: convert git-shortlog manual page to synopsis style
- + doc: convert git-range-diff manual page to synopsis style
- + doc: convert git-difftool manual page to synopsis style
-
- Doc mark-up updates.
- source: <pull.2077.git.1775322767.gitgitgadget@gmail.com>
-
-
-* jc/doc-timestamps-in-stat (2026-04-10) 1 commit
-  (merged to 'next' on 2026-04-20 at 0680260012)
- + CodingGuidelines: st_mtimespec vs st_mtim vs st_mtime
-
- Doc update.
- source: <xmqqzf3aofdj.fsf_-_@gitster.g>
-
-
-* ps/test-set-e-clean (2026-04-21) 12 commits
-  (merged to 'next' on 2026-04-23 at 4f69b47b94)
- + t: detect errors outside of test cases
- + t9902: fix use of `read` with `set -e`
- + t6002: fix use of `expr` with `set -e`
- + t1301: don't fail in case setfacl(1) doesn't exist or fails
- + t0008: silence error in subshell when using `grep -v`
- + t: prepare `test_when_finished ()`/`test_atexit()` for `set -e`
- + t: prepare execution of potentially failing commands for `set -e`
- + t: prepare conditional test execution for `set -e`
- + t: prepare `git config --unset` calls for `set -e`
- + t: prepare `stop_git_daemon ()` for `set -e`
- + t: prepare `test_must_fail ()` for `set -e`
- + t: prepare `test_match_signal ()` calls for `set -e`
-
- The test suite harness and many individual test scripts have been
- updated to work correctly when 'set -e' is in effect, which helps
- detect misspelled test commands.
- source: <20260421-b4-pks-tests-with-set-e-v6-0-26330e3061ab@pks.im>
-
-
-* sb/userdiff-lisp-family (2026-04-14) 2 commits
-  (merged to 'next' on 2026-04-20 at 5897c04899)
- + userdiff: extend Scheme support to cover other Lisp dialects
- + userdiff: tighten word-diff test case of the scheme driver
-
- The userdiff driver for the Scheme language has been extended to
- cover other Lisp dialects.
- source: <pull.2000.v4.git.1776220063.gitgitgadget@gmail.com>
-
-
-* sp/refs-reduce-the-repository (2026-04-04) 3 commits
-  (merged to 'next' on 2026-04-09 at bb1d626802)
- + refs/reftable-backend: drop uses of the_repository
- + refs: remove the_hash_algo global state
- + refs: add struct repository parameter in get_files_ref_lock_timeout_ms()
-
- Code clean-up to use the right instance of a repository instance in
- calls inside refs subsystem.
- source: <20260404135914.61195-1-shreyanshpaliwalcmsmn@gmail.com>
+ Comments?
+ source: <20260511-pks-maintenance-fix-lock-with-detach-v1-0-ccd7d62c9a40@pks.im>
 
 --------------------------------------------------
-[New Topics]
+[Graduated to 'master']
+
+* jc/neuter-sideband-fixup (2026-03-05) 6 commits
+  (merged to 'next' on 2026-03-13 at 5a4098b0cd)
+ + sideband: drop 'default' configuration
+ + sideband: offer to configure sanitizing on a per-URL basis
+ + sideband: add options to allow more control sequences to be passed through
+ + sideband: do allow ANSI color sequences by default
+ + sideband: introduce an "escape hatch" to allow control characters
+ + sideband: mask control characters
+ (this branch is used by jc/neuter-sideband-post-3.0.)
+
+ Try to resurrect and reboot a stalled "avoid sending risky escape
+ sequences taken from sideband to the terminal" topic by Dscho.
+
+ Merged early in the cycle to 'master', *without* the final "for
+ now, let's tone it down and allow everything" step, which would
+ give us a chance to prove that the more stricter form that we were
+ planning to postpone until Git 3.0 may not be needed.
+
+ Or people may find issues in the stricter form already.  We'll see.
+ source: <20260305233452.3727126-1-gitster@pobox.com>
+
+
+* jc/t5551-fix-expensive (2026-05-07) 1 commit
+  (merged to 'next' on 2026-05-11 at 1bafedde58)
+ + t5551: "GIT_TEST_LONG=Yes make test" is broken
+
+ Test fix.
+ source: <xmqqqznmeaco.fsf@gitster.g>
+
+
+* jk/revert-aa-reap-transport-child-processes (2026-04-22) 1 commit
+  (merged to 'next' on 2026-05-11 at b41904c1d3)
+ + Revert "transport-helper, connect: use clean_on_exit to reap children on abnormal exit"
+
+ Revert a recent change that introduced a regression to help mksh users.
+ source: <20260422230020.GA1839627@coredump.intra.peff.net>
+
+
+* js/ci-github-actions-update (2026-04-30) 6 commits
+  (merged to 'next' on 2026-05-11 at ba87f84054)
+ + l10n: bump mshick/add-pr-comment from v2 to v3
+ + ci: bump git-for-windows/setup-git-for-windows-sdk from v1 to v2
+ + ci: bump actions/checkout from v5 to v6
+ + ci: bump actions/github-script from v8 to v9
+ + ci: bump actions/{upload,download}-artifact to v7 and v8
+ + ci: bump microsoft/setup-msbuild from v2 to v3
+
+ Update various GitHub Actions versions.
+ source: <pull.2097.v3.git.1777534500.gitgitgadget@gmail.com>
+
+
+* js/maintenance-fix-deadlock-on-win10 (2026-05-07) 2 commits
+  (merged to 'next' on 2026-05-11 at e1b05301d1)
+ + maintenance(geometric): do release the `.idx` files before repacking
+ + mingw: optionally use legacy (non-POSIX) delete semantics
+
+ To help Windows 10 installations, avoid removing files whose
+ contents are still mmap()'ed.
+ source: <pull.2103.v2.git.1778158273.gitgitgadget@gmail.com>
+
+
+* js/t5564-socks-use-short-path (2026-04-29) 1 commit
+  (merged to 'next' on 2026-05-11 at fbb23860ca)
+ + t5564: use a short path for the SOCKS proxy socket
+
+ Avoid hitting the pathname limit for socks proxy socket during the
+ test.
+ source: <pull.2100.v2.git.1777450974159.gitgitgadget@gmail.com>
+
+--------------------------------------------------
+[Cooking]
 
 * js/mingw-no-nedmalloc (2026-05-08) 3 commits
  - mingw: remove the vendored compat/nedmalloc/ subtree
@@ -189,12 +169,13 @@ Release tarballs are available at:
 
 
 * sj/submodule-update-clone-config-fix (2026-05-09) 1 commit
- - submodule-config: fix reading submodule.fetchJobs
+  (merged to 'next' on 2026-05-12 at 5a0094838a)
+ + submodule-config: fix reading submodule.fetchJobs
 
  The configuration variable submodule.fetchJobs was not read correctly,
  which has been corrected.
 
- Will merge to 'next'.
+ Will merge to 'master'.
  source: <pull.2287.v4.git.git.1778385022964.gitgitgadget@gmail.com>
 
 
@@ -204,14 +185,13 @@ Release tarballs are available at:
  Misspelt proxy URL (e.g., httt://...) did not trigger any warning
  or failure, which has been corrected.
 
- Will merge to 'next'?
+ Will merge to 'next'.
  source: <20260505091941.1825-2-aminnimaj@gmail.com>
 
 
-* hn/branch-prune-merged (2026-05-05) 6 commits
+* hn/branch-prune-merged (2026-05-11) 5 commits
  - branch: add --all-remotes flag
  - branch: add branch.<name>.pruneMerged opt-out
- - fetch: add --prune-merged
  - branch: add --prune-merged <remote>
  - branch: let delete_branches warn instead of error on bulk refusal
  - branch: add --forked <remote>
@@ -220,17 +200,18 @@ Release tarballs are available at:
  local branches that have already been merged to the remote-tracking
  branches they track.
 
- Expecting a reroll to remove "fetch" part?
- cf. <20260505220712.93952-1-haraldnordgren@gmail.com>
- source: <pull.2285.v4.git.git.1778009038.gitgitgadget@gmail.com>
+ Expecting a reroll.
+ cf. <xmqqse7xr0t7.fsf@gitster.g>
+ source: <pull.2285.v6.git.git.1778492691.gitgitgadget@gmail.com>
 
 
 * kh/doc-restore-double-underscores-fix (2026-05-05) 1 commit
- - doc: restore: remove double underscore
+  (merged to 'next' on 2026-05-12 at 2e8fc7cdac)
+ + doc: restore: remove double underscore
 
  Doc update.
 
- Will merge to 'next'.
+ Will merge to 'master'.
  source: <double_underscore.670@msgid.xyz>
 
 
@@ -242,18 +223,20 @@ Release tarballs are available at:
  The command line parser for "git diff" learned a few options take
  only non-negative integers.
 
- Will merge to 'next'?
+ Expecting a (hopefully small and final) reroll.
+ cf. <CAC2QwmLH19+LHNaP=13c9Ov8x1zXvyDmEhN69_RpbOY+OqEVZA@mail.gmail.com>
  source: <pull.2105.git.1778022144.gitgitgadget@gmail.com>
 
 
-* ps/clang-w-glibc-2.43-and-_Generic (2026-05-05) 1 commit
- - build: tolerate use of _Generic from glibc 2.43 with Clang
+* ps/clang-w-glibc-2.43-and-_Generic (2026-05-10) 1 commit
+  (merged to 'next' on 2026-05-12 at fca23344f2)
+ + build: tolerate use of _Generic from glibc 2.43 with Clang
 
  Headers from glibc 2.43 when used with clang does not allow
  disabling C11 language features, causing build failures..
 
- Will merge to 'next'.
- source: <20260505-b4-pks-ci-tolerate-glibc-generic-v1-1-5786386fe512@pks.im>
+ Will merge to 'master'.
+ source: <xmqqqzniset2.fsf@gitster.g>
 
 
 * mm/git-url-parse (2026-05-01) 8 commits
@@ -270,14 +253,18 @@ Release tarballs are available at:
  subcommand "git url-parse".
 
  Will merge to 'next'?
+ cf. <xmqqjyt9p9pk.fsf@gitster.g>
  source: <pull.1715.v3.git.git.1777699722.gitgitgadget@gmail.com>
 
 
 * kh/doc-commit-graph (2026-05-07) 1 commit
- - doc: add caveat about turning off commit-graph
+  (merged to 'next' on 2026-05-12 at b9cafeb32d)
+ + doc: add caveat about turning off commit-graph
 
  Ramifications of turning off commit-graph has been documented a bit
  more clearly.
+
+ Will merge to 'master'.
  source: <V3_caveat_commit-graph.6b6@msgid.xyz>
 
 
@@ -287,26 +274,19 @@ Release tarballs are available at:
  Document the fact that .git/info/exclude is shared across worktrees
  linked to the same repository.
 
- Will merge to 'next'?
+ Needs more coverage.
+ cf. <fd05eba1-d821-4cbe-ada6-ccab97308e56@gmail.com>
  source: <d58b6e921d3005c6170fc6c47f175214acb3fa68.1778249267.git.ben.knoble+github@gmail.com>
 
 
-* jc/t5551-fix-expensive (2026-05-07) 1 commit
- - t5551: "GIT_TEST_LONG=Yes make test" is broken
-
- Test fix.
-
- Will merge to 'next'.
- source: <xmqqqznmeaco.fsf@gitster.g>
-
-
-* kk/paint-down-to-common-optim (2026-05-08) 1 commit
+* kk/paint-down-to-common-optim (2026-05-11) 2 commits
  - commit-reach: early exit paint_down_to_common for single merge-base
+ - commit-reach: introduce merge_base_flags enum
 
  "git merge-base" optimization.
 
- Comments?
- source: <pull.2109.git.1778252837132.gitgitgadget@gmail.com>
+ Will merge to 'next'.
+ source: <pull.2109.v4.git.1778504352.gitgitgadget@gmail.com>
 
 
 * st/daemon-sockaddr-fixes (2026-05-08) 1 commit
@@ -314,18 +294,20 @@ Release tarballs are available at:
 
  Correct use of sockaddr API in "git daemon".
 
- Comments?
+ Waiting for response(s) to review comment(s).
+ cf. <agGLRC1ziF5F8Okh@pks.im>
  source: <pull.2299.git.git.1778291290159.gitgitgadget@gmail.com>
 
 
 * ag/rebase-update-refs-limit-to-branches (2026-05-10) 1 commit
- - rebase: ignore non-branch update-refs
+  (merged to 'next' on 2026-05-12 at 5222da09bb)
+ + rebase: ignore non-branch update-refs
 
  "git rebase --update-refs", when used with an rebase.instructionFormat
  with "%d" (describe) in it, tried to update local branch HEAD by
  mistake, which has been corrected.
 
- Will merge to 'next'.
+ Will merge to 'master'.
  source: <20260510224111.64467-2-mail@abhinavg.net>
 
 
@@ -338,29 +320,28 @@ Release tarballs are available at:
  integration branches closer to their origin in the contributor PR
  builds.
 
- Comments?
+ Will merge to 'next'.
  source: <xmqqjyta9630.fsf@gitster.g>
 
 
 * rs/sideband-clear-line-before-print (2026-05-10) 1 commit
- - sideband: clear full line when printing remote messages
+  (merged to 'next' on 2026-05-12 at 83880f8ce6)
+ + sideband: clear full line when printing remote messages
 
  Tweak the way how sideband messages from remote are printed while
  we talk with a remote repository to avoid tickling terminal
  emulator glitches.
 
- Will merge to 'next'.
+ Will merge to 'master'.
  source: <9826dabf-c9a6-4397-8ae6-a24f9c507f1b@web.de>
 
---------------------------------------------------
-[Cooking]
 
 * jh/alias-i18n-fixes (2026-04-24) 1 commit
  - alias: restore support for simple dotted aliases
 
  Further update to the i18n alias support to avoid regressions.
 
- Will merge to 'next'?
+ Will merge to 'next'.
  source: <20260424161707.1514255-1-jonatan@jontes.page>
 
 
@@ -377,7 +358,9 @@ Release tarballs are available at:
 
  Refactor service routines in the ref subsystem backends.
 
- Will merge to 'next'?
+ Will merge to 'next'.
+ cf. <afmFmGo_Sg33Rv6V@pks.im>
+ cf. <87o6isqq4q.fsf@toon--20250203-5JQV3.mail-host-address-is-not-set>
  source: <20260504-refs-move-to-generic-layer-v4-0-936ac2f0b1a3@gmail.com>
 
 
@@ -393,6 +376,7 @@ Release tarballs are available at:
 
  Expecting a reroll.
  cf. <CAD=f0L8-_3sDGGkCzF4WA0xmUtaY_qiz__3zq5AemLgwTsqvsg@mail.gmail.com>
+ cf. <xmqqlddqu013.fsf@gitster.g>
  source: <20260423165432.143598-1-belkid98@gmail.com>
 
 
@@ -403,16 +387,18 @@ Release tarballs are available at:
 
  "git history" learned "fixup" command.
 
- Comments?
+ Will merge to 'next'.
+ cf. <xmqq33zxp4aq.fsf@gitster.g>
  source: <20260427-b4-pks-history-fixup-v3-0-cb908f06264b@pks.im>
 
 
 * rs/grep-column-only-match-fix (2026-04-24) 1 commit
- - grep: fix --column --only-match for 2nd and later matches
+  (merged to 'next' on 2026-05-11 at a0d87e3104)
+ + grep: fix --column --only-match for 2nd and later matches
 
  "git grep" update.
 
- Will merge to 'next'.
+ Will merge to 'master'.
  source: <9bd69678-f04b-41d2-ad74-a386820d34c8@web.de>
 
 
@@ -421,7 +407,8 @@ Release tarballs are available at:
 
  Use a larger buffer size in the code paths to ingest pack stream.
 
- Will merge to 'next'?
+ Will merge to 'next'.
+ cf. <xmqqy0hpnpkb.fsf@gitster.g>
  source: <pull.2282.v4.git.git.1777387660841.gitgitgadget@gmail.com>
 
 
@@ -432,7 +419,8 @@ Release tarballs are available at:
  Signing commit with custom encoding was passing the data to be
  signed at a wrong stage in the pipeline, which has been corrected.
 
- Will merge to 'next'?
+ Will merge to 'next'.
+ cf. <xmqqtssdnpf7.fsf@gitster.g>
  source: <20260427221834.1824543-1-sandals@crustytoothpaste.net>
 
 
@@ -452,20 +440,9 @@ Release tarballs are available at:
  remotes via the promisor.acceptFromServerURL configuration
  variable.
 
- Comments?
+ Waiting for response(s) to review comment(s).
  cf. <875x4yoys5.fsf@toon--20250203-5JQV3.mail-host-address-is-not-set>
  source: <20260427124108.3524129-1-christian.couder@gmail.com>
-
-
-* js/maintenance-fix-deadlock-on-win10 (2026-05-07) 2 commits
- - maintenance(geometric): do release the `.idx` files before repacking
- - mingw: optionally use legacy (non-POSIX) delete semantics
-
- To help Windows 10 installations, avoid removing files whose
- contents are still mmap()'ed.
-
- Will merge to 'next'.
- source: <pull.2103.v2.git.1778158273.gitgitgadget@gmail.com>
 
 
 * js/objects-larger-than-4gb-on-windows (2026-05-08) 11 commits
@@ -489,24 +466,14 @@ Release tarballs are available at:
  source: <pull.2102.v3.git.1778228209.gitgitgadget@gmail.com>
 
 
-* js/t5564-socks-use-short-path (2026-04-29) 1 commit
-  (merged to 'next' on 2026-05-11 at fbb23860ca)
- + t5564: use a short path for the SOCKS proxy socket
-
- Avoid hitting the pathname limit for socks proxy socket during the
- test..
-
- Will merge to 'master'.
- source: <pull.2100.v2.git.1777450974159.gitgitgadget@gmail.com>
-
-
 * kh/doc-log-decorate-list (2026-04-27) 2 commits
  - doc: log: use the same delimiter in description list
  - doc: log: fix --decorate description list
 
  Doc update.
 
- Comments?
+ Will merge to 'next'.
+ cf. <xmqqpl31np0l.fsf@gitster.g>
  source: <CV_doc_log_--decorate_list.626@msgid.xyz>
 
 
@@ -515,19 +482,20 @@ Release tarballs are available at:
 
  Test update.
 
- Comments?
+ Will merge to 'next'.
+ cf. <xmqqfr3xnofn.fsf@gitster.g>
  source: <20260429103607.406339-1-zakariyahali100@gmail.com>
 
 
-* hn/checkout-track-fetch (2026-05-08) 1 commit
+* hn/checkout-track-fetch (2026-05-11) 1 commit
  - checkout: extend --track with a "fetch" mode to refresh start-point
 
  "git checkout --track=..." learned to optionally fetch the branch
  from the remote the new branch will work with.
 
  Comments?
- cf. <f23eb128-958f-475f-911b-eac4f6daddff@gmail.com>
- source: <pull.2281.v7.git.git.1778280727849.gitgitgadget@gmail.com>
+ cf. <xmqqh5odqxh2.fsf@gitster.g>
+ source: <pull.2281.v8.git.git.1778507225500.gitgitgadget@gmail.com>
 
 
 * mf/revision-max-count-oldest (2026-05-09) 2 commits
@@ -537,7 +505,8 @@ Release tarballs are available at:
  "git rev-list" (and "git log" family of commands) learned a new "--max-count-oldest"
  that picks oldest N commits in the range instead of the usual newest.
 
- Comments?
+ Expecting a (hopefully small and final) reroll.
+ cf. <af_SX9mQPLxolg4k@exploit>
  source: <2f71a00b035e25b971641b77a6fa7626f1e2459c.1777578676.git.mroik@delayed.space>
 
 
@@ -549,19 +518,21 @@ Release tarballs are available at:
  Code clean-up.
 
  Comments?
+ cf. <xmqqfr3xp98b.fsf@gitster.g>
  source: <pull.2094.git.1777349126.gitgitgadget@gmail.com>
 
 
 * pw/rename-to-get-current-worktree (2026-05-01) 1 commit
- - worktree: rename get_worktree_from_repository()
+  (merged to 'next' on 2026-05-11 at 36ca1d49e2)
+ + worktree: rename get_worktree_from_repository()
 
  Code clean-up.
 
- Will merge to 'next'.
+ Will merge to 'master'.
  source: <bd48396137f8d1352d11b3bd2dca2848f24a347d.1777648798.git.phillip.wood@dunelm.org.uk>
 
 
-* ds/path-walk-filters (2026-05-04) 11 commits
+* ds/path-walk-filters (2026-05-11) 13 commits
  - path-walk: support `combine` filter
  - path-walk: support `object:type` filter
  - path-walk: support `tree:0` filter
@@ -570,17 +541,19 @@ Release tarballs are available at:
  - path-walk: support blob size limit filter
  - backfill: die on incompatible filter options
  - path-walk: support blobless filter
+ - path-walk: always emit directly-requested objects
  - t/perf: add pack-objects filter and path-walk benchmark
  - pack-objects: pass --objects with --path-walk
+ - t5620: make test work with path-walk var
  - Merge branch 'en/backfill-fixes-and-edges' into ds/path-walk-filters
  (this branch uses en/backfill-fixes-and-edges.)
 
  The "git pack-objects --path-walk" traversal has been integrated
  with several object filters, including blobless and sparse filters.
 
- Expecting a reroll?
- cf. <07b36bd8-376b-4a98-a735-0c0f75452c24@gmail.com>
- source: <pull.2101.v2.git.1777926079.gitgitgadget@gmail.com>
+ Expecting a (hopefully small and final) reroll.
+ cf. <0b4a8595-63e3-427c-8920-af4271ae1714@gmail.com>
+ source: <pull.2101.v3.git.1778523189.gitgitgadget@gmail.com>
 
 
 * en/ort-cached-rename-with-trivial-resolution (2026-04-20) 1 commit
@@ -607,31 +580,6 @@ Release tarballs are available at:
  source: <pull.2096.git.1776731171.gitgitgadget@gmail.com>
 
 
-* jk/revert-aa-reap-transport-child-processes (2026-04-22) 1 commit
-  (merged to 'next' on 2026-05-11 at b41904c1d3)
- + Revert "transport-helper, connect: use clean_on_exit to reap children on abnormal exit"
-
- Revert a recent change that introduced a regression to help mksh users.
-
- Will merge to 'master'.
- source: <20260422230020.GA1839627@coredump.intra.peff.net>
-
-
-* js/ci-github-actions-update (2026-04-30) 6 commits
-  (merged to 'next' on 2026-05-11 at ba87f84054)
- + l10n: bump mshick/add-pr-comment from v2 to v3
- + ci: bump git-for-windows/setup-git-for-windows-sdk from v1 to v2
- + ci: bump actions/checkout from v5 to v6
- + ci: bump actions/github-script from v8 to v9
- + ci: bump actions/{upload,download}-artifact to v7 and v8
- + ci: bump microsoft/setup-msbuild from v2 to v3
-
- Update various GitHub Actions versions.
-
- Will merge to 'master'.
- source: <pull.2097.v3.git.1777534500.gitgitgadget@gmail.com>
-
-
 * mf/format-patch-cover-letter-format-docfix (2026-04-22) 1 commit
   (merged to 'next' on 2026-05-11 at 3cca9cc117)
  + Fix docs for format.commitListFormat
@@ -643,11 +591,12 @@ Release tarballs are available at:
 
 
 * sg/t6112-unwanted-tilde-expansion-fix (2026-04-21) 1 commit
- - t6112: avoid tilde expansion
+  (merged to 'next' on 2026-05-12 at ad2d08eb44)
+ + t6112: avoid tilde expansion
 
  Test fix.
 
- Will merge to 'next'.
+ Will merge to 'master'.
  source: <20260421192132.51172-1-szeder.dev@gmail.com>
 
 
@@ -676,7 +625,7 @@ Release tarballs are available at:
  source: <20260421053334.5414-1-r.siddharth.shrimali@gmail.com>
 
 
-* tb/pseudo-merge-bugfixes (2026-04-21) 9 commits
+* tb/pseudo-merge-bugfixes (2026-05-11) 9 commits
  - pack-bitmap: prevent pattern leak on pseudo-merge re-assignment
  - Documentation: fix broken `sampleRate` in gitpacking(7)
  - pack-bitmap: reject pseudo-merge "sampleRate" of 0
@@ -689,9 +638,8 @@ Release tarballs are available at:
 
  Fixes many bugs in pseudo-merge code.
 
- Expecting (hopefully minor and final) reroll.
- cf. <CABPp-BGkfavqezk2SV3+K6iF8MLm8j_=ijHiPDLmv_U_o_Ykgg@mail.gmail.com>
- source: <cover.1776801694.git.me@ttaylorr.com>
+ Will merge to 'next'.
+ source: <cover.1778546804.git.me@ttaylorr.com>
 
 
 * ds/fetch-negotiation-options (2026-04-22) 7 commits
@@ -729,7 +677,8 @@ Release tarballs are available at:
 
 
 * mc/http-emptyauth-negotiate-fix (2026-04-30) 4 commits
- - doc: clarify http.emptyAuth values
+  (merged to 'next' on 2026-05-12 at 843ae82cd0)
+ + doc: clarify http.emptyAuth values
   (merged to 'next' on 2026-04-20 at 6539524ca2)
  + t5563: add tests for http.emptyAuth with Negotiate
  + http: attempt Negotiate auth in http.emptyAuth=auto mode
@@ -740,7 +689,7 @@ Release tarballs are available at:
  This allows seamless Kerberos ticket-based authentication without
  requiring users to explicitly set 'http.emptyAuth=true'.
 
- Will merge to 'next' and then to 'master'.
+ Will merge to 'master'.
  source: <e0f236767f81ea60f90749d1bc00ab78081efd0e.1777546472.git.gitgitgadget@gmail.com>
  source: <pull.2087.git.1776331259.gitgitgadget@gmail.com>
 
@@ -755,7 +704,8 @@ Release tarballs are available at:
  to collect necessary object names and fetch them in bulk to gain
  reasonable performance.
 
- Needs review.
+ Expecting a reroll.
+ cf. <CABPp-BFdYjnjhSrjEBf8kjYYY2jtrQ_=w0jYR+DDWh3szmtvqQ@mail.gmail.com>
  source: <pull.2089.v2.git.1776472347.gitgitgadget@gmail.com>
 
 
@@ -767,7 +717,7 @@ Release tarballs are available at:
  into account error cases (e.g., an invalid UTF-8 sequence, or a
  control character).
 
- Will merge to 'next'?
+ Will merge to 'next'.
  source: <pull.2093.v3.git.1776699778177.gitgitgadget@gmail.com>
 
 
@@ -796,7 +746,7 @@ Release tarballs are available at:
  tentative objects (like the virtual blob object that represents the
  working tree file used by "git blame").
 
- Will merge to 'next'.
+ Need to wait for the base topioc.
  source: <20260410-b4-pks-odb-source-inmemory-v3-0-22fd0fad58fe@pks.im>
 
 
@@ -814,7 +764,7 @@ Release tarballs are available at:
  allowed; rewrite some of them to avoid the assumption, rewrite
  others to explicitly set safe.bareRepository to allow them.
 
- Will merge to 'next'?
+ Will merge to 'next'.
  source: <pull.2098.v2.git.1777214316.gitgitgadget@gmail.com>
 
 
@@ -826,7 +776,8 @@ Release tarballs are available at:
  configuration files has learned to use the location of worktree
  in its condition.
 
- Comments?
+ Needs review.
+ cf. <xmqq4ikdnn8g.fsf@gitster.g>
  source: <20260403-includeif-worktree-v3-0-109ce5782b03@black-desk.cn>
 
 
@@ -838,19 +789,8 @@ Release tarballs are available at:
  commit, which has been corrected by making the spot below a root
  unavailable.
 
- Will merge to 'next'?
+ Will merge to 'next'.
  source: <20260427102838.44867-2-pabloosabaterr@gmail.com>
-
-
-* jt/config-lock-timeout (2026-04-03) 1 commit
- - config: retry acquiring config.lock for 100ms
-
- The code path to update the configuration file has been taught to
- use a short timeout to retry.
-
- Waiting for a review response.
- cf. <adYvSZeN0ZVqwRhi@pks.im>
- source: <20260403100135.3901610-1-joerg@thalheim.io>
 
 
 * lp/repack-propagate-promisor-debugging-info (2026-04-18) 6 commits
@@ -866,7 +806,8 @@ Release tarballs are available at:
  repack" has been taught to carry this information forward to
  packfiles that are newly created.
 
- Comments?
+ Needs review.
+ cf. <xmqqse7xm8av.fsf@gitster.g>
  source: <cover.1776384902.git.lorenzo.pegorari2002@gmail.com>
 
 
@@ -894,7 +835,8 @@ Release tarballs are available at:
  ODB transaction interface is being reworked to explicitly handle
  object writes.
 
- Will merge to 'next'.
+ Needs leakfix.
+ cf. <20260511175835.GA4811@coredump.intra.peff.net>
  source: <20260402213220.2651523-1-jltobler@gmail.com>
 
 
@@ -930,7 +872,7 @@ Release tarballs are available at:
  have been implemented, and incremental strategy that does not require
  all-into-one repacking has been introduced.
 
- Will merge to 'next'?
+ Will merge to 'next'.
  source: <cover.1777507303.git.me@ttaylorr.com>
 
 
@@ -987,6 +929,7 @@ Release tarballs are available at:
  Documentation updates.
 
  Needs review.
+ cf. <xmqq1pfivfa3.fsf@gitster.g>
  source: <V2_CV_doc_int-tr_key_format.613@msgid.xyz>
 
 
@@ -999,7 +942,7 @@ Release tarballs are available at:
  limited to a specified number of lanes, preventing overly wide output
  in repositories with many branches.
 
- Needs review.
+ Will merge to 'next'?
  cf. <bdff0a5d-b738-4053-9b72-08eba88156de@kdbg.org>
  source: <20260328001113.1275291-1-pabloosabaterr@gmail.com>
 
@@ -1011,7 +954,8 @@ Release tarballs are available at:
  "git bisect" now uses the selected terms (e.g., old/new) more
  consistently in its output.
 
- Needs review.
+ Waiting for response(s) to review comment(s).
+ cf. <xmqqjyu5weli.fsf@gitster.g>
  source: <20260417-bisect-terms-v3-0-d659fa547261@schlaraffenlan.de>
 
 
@@ -1028,34 +972,36 @@ Release tarballs are available at:
 
 
 * hn/git-checkout-m-with-stash (2026-04-28) 5 commits
- - checkout -m: autostash when switching branches
- - checkout: rollback lock on early returns in merge_working_tree
- - sequencer: teach autostash apply to take optional conflict marker labels
- - sequencer: allow create_autostash to run silently
- - stash: add --label-ours, --label-theirs, --label-base for apply
+  (merged to 'next' on 2026-05-11 at 46adae5e5d)
+ + checkout -m: autostash when switching branches
+ + checkout: rollback lock on early returns in merge_working_tree
+ + sequencer: teach autostash apply to take optional conflict marker labels
+ + sequencer: allow create_autostash to run silently
+ + stash: add --label-ours, --label-theirs, --label-base for apply
 
  "git checkout -m another-branch" was invented to deal with local
  changes to paths that are different between the current and the new
  branch, but it gave only one chance to resolve conflicts.  The command
  was taught to create a stash to save the local changes.
 
- Will merge to 'next'.
+ Will merge to 'master'.
  source: <pull.2234.v16.git.git.1777401552.gitgitgadget@gmail.com>
 
 
-* kh/name-rev-custom-format (2026-05-07) 5 commits
- - format-rev: introduce builtin for on-demand pretty formatting
- - name-rev: make dedicated --annotate-stdin --name-only test
- - name-rev: factor code for sharing with a new command
- - name-rev: run clang-format before factoring code
- - name-rev: wrap both blocks in braces
+* kh/name-rev-custom-format (2026-05-11) 5 commits
+  (merged to 'next' on 2026-05-12 at c944d6131e)
+ + format-rev: introduce builtin for on-demand pretty formatting
+ + name-rev: make dedicated --annotate-stdin --name-only test
+ + name-rev: factor code for sharing with a new command
+ + name-rev: run clang-format before factoring code
+ + name-rev: wrap both blocks in braces
 
  A new builtin "git format-rev" is introduced for pretty formatting
  one revision expression per line or commit object names found in
  running text.
 
- Will merge to 'next'.
- source: <V4_CV_format-rev.6aa@msgid.xyz>
+ Will merge to 'master'.
+ source: <V5_CV_format-rev.6c9@msgid.xyz>
 
 
 * js/parseopt-subcommand-autocorrection (2026-04-27) 11 commits
@@ -1075,50 +1021,18 @@ Release tarballs are available at:
  subcommand names.
 
  Expecting a reroll.
+ cf. <xmqqcxz2tzpr.fsf@gitster.g>
  source: <SY0P300MB0801677A2A1E0FD38D06A841CE2A2@SY0P300MB0801.AUSP300.PROD.OUTLOOK.COM>
-
-
-* ab/clone-default-object-filter (2026-03-14) 1 commit
- - clone: add clone.<url>.defaultObjectFilter config
-
- "git clone" learns to pay attention to "clone.<url>.defaultObjectFilter"
- configuration and behave as if the "--filter=<filter-spec>" option
- was given on the command line.
-
- Expecting review responses.
- cf. <abe1l8ONmFIhzaxi@pks.im>
- source: <pull.2058.v6.git.1773553022381.gitgitgadget@gmail.com>
-
-
-* jc/neuter-sideband-fixup (2026-03-05) 6 commits
-  (merged to 'next' on 2026-03-13 at 5a4098b0cd)
- + sideband: drop 'default' configuration
- + sideband: offer to configure sanitizing on a per-URL basis
- + sideband: add options to allow more control sequences to be passed through
- + sideband: do allow ANSI color sequences by default
- + sideband: introduce an "escape hatch" to allow control characters
- + sideband: mask control characters
- (this branch is used by jc/neuter-sideband-post-3.0.)
-
- Try to resurrect and reboot a stalled "avoid sending risky escape
- sequences taken from sideband to the terminal" topic by Dscho.  The
- plan is to keep it in 'next' long enough to see if anybody screams
- with the "everything dropped except for ANSI color escape sequences"
- default.
-
- Will keep in 'next' a bit longer than usual.
- source: <20260305233452.3727126-1-gitster@pobox.com>
 
 
 * jc/neuter-sideband-post-3.0 (2026-03-05) 2 commits
  - sideband: delay sanitizing by default to Git v3.0
  - Merge branch 'jc/neuter-sideband-fixup' into jc/neuter-sideband-post-3.0
- (this branch uses jc/neuter-sideband-fixup.)
 
  The final step, split from earlier attempt by Dscho, to loosen the
  sideband restriction for now and tighten later at Git v3.0 boundary.
 
- On hold, until jc/neuter-sideband-fixup cooks long enough in 'next'.
+ On hold to help the base topic with wider exposure.
  (this branch uses jc/neuter-sideband-fixup.)
  source: <20260305233452.3727126-8-gitster@pobox.com>
 
@@ -1133,18 +1047,6 @@ Release tarballs are available at:
 
  Comments?
  source: <20260305-cs-subtree-split-recursion-v2-0-7266be870ba9@howdoi.land>
-
-
-* pt/promisor-lazy-fetch-no-recurse (2026-03-11) 1 commit
- - promisor-remote: prevent lazy-fetch recursion in child fetch
-
- The mechanism to avoid recursive lazy-fetch from promisor remotes
- was not propagated properly to child "git fetch" processes, which
- has been corrected.
-
- Will discard.
- cf. <xmqqik9s6qvd.fsf@gitster.g>
- source: <pull.2224.v3.git.git.1773238778894.gitgitgadget@gmail.com>
 
 
 * pt/fsmonitor-linux (2026-04-15) 13 commits
@@ -1165,6 +1067,7 @@ Release tarballs are available at:
  The fsmonitor daemon has been implemented for Linux.
 
  Will merge to 'next'?
+ cf. <xmqqa4u5nnxq.fsf@gitster.g>
  source: <pull.2147.v15.git.git.1776259657.gitgitgadget@gmail.com>
 
 
@@ -1179,20 +1082,60 @@ Release tarballs are available at:
  Shrink wasted memory in Myers diff that does not account for common
  prefix and suffix removal.
 
- Will merge to 'next'?
+ Will merge to 'next'.
  source: <cover.1777903579.git.phillip.wood@dunelm.org.uk>
 
 
 * en/xdiff-cleanup-3 (2026-04-29) 6 commits
- - xdiff/xdl_cleanup_records: make execution of action easier to follow
- - xdiff/xdl_cleanup_records: make setting action easier to follow
- - xdiff/xdl_cleanup_records: make limits more clear
- - xdiff/xdl_cleanup_records: use unambiguous types
- - xdiff: use unambiguous types in xdl_bogo_sqrt()
- - xdiff/xdl_cleanup_records: delete local recs pointer
+  (merged to 'next' on 2026-05-12 at e4e72e0f34)
+ + xdiff/xdl_cleanup_records: make execution of action easier to follow
+ + xdiff/xdl_cleanup_records: make setting action easier to follow
+ + xdiff/xdl_cleanup_records: make limits more clear
+ + xdiff/xdl_cleanup_records: use unambiguous types
+ + xdiff: use unambiguous types in xdl_bogo_sqrt()
+ + xdiff/xdl_cleanup_records: delete local recs pointer
  (this branch is used by pw/xdiff-shrink-memory-consumption.)
 
  Preparation of the xdiff/ codebase to work with Rust.
 
- Will merge to 'next'.
+ Will merge to 'master'.
  source: <pull.2156.v6.git.git.1777500495.gitgitgadget@gmail.com>
+
+--------------------------------------------------
+[Discarded]
+
+* pt/promisor-lazy-fetch-no-recurse (2026-03-11) 1 commit
+ . promisor-remote: prevent lazy-fetch recursion in child fetch
+
+ The mechanism to avoid recursive lazy-fetch from promisor remotes
+ was not propagated properly to child "git fetch" processes, which
+ has been corrected.
+
+ Dropped due to a long silence and inactivity.
+ cf. <xmqqik9s6qvd.fsf@gitster.g>
+ source: <pull.2224.v3.git.git.1773238778894.gitgitgadget@gmail.com>
+
+
+* jt/config-lock-timeout (2026-04-03) 1 commit
+ . config: retry acquiring config.lock for 100ms
+
+ The code path to update the configuration file has been taught to
+ use a short timeout to retry.
+
+ Dropped due to a long silence and inactivity.
+ cf. <adYvSZeN0ZVqwRhi@pks.im>
+ cf. <xmqqcxz2vfpa.fsf@gitster.g>
+ source: <20260403100135.3901610-1-joerg@thalheim.io>
+
+
+* ab/clone-default-object-filter (2026-03-14) 1 commit
+ . clone: add clone.<url>.defaultObjectFilter config
+
+ "git clone" learns to pay attention to "clone.<url>.defaultObjectFilter"
+ configuration and behave as if the "--filter=<filter-spec>" option
+ was given on the command line.
+
+ Dropped due to a long silence and inactivity.
+ cf. <abe1l8ONmFIhzaxi@pks.im>
+ cf. <xmqq8q9qvffs.fsf@gitster.g>
+ source: <pull.2058.v6.git.1773553022381.gitgitgadget@gmail.com>
