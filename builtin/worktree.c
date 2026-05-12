@@ -123,6 +123,7 @@ struct add_opts {
 	int checkout;
 	int orphan;
 	int relative_paths;
+	int recurse_submodules;
 	const char *keep_locked;
 };
 
@@ -593,6 +594,20 @@ static int add_worktree(const char *path, const char *refname,
 	    (ret = checkout_worktree(opts, &child_env)))
 		goto done;
 
+	if (!ret && opts->checkout && opts->recurse_submodules) {
+		struct child_process cp = CHILD_PROCESS_INIT;
+		cp.git_cmd = 1;
+		cp.dir = path;
+		strvec_pushl(&cp.args, "submodule", "update",
+			     "--init", "--recursive", NULL);
+		if (opts->quiet)
+			strvec_push(&cp.args, "--quiet");
+		strvec_pushv(&cp.env, child_env.v);
+		ret = run_command(&cp);
+		if (ret)
+			goto done;
+	}
+
 	is_junk = 0;
 	FREE_AND_NULL(junk_work_tree);
 	FREE_AND_NULL(junk_git_dir);
@@ -823,6 +838,8 @@ static int add(int ac, const char **av, const char *prefix,
 			 N_("try to match the new branch name with a remote-tracking branch")),
 		OPT_BOOL(0, "relative-paths", &opts.relative_paths,
 			 N_("use relative paths for worktrees")),
+		OPT_BOOL(0, "recurse-submodules", &opts.recurse_submodules,
+			 N_("initialize submodules in the new worktree")),
 		OPT_END()
 	};
 	int ret;
@@ -842,6 +859,12 @@ static int add(int ac, const char **av, const char *prefix,
 	if (opts.orphan && !opts.checkout)
 		die(_("options '%s' and '%s' cannot be used together"),
 		    "--orphan", "--no-checkout");
+	if (opts.recurse_submodules && !opts.checkout)
+		die(_("options '%s' and '%s' cannot be used together"),
+		    "--recurse-submodules", "--no-checkout");
+	if (opts.recurse_submodules && opts.orphan)
+		die(_("options '%s' and '%s' cannot be used together"),
+		    "--recurse-submodules", "--orphan");
 	if (opts.orphan && ac == 2)
 		die(_("option '%s' and commit-ish cannot be used together"),
 		    "--orphan");
@@ -1200,6 +1223,143 @@ static int unlock_worktree(int ac, const char **av, const char *prefix,
 	return ret;
 }
 
+/*
+ * Recursively check whether every submodule repo under modules_dir has a
+ * worktrees/<wt_id>/ entry.  Recurses into repo/modules/ for nested
+ * submodules and into bare subdirectories for slash-named submodule paths.
+ * Returns > 0 if all repos have the entry, 0 if any lack it, < 0 if none found.
+ */
+static int scan_modules_for_wt_id(const char *modules_dir, const char *wt_id)
+{
+	DIR *dir;
+	struct dirent *de;
+	int found = 0, all_have_entry = 1;
+
+	dir = opendir(modules_dir);
+	if (!dir)
+		return -1;
+
+	while ((de = readdir_skip_dot_and_dotdot(dir)) != NULL) {
+		struct strbuf entry = STRBUF_INIT;
+
+		strbuf_addf(&entry, "%s/%s", modules_dir, de->d_name);
+		if (!is_directory(entry.buf)) {
+			strbuf_release(&entry);
+			continue;
+		}
+
+		strbuf_addstr(&entry, "/HEAD");
+		if (file_exists(entry.buf)) {
+			struct strbuf probe = STRBUF_INIT;
+
+			strbuf_strip_suffix(&entry, "/HEAD");
+			found = 1;
+
+			strbuf_addf(&probe, "%s/worktrees/%s", entry.buf, wt_id);
+			if (!is_directory(probe.buf))
+				all_have_entry = 0;
+
+			/* Check nested submodules. */
+			strbuf_reset(&probe);
+			strbuf_addf(&probe, "%s/modules", entry.buf);
+			if (is_directory(probe.buf)) {
+				int nested = scan_modules_for_wt_id(probe.buf,
+								     wt_id);
+				if (nested == 0)
+					all_have_entry = 0;
+			}
+			strbuf_release(&probe);
+		} else {
+			int sub;
+			/* Intermediate path component for slash-named submodule. */
+			strbuf_strip_suffix(&entry, "/HEAD");
+			sub = scan_modules_for_wt_id(entry.buf, wt_id);
+			if (sub >= 0) {
+				found = 1;
+				if (sub == 0)
+					all_have_entry = 0;
+			}
+		}
+		strbuf_release(&entry);
+	}
+	closedir(dir);
+
+	if (!found)
+		return -1;
+	return all_have_entry ? 1 : 0;
+}
+
+/*
+ * Delete worktrees/<wt_id>/ from every submodule shared repo under modules_dir.
+ * Called by remove_worktree() to clean up per-worktree submodule gitdirs.
+ */
+static void remove_submodule_wt_entries(const char *modules_dir,
+					const char *wt_id)
+{
+	DIR *dir;
+	struct dirent *de;
+
+	dir = opendir(modules_dir);
+	if (!dir)
+		return;
+
+	while ((de = readdir_skip_dot_and_dotdot(dir)) != NULL) {
+		struct strbuf entry = STRBUF_INIT;
+		struct strbuf head = STRBUF_INIT;
+
+		strbuf_addf(&entry, "%s/%s", modules_dir, de->d_name);
+		if (!is_directory(entry.buf)) {
+			strbuf_release(&entry);
+			strbuf_release(&head);
+			continue;
+		}
+
+		strbuf_addf(&head, "%s/HEAD", entry.buf);
+		if (file_exists(head.buf)) {
+			struct strbuf wt_path = STRBUF_INIT;
+			struct strbuf nested = STRBUF_INIT;
+
+			strbuf_addf(&wt_path, "%s/worktrees/%s", entry.buf, wt_id);
+			if (is_directory(wt_path.buf))
+				remove_dir_recursively(&wt_path, 0);
+
+			strbuf_addf(&nested, "%s/modules", entry.buf);
+			if (is_directory(nested.buf))
+				remove_submodule_wt_entries(nested.buf, wt_id);
+
+			strbuf_release(&wt_path);
+			strbuf_release(&nested);
+		} else {
+			remove_submodule_wt_entries(entry.buf, wt_id);
+		}
+		strbuf_release(&entry);
+		strbuf_release(&head);
+	}
+	closedir(dir);
+}
+
+/*
+ * Return true when every submodule in <wt> has its per-worktree gitdir set up
+ * at $GIT_COMMON_DIR/modules/<name>/worktrees/<wt->id>/.  Returns false if any
+ * submodule uses the legacy layout or is not yet initialized.
+ */
+static int worktree_has_per_worktree_submodule_gitdirs(
+	const struct worktree *wt)
+{
+	struct strbuf modules_path = STRBUF_INIT;
+	int result;
+
+	strbuf_addf(&modules_path, "%s/modules", the_repository->commondir);
+	if (!is_directory(modules_path.buf)) {
+		strbuf_release(&modules_path);
+		return 0;
+	}
+
+	result = scan_modules_for_wt_id(modules_path.buf, wt->id);
+	strbuf_release(&modules_path);
+	return result > 0;
+}
+
 static void validate_no_submodules(const struct worktree *wt)
 {
 	struct index_state istate = INDEX_STATE_INIT(the_repository);
@@ -1330,10 +1490,18 @@ static void check_clean_worktree(struct worktree *wt,
 	int ret;
 
 	/*
-	 * Until we sort this out, all submodules are "dirty" and
-	 * will abort this function.
+	 * Per-worktree submodule gitdirs (identified by a "commondir" file
+	 * under the worktree's modules/ directory) are nested inside the
+	 * worktree's own gitdir and therefore disappear for free when the
+	 * gitdir is deleted.  Their working-tree cleanliness is checked by
+	 * "git status --ignore-submodules=none" below, so skip the blanket
+	 * submodule block in that case.
+	 *
+	 * For any other submodule layout (e.g. old shared gitdirs without a
+	 * "commondir" file) retain the existing hard block.
 	 */
-	validate_no_submodules(wt);
+	if (!worktree_has_per_worktree_submodule_gitdirs(wt))
+		validate_no_submodules(wt);
 
 	child_process_init(&cp);
 	strvec_pushf(&cp.env, "%s=%s/.git",
@@ -1424,6 +1592,20 @@ static int remove_worktree(int ac, const char **av, const char *prefix,
 	 * from here.
 	 */
 	ret |= delete_git_dir(wt->id);
+
+	/*
+	 * Per-worktree submodule gitdirs live at
+	 * $GIT_COMMON_DIR/modules/<name>/worktrees/<wt-id>/ and are not
+	 * removed by delete_git_dir(); clean them up explicitly.
+	 */
+	{
+		struct strbuf modules_path = STRBUF_INIT;
+		strbuf_addf(&modules_path, "%s/modules", the_repository->commondir);
+		if (is_directory(modules_path.buf))
+			remove_submodule_wt_entries(modules_path.buf, wt->id);
+		strbuf_release(&modules_path);
+	}
+
 	delete_worktrees_dir_if_empty();
 
 	free_worktrees(worktrees);
