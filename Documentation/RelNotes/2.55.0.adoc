@@ -10,6 +10,10 @@ UI, Workflows & Features
  * The userdiff driver for the Scheme language has been extended to
    cover other Lisp dialects.
 
+ * Terminal control sequences coming over the sideband while talking
+   to a remote repository are mostly disabled by default, except for
+   ANSI color escape sequences.
+
 
 Performance, Internal Implementation, Development Support etc.
 --------------------------------------------------------------
@@ -38,6 +42,23 @@ Fixes since v2.54
    detect misspelled test commands.
    (merge ffe8005b9d ps/test-set-e-clean later to maint).
 
+ * Revert a recent change that introduced a regression to help mksh users.
+   (merge 8b44deebaf jk/revert-aa-reap-transport-child-processes later to maint).
+
  * Other code cleanup, docfix, build fix, etc.
    (merge 80f4b802e9 ja/doc-difftool-synopsis-style later to maint).
    (merge b96490241e jc/doc-timestamps-in-stat later to maint).
+
+ * Update various GitHub Actions versions.
+   (merge 4a6ed9d09f js/ci-github-actions-update later to maint).
+
+ * Avoid hitting the pathname limit for socks proxy socket during the
+   test..
+   (merge b33bea27a2 js/t5564-socks-use-short-path later to maint).
+
+ * Test fix.
+   (merge 66ae1a48ec jc/t5551-fix-expensive later to maint).
+
+ * To help Windows 10 installations, avoid removing files whose
+   contents are still mmap()'ed.
+   (merge 4bb086cfa2 js/maintenance-fix-deadlock-on-win10 later to maint).
