@@ -1771,6 +1771,27 @@ test_expect_success '--forked requires at least one <remote>' '
 	test_grep "at least one <remote>" err
 '
 
+test_expect_success '--forked --all-remotes covers every configured remote' '
+	git -C forked branch --forked --all-remotes >actual &&
+	cat >expect <<-\EOF &&
+	local-foreign
+	local-one
+	local-two
+	main
+	EOF
+	test_cmp expect actual
+'
+
+test_expect_success '--forked --all-remotes still validates explicit <remote>' '
+	test_must_fail git -C forked branch --forked nope --all-remotes 2>err &&
+	test_grep "neither a configured remote nor a remote-tracking branch" err
+'
+
+test_expect_success '--all-remotes alone is rejected' '
+	test_must_fail git -C forked branch --all-remotes 2>err &&
+	test_grep "requires --forked or --prune-merged" err
+'
+
 test_expect_success '--prune-merged: setup' '
 	test_create_repo pm-upstream &&
 	test_commit -C pm-upstream base &&
@@ -1879,6 +1900,29 @@ test_expect_success 'branch -d still deletes a pruneMerged=false branch' '
 
 	git -C pm-optout-d branch -d one &&
 	test_must_fail git -C pm-optout-d rev-parse --verify refs/heads/one
+'
+
+test_expect_success '--prune-merged --all-remotes covers every configured remote' '
+	test_when_finished "rm -rf pm-allremotes pm-other" &&
+	git clone pm-upstream pm-allremotes &&
+	test_create_repo pm-other &&
+	test_commit -C pm-other other-base &&
+	git -C pm-other checkout -b stable &&
+	test_commit -C pm-other foreign-commit &&
+	git -C pm-other branch foreign HEAD &&
+	git -C pm-other checkout main &&
+
+	git -C pm-allremotes remote add other ../pm-other &&
+	git -C pm-allremotes fetch other &&
+	git -C pm-allremotes branch one one-commit &&
+	git -C pm-allremotes branch --set-upstream-to=origin/next one &&
+	git -C pm-allremotes branch foreign other/foreign &&
+	git -C pm-allremotes branch --set-upstream-to=other/stable foreign &&
+
+	git -C pm-allremotes branch --prune-merged --all-remotes &&
+
+	test_must_fail git -C pm-allremotes rev-parse --verify refs/heads/one &&
+	test_must_fail git -C pm-allremotes rev-parse --verify refs/heads/foreign
 '
 
 test_done
