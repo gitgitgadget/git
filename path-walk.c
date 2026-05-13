@@ -249,6 +249,17 @@ static int add_tree_entries(struct path_walk_context *ctx,
 }
 
 /*
+ * Paths starting with '/' (e.g., "/tags", "/tagged-blobs") hold objects that
+ * were directly requested by 'pending' objects rather than discovered during
+ * tree traversal.
+ */
+static int path_is_for_direct_objects(const char *path)
+{
+	ASSERT(path);
+	return path[0] == '/';
+}
+
+/*
  * For each path in paths_to_explore, walk the trees another level
  * and add any found blobs to the batch (but only if they exist and
  * haven't been added yet).
@@ -306,14 +317,19 @@ static int walk_path(struct path_walk_context *ctx,
 
 	if (list->type == OBJ_BLOB &&
 	    ctx->revs->prune_data.nr &&
+	    !path_is_for_direct_objects(path) &&
 	    !match_pathspec(ctx->repo->index, &ctx->revs->prune_data,
 			   path, strlen(path), 0,
 			   NULL, 0))
 		return 0;
 
-	/* Evaluate function pointer on this data, if requested. */
-	if ((list->type == OBJ_TREE && ctx->info->trees) ||
-	    (list->type == OBJ_BLOB && ctx->info->blobs) ||
+	/*
+	 * Evaluate function pointer on this data, if requested.
+	 * Ignore object type filters for tagged objects (path starts
+	 * with `/`).
+	 */
+	if ((list->type == OBJ_TREE && (ctx->info->trees || path_is_for_direct_objects(path))) ||
+	    (list->type == OBJ_BLOB && (ctx->info->blobs || path_is_for_direct_objects(path))) ||
 	    (list->type == OBJ_TAG && ctx->info->tags))
 		ret = ctx->info->path_fn(path, &list->oids, list->type,
 					ctx->info->path_fn_data);
@@ -374,10 +390,8 @@ static int setup_pending_objects(struct path_walk_info *info,
 
 	if (info->tags)
 		CALLOC_ARRAY(tags, 1);
-	if (info->blobs)
-		CALLOC_ARRAY(tagged_blobs, 1);
-	if (info->trees)
-		root_tree_list = strmap_get(&ctx->paths_to_lists, root_path);
+	CALLOC_ARRAY(tagged_blobs, 1);
+	root_tree_list = strmap_get(&ctx->paths_to_lists, root_path);
 
 	/*
 	 * Pending objects include:
@@ -421,8 +435,6 @@ static int setup_pending_objects(struct path_walk_info *info,
 
 		switch (obj->type) {
 		case OBJ_TREE:
-			if (!info->trees)
-				continue;
 			if (pending->path) {
 				char *path = *pending->path ? xstrfmt("%s/", pending->path)
 							    : xstrdup("");
@@ -435,8 +447,6 @@ static int setup_pending_objects(struct path_walk_info *info,
 			break;
 
 		case OBJ_BLOB:
-			if (!info->blobs)
-				continue;
 			if (pending->path)
 				add_path_to_list(ctx, pending->path, OBJ_BLOB, &obj->oid, 1);
 			else
@@ -532,14 +542,16 @@ int walk_objects_by_path(struct path_walk_info *info)
 	push_to_stack(&ctx, root_path);
 
 	/*
-	 * Set these values before preparing the walk to catch
-	 * lightweight tags pointing to non-commits and indexed objects.
+	 * Ensure that prepare_revision_walk() keeps all pending objects
+	 * even through an object type filter.
 	 */
-	info->revs->blob_objects = info->blobs;
-	info->revs->tree_objects = info->trees;
+	info->revs->blob_objects = info->revs->tree_objects = 1;
 
 	if (prepare_revision_walk(info->revs))
 		die(_("failed to setup revision walk"));
+
+	info->revs->blob_objects = info->blobs;
+	info->revs->tree_objects = info->trees;
 
 	/*
 	 * Walk trees to mark them as UNINTERESTING.
