@@ -36,6 +36,8 @@
 #include "wildmatch.h"
 #include "strbuf.h"
 #include "url.h"
+#include "worktree.h"
+#include "copy.h"
 
 #define OPT_QUIET (1 << 0)
 #define OPT_CACHED (1 << 1)
@@ -1896,6 +1898,72 @@ static int dir_contains_only_dotgit(const char *path)
 	return ret;
 }
 
+/*
+ * Best-effort: if the main worktree has the submodule with an in-tree .git/
+ * directory, relocate it to $GIT_COMMON_DIR/modules/<name>/.  Stderr is
+ * suppressed; if nothing is absorbed the caller will clone from URL instead.
+ */
+static void absorb_in_main_worktree(const char *sub_path)
+{
+	struct worktree **worktrees = get_worktrees();
+	const char *main_path = NULL;
+	int i;
+
+	for (i = 0; worktrees[i]; i++) {
+		if (is_main_worktree(worktrees[i])) {
+			main_path = worktrees[i]->path;
+			break;
+		}
+	}
+	if (main_path) {
+		struct child_process cp = CHILD_PROCESS_INIT;
+		cp.git_cmd = 1;
+		cp.dir = main_path;
+		cp.no_stdin = 1;
+		cp.no_stderr = 1;
+		strvec_pushl(&cp.args, "submodule", "absorbgitdirs",
+			     "--", sub_path, NULL);
+		prepare_submodule_repo_env(&cp.env);
+		run_command(&cp);
+	}
+
+	free_worktrees(worktrees);
+}
+
+/*
+ * Create sm_gitdir ($GIT_COMMON_DIR/modules/<name>/worktrees/<wt-id>/) as a
+ * linked-worktree gitdir of shared_sm_gitdir.  Because it lives under the
+ * shared repo's worktrees/ tree, "git gc" on the submodule sees it via
+ * get_worktrees() and protects per-worktree objects from pruning.
+ * connect_work_tree_and_git_dir() writes the "gitdir" back-pointer afterwards.
+ */
+static void setup_worktree_submodule_gitdir(const char *sm_gitdir,
+					    const char *shared_sm_gitdir)
+{
+	struct strbuf path = STRBUF_INIT, rel = STRBUF_INIT;
+	char *head_src;
+
+	if (safe_create_leading_directories_const(the_repository, sm_gitdir) < 0)
+		die(_("could not create directory '%s'"), sm_gitdir);
+	if (mkdir(sm_gitdir, 0777) && errno != EEXIST)
+		die_errno(_("could not create directory '%s'"), sm_gitdir);
+
+	strbuf_addf(&path, "%s/commondir", sm_gitdir);
+	relative_path(shared_sm_gitdir, sm_gitdir, &rel);
+	strbuf_strip_suffix(&rel, "/");
+	write_file(path.buf, "%s", rel.buf);
+	strbuf_reset(&path);
+
+	strbuf_addf(&path, "%s/HEAD", sm_gitdir);
+	head_src = xstrfmt("%s/HEAD", shared_sm_gitdir);
+	if (copy_file(path.buf, head_src, 0666))
+		die(_("could not copy '%s' to '%s'"), head_src, path.buf);
+	free(head_src);
+
+	strbuf_release(&path);
+	strbuf_release(&rel);
+}
+
 static int clone_submodule(const struct module_clone_data *clone_data,
 			   struct string_list *reference)
 {
@@ -1906,21 +1974,31 @@ static int clone_submodule(const struct module_clone_data *clone_data,
 	struct child_process cp = CHILD_PROCESS_INIT;
 	const char *clone_data_path = clone_data->path;
 	char *to_free = NULL;
+	/*
+	 * In a linked worktree, submodule_name_to_gitdir() returns a per-worktree
+	 * gitdir at $GIT_COMMON_DIR/modules/<name>/worktrees/<wt-id>/ (sm_gitdir).
+	 * Any cloning targets the shared location shared_sm_gitdir; afterwards we
+	 * set sm_gitdir up as a linked-worktree gitdir pointing at it so that
+	 * "git gc" on the submodule finds per-worktree objects via get_worktrees().
+	 */
+	char *shared_sm_gitdir =
+		xstrfmt("%s/modules/%s",
+			the_repository->commondir, clone_data->name);
+	/* True when the superproject is in a linked worktree (gitdir != commondir). */
+	int linked_worktree = the_repository->different_commondir;
 
-	if (validate_submodule_path(clone_data_path) < 0)
-		die(NULL);
+	/* Auto-absorb a legacy in-tree gitdir if shared location is missing. */
+	if (linked_worktree && !is_git_directory(shared_sm_gitdir))
+		absorb_in_main_worktree(clone_data->path);
 
-	if (!is_absolute_path(clone_data->path))
-		clone_data_path = to_free = xstrfmt("%s/%s", repo_get_work_tree(the_repository),
-						    clone_data->path);
-
-	if (!file_exists(sm_gitdir)) {
+	if (!file_exists(shared_sm_gitdir)) {
 		if (clone_data->require_init && !stat(clone_data_path, &st) &&
 		    !is_empty_dir(clone_data_path))
 			die(_("directory not empty: '%s'"), clone_data_path);
 
-		if (safe_create_leading_directories_const(the_repository, sm_gitdir) < 0)
-			die(_("could not create directory '%s'"), sm_gitdir);
+		if (safe_create_leading_directories_const(the_repository,
+							      shared_sm_gitdir) < 0)
+			die(_("could not create directory '%s'"), shared_sm_gitdir);
 
 		prepare_possible_alternates(clone_data->name, reference);
 
@@ -1944,8 +2022,8 @@ static int clone_submodule(const struct module_clone_data *clone_data,
 				     ref_storage_format_to_name(clone_data->ref_storage_format));
 		if (clone_data->dissociate)
 			strvec_push(&cp.args, "--dissociate");
-		if (sm_gitdir && *sm_gitdir)
-			strvec_pushl(&cp.args, "--separate-git-dir", sm_gitdir, NULL);
+		if (shared_sm_gitdir && *shared_sm_gitdir)
+			strvec_pushl(&cp.args, "--separate-git-dir", shared_sm_gitdir, NULL);
 		if (clone_data->filter_options && clone_data->filter_options->choice)
 			strvec_pushf(&cp.args, "--filter=%s",
 				     expand_list_objects_filter_spec(
@@ -1996,14 +2074,17 @@ static int clone_submodule(const struct module_clone_data *clone_data,
 	 * To prevent further harm coming from this unintentionally-nested
 	 * gitdir, let's disable it by deleting the `HEAD` file.
 	 */
-	if (validate_submodule_git_dir(sm_gitdir, clone_data->name) < 0) {
-		char *head = xstrfmt("%s/HEAD", sm_gitdir);
+	if (validate_submodule_git_dir(shared_sm_gitdir, clone_data->name) < 0) {
+		char *head = xstrfmt("%s/HEAD", shared_sm_gitdir);
 		unlink(head);
 		free(head);
 		die(_("refusing to create/use '%s' in another submodule's git dir. "
 		      "Enabling extensions.submodulePathConfig should fix this."),
-		    sm_gitdir);
+		    shared_sm_gitdir);
 	}
+
+	if (linked_worktree)
+		setup_worktree_submodule_gitdir(sm_gitdir, shared_sm_gitdir);
 
 	connect_work_tree_and_git_dir(clone_data_path, sm_gitdir, 0);
 
@@ -2025,6 +2106,7 @@ static int clone_submodule(const struct module_clone_data *clone_data,
 	free(error_strategy);
 
 	free(sm_gitdir);
+	free(shared_sm_gitdir);
 	free(p);
 	free(to_free);
 	return 0;
@@ -2727,6 +2809,23 @@ static int ensure_core_worktree(const char *path)
 		char *cfg_file, *abs_path;
 		const char *rel_path;
 		struct strbuf sb = STRBUF_INIT;
+
+		/*
+		 * In a worktree-style submodule (a per-worktree gitdir
+		 * pointing at a shared modules/<name>/ via "commondir"),
+		 * repo_git_path() redirects "config" to the shared file,
+		 * which holds the main worktree's core.worktree.  Writing
+		 * a per-worktree value there would corrupt the main
+		 * worktree's view of the submodule -- and the read in the
+		 * "if" above already returned that shared value, so there
+		 * is nothing useful to refresh.  Worktree-private state
+		 * lives next to the worktree's .git pointer file; leave
+		 * the shared config alone.
+		 */
+		if (subrepo.different_commondir) {
+			repo_clear(&subrepo);
+			return 0;
+		}
 
 		cfg_file = repo_git_path(&subrepo, "config");
 
