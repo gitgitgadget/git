@@ -409,7 +409,7 @@ changes to tracked files.
 	already added to the index. The contents of these files are also
 	staged for the next commit on top of what have been staged before.
 +
-For more details, see the 'pathspec' entry in linkgit:gitglossary[7].
+For more details, see linkgit:gitpathspecs[7].
 
 EXAMPLES
 --------

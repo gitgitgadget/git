@@ -279,7 +279,7 @@ that match the pathspec.  The index entries and working tree files
 are then rolled back to the state in HEAD only for these files,
 too, leaving files that do not match the pathspec intact.
 +
-For more details, see the 'pathspec' entry in linkgit:gitglossary[7].
+For more details, see linkgit:gitpathspecs[7].
 
 _<stash>_::
 	This option is only valid for `apply`, `branch`, `drop`, `pop`,

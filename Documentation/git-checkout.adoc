@@ -371,7 +371,7 @@ leave out at most one of _<rev-a>_ and _<rev-b>_, in which case it defaults to `
 `<pathspec>...`::
 	Limits the paths affected by the operation.
 +
-For more details, see the 'pathspec' entry in linkgit:gitglossary[7].
+For more details, see linkgit:gitpathspecs[7].
 
 DETACHED HEAD
 -------------
