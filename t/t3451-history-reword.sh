@@ -201,12 +201,21 @@ test_expect_success 'can reword a merge commit' '
 		git switch - &&
 		git merge theirs &&
 
-		# It is not possible to replay merge commits embedded in the
-		# history (yet).
-		test_must_fail git -c core.editor=false history reword HEAD~ 2>err &&
-		test_grep "replaying merge commits is not supported yet" err &&
+		# Reword a non-merge commit whose descendants include the
+		# merge: replay carries the merge through.
+		reword_with_message HEAD~ <<-EOF &&
+		ours reworded
+		EOF
+		expect_graph <<-EOF &&
+		*   Merge tag ${SQ}theirs${SQ}
+		|\\
+		| * theirs
+		* | ours reworded
+		|/
+		* base
+		EOF
 
-		# But it is possible to reword a merge commit directly.
+		# And reword a merge commit directly.
 		reword_with_message HEAD <<-EOF &&
 		Reworded merge commit
 		EOF
@@ -214,7 +223,7 @@ test_expect_success 'can reword a merge commit' '
 		*   Reworded merge commit
 		|\
 		| * theirs
-		* | ours
+		* | ours reworded
 		|/
 		* base
 		EOF
