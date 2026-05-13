@@ -130,6 +130,30 @@ long xdl_mmfile_size(mmfile_t *mmf);
 int xdl_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	     xdemitconf_t const *xecfg, xdemitcb_t *ecb);
 
+/*
+ * A half-open byte range identifying one conflict-marker block
+ * (from the leading "<<<<<<<" line through the trailing newline of
+ * the matching ">>>>>>>" line) inside a buffer produced by
+ * xdl_merge.
+ */
+struct xdl_conflict_interval {
+	long start;	/* offset of the first byte of the opener line */
+	long end;	/* offset one past the trailing newline of the closer line */
+};
+
+/*
+ * A growable list of xdl_conflict_interval records, in order of
+ * appearance in the produced buffer. Initialize all-zero; release
+ * with xdl_conflict_intervals_release.
+ */
+struct xdl_conflict_intervals {
+	struct xdl_conflict_interval *items;
+	long nr;
+	long alloc;
+};
+
+void xdl_conflict_intervals_release(struct xdl_conflict_intervals *intervals);
+
 typedef struct s_xmparam {
 	xpparam_t xpp;
 	int marker_size;
@@ -139,6 +163,33 @@ typedef struct s_xmparam {
 	const char *ancestor;	/* label for orig */
 	const char *file1;	/* label for mf1 */
 	const char *file2;	/* label for mf2 */
+	/*
+	 * Side channel for detecting a fresh conflict introduced by
+	 * mf2 (side2) that has no counterpart in orig (the merge
+	 * base). Useful when xdl_merge is the outer merge of a
+	 * replayed merge commit: orig and mf2 may themselves be the
+	 * output of earlier xdl_merge calls that emitted
+	 * conflict-marker hunks into their buffers, and the normal
+	 * three-way merge cannot tell those literal marker bytes
+	 * apart from any other text.
+	 *
+	 * out_intervals (output): when non-NULL, xdl_merge populates
+	 * it with the byte range of every conflict-marker hunk it
+	 * writes into the result buffer. Use this on the inner
+	 * merges whose output will later be fed to an outer merge as
+	 * orig or mf2. The caller initializes the struct all-zero
+	 * and releases it with xdl_conflict_intervals_release.
+	 *
+	 * in_orig_intervals, in_side2_intervals (inputs): when
+	 * in_side2_intervals is non-NULL, xdl_merge counts every
+	 * recorded mf2 hunk that has no byte-equal counterpart in
+	 * orig as an additional conflict in the returned status; if
+	 * in_orig_intervals is NULL, every mf2 hunk is counted. Pass
+	 * NULL on side2 to opt out.
+	 */
+	struct xdl_conflict_intervals *out_intervals;
+	struct xdl_conflict_intervals *in_orig_intervals;
+	struct xdl_conflict_intervals *in_side2_intervals;
 } xmparam_t;
 
 #define DEFAULT_CONFLICT_MARKER_SIZE 7

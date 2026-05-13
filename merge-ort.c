@@ -1371,13 +1371,31 @@ static int collect_merge_info_callback(int n,
 	 * files, then we can use side2 as the resolution.  We cannot
 	 * necessarily do so this for trees, because there may be rename
 	 * destinations within side2.
+	 *
+	 * Under the replay-merge interval side channel, however, this
+	 * shortcut would silently install side2's blob even when an
+	 * earlier inner merge left an unresolved conflict on the path:
+	 * the conflict-marker bytes (or, for non-textual drivers, the
+	 * unresolved binary blob) would land in the result verbatim.
+	 * Skip the shortcut when a side-channel entry says side2 is
+	 * unresolved for this path; the path then falls through to the
+	 * full content merge below, where xdl_merge or the loud-gate
+	 * for non-xdiff drivers will surface the conflict.
 	 */
 	if (side1_matches_mbase && filemask == 0x07) {
-		/* use side2 version as resolution */
-		setup_path_info(opt, &pi, dirname, info->pathlen, fullpath,
-				names, names+2, side2_null, 0,
-				filemask, dirmask, 1);
-		return mask;
+		int side2_unresolved = 0;
+
+		if (opt->in_replay_side2_intervals &&
+		    strmap_get(opt->in_replay_side2_intervals, fullpath))
+			side2_unresolved = 1;
+
+		if (!side2_unresolved) {
+			/* use side2 version as resolution */
+			setup_path_info(opt, &pi, dirname, info->pathlen, fullpath,
+					names, names+2, side2_null, 0,
+					filemask, dirmask, 1);
+			return mask;
+		}
 	}
 
 	/* Similar to above but swapping sides 1 and 2 */
@@ -2105,6 +2123,7 @@ static int merge_3way(struct merge_options *opt,
 {
 	mmfile_t orig, src1, src2;
 	struct ll_merge_options ll_opts = LL_MERGE_OPTIONS_INIT;
+	struct xdl_conflict_intervals out_intervals = { 0 };
 	char *base, *name1, *name2;
 	enum ll_merge_result merge_status;
 
@@ -2115,6 +2134,14 @@ static int merge_3way(struct merge_options *opt,
 	ll_opts.extra_marker_size = extra_marker_size;
 	ll_opts.xdl_opts = opt->xdl_opts;
 	ll_opts.conflict_style = opt->conflict_style;
+	if (opt->out_replay_intervals)
+		ll_opts.out_intervals = &out_intervals;
+	if (opt->in_replay_orig_intervals)
+		ll_opts.in_orig_intervals =
+			strmap_get(opt->in_replay_orig_intervals, path);
+	if (opt->in_replay_side2_intervals)
+		ll_opts.in_side2_intervals =
+			strmap_get(opt->in_replay_side2_intervals, path);
 
 	if (opt->priv->call_depth) {
 		ll_opts.virtual_ancestor = 1;
@@ -2156,6 +2183,28 @@ static int merge_3way(struct merge_options *opt,
 			 path, NULL, NULL, NULL,
 			 "warning: Cannot merge binary files: %s (%s vs. %s)",
 			 path, name1, name2);
+
+	if (opt->out_replay_intervals &&
+	    (out_intervals.nr > 0 ||
+	     merge_status == LL_MERGE_CONFLICT ||
+	     merge_status == LL_MERGE_BINARY_CONFLICT)) {
+		/*
+		 * Inner content merge for this path emitted markers
+		 * (recorded as intervals) or otherwise failed to
+		 * resolve (binary driver or other non-textual
+		 * driver). Either way, the path carries an
+		 * unresolved inner conflict that the outer merge
+		 * needs to know about; transfer ownership of the
+		 * recorded intervals (possibly empty) into the
+		 * caller-owned strmap.
+		 */
+		struct xdl_conflict_intervals *stored;
+		stored = xmalloc(sizeof(*stored));
+		*stored = out_intervals;
+		strmap_put(opt->out_replay_intervals, path, stored);
+	} else {
+		xdl_conflict_intervals_release(&out_intervals);
+	}
 
 	free(base);
 	free(name1);
@@ -4216,6 +4265,26 @@ static int process_entry(struct merge_options *opt,
 			assert(othermask == 2 || othermask == 4);
 			assert(ci->merged.is_null ==
 			       (ci->filemask == ci->match_mask));
+
+			/*
+			 * Replay-merge side channel: when this match_mask
+			 * shortcut would have taken side2's blob verbatim
+			 * (match_mask == 3 means stages 0 and 1 agree,
+			 * stage 2 differs), but an earlier inner merge
+			 * recorded that side2 is unresolved for this
+			 * path, surface a content conflict instead of
+			 * silently committing the inner-conflict blob.
+			 */
+			if (ci->merged.clean && side == 2 &&
+			    !ci->merged.is_null &&
+			    opt->in_replay_side2_intervals &&
+			    strmap_get(opt->in_replay_side2_intervals, path)) {
+				ci->merged.clean = 0;
+				path_msg(opt, CONFLICT_CONTENTS, 0,
+					 path, NULL, NULL, NULL,
+					 _("CONFLICT (content): Merge conflict in %s"),
+					 path);
+			}
 		}
 	} else if (ci->filemask >= 6 &&
 		   (S_IFMT & ci->stages[1].mode) !=
