@@ -73,6 +73,31 @@ test_expect_success 'maintenance.auto config option' '
 	test_subcommand ! git maintenance run --auto --quiet --detach <false
 '
 
+test_expect_success 'gc.auto config option' '
+	GIT_TRACE2_EVENT="$(pwd)/default" git commit --quiet --allow-empty -m 1 &&
+	test_subcommand git maintenance run --auto --quiet --detach <default &&
+	GIT_TRACE2_EVENT="$(pwd)/true" \
+		git -c gc.auto=1 commit --quiet --allow-empty -m 2 &&
+	test_subcommand git maintenance run --auto --quiet --detach <true &&
+	GIT_TRACE2_EVENT="$(pwd)/false" \
+		git -c gc.auto=0 commit --quiet --allow-empty -m 3 &&
+	test_subcommand ! git maintenance run --auto --quiet --detach <false
+'
+
+test_expect_success 'maintenance.auto overrides gc.auto' '
+	test_when_finished "rm -f trace" &&
+
+	test_config maintenance.auto false &&
+	test_config gc.auto 1 &&
+	GIT_TRACE2_EVENT="$(pwd)/trace" git commit --quiet --allow-empty -m 1 &&
+	test_subcommand ! git maintenance run --auto --quiet --detach <trace &&
+
+	test_config maintenance.auto true &&
+	test_config gc.auto 0 &&
+	GIT_TRACE2_EVENT="$(pwd)/trace" git commit --quiet --allow-empty -m 1 &&
+	test_subcommand git maintenance run --auto --quiet --detach <trace
+'
+
 for cfg in maintenance.autoDetach gc.autoDetach
 do
 	test_expect_success "$cfg=true config option" '
