@@ -6409,7 +6409,6 @@ struct todo_add_branch_context {
 	size_t items_nr;
 	size_t items_alloc;
 	struct strbuf *buf;
-	struct commit *commit;
 	struct string_list refs_to_oids;
 };
 
@@ -6498,7 +6497,6 @@ static int todo_list_add_update_ref_commands(struct todo_list *todo_list)
 		ctx.items[ctx.items_nr++] = todo_list->items[i++];
 
 		if (item->commit) {
-			ctx.commit = item->commit;
 			add_decorations_to_list(item->commit, &ctx);
 		}
 	}
