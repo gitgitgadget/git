@@ -227,7 +227,8 @@ against whatever the remote-tracking refs say locally.
 A branch whose upstream no longer resolves locally is left alone
 (its disappearance is not, on its own, evidence that the work was
 integrated). The currently checked-out branch in any worktree is
-always preserved, as is the local branch that mirrors _<remote>_'s
+always preserved, as is any branch with `branch.<name>.pruneMerged`
+set to `false`, and the local branch that mirrors _<remote>_'s
 default branch.
 
 `-v`::
