@@ -7,17 +7,15 @@ test_description='direct path-walk API tests'
 test_expect_success 'setup test repository' '
 	git checkout -b base &&
 
-	# Make some objects that will only be reachable
-	# via non-commit tags.
-	mkdir child &&
-	echo file >child/file &&
-	git add child &&
-	git commit -m "will abandon" &&
-	git tag -a -m "tree" tree-tag HEAD^{tree} &&
-	echo file2 >file2 &&
-	git add file2 &&
-	git commit --amend -m "will abandon" &&
-	git tag tree-tag2 HEAD^{tree} &&
+	# Create tree objects that are only reachable via tags,
+	# not from any commit in the history.
+	child_blob_oid=$(echo "child blob content" | git hash-object -t blob -w --stdin) &&
+	child_tree_oid=$(printf "100644 blob %s\tfile\n" "$child_blob_oid" | git mktree) &&
+	tree_tag_oid=$(printf "040000 tree %s\tchild\n" "$child_tree_oid" | git mktree) &&
+	git tag -a -m "tree" tree-tag "$tree_tag_oid" &&
+	file2_blob_oid=$(echo "tagged tree file2" | git hash-object -t blob -w --stdin) &&
+	tree_tag2_oid=$(printf "040000 tree %s\tchild\n100644 blob %s\tfile2\n" "$child_tree_oid" "$file2_blob_oid" | git mktree) &&
+	git tag tree-tag2 "$tree_tag2_oid" &&
 
 	echo blob >file &&
 	blob_oid=$(git hash-object -t blob -w --stdin <file) &&
@@ -26,7 +24,7 @@ test_expect_success 'setup test repository' '
 	blob2_oid=$(git hash-object -t blob -w --stdin <file2) &&
 	git tag blob-tag2 "$blob2_oid" &&
 
-	rm -fr child file file2 &&
+	rm -fr file file2 &&
 
 	mkdir left &&
 	mkdir right &&
@@ -34,7 +32,7 @@ test_expect_success 'setup test repository' '
 	echo b >left/b &&
 	echo c >right/c &&
 	git add . &&
-	git commit --amend -m "first" &&
+	git commit -m "first" &&
 	git tag -m "first" first HEAD &&
 
 	echo d >right/d &&
