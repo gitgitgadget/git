@@ -2,7 +2,7 @@
 
 usage() {
 	cat <<\EOF
-usage: git jump [--stdout] <mode> [<args>]
+usage: git jump [--stdout] [<mode>] [<args>]
 
 Jump to interesting elements in an editor.
 The <mode> parameter is one of:
@@ -99,8 +99,18 @@ while test $# -gt 0; do
 	shift
 done
 if test $# -lt 1; then
-	usage >&2
-	exit 1
+	if test "$(git rev-parse --is-inside-work-tree 2>/dev/null)" != "true"; then
+		usage >&2
+		exit 1
+	fi
+	if test -n "$(git ls-files -u)"; then
+		set -- merge
+	elif ! git diff --quiet; then
+		set -- diff
+	else
+		usage >&2
+		exit 1
+	fi
 fi
 mode=$1; shift
 type "mode_$mode" >/dev/null 2>&1 || { usage >&2; exit 1; }

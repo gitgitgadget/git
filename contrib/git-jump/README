@@ -55,6 +55,10 @@ To use it, just drop git-jump in your PATH, and then invoke it like
 this:
 
 --------------------------------------------------
+# pick a mode automatically: "merge" if there are unmerged paths,
+# "diff" if the worktree has unstaged changes, otherwise show usage
+git jump
+
 # jump to changes not yet staged for commit
 git jump diff
 
