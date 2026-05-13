@@ -580,6 +580,10 @@ int git_config_parse_key(const char *key, char **store_key, size_t *baselen_)
 			if (!iskeychar(c) ||
 			    (i == baselen + 1 && !isalpha(c))) {
 				error(_("invalid key: %s"), key);
+				if (c == '=')
+					fprintf_ln(stderr,
+						   _("  (did you mean \"git config set %.*s %s\"?)"),
+						   (int)i, key, key + i + 1);
 				goto out_free_ret_1;
 			}
 			c = tolower(c);
