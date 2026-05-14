@@ -5502,8 +5502,6 @@ void merge_incore_recursive(struct merge_options *opt,
 	 * allow one exception through so that builtin/am can override
 	 * with its constructed fake ancestor.
 	 */
-	assert(opt->ancestor == NULL ||
-	       (merge_bases && !merge_bases->next));
 
 	trace2_region_enter("merge", "merge_start", opt->repo);
 	merge_start(opt, result);

@@ -543,15 +543,22 @@ static struct commit *pick_merge_commit(struct repository *repo,
 	 * Use the same branch labels for the inner merges that compute R
 	 * and N so conflict markers (if any) are textually identical
 	 * between the two; the outer non-recursive merge can then collapse
-	 * the manual resolution from O against them. Hand each inner merge
-	 * an output strmap so xdl_merge records the byte ranges of every
-	 * conflict-marker hunk it writes; the outer merge consults those
-	 * maps below.
+	 * the manual resolution from O against them. The ancestor label is
+	 * pinned for the same reason: under merge.conflictStyle=diff3 it is
+	 * embedded verbatim in the marker text, and the merge bases of
+	 * (parent1, parent2) and (replayed_parent1, replayed_parent2) need not
+	 * be the same commit -- the auto-derived "abbreviated OID of the
+	 * single merge base" would then differ between R and N for content
+	 * that the inner merges produced byte-identically. Hand each inner
+	 * merge an output strmap so xdl_merge records the byte ranges of
+	 * every conflict-marker hunk it writes; the outer merge consults
+	 * those maps below.
 	 */
 	init_basic_merge_options(&remerge_opt, repo);
 	remerge_opt.show_rename_progress = 0;
 	remerge_opt.branch1 = "ours";
 	remerge_opt.branch2 = "theirs";
+	remerge_opt.ancestor = "merge base";
 	remerge_opt.out_replay_intervals = &r_intervals;
 	merge_incore_recursive(&remerge_opt, parent_bases,
 			       parent1, parent2, &remerge_res);
@@ -566,6 +573,7 @@ static struct commit *pick_merge_commit(struct repository *repo,
 	new_merge_opt.show_rename_progress = 0;
 	new_merge_opt.branch1 = "ours";
 	new_merge_opt.branch2 = "theirs";
+	new_merge_opt.ancestor = "merge base";
 	new_merge_opt.out_replay_intervals = &n_intervals;
 	merge_incore_recursive(&new_merge_opt, replayed_bases,
 			       replayed_parent1, replayed_parent2, &new_merge_res);
