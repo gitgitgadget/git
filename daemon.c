@@ -674,9 +674,20 @@ static void lookup_hostname(struct hostinfo *hi)
 
 		gai = getaddrinfo(hi->hostname.buf, NULL, &hints, &ai);
 		if (!gai) {
-			struct sockaddr_in *sin_addr = (void *)ai->ai_addr;
+			void *addr;
 
-			inet_ntop(AF_INET, &sin_addr->sin_addr,
+			if (ai->ai_family == AF_INET) {
+				struct sockaddr_in *sa = (void *)ai->ai_addr;
+				addr = &sa->sin_addr;
+			} else if (ai->ai_family == AF_INET6) {
+				struct sockaddr_in6 *sa6 = (void *)ai->ai_addr;
+				addr = &sa6->sin6_addr;
+			} else {
+				die("unexpected address family: %d",
+				    ai->ai_family);
+			}
+
+			inet_ntop(ai->ai_family, addr,
 				  addrbuf, sizeof(addrbuf));
 			strbuf_addstr(&hi->ip_address, addrbuf);
 
