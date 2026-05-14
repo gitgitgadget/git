@@ -1204,6 +1204,7 @@ static const struct special {
 	{ "AM", date_am },
 	{ "never", date_never },
 	{ "now", date_now },
+	{ "today", date_now },
 	{ NULL }
 };
 
