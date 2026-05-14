@@ -98,7 +98,7 @@ static struct transport *gtransport;
 static struct transport *gsecondary;
 static struct refspec refmap = REFSPEC_INIT_FETCH;
 static struct string_list server_options = STRING_LIST_INIT_DUP;
-static struct string_list negotiation_tip = STRING_LIST_INIT_NODUP;
+static struct string_list negotiation_restrict = STRING_LIST_INIT_NODUP;
 
 struct fetch_config {
 	enum display_format display_format;
@@ -1534,13 +1534,13 @@ static int add_oid(const struct reference *ref, void *cb_data)
 	return 0;
 }
 
-static void add_negotiation_tips(struct git_transport_options *smart_options)
+static void add_negotiation_restrict_tips(struct git_transport_options *smart_options)
 {
 	struct oid_array *oids = xcalloc(1, sizeof(*oids));
 	int i;
 
-	for (i = 0; i < negotiation_tip.nr; i++) {
-		const char *s = negotiation_tip.items[i].string;
+	for (i = 0; i < negotiation_restrict.nr; i++) {
+		const char *s = negotiation_restrict.items[i].string;
 		struct refs_for_each_ref_options opts = {
 			.pattern = s,
 		};
@@ -1561,7 +1561,7 @@ static void add_negotiation_tips(struct git_transport_options *smart_options)
 			warning(_("ignoring %s=%s because it does not match any refs"),
 				"--negotiation-restrict", s);
 	}
-	smart_options->negotiation_tips = oids;
+	smart_options->negotiation_restrict_tips = oids;
 }
 
 static struct transport *prepare_transport(struct remote *remote, int deepen,
@@ -1595,9 +1595,9 @@ static struct transport *prepare_transport(struct remote *remote, int deepen,
 		set_option(transport, TRANS_OPT_LIST_OBJECTS_FILTER, spec);
 		set_option(transport, TRANS_OPT_FROM_PROMISOR, "1");
 	}
-	if (negotiation_tip.nr) {
+	if (negotiation_restrict.nr) {
 		if (transport->smart_options)
-			add_negotiation_tips(transport->smart_options);
+			add_negotiation_restrict_tips(transport->smart_options);
 		else
 			warning(_("ignoring %s because the protocol does not support it"),
 				"--negotiation-restrict");
@@ -2566,7 +2566,7 @@ int cmd_fetch(int argc,
 			       N_("specify fetch refmap"), PARSE_OPT_NONEG, parse_refmap_arg),
 		OPT_STRING_LIST('o', "server-option", &server_options, N_("server-specific"), N_("option to transmit")),
 		OPT_IPVERSION(&family),
-		OPT_STRING_LIST(0, "negotiation-restrict", &negotiation_tip, N_("revision"),
+		OPT_STRING_LIST(0, "negotiation-restrict", &negotiation_restrict, N_("revision"),
 				N_("report that we have only objects reachable from this object")),
 		OPT_ALIAS(0, "negotiation-tip", "negotiation-restrict"),
 		OPT_BOOL(0, "negotiate-only", &negotiate_only,
@@ -2658,7 +2658,7 @@ int cmd_fetch(int argc,
 		config.display_format = DISPLAY_FORMAT_PORCELAIN;
 	}
 
-	if (negotiate_only && !negotiation_tip.nr)
+	if (negotiate_only && !negotiation_restrict.nr)
 		die(_("%s needs one or more %s"), "--negotiate-only",
 		    "--negotiation-restrict=*");
 
