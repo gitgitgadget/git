@@ -1077,8 +1077,10 @@ test_expect_success 'bisect terms shows good/bad after start' '
 
 test_expect_success 'bisect start with one term1 and term2' '
 	git bisect reset &&
-	git bisect start --term-old term2 --term-new term1 &&
-	git bisect term2 $HASH1 &&
+	git bisect start --term-old term2 --term-new term1 >bisect_result &&
+	grep "status: waiting for both term2 and term1 commits" bisect_result &&
+	git bisect term2 $HASH1 >bisect_result &&
+	grep "status: waiting for term1 commit, 1 term2 commit known" bisect_result &&
 	git bisect term1 $HASH4 &&
 	git bisect term1 &&
 	git bisect term1 >bisect_result &&
@@ -1100,6 +1102,16 @@ test_expect_success 'bogus command does not start bisect' '
 test_expect_success 'bisect replay with term1 and term2' '
 	git bisect replay log_to_replay.txt >bisect_result &&
 	grep "$HASH2 is the first term1 commit" bisect_result &&
+	git bisect reset
+'
+
+test_expect_success 'bisect run term1 term2' '
+	git bisect reset &&
+	git bisect start --term-new term1 --term-old term2 $HASH4 $HASH1 &&
+	git bisect term1 &&
+	git bisect run false >bisect_result &&
+	grep "bisect found first term1 commit" bisect_result &&
+	git bisect log >log_to_replay.txt &&
 	git bisect reset
 '
 
