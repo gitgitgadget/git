@@ -502,7 +502,7 @@ build_resolution_preserved_under_diff3 () {
 	EOF
 }
 
-test_expect_failure 'previously-resolved conflicts with diff3' '
+test_expect_success 'previously-resolved conflicts with diff3' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
