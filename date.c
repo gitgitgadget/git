@@ -1132,7 +1132,11 @@ static void date_yesterday(struct tm *tm, struct tm *now, int *num)
 
 static void date_time(struct tm *tm, struct tm *now, int hour)
 {
-	if (tm->tm_hour < hour)
+	/*
+	 * If we do not yet have a specified day, we'll use the most recent
+	 * version of "hour" relative to now.  But that may be yesterday.
+	 */
+	if (tm->tm_mday < 0 && tm->tm_hour < hour)
 		update_tm(tm, now, 24*60*60);
 	tm->tm_hour = hour;
 	tm->tm_min = 0;
