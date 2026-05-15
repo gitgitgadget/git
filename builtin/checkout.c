@@ -25,10 +25,12 @@
 #include "preload-index.h"
 #include "read-cache.h"
 #include "refs.h"
+#include "refspec.h"
 #include "remote.h"
 #include "repo-settings.h"
 #include "resolve-undo.h"
 #include "revision.h"
+#include "run-command.h"
 #include "sequencer.h"
 #include "setup.h"
 #include "strvec.h"
@@ -62,6 +64,7 @@ struct checkout_opts {
 	int count_checkout_paths;
 	int overlay_mode;
 	int dwim_new_local_branch;
+	int fetch;
 	int discard_changes;
 	int accept_ref;
 	int accept_pathspec;
@@ -114,6 +117,157 @@ struct branch_info {
 	 */
 	char *checkout;
 };
+
+static int resolve_fetch_target(const char *arg, char **remote_out,
+				char **src_ref_out)
+{
+	const char *slash;
+	char *remote_name;
+	struct remote *remote;
+	struct refspec_item query = { 0 };
+	struct strbuf dst = STRBUF_INIT;
+	const char *rest;
+
+	*remote_out = NULL;
+	*src_ref_out = NULL;
+
+	if (!arg || !*arg)
+		return -1;
+
+	slash = strchr(arg, '/');
+	if (slash == arg)
+		return -1;
+	remote_name = slash ? xstrndup(arg, slash - arg) : xstrdup(arg);
+
+	remote = remote_get(remote_name);
+	if (!remote || !remote_is_configured(remote, 1)) {
+		free(remote_name);
+		return -1;
+	}
+
+	rest = (slash && slash[1]) ? slash + 1 : NULL;
+	if (!rest) {
+		struct object_id oid;
+		const char *head_target;
+		const char *short_target;
+
+		strbuf_addf(&dst, "refs/remotes/%s/HEAD", remote_name);
+		head_target = refs_resolve_ref_unsafe(get_main_ref_store(the_repository),
+						      dst.buf,
+						      RESOLVE_REF_READING |
+						      RESOLVE_REF_NO_RECURSE,
+						      &oid, NULL);
+		strbuf_reset(&dst);
+		if (head_target &&
+		    skip_prefix(head_target, "refs/remotes/", &short_target) &&
+		    skip_prefix(short_target, remote_name, &short_target) &&
+		    *short_target == '/')
+			rest = short_target + 1;
+	}
+
+	if (rest) {
+		strbuf_addf(&dst, "refs/remotes/%s/%s", remote_name, rest);
+		query.dst = dst.buf;
+		if (!remote_find_tracking(remote, &query) && query.src) {
+			*src_ref_out = xstrdup(query.src);
+			free(query.src);
+		} else {
+			*src_ref_out = xstrdup(rest);
+		}
+	}
+
+	strbuf_release(&dst);
+	*remote_out = remote_name;
+	return 0;
+}
+
+static void fetch_remote_for_start_point(const char *arg)
+{
+	char *remote_name = NULL;
+	char *src_ref = NULL;
+	struct child_process cmd = CHILD_PROCESS_INIT;
+	struct strbuf dst_ref = STRBUF_INIT;
+	int have_existing_ref = 0;
+
+	if (resolve_fetch_target(arg, &remote_name, &src_ref))
+		return;
+
+	{
+		struct object_id oid;
+
+		if (strchr(arg, '/'))
+			strbuf_addf(&dst_ref, "refs/remotes/%s", arg);
+		else
+			strbuf_addf(&dst_ref, "refs/remotes/%s/HEAD", arg);
+		if (!refs_read_ref(get_main_ref_store(the_repository),
+				   dst_ref.buf, &oid))
+			have_existing_ref = 1;
+	}
+
+	strvec_pushl(&cmd.args, "fetch", remote_name, NULL);
+	if (src_ref)
+		strvec_push(&cmd.args, src_ref);
+	cmd.git_cmd = 1;
+	if (run_command(&cmd)) {
+		if (have_existing_ref)
+			warning(_("failed to fetch start-point '%s'; "
+				  "using existing '%s'"),
+				arg, dst_ref.buf);
+		else
+			die(_("failed to fetch start-point '%s'"), arg);
+	}
+
+	free(remote_name);
+	free(src_ref);
+	strbuf_release(&dst_ref);
+}
+
+static int parse_opt_checkout_track(const struct option *opt,
+				    const char *arg, int unset)
+{
+	struct checkout_opts *opts = opt->value;
+	struct string_list tokens = STRING_LIST_INIT_DUP;
+	struct string_list_item *item;
+	int saw_direct = 0, saw_inherit = 0;
+	int ret = 0;
+
+	opts->fetch = 0;
+
+	if (unset) {
+		opts->track = BRANCH_TRACK_NEVER;
+		return 0;
+	}
+
+	opts->track = BRANCH_TRACK_EXPLICIT;
+	if (!arg)
+		return 0;
+
+	string_list_split(&tokens, arg, ",", -1);
+	for_each_string_list_item(item, &tokens) {
+		if (!strcmp(item->string, "fetch")) {
+			opts->fetch = 1;
+		} else if (!strcmp(item->string, "direct")) {
+			saw_direct = 1;
+			opts->track = BRANCH_TRACK_EXPLICIT;
+		} else if (!strcmp(item->string, "inherit")) {
+			saw_inherit = 1;
+			opts->track = BRANCH_TRACK_INHERIT;
+		} else {
+			ret = error(_("option `%s' expects \"%s\", \"%s\", "
+				      "or \"%s\""),
+				    "--track", "direct", "inherit", "fetch");
+			goto out;
+		}
+	}
+
+	if (saw_direct && saw_inherit)
+		ret = error(_("option `%s' cannot combine \"%s\" and \"%s\""),
+			    "--track", "direct", "inherit");
+
+out:
+	string_list_clear(&tokens, 0);
+	return ret;
+}
 
 static void branch_info_release(struct branch_info *info)
 {
@@ -1236,7 +1390,6 @@ static int git_checkout_config(const char *var, const char *value,
 		opts->dwim_new_local_branch = git_config_bool(var, value);
 		return 0;
 	}
-
 	if (starts_with(var, "submodule."))
 		return git_default_submodule_config(var, value, NULL);
 
@@ -1733,10 +1886,10 @@ static struct option *add_common_switch_branch_options(
 {
 	struct option options[] = {
 		OPT_BOOL('d', "detach", &opts->force_detach, N_("detach HEAD at named commit")),
-		OPT_CALLBACK_F('t', "track",  &opts->track, "(direct|inherit)",
+		OPT_CALLBACK_F('t', "track",  opts, "(direct|inherit|fetch)[,...]",
 			N_("set branch tracking configuration"),
 			PARSE_OPT_OPTARG,
-			parse_opt_tracking_mode),
+			parse_opt_checkout_track),
 		OPT__FORCE(&opts->force, N_("force checkout (throw away local modifications)"),
 			   PARSE_OPT_NOCOMPLETE),
 		OPT_STRING(0, "orphan", &opts->new_orphan_branch, N_("new-branch"), N_("new unborn branch")),
@@ -1941,8 +2094,13 @@ static int checkout_main(int argc, const char **argv, const char *prefix,
 			opts->dwim_new_local_branch &&
 			opts->track == BRANCH_TRACK_UNSPECIFIED &&
 			!opts->new_branch;
-		int n = parse_branchname_arg(argc, argv, dwim_ok, which_command,
-					     &new_branch_info, opts, &rev);
+		int n;
+
+		if (opts->fetch)
+			fetch_remote_for_start_point(argv[0]);
+
+		n = parse_branchname_arg(argc, argv, dwim_ok, which_command,
+					 &new_branch_info, opts, &rev);
 		argv += n;
 		argc -= n;
 	} else if (!opts->accept_ref && opts->from_treeish) {
