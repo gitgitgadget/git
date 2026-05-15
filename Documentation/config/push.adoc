@@ -45,6 +45,9 @@ If you are working on a centralized workflow (pushing to the same repository you
 pull from, which is typically `origin`), then you need to configure an upstream
 branch with the same name.
 +
+In a triangular workflow (pushing to a remote different from the upstream),
+`simple` behaves like `current`.
++
 This mode is the default since Git 2.0, and is the safest option suited for
 beginners.
 
