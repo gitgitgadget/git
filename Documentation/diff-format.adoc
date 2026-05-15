@@ -19,7 +19,9 @@ compared differs:
 `git-diff-files [<pattern>...]`::
         compares the index and the files on the filesystem.
 
-All the commands print one output line per changed file.
+All the commands print one output line per changed file,
+except `git diff-files` in the case of an unmerged file, which prints
+both an "unmerged" and an "in-place edit" line.
 
 An output line is formatted this way:
 
