@@ -336,6 +336,7 @@ int get_common_dir_noenv(struct strbuf *sb, const char *gitdir)
 			data.len--;
 		data.buf[data.len] = '\0';
 		strbuf_reset(&path);
+		translate_windows_path(&data);
 		if (!is_absolute_path(data.buf))
 			strbuf_addf(&path, "%s/", gitdir);
 		strbuf_addbuf(&path, &data);
@@ -1008,6 +1009,19 @@ const char *read_gitfile_gently(const char *path, int *return_error_code)
 	}
 	buf[len] = '\0';
 	dir = buf + 8;
+
+	{
+		struct strbuf translated = STRBUF_INIT;
+		strbuf_addstr(&translated, dir);
+		if (translate_windows_path(&translated)) {
+			char *new_buf = xstrfmt("gitdir: %s", translated.buf);
+			free(buf);
+			buf = new_buf;
+			len = strlen(buf);
+			dir = buf + 8;
+		}
+		strbuf_release(&translated);
+	}
 
 	if (!is_absolute_path(dir) && (slash = strrchr(path, '/'))) {
 		size_t pathlen = slash+1 - path;
