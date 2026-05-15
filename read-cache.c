@@ -3149,13 +3149,18 @@ static int do_write_locked_index(struct index_state *istate,
 	else
 		ret = close_lock_file_gently(lock);
 
+	if (!(flags & SKIP_INDEX_CHANGE_HOOK))
+		emit_post_index_change(istate);
+	return ret;
+}
+
+void emit_post_index_change(struct index_state *istate)
+{
 	run_hooks_l(the_repository, "post-index-change",
 		    istate->updated_workdir ? "1" : "0",
 		    istate->updated_skipworktree ? "1" : "0", NULL);
 	istate->updated_workdir = 0;
 	istate->updated_skipworktree = 0;
-
-	return ret;
 }
 
 static int write_split_index(struct index_state *istate,

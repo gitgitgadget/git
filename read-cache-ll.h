@@ -284,6 +284,9 @@ int is_index_unborn(struct index_state *);
 /* For use with `write_locked_index()`. */
 #define COMMIT_LOCK		(1 << 0)
 #define SKIP_IF_UNCHANGED	(1 << 1)
+#define SKIP_INDEX_CHANGE_HOOK	(1 << 2)
+
+void emit_post_index_change(struct index_state *istate);
 
 /*
  * Write the index while holding an already-taken lock. Close the lock,

@@ -26,6 +26,8 @@
 #include "strvec.h"
 #include "submodule.h"
 #include "add-interactive.h"
+#include "hook.h"
+#include "abspath.h"
 
 static const char * const builtin_add_usage[] = {
 	N_("git add [<options>] [--] <pathspec>..."),
@@ -37,6 +39,7 @@ static int take_worktree_changes;
 static int add_renormalize;
 static int pathspec_file_nul;
 static int include_sparse;
+static int no_verify;
 static const char *pathspec_from_file;
 
 static int chmod_pathspec(struct repository *repo,
@@ -274,6 +277,7 @@ static struct option builtin_add_options[] = {
 	OPT_BOOL( 0 , "refresh", &refresh_only, N_("don't add, only refresh the index")),
 	OPT_BOOL( 0 , "ignore-errors", &ignore_add_errors, N_("just skip files which cannot be added because of errors")),
 	OPT_BOOL( 0 , "ignore-missing", &ignore_missing, N_("check if - even missing - files are ignored in dry run")),
+	OPT_BOOL( 0 , "no-verify", &no_verify, N_("bypass pre-add hook")),
 	OPT_BOOL(0, "sparse", &include_sparse, N_("allow updating entries outside of the sparse-checkout cone")),
 	OPT_STRING(0, "chmod", &chmod_arg, "(+|-)x",
 		   N_("override the executable bit of the listed files")),
@@ -394,6 +398,8 @@ int cmd_add(int argc,
 	char *ps_matched = NULL;
 	struct lock_file lock_file = LOCK_INIT;
 	struct odb_transaction *transaction;
+	int run_pre_add = 0;
+	char *orig_index_path = NULL;
 
 	repo_config(repo, add_config, NULL);
 
@@ -581,6 +587,11 @@ int cmd_add(int argc,
 		string_list_clear(&only_match_skip_worktree, 0);
 	}
 
+	if (!show_only && !no_verify && hook_exists(repo, "pre-add")) {
+		run_pre_add = 1;
+		orig_index_path = absolute_pathdup(repo_get_index_file(repo));
+	}
+
 	transaction = odb_transaction_begin(repo->objects);
 
 	ps_matched = xcalloc(pathspec.nr, 1);
@@ -603,9 +614,30 @@ int cmd_add(int argc,
 	odb_transaction_commit(transaction);
 
 finish:
-	if (write_locked_index(repo->index, &lock_file,
-			       COMMIT_LOCK | SKIP_IF_UNCHANGED))
-		die(_("unable to write new index file"));
+	if (run_pre_add && repo->index->cache_changed) {
+		struct run_hooks_opt opt = RUN_HOOKS_OPT_INIT;
+
+		if (write_locked_index(repo->index, &lock_file,
+				SKIP_INDEX_CHANGE_HOOK))
+			die(_("unable to write proposed index"));
+
+		strvec_push(&opt.args, orig_index_path);
+		strvec_push(&opt.args, get_lock_file_path(&lock_file));
+		if (run_hooks_opt(repo, "pre-add", &opt)) {
+			rollback_lock_file(&lock_file); /* hook rejected */
+			exit_status = 1;
+		} else if (commit_lock_file(&lock_file)) {
+			die(_("unable to write new index file"));
+		} else {
+			emit_post_index_change(repo->index);
+		}
+	} else {
+		if (write_locked_index(repo->index, &lock_file,
+				       COMMIT_LOCK | SKIP_IF_UNCHANGED))
+			die(_("unable to write new index file"));
+	}
+
+	free(orig_index_path);
 
 	free(ps_matched);
 	dir_clear(&dir);
