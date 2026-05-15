@@ -1150,6 +1150,7 @@ void tips_reachable_from_bases(struct repository *r,
 	size_t min_generation_index = 0;
 	timestamp_t min_generation;
 	struct commit_list *stack = NULL;
+	struct decoration tip_index = { "tip_index" };
 
 	if (!bases || !tips || !tips_nr)
 		return;
@@ -1173,6 +1174,10 @@ void tips_reachable_from_bases(struct repository *r,
 	QSORT(commits, tips_nr, compare_commit_and_index_by_generation);
 	min_generation = commits[0].generation;
 
+	for (size_t i = 0; i < tips_nr; i++)
+		add_decoration(&tip_index, &commits[i].commit->object,
+			       (void *)(i + 1));
+
 	while (bases) {
 		repo_parse_commit(r, bases->item);
 		commit_list_insert(bases->item, &stack);
@@ -1183,14 +1188,11 @@ void tips_reachable_from_bases(struct repository *r,
 		int explored_all_parents = 1;
 		struct commit_list *p;
 		struct commit *c = stack->item;
-		timestamp_t c_gen = commit_graph_generation(c);
 
 		/* Does it match any of our tips? */
-		for (size_t j = min_generation_index; j < tips_nr; j++) {
-			if (c_gen < commits[j].generation)
-				break;
-
-			if (commits[j].commit == c) {
+		{
+			size_t j = (size_t)lookup_decoration(&tip_index, &c->object) - 1;
+			if (j < tips_nr) {
 				tips[commits[j].index]->object.flags |= mark;
 
 				if (j == min_generation_index) {
@@ -1232,6 +1234,7 @@ void tips_reachable_from_bases(struct repository *r,
 	}
 
 done:
+	clear_decoration(&tip_index, NULL);
 	free(commits);
 	repo_clear_commit_marks(r, SEEN);
 	commit_list_free(stack);
