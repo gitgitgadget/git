@@ -49,6 +49,46 @@ static int queue_has_nonstale(struct prio_queue *queue)
 	return 0;
 }
 
+/*
+ * Two conditions must both hold for it to be safe to stop early:
+ *
+ *  1. No merge-base candidate is currently waiting in the queue to be
+ *     recorded (pending_merges_count == 0).  A candidate is a commit
+ *     that has both PARENT1 and PARENT2 set, is not STALE, and has not
+ *     yet had RESULT set on it.
+ *
+ *  2. At least one side has zero exclusive (non-STALE) commits left in
+ *     the queue.  An "exclusive" commit carries exactly one of PARENT1
+ *     or PARENT2 (and not STALE).  New merge-base candidates are born
+ *     only when an exclusive commit on one side propagates its flag
+ *     onto a commit that already carries the other side's flag; if one
+ *     side has run out of exclusive territory, no further such transition
+ *     can occur.  Propagation through STALE commits cannot create new
+ *     candidates, because STALE commits already carry both PARENT1 and
+ *     PARENT2.
+ *
+ * The callers maintain p1_exclusive_count, p2_exclusive_count, and
+ * pending_merges_count incrementally so this check is O(1).  Each
+ * enqueue of a commit in a counted state contributes +1, balanced by
+ * either the flag transition that takes the commit out of that state or
+ * by its eventual dequeue, so the counts stay >= 0.  The
+ * `(p->object.flags & flags) == flags` check on parent visits prevents
+ * enqueueing a second copy of a commit in the same flag state, which
+ * keeps the accounting straight even through diamond merges.  Transitions
+ * out of (PARENT1|PARENT2) -- when a descendant merge-base propagates
+ * STALE up to a still-pending candidate -- are also counted, so that
+ * the candidate is not double-counted when it later dequeues with STALE
+ * set (and thus fails the dequeue-time decrement check).
+ */
+static int no_more_merge_bases_possible(int p1_exclusive_count,
+					int p2_exclusive_count,
+					int pending_merges_count)
+{
+	if (pending_merges_count)
+		return 0;
+	return !p1_exclusive_count || !p2_exclusive_count;
+}
+
 /* all input commits in one and twos[] must have been parsed! */
 static int paint_down_to_common(struct repository *r,
 				struct commit *one, int n,
@@ -59,11 +99,40 @@ static int paint_down_to_common(struct repository *r,
 {
 	struct prio_queue queue = { compare_commits_by_gen_then_commit_date };
 	int i;
+	int found_result = 0;
+	int use_early_termination;
+	int p1_has_infinity = 0, p2_has_infinity = 0;
+	int p1_exclusive_count = 0, p2_exclusive_count = 0;
+	int pending_merges_count = 0;
 	timestamp_t last_gen = GENERATION_NUMBER_INFINITY;
 	struct commit_list **tail = result;
 
 	if (!min_generation && !corrected_commit_dates_enabled(r))
 		queue.compare = compare_commits_by_commit_date;
+
+	/*
+	 * The early termination optimization in no_more_merge_bases_possible()
+	 * relies on the priority queue processing commits in an order where
+	 * parents are never dequeued before their children.  This is guaranteed
+	 * by corrected commit dates (which ensure child_gen > parent_gen) for
+	 * commits covered by the commit graph.  Commits NOT in the graph get
+	 * GENERATION_NUMBER_INFINITY and sort among themselves by commit date,
+	 * which may violate monotonicity if timestamps are out of order.
+	 *
+	 * We handle this by tracking whether both sides have ever touched any
+	 * INFINITY-generation commit; if so, we disable early termination
+	 * because the dequeue order among INFINITY commits is not trustworthy
+	 * and counter updates from later cross-side transitions can desync from
+	 * the queue state.  When only one side has INFINITY commits, the other
+	 * side's territory is entirely in graph space (commit-graph writes are
+	 * ancestry-closed) and no monotonicity violation can occur between them,
+	 * so the optimization remains safe.
+	 *
+	 * Detection happens at push time -- both at the initial pushes of `one`
+	 * and `twos[]` below, and when a parent is (re-)enqueued during the
+	 * walk.  The flag is sticky.
+	 */
+	use_early_termination = corrected_commit_dates_enabled(r);
 
 	one->object.flags |= PARENT1;
 	if (!n) {
@@ -71,11 +140,33 @@ static int paint_down_to_common(struct repository *r,
 		return 0;
 	}
 	prio_queue_put(&queue, one);
+	if (use_early_termination) {
+		p1_exclusive_count++;
+		if (commit_graph_generation(one) == GENERATION_NUMBER_INFINITY)
+			p1_has_infinity = 1;
+	}
 
 	for (i = 0; i < n; i++) {
+		/*
+		 * Skip duplicates within twos[].  A second push of an already-queued
+		 * commit would inflate p2_exclusive_count, leaving a phantom that
+		 * could delay the early-termination check.  (Callers separately
+		 * ensure twos[i] != one, so this is the only duplicate case we must
+		 * handle here.)
+		 */
+		if (twos[i]->object.flags & PARENT2)
+			continue;
 		twos[i]->object.flags |= PARENT2;
 		prio_queue_put(&queue, twos[i]);
+		if (use_early_termination) {
+			p2_exclusive_count++;
+			if (commit_graph_generation(twos[i]) == GENERATION_NUMBER_INFINITY)
+				p2_has_infinity = 1;
+		}
 	}
+
+	if (p1_has_infinity && p2_has_infinity)
+		use_early_termination = 0;
 
 	while (queue_has_nonstale(&queue)) {
 		struct commit *commit = prio_queue_get(&queue);
@@ -93,6 +184,29 @@ static int paint_down_to_common(struct repository *r,
 			break;
 
 		flags = commit->object.flags & (PARENT1 | PARENT2 | STALE);
+
+		/*
+		 * Decrement queue counters for the dequeued commit.  Only maintained
+		 * while early termination is active, since otherwise the increments
+		 * in the parent-visit block below are also skipped.  The counts must
+		 * stay >= 0 in graph-space: each enqueue of a commit in a counted
+		 * state is balanced by exactly one dequeue (or by a flag transition
+		 * that moves it out of that state while still queued).
+		 */
+		if (use_early_termination) {
+			if (flags == PARENT1) {
+				if (p1_exclusive_count-- <= 0)
+					BUG("p1_exclusive_count went negative");
+			} else if (flags == PARENT2) {
+				if (p2_exclusive_count-- <= 0)
+					BUG("p2_exclusive_count went negative");
+			} else if (flags == (PARENT1 | PARENT2) &&
+				 !(commit->object.flags & RESULT)) {
+				if (pending_merges_count-- <= 0)
+					BUG("pending_merges_count went negative");
+			}
+		}
+
 		if (flags == (PARENT1 | PARENT2)) {
 			if (!(commit->object.flags & RESULT)) {
 				commit->object.flags |= RESULT;
@@ -100,7 +214,9 @@ static int paint_down_to_common(struct repository *r,
 			}
 			/* Mark parents of a found merge stale */
 			flags |= STALE;
+			found_result = 1;
 		}
+
 		parents = commit->parents;
 		while (parents) {
 			struct commit *p = parents->item;
@@ -123,9 +239,82 @@ static int paint_down_to_common(struct repository *r,
 				return error(_("could not parse commit %s"),
 					     oid_to_hex(&p->object.oid));
 			}
+			/*
+			 * Adjust counts for the flag transition on this parent.  With
+			 * corrected commit dates, parents are never dequeued before
+			 * their children, so the `old_flags` we read here reflects
+			 * the current state of every queue entry of p.
+			 *
+			 * The `(p->object.flags & flags) == flags` check above ensures
+			 * we never enqueue a second copy of p with the same flag state,
+			 * so the count of queued entries in each exclusive (non-STALE)
+			 * state is exact: +1 on the transition that brings p into that
+			 * state, -1 on the transition that takes it out, and -1 on
+			 * dequeue if it is still in that state.  In particular, the
+			 * counts cannot drift negative.
+			 */
+			if (use_early_termination) {
+				unsigned old_flags = p->object.flags &
+					(PARENT1 | PARENT2 | STALE);
+				unsigned new_flags = (p->object.flags | flags) &
+					(PARENT1 | PARENT2 | STALE);
+
+				/*
+				 * Detect INFINITY exposure on this push.  If both sides have
+				 * touched any INFINITY commit, monotonicity among those
+				 * commits is no longer guaranteed and counters can desync;
+				 * disable the optimization before mutating them.  In normal
+				 * usage (ancestry-closed commit graphs) this is reached only
+				 * when at least one side's tip is itself INFINITY, which is
+				 * already detected at the initial pushes above; the check
+				 * here is a safety net for unusual graph layouts.
+				 */
+				if (commit_graph_generation(p) == GENERATION_NUMBER_INFINITY) {
+					if (new_flags & PARENT1)
+						p1_has_infinity = 1;
+					if (new_flags & PARENT2)
+						p2_has_infinity = 1;
+					if (p1_has_infinity && p2_has_infinity)
+						use_early_termination = 0;
+				}
+
+				if (use_early_termination && old_flags != new_flags) {
+					if (old_flags == PARENT1) {
+						if (p1_exclusive_count-- <= 0)
+							BUG("p1_exclusive_count went negative");
+					} else if (old_flags == PARENT2) {
+						if (p2_exclusive_count-- <= 0)
+							BUG("p2_exclusive_count went negative");
+					} else if (old_flags == (PARENT1 | PARENT2) &&
+						   !(p->object.flags & RESULT)) {
+						/*
+						 * p was a pending merge-base candidate; STALE is being
+						 * propagated to it from a descendant that has already
+						 * been recorded.  When p later dequeues with STALE
+						 * set, the dequeue path will not match its
+						 * (PARENT1|PARENT2)&&!RESULT check, so we must
+						 * decrement here to keep pending_merges_count exact.
+						 */
+						if (pending_merges_count-- <= 0)
+							BUG("pending_merges_count went negative");
+					}
+					if (new_flags == PARENT1)
+						p1_exclusive_count++;
+					else if (new_flags == PARENT2)
+						p2_exclusive_count++;
+					else if (new_flags == (PARENT1 | PARENT2))
+						pending_merges_count++;
+				}
+			}
 			p->object.flags |= flags;
 			prio_queue_put(&queue, p);
 		}
+
+		if (found_result && use_early_termination &&
+		    no_more_merge_bases_possible(p1_exclusive_count,
+						 p2_exclusive_count,
+						 pending_merges_count))
+			break;
 	}
 
 	clear_prio_queue(&queue);
@@ -543,6 +732,15 @@ int repo_in_merge_bases_many(struct repository *r, struct commit *commit,
 	for (i = 0; i < nr_reference; i++) {
 		if (repo_parse_commit(r, reference[i]))
 			return ignore_missing_commits ? 0 : -1;
+
+		/*
+		 * Short-circuit when commit is itself one of the references: a commit
+		 * is trivially reachable from itself.  This also avoids tripping the
+		 * counter invariants in paint_down_to_common(), which assumes the
+		 * initial pushes of `one` and `twos[]` paint disjoint commits.
+		 */
+		if (commit == reference[i])
+			return 1;
 
 		generation = commit_graph_generation(reference[i]);
 		if (generation > max_generation)
