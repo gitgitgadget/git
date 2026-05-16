@@ -1125,7 +1125,6 @@ void ahead_behind(struct repository *r,
 
 struct commit_and_index {
 	struct commit *commit;
-	unsigned int index;
 	timestamp_t generation;
 };
 
@@ -1165,13 +1164,15 @@ void tips_reachable_from_bases(struct repository *r,
 
 	for (size_t i = 0; i < tips_nr; i++) {
 		commits[i].commit = tips[i];
-		commits[i].index = i;
 		commits[i].generation = commit_graph_generation(tips[i]);
 	}
 
 	/* Sort with generation number ascending. */
 	QSORT(commits, tips_nr, compare_commit_and_index_by_generation);
 	min_generation = commits[0].generation;
+
+	for (size_t i = 0; i < tips_nr; i++)
+		commits[i].commit->object.flags |= RESULT;
 
 	while (bases) {
 		repo_parse_commit(r, bases->item);
@@ -1183,20 +1184,16 @@ void tips_reachable_from_bases(struct repository *r,
 		int explored_all_parents = 1;
 		struct commit_list *p;
 		struct commit *c = stack->item;
-		timestamp_t c_gen = commit_graph_generation(c);
 
 		/* Does it match any of our tips? */
-		for (size_t j = min_generation_index; j < tips_nr; j++) {
-			if (c_gen < commits[j].generation)
-				break;
+		{
+			if (c->object.flags & RESULT) {
+				c->object.flags |= mark;
 
-			if (commits[j].commit == c) {
-				tips[commits[j].index]->object.flags |= mark;
-
-				if (j == min_generation_index) {
-					unsigned int k = j + 1;
+				if (commits[min_generation_index].commit->object.flags & mark) {
+					unsigned int k = min_generation_index + 1;
 					while (k < tips_nr &&
-					       (tips[commits[k].index]->object.flags & mark))
+					       (commits[k].commit->object.flags & mark))
 						k++;
 
 					/* Terminate early if all found. */
@@ -1232,6 +1229,8 @@ void tips_reachable_from_bases(struct repository *r,
 	}
 
 done:
+	for (size_t i = 0; i < tips_nr; i++)
+		commits[i].commit->object.flags &= ~RESULT;
 	free(commits);
 	repo_clear_commit_marks(r, SEEN);
 	commit_list_free(stack);
