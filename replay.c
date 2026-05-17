@@ -804,8 +804,21 @@ int replay_revisions(struct rev_info *revs,
 	}
 
 	if (!result.clean) {
+		struct string_list conflicted_files = STRING_LIST_INIT_NODUP;
+
+		fprintf(stdout, "Error replaying %s\ntree %s\n",
+			oid_to_hex(&commit->object.oid),
+			oid_to_hex(&result.tree->object.oid));
 		merge_display_update_messages(&merge_opt, /* detailed */ 0,
 					      &result);
+		merge_get_conflicted_files(&result, &conflicted_files);
+		for (size_t i = 0; i < conflicted_files.nr; i++) {
+			const char *name = conflicted_files.items[i].string;
+			struct stage_info *c = conflicted_files.items[i].util;
+			printf("%06o %s %d\t%s\n",
+			       c->mode, oid_to_hex(&c->oid), c->stage, name);
+		}
+		string_list_clear(&conflicted_files, 1);
 		ret = 1;
 		goto out;
 	}
