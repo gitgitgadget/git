@@ -569,6 +569,7 @@ error("%s:%d: REPLAYED %s as %s", __FILE__, __LINE__, oid_to_hex(&parent2->objec
 		result->clean = remerge_res.clean;
 		goto out;
 	}
+error("%s:%d: R: %s", __FILE__, __LINE__, oid_to_hex(&remerge_res.tree->object.oid));
 
 	/* N: fresh merge of the (possibly rewritten) parents. */
 	init_basic_merge_options(&new_merge_opt, repo);
@@ -584,6 +585,7 @@ error("%s:%d: REPLAYED %s as %s", __FILE__, __LINE__, oid_to_hex(&parent2->objec
 		result->clean = new_merge_res.clean;
 		goto out;
 	}
+error("%s:%d: N: %s", __FILE__, __LINE__, oid_to_hex(&new_merge_res.tree->object.oid));
 
 	/*
 	 * Outer non-recursive merge: base=R, side1=O (pickme), side2=N.
@@ -613,6 +615,7 @@ error("%s:%d: REPLAYED %s as %s", __FILE__, __LINE__, oid_to_hex(&parent2->objec
 	merge_opt->in_replay_side2_intervals = saved_side2_in;
 	if (!result->clean)
 		goto out;
+error("%s:%d: R/O/N: %s", __FILE__, __LINE__, oid_to_hex(&result->tree->object.oid));
 
 	parents = NULL;
 	commit_list_insert(replayed_parent2, &parents);
