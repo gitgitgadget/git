@@ -419,7 +419,9 @@ static struct commit *pick_merge_commit(struct repository *repo,
 	 * fallback for both sides.
 	 */
 	replayed_parent1 = mapped_commit(replayed_commits, parent1, parent1);
+error("%s:%d: REPLAYED %s as %s", __FILE__, __LINE__, oid_to_hex(&parent1->object.oid), oid_to_hex(&replayed_parent1->object.oid));
 	replayed_parent2 = mapped_commit(replayed_commits, parent2, parent2);
+error("%s:%d: REPLAYED %s as %s", __FILE__, __LINE__, oid_to_hex(&parent2->object.oid), oid_to_hex(&replayed_parent2->object.oid));
 
 	/*
 	 * Compute both pairs of merge bases up front. The fast path below
@@ -737,7 +739,9 @@ int replay_revisions(struct rev_info *revs,
 			pos = kh_put_oid_map(replayed_commits,
 					     boundary->object.oid, &hr);
 			if (hr != 0)
+{ error("%s:%d: BOTTOM %s -> %s", __FILE__, __LINE__, oid_to_hex(&boundary->object.oid), oid_to_hex(&onto->object.oid));
 				kh_value(replayed_commits, pos) = onto;
+}
 		}
 	}
 
