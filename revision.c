@@ -3250,8 +3250,13 @@ static void free_void_commit_list(void *list)
 	commit_list_free(list);
 }
 
+static const struct revision_walk_ops *get_walk_ops(struct rev_info *revs);
+
 void release_revisions(struct rev_info *revs)
 {
+	if (revs->walk_ops && revs->walk_ops != get_walk_ops(revs))
+		BUG("walk_ops changed after initial selection");
+
 	commit_list_free(revs->commits);
 	clear_prio_queue(&revs->commit_queue);
 	commit_list_free(revs->ancestry_path_bottoms);
@@ -3942,11 +3947,26 @@ void rev_info_commit_list_to_queue(struct rev_info *revs)
 }
 
 
+/*
+ * Reset walk machinery so the same rev_info can be walked again.
+ * The bitmap code does this: it walks haves, then walks wants on the
+ * same rev_info. Without this reset, the cached walk_ops would skip
+ * re-initialization (e.g. draining the commit list into the priority
+ * queue), causing the second walk to read from an empty queue.
+ */
+static void reset_walk_state(struct rev_info *revs)
+{
+	revs->walk_ops = NULL;
+	clear_prio_queue(&revs->commit_queue);
+}
+
 int prepare_revision_walk(struct rev_info *revs)
 {
 	int i;
 	struct object_array old_pending;
 	struct commit_list **next = &revs->commits;
+
+	reset_walk_state(revs);
 
 	memcpy(&old_pending, &revs->pending, sizeof(old_pending));
 	revs->pending.nr = 0;
@@ -4322,46 +4342,98 @@ static void track_linear(struct rev_info *revs, struct commit *commit)
 	revs->previous_parents = commit_list_copy(commit->parents);
 }
 
+struct revision_walk_ops {
+	void (*init)(struct rev_info *);
+	struct commit *(*next)(struct rev_info *);
+	int (*expand)(struct rev_info *, struct commit *);
+};
+
+static struct commit *next_reflog(struct rev_info *revs)
+{
+	struct commit *commit = next_reflog_entry(revs->reflog_info);
+	if (commit)
+		commit->object.flags &= ~(ADDED | SEEN | SHOWN);
+	return commit;
+}
+
+static int expand_reflog(struct rev_info *revs, struct commit *commit)
+{
+	try_to_simplify_commit(revs, commit);
+	return 0;
+}
+
+static int expand_topo(struct rev_info *revs, struct commit *commit)
+{
+	expand_topo_walk(revs, commit);
+	return 0;
+}
+
+static struct commit *next_streaming(struct rev_info *revs)
+{
+	return prio_queue_get(&revs->commit_queue);
+}
+
+static int expand_streaming(struct rev_info *revs, struct commit *commit)
+{
+	return process_parents(revs, commit, &revs->commit_queue);
+}
+
+static struct commit *next_commit_list(struct rev_info *revs)
+{
+	return pop_commit(&revs->commits);
+}
+
+static int expand_no_walk(struct rev_info *revs, struct commit *commit)
+{
+	return process_parents(revs, commit, NULL);
+}
+
+static struct revision_walk_ops reflog_ops =
+	{ NULL, next_reflog, expand_reflog };
+static struct revision_walk_ops topo_ops =
+	{ NULL, next_topo_commit, expand_topo };
+static struct revision_walk_ops streaming_ops =
+	{ rev_info_commit_list_to_queue, next_streaming, expand_streaming };
+static struct revision_walk_ops no_walk_ops =
+	{ NULL, next_commit_list, expand_no_walk };
+static struct revision_walk_ops limited_ops =
+	{ NULL, next_commit_list, NULL };
+
+static const struct revision_walk_ops *get_walk_ops(struct rev_info *revs)
+{
+	if (revs->reflog_info)
+		return &reflog_ops;
+	if (revs->topo_walk_info)
+		return &topo_ops;
+	if (revs->no_walk)
+		return &no_walk_ops;
+	if (!revs->limited)
+		return &streaming_ops;
+	return &limited_ops;
+}
+
 static struct commit *get_revision_1(struct rev_info *revs)
 {
-	while (1) {
-		struct commit *commit;
+	const struct revision_walk_ops *ops;
 
-		if (revs->reflog_info)
-			commit = next_reflog_entry(revs->reflog_info);
-		else if (revs->topo_walk_info)
-			commit = next_topo_commit(revs);
-		else if (revs->limited || revs->no_walk)
-			commit = pop_commit(&revs->commits);
-		else {
-			if (!revs->commit_queue.nr && revs->commits)
-				rev_info_commit_list_to_queue(revs);
-			commit = prio_queue_get(&revs->commit_queue);
-		}
+	if (!revs->walk_ops) {
+		revs->walk_ops = get_walk_ops(revs);
+		if (revs->walk_ops->init)
+			revs->walk_ops->init(revs);
+	}
+	ops = revs->walk_ops;
+
+	while (1) {
+		struct commit *commit = ops->next(revs);
 
 		if (!commit)
 			return NULL;
 
-		if (revs->reflog_info)
-			commit->object.flags &= ~(ADDED | SEEN | SHOWN);
-
-		/*
-		 * If we haven't done the list limiting, we need to look at
-		 * the parents here. We also need to do the date-based limiting
-		 * that we'd otherwise have done in limit_list().
-		 */
-		if (!revs->limited) {
+		if (ops->expand) {
 			if (revs->max_age != -1 &&
 			    comparison_date(revs, commit) < revs->max_age)
 				continue;
-
-			if (revs->reflog_info)
-				try_to_simplify_commit(revs, commit);
-			else if (revs->topo_walk_info)
-				expand_topo_walk(revs, commit);
-			else if (process_parents(revs, commit,
-					revs->no_walk ?
-					NULL : &revs->commit_queue) < 0) {
+			if (ops->expand(revs, commit) < 0) {
 				if (!revs->ignore_missing_links)
 					die("Failed to traverse parents of commit %s",
 						oid_to_hex(&commit->object.oid));

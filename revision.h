@@ -120,6 +120,7 @@ struct ref_exclusions {
 }
 
 struct oidset;
+struct revision_walk_ops;
 struct topo_walk_info;
 
 struct rev_info {
@@ -367,6 +368,7 @@ struct rev_info {
 	struct revision_sources *sources;
 
 	struct topo_walk_info *topo_walk_info;
+	const struct revision_walk_ops *walk_ops;
 
 	/* Commit graph bloom filter fields */
 	/* The bloom filter key(s) for the pathspec */
