@@ -1,0 +1,4 @@
+if only one of the parents has been rebased (i.e. we're
+replaying O with parents P1' and P2) then can we just cherry-pick the merge -
+instead of merging P1' and P2, use P1 as the merge-base with O and P1' as the
+merge heads?
