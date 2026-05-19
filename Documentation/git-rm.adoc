@@ -43,7 +43,7 @@ directories `d` and `d2`, there is a difference between using
 `git rm 'd*'` and `git rm 'd/*'`, as the former will also remove all
 of directory `d2`.
 +
-For more details, see the _<pathspec>_ entry in linkgit:gitglossary[7].
+For more details, see linkgit:gitpathspecs[7].
 
 `-f`::
 `--force`::

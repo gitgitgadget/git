@@ -1,0 +1,32 @@
+gitpathspecs(7)
+===============
+
+NAME
+----
+gitpathspecs - Specifying path selection for Git
+
+SYNOPSIS
+--------
+gitpathspecs
+
+DESCRIPTION
+-----------
+
+Many Git commands accept pathspec arguments to limit the scope of
+operations to a subset of the tree or working tree.
+
+include::pathspecs.adoc[]
+
+SEE ALSO
+--------
+linkgit:git-add[1],
+linkgit:git-grep[1],
+linkgit:git-diff[1],
+linkgit:git-checkout[1],
+linkgit:git-reset[1],
+linkgit:git-ls-files[1],
+linkgit:gitglossary[7]
+
+GIT
+---
+Part of the linkgit:git[1] suite

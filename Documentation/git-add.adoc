@@ -61,8 +61,7 @@ OPTIONS
 	to ignore removed files; use `--no-all` option if you want
 	to add modified or new files but ignore removed ones.
 +
-For more details about the _<pathspec>_ syntax, see the 'pathspec' entry
-in linkgit:gitglossary[7].
+For more details about the _<pathspec>_ syntax, see linkgit:gitpathspecs[7].
 
 `-n`::
 `--dry-run`::
