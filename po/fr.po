@@ -22910,7 +22910,7 @@ msgstr ""
 "\"git add/rm <spéc-de-réf>\", puis lancez\n"
 "\"git cherry-pick --continue\".\n"
 "Vous pouvez aussi sauter ce commit avec \"git cherry-pick --skip\".\n"
-"Pour arrêter et revenir à l'état antérieur à \"git cherry-pick\",,\n"
+"Pour arrêter et revenir à l'état antérieur à \"git cherry-pick\",\n"
 "lancez \"git cherry-pick --abort\"."
 
 msgid ""
@@ -22925,7 +22925,7 @@ msgstr ""
 "\"git add/rm <spéc-de-réf>\", puis lancez\n"
 "\"git revert --continue\".\n"
 "Vous pouvez aussi sauter ce commit avec \"git revert --skip\".\n"
-"Pour arrêter et revenir à l'état antérieur à \"git revert\",,\n"
+"Pour arrêter et revenir à l'état antérieur à \"git revert\",\n"
 "lancez \"git revert --abort\"."
 
 #, c-format
