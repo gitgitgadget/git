@@ -25,6 +25,7 @@
 #include "utf8.h"
 #include "odb.h"
 #include "userdiff.h"
+#include "diff-process.h"
 #include "submodule.h"
 #include "hashmap.h"
 #include "mem-pool.h"
@@ -3991,6 +3992,7 @@ static void builtin_diff(const char *name_a,
 		xpparam_t xpp;
 		xdemitconf_t xecfg;
 		struct emit_callback ecbdata;
+		struct xdl_hunk *ext_hunks = NULL;
 		unsigned ws_rule;
 		const struct userdiff_funcname *pe;
 
@@ -4031,6 +4033,26 @@ static void builtin_diff(const char *name_a,
 		xpp.ignore_regex_nr = o->ignore_regex_nr;
 		xpp.anchors = o->anchors;
 		xpp.anchors_nr = o->anchors_nr;
+
+		if (!o->ignore_driver_algorithm &&
+		    one->driver && one->driver->process) {
+			size_t ext_hunks_nr = 0;
+			if (!diff_process_get_hunks(
+				    one->driver, name_a,
+				    mf1.ptr, mf1.size,
+				    mf2.ptr, mf2.size,
+				    &ext_hunks, &ext_hunks_nr)) {
+				if (!ext_hunks_nr)
+					goto free_ab_and_return;
+				xpp.external_hunks = ext_hunks;
+				xpp.external_hunks_nr = ext_hunks_nr;
+			} else {
+				warning(_("diff process failed for '%s',"
+					  " falling back to builtin diff"),
+					name_a);
+			}
+		}
+
 		xecfg.ctxlen = o->context;
 		xecfg.interhunkctxlen = o->interhunkcontext;
 		xecfg.flags = XDL_EMIT_FUNCNAMES;
@@ -4111,6 +4133,7 @@ static void builtin_diff(const char *name_a,
 		} else if (xdi_diff_outf(&mf1, &mf2, NULL, fn_out_consume,
 					 &ecbdata, &xpp, &xecfg))
 			die("unable to generate diff for %s", one->path);
+		free(ext_hunks);
 		if (o->word_diff)
 			free_diff_words_data(&ecbdata);
 		if (textconv_one)

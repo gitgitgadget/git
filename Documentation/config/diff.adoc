@@ -218,6 +218,14 @@ endif::git-diff[]
 	Set this option to `true` to make the diff driver cache the text
 	conversion outputs.  See linkgit:gitattributes[5] for details.
 
+`diff.<driver>.process`::
+	The command to run as a long-running diff process.
+	The tool communicates via the pkt-line protocol and returns
+	hunks that are fed into Git's diff and blame pipelines.
+	If the tool returns zero hunks, the file is treated as
+	unchanged for both diff output and blame attribution.
+	See linkgit:gitattributes[5] for details.
+
 `diff.indentHeuristic`::
 	Set this option to `false` to disable the default heuristics
 	that shift diff hunk boundaries to make patches easier to read.

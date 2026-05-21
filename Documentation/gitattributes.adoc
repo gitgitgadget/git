@@ -821,6 +821,46 @@ NOTE: If `diff.<name>.command` is defined for path with the
 (see above), and adding `diff.<name>.algorithm` has no effect, as the
 algorithm is not passed to the external diff driver.
 
+Using an external diff process
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+An external tool can provide content-aware line matching by
+setting `diff.<name>.process` to the command that runs
+the tool.  The tool is a long-running process that communicates via
+the pkt-line protocol (described in
+Documentation/technical/long-running-process-protocol.adoc).
+
+------------------------
+*.c diff=cdiff
+------------------------
+
+----------------------------------------------------------------
+[diff "cdiff"]
+  process = /path/to/diff-process-tool
+----------------------------------------------------------------
+
+The tool receives file pairs and returns hunk descriptors indicating
+which lines changed.  Git feeds these hunks into its standard diff
+pipeline, so all output features (word diff, function context,
+color) work normally.
+
+If the tool fails or returns an error, Git silently falls back to
+the builtin diff algorithm.  If the tool returns invalid hunks
+(out of bounds, overlapping), Git also falls back silently.
+
+The handshake negotiates `version=1` and `capability=hunks`.
+Per-file requests send `command=hunks` and `pathname=<path>`,
+followed by the old and new file content as packetized data.
+The tool responds with lines of the form
+`hunk <old_start> <old_count> <new_start> <new_count>`
+(1-based line numbers), a flush packet, and `status=success`.
+
+If the tool returns zero hunks with `status=success`, Git treats
+the file as having no changes and produces no diff output.
+
+Tools should ignore unknown keys in the per-file request to
+remain forward-compatible.
+
 Defining a custom hunk-header
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
