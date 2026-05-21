@@ -25,7 +25,7 @@ git branch (-c|-C) [<old-branch>] <new-branch>
 git branch (-d|-D) [-r] <branch-name>...
 git branch --edit-description [<branch-name>]
 git branch --forked <branch>...
-git branch --prune-merged <branch>...
+git branch --prune-merged [--dry-run] <branch>...
 
 DESCRIPTION
 -----------
@@ -227,6 +227,10 @@ The following branches are always preserved:
 * any branch with `branch.<name>.pruneMerged` set to `false`;
 * any branch whose upstream no longer resolves locally.
 --
+
+`--dry-run`::
+	With `--prune-merged`, print the branches that would be
+	deleted instead of deleting them.
 
 `-v`::
 `-vv`::

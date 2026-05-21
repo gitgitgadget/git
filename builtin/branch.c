@@ -41,7 +41,7 @@ static const char * const builtin_branch_usage[] = {
 	N_("git branch [<options>] [-r | -a] [--points-at]"),
 	N_("git branch [<options>] [-r | -a] [--format]"),
 	N_("git branch [<options>] --forked <branch>..."),
-	N_("git branch [<options>] --prune-merged <branch>..."),
+	N_("git branch [<options>] --prune-merged [--dry-run] <branch>..."),
 	NULL
 };
 
@@ -231,7 +231,8 @@ static void delete_branch_config(const char *branchname)
 }
 
 static int delete_branches(int argc, const char **argv, int force, int kinds,
-			   int quiet, int warn_only, int *n_not_merged)
+			   int quiet, int warn_only, int dry_run,
+			   int *n_not_merged)
 {
 	struct commit *head_rev = NULL;
 	struct object_id oid;
@@ -324,6 +325,12 @@ static int delete_branches(int argc, const char **argv, int force, int kinds,
 					force, warn_only, n_not_merged)) {
 			if (!warn_only)
 				ret = 1;
+			goto next;
+		}
+
+		if (dry_run) {
+			printf(_("Would delete branch '%s'\n"),
+			       name + branch_name_pos);
 			goto next;
 		}
 
@@ -802,7 +809,8 @@ static int list_forked_branches(int argc, const char **argv)
 	return 0;
 }
 
-static int prune_merged_branches(int argc, const char **argv, int quiet)
+static int prune_merged_branches(int argc, const char **argv,
+				 int dry_run, int quiet)
 {
 	struct ref_store *refs = get_main_ref_store(the_repository);
 	struct string_list candidates = STRING_LIST_INIT_DUP;
@@ -855,7 +863,7 @@ static int prune_merged_branches(int argc, const char **argv, int quiet)
 	if (deletable.nr)
 		ret = delete_branches(deletable.nr, deletable.v,
 				      0, FILTER_REFS_BRANCHES, quiet,
-				      1, &n_not_merged);
+				      1, dry_run, &n_not_merged);
 
 	if (n_not_merged && !quiet)
 		fprintf(stderr,
@@ -915,6 +923,7 @@ int cmd_branch(int argc,
 	    unset_upstream = 0, show_current = 0, edit_description = 0;
 	int forked = 0;
 	int prune_merged = 0;
+	int dry_run = 0;
 	const char *new_upstream = NULL;
 	int noncreate_actions = 0;
 	/* possible options */
@@ -972,6 +981,8 @@ int cmd_branch(int argc,
 			N_("list local branches whose upstream matches the given <branch>...")),
 		OPT_BOOL(0, "prune-merged", &prune_merged,
 			N_("delete local branches whose upstream matches the given <branch>... and that are merged into it")),
+		OPT_BOOL(0, "dry-run", &dry_run,
+			N_("with --prune-merged, only print what would be deleted")),
 		OPT__FORCE(&force, N_("force creation, move/rename, deletion"), PARSE_OPT_NOCOMPLETE),
 		OPT_MERGED(&filter, N_("print only branches that are merged")),
 		OPT_NO_MERGED(&filter, N_("print only branches that are not merged")),
@@ -1014,6 +1025,9 @@ int cmd_branch(int argc,
 
 	argc = parse_options(argc, argv, prefix, options, builtin_branch_usage,
 			     0);
+
+	if (dry_run && !prune_merged)
+		die(_("--dry-run requires --prune-merged"));
 
 	if (!delete && !rename && !copy && !edit_description && !new_upstream &&
 	    !show_current && !unset_upstream && !forked && !prune_merged &&
@@ -1065,13 +1079,13 @@ int cmd_branch(int argc,
 		if (!argc)
 			die(_("branch name required"));
 		ret = delete_branches(argc, argv, delete > 1, filter.kind,
-				      quiet, 0, NULL);
+				      quiet, 0, 0, NULL);
 		goto out;
 	} else if (forked) {
 		ret = list_forked_branches(argc, argv);
 		goto out;
 	} else if (prune_merged) {
-		ret = prune_merged_branches(argc, argv, quiet);
+		ret = prune_merged_branches(argc, argv, dry_run, quiet);
 		goto out;
 	} else if (show_current) {
 		print_current_branch_name();

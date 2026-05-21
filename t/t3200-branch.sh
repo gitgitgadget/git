@@ -1964,4 +1964,39 @@ test_expect_success 'branch -d still deletes a pruneMerged=false branch' '
 	test_must_fail git -C pm-optout-d rev-parse --verify refs/heads/one
 '
 
+test_expect_success '--prune-merged --dry-run prints but does not delete' '
+	test_when_finished "rm -rf pm-dryrun" &&
+	git clone pm-upstream pm-dryrun &&
+	git -C pm-dryrun branch one one-commit &&
+	git -C pm-dryrun branch --set-upstream-to=origin/next one &&
+
+	git -C pm-dryrun branch --prune-merged --dry-run "origin/*" >out &&
+	test_grep "Would delete branch .one." out &&
+	git -C pm-dryrun rev-parse --verify refs/heads/one
+'
+
+test_expect_success '--prune-merged --dry-run skips un-integrated branches' '
+	test_when_finished "rm -rf pm-dryrun-unmerged" &&
+	git clone pm-upstream pm-dryrun-unmerged &&
+	git -C pm-dryrun-unmerged checkout -b wip origin/next &&
+	git -C pm-dryrun-unmerged branch --set-upstream-to=origin/next wip &&
+	test_commit -C pm-dryrun-unmerged local-only &&
+	git -C pm-dryrun-unmerged checkout - &&
+	git -C pm-dryrun-unmerged branch merged one-commit &&
+	git -C pm-dryrun-unmerged branch --set-upstream-to=origin/next merged &&
+
+	git -C pm-dryrun-unmerged branch --prune-merged --dry-run "origin/*" \
+		>out 2>err &&
+	test_grep "Would delete branch .merged." out &&
+	test_grep ! "Would delete branch .wip." out &&
+	test_grep "not fully merged" err &&
+	git -C pm-dryrun-unmerged rev-parse --verify refs/heads/wip &&
+	git -C pm-dryrun-unmerged rev-parse --verify refs/heads/merged
+'
+
+test_expect_success '--dry-run requires --prune-merged' '
+	test_must_fail git -C pm-upstream branch --dry-run 2>err &&
+	test_grep "requires --prune-merged" err
+'
+
 test_done
