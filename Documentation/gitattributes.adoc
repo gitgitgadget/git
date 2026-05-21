@@ -857,6 +857,9 @@ The tool responds with lines of the form
 
 If the tool returns zero hunks with `status=success`, Git treats
 the file as having no changes and produces no diff output.
+`git blame` also consults the diff process and skips commits
+where it reports zero hunks, attributing lines to earlier commits
+instead.
 
 Tools should ignore unknown keys in the per-file request to
 remain forward-compatible.
