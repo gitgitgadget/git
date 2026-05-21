@@ -224,6 +224,8 @@ endif::git-diff[]
 	hunks that are fed into Git's diff and blame pipelines.
 	If the tool returns zero hunks, the file is treated as
 	unchanged for both diff output and blame attribution.
+	Git provides `git diff-process-normalize` as a built-in
+	tool that detects whitespace-only changes.
 	See linkgit:gitattributes[5] for details.
 
 `diff.indentHeuristic`::

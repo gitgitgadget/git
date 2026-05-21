@@ -366,5 +366,65 @@ test_expect_success PYTHON 'blame skips commits with zero hunks from diff proces
 	! grep "$BLAME_COMMIT" with
 '
 
+NORMALIZE="git diff-process-normalize"
+
+test_expect_success 'diff-process-normalize setup' '
+	echo "*.c diff=cdiff" >.gitattributes &&
+	git add .gitattributes &&
+	test_commit normalize-base
+'
+
+test_expect_success 'diff-process-normalize suppresses whitespace-only changes' '
+	cat >ws.c <<-\EOF &&
+	int main(void)
+	{
+	    return 0;
+	}
+	EOF
+	git add ws.c &&
+	git commit -m "add ws.c" &&
+
+	cat >ws.c <<-\EOF &&
+	int main(void)
+	{
+	        return 0;
+	}
+	EOF
+
+	git -c diff.cdiff.process="$NORMALIZE" \
+		diff ws.c >actual &&
+	test_must_be_empty actual
+'
+
+test_expect_success 'diff-process-normalize falls back on non-whitespace changes' '
+	cat >ws.c <<-\EOF &&
+	int main(void)
+	{
+	    return 0;
+	}
+
+	int added_function(void)
+	{
+	    return 99;
+	}
+	EOF
+
+	git -c diff.cdiff.process="$NORMALIZE" \
+		diff ws.c >actual &&
+	grep "added_function" actual
+'
+
+test_expect_success 'diff-process-normalize falls back on mixed whitespace and real changes' '
+	cat >ws.c <<-\EOF &&
+	int main(void)
+	{
+	        return 42;
+	}
+	EOF
+
+	git -c diff.cdiff.process="$NORMALIZE" \
+		diff ws.c >actual &&
+	grep "return 42" actual
+'
 
 test_done

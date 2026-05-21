@@ -861,6 +861,21 @@ the file as having no changes and produces no diff output.
 where it reports zero hunks, attributing lines to earlier commits
 instead.
 
+Git ships with a built-in diff process, `git diff-process-normalize`,
+that detects whitespace-only changes.  Files whose only differences
+are whitespace produce zero hunks; files with non-whitespace changes
+fall back to the builtin diff algorithm.  To use it:
+
+----------------------------------------------------------------
+[diff "cdiff"]
+  process = git diff-process-normalize
+----------------------------------------------------------------
+
+This is useful after running a code formatter: `git diff` shows
+no output for files that only had whitespace changes,
+`git blame` skips whitespace-only commits automatically without
+requiring a `.git-blame-ignore-revs` file.
+
 Tools should ignore unknown keys in the per-file request to
 remain forward-compatible.
 
