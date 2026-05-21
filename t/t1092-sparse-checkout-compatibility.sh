@@ -2608,19 +2608,19 @@ test_expect_success 'restore --staged with wildcards' '
 	test_all_match git diff --cached
 '
 
-test_expect_success 'sparse-index is expanded: restore --staged' '
+test_expect_success 'sparse-index is not expanded: restore --staged' '
 	init_repos &&
 
 	git -C sparse-index checkout -b restore-staged-exp base &&
 	git -C sparse-index reset --soft update-folder1 &&
-	ensure_expanded restore --staged .
+	ensure_not_expanded restore --staged .
 '
 
-test_expect_success 'sparse-index is expanded: restore --source --staged' '
+test_expect_success 'sparse-index is not expanded: restore --source --staged' '
 	init_repos &&
 
 	git -C sparse-index checkout -b restore-source-staged base &&
-	ensure_expanded restore --source update-folder1 --staged .
+	ensure_not_expanded restore --source update-folder1 --staged .
 '
 
 test_done
