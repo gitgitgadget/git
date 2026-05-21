@@ -19,6 +19,8 @@
 #include "tag.h"
 #include "trace2.h"
 #include "blame.h"
+#include "diff-process.h"
+#include "userdiff.h"
 #include "alloc.h"
 #include "commit-slab.h"
 #include "bloom.h"
@@ -315,16 +317,47 @@ static struct commit *fake_working_tree_commit(struct repository *r,
 
 
 static int diff_hunks(mmfile_t *file_a, mmfile_t *file_b,
-		      xdl_emit_hunk_consume_func_t hunk_func, void *cb_data, int xdl_opts)
+		      xdl_emit_hunk_consume_func_t hunk_func, void *cb_data,
+		      int xdl_opts, struct index_state *istate,
+		      const char *path)
 {
 	xpparam_t xpp = {0};
 	xdemitconf_t xecfg = {0};
 	xdemitcb_t ecb = {NULL};
+	struct xdl_hunk *ext_hunks = NULL;
+	int ret;
 
 	xpp.flags = xdl_opts;
 	xecfg.hunk_func = hunk_func;
 	ecb.priv = cb_data;
-	return xdi_diff(file_a, file_b, &xpp, &xecfg, &ecb);
+
+	if (path && istate) {
+		struct userdiff_driver *drv;
+		drv = userdiff_find_by_path(istate, path);
+		if (drv && drv->process) {
+			size_t nr = 0;
+			if (!diff_process_get_hunks(drv, path,
+						    file_a->ptr, file_a->size,
+						    file_b->ptr, file_b->size,
+						    &ext_hunks, &nr)) {
+				if (!nr) {
+					/*
+					 * Zero hunks: the diff process
+					 * considers these files equivalent.
+					 * Skip so blame looks past this
+					 * commit.
+					 */
+					return 0;
+				}
+				xpp.external_hunks = ext_hunks;
+				xpp.external_hunks_nr = nr;
+			}
+		}
+	}
+
+	ret = xdi_diff(file_a, file_b, &xpp, &xecfg, &ecb);
+	free(ext_hunks);
+	return ret;
 }
 
 static const char *get_next_line(const char *start, const char *end)
@@ -1961,7 +1994,8 @@ static void pass_blame_to_parent(struct blame_scoreboard *sb,
 			 &sb->num_read_blob, ignore_diffs);
 	sb->num_get_patch++;
 
-	if (diff_hunks(&file_p, &file_o, blame_chunk_cb, &d, sb->xdl_opts))
+	if (diff_hunks(&file_p, &file_o, blame_chunk_cb, &d, sb->xdl_opts,
+		       sb->revs->diffopt.repo->index, target->path))
 		die("unable to generate diff (%s -> %s)",
 		    oid_to_hex(&parent->commit->object.oid),
 		    oid_to_hex(&target->commit->object.oid));
@@ -2114,7 +2148,8 @@ static void find_copy_in_blob(struct blame_scoreboard *sb,
 	 * file_p partially may match that image.
 	 */
 	memset(split, 0, sizeof(struct blame_entry [3]));
-	if (diff_hunks(file_p, &file_o, handle_split_cb, &d, sb->xdl_opts))
+	if (diff_hunks(file_p, &file_o, handle_split_cb, &d, sb->xdl_opts,
+		       NULL, NULL))
 		die("unable to generate diff (%s)",
 		    oid_to_hex(&parent->commit->object.oid));
 	/* remainder, if any, all match the preimage */

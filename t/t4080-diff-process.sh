@@ -335,4 +335,36 @@ test_expect_success PYTHON 'diff process zero hunks suppresses diff output' '
 	test_must_be_empty actual
 '
 
+test_expect_success PYTHON 'blame skips commits with zero hunks from diff process' '
+	cat >blame.c <<-\EOF &&
+	int main(void)
+	{
+	    return 0;
+	}
+	EOF
+	git add blame.c &&
+	git commit -m "add blame.c" &&
+
+	cat >blame.c <<-\EOF &&
+	int main(void)
+	{
+	        return 0;
+	}
+	EOF
+	git add blame.c &&
+	git commit -m "reformat blame.c" &&
+	BLAME_COMMIT=$(git rev-parse --short HEAD) &&
+
+	# Without zero-hunk mode, blame attributes the change.
+	git blame blame.c >without &&
+	grep "$BLAME_COMMIT" without &&
+
+	# With zero-hunk mode, the process considers the files equivalent
+	# and blame skips the reformat commit.
+	git -c diff.cdiff.process="$BACKEND --mode=zero-hunk" \
+		blame blame.c >with &&
+	! grep "$BLAME_COMMIT" with
+'
+
+
 test_done
