@@ -124,33 +124,47 @@ sub topic_relation {
 	}
 }
 
+my %msgid_to_in_reply_to = ();
+
 sub get_message_parent {
 	my ($mid) = @_;
-	my @line = ();
-	my %irt = ();
+	my $state = 0;
+	my ($message_id, $in_reply_to);
 
-	open(my $fh, "-|", qw(b4 -q mbox --single-message -o-), "$mid");
-	while (<$fh>) {
-		last if (/^$/);
-		chomp;
-		if (/^\s/) {
-			$line[-1] .= $_;
-		} else {
-			push @line, $_;
-		}
+	if (exists $msgid_to_in_reply_to{$mid}) {
+		return $msgid_to_in_reply_to{$mid};
 	}
-	while (<$fh>) { # slurp
+
+	open(my $fh, "-|", qw(b4 -q mbox -o-), "$mid");
+	while (<$fh>) {
+		chomp;
+		if ($state == 0) {
+			if (/^$/) {
+				if (defined $message_id && defined $in_reply_to) {
+					$msgid_to_in_reply_to{$message_id} = $in_reply_to;
+				}
+				$state = 1;
+				$message_id = $in_reply_to = undef;
+			} elsif (/^message-id:\s*<(.*)>\s*$/i) {
+				$message_id = $1;
+			} elsif (/^in-reply-to:\s*<(.*)>\s*/i) {
+				$in_reply_to = $1;
+			}
+			next;
+		} elsif ($state == 1) {
+			if (/^From /) {
+				$state = 0;
+			}
+			next;
+		}
 	}
 	close($fh);
-	for (@line) {
-		if (s/^in-reply-to:\s*//i) {
-			while (/\s*<([^<]*)>\s*(.*)/) {
-				$irt{$1} = $1;
-				$_ = $2;
-			}
-		}
+
+	if (exists $msgid_to_in_reply_to{$mid}) {
+		return $msgid_to_in_reply_to{$mid};
+	} else {
+		return ();
 	}
-	keys %irt;
 }
 
 sub get_source {
