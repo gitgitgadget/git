@@ -24,6 +24,7 @@ git branch (-m|-M) [<old-branch>] <new-branch>
 git branch (-c|-C) [<old-branch>] <new-branch>
 git branch (-d|-D) [-r] <branch-name>...
 git branch --edit-description [<branch-name>]
+git branch --forked <branch>...
 
 DESCRIPTION
 -----------
@@ -198,6 +199,12 @@ This option is only applicable in non-verbose mode.
 `--show-current`::
 	Print the name of the current branch. In detached `HEAD` state,
 	nothing is printed.
+
+`--forked`::
+	List local branches whose configured upstream matches any
+	of the given _<branch>_ arguments. Each argument is either
+	a ref (e.g. `origin/master`, `master`) or a shell-style
+	glob (e.g. `'origin/*'`). Multiple arguments are unioned.
 
 `-v`::
 `-vv`::
