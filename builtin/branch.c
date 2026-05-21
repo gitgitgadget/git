@@ -21,6 +21,7 @@
 #include "branch.h"
 #include "path.h"
 #include "string-list.h"
+#include "strvec.h"
 #include "column.h"
 #include "utf8.h"
 #include "ref-filter.h"
@@ -40,6 +41,7 @@ static const char * const builtin_branch_usage[] = {
 	N_("git branch [<options>] [-r | -a] [--points-at]"),
 	N_("git branch [<options>] [-r | -a] [--format]"),
 	N_("git branch [<options>] --forked <branch>..."),
+	N_("git branch [<options>] --prune-merged <branch>..."),
 	NULL
 };
 
@@ -172,8 +174,8 @@ static int branch_merged(int kind, const char *name,
 	 * any of the following code, but during the transition period,
 	 * a gentle reminder is in order.
 	 */
-	if (head_rev != reference_rev) {
-		int expect = head_rev ? repo_in_merge_bases(the_repository, rev, head_rev) : 0;
+	if (head_rev && head_rev != reference_rev) {
+		int expect = repo_in_merge_bases(the_repository, rev, head_rev);
 		if (expect < 0)
 			exit(128);
 		if (expect == merged)
@@ -748,6 +750,25 @@ static int collect_forked_branch(const struct reference *ref, void *cb_data)
 	return 0;
 }
 
+static int collect_default_branch_name(struct remote *remote, void *cb_data)
+{
+	struct string_list *protected = cb_data;
+	struct ref_store *refs = get_main_ref_store(the_repository);
+	struct strbuf head = STRBUF_INIT;
+	const char *target;
+
+	strbuf_addf(&head, "refs/remotes/%s/HEAD", remote->name);
+	target = refs_resolve_ref_unsafe(refs, head.buf,
+					 RESOLVE_REF_NO_RECURSE, NULL, NULL);
+	if (target) {
+		const char *leaf = strrchr(target, '/');
+		if (leaf)
+			string_list_insert(protected, leaf + 1);
+	}
+	strbuf_release(&head);
+	return 0;
+}
+
 static void collect_forked_set(int argc, const char **argv,
 			       struct string_list *out)
 {
@@ -779,6 +800,63 @@ static int list_forked_branches(int argc, const char **argv)
 
 	string_list_clear(&out, 1);
 	return 0;
+}
+
+static int prune_merged_branches(int argc, const char **argv, int quiet)
+{
+	struct ref_store *refs = get_main_ref_store(the_repository);
+	struct string_list candidates = STRING_LIST_INIT_DUP;
+	struct string_list protected_default_names = STRING_LIST_INIT_DUP;
+	struct strvec deletable = STRVEC_INIT;
+	struct strbuf buf = STRBUF_INIT;
+	struct string_list_item *item;
+	int n_not_merged = 0;
+	int ret = 0;
+
+	if (!argc)
+		die(_("--prune-merged requires at least one <branch>"));
+
+	collect_forked_set(argc, argv, &candidates);
+	for_each_remote(collect_default_branch_name, &protected_default_names);
+
+	for_each_string_list_item(item, &candidates) {
+		const char *short_name = item->string;
+		const char *upstream = item->util;
+
+		strbuf_reset(&buf);
+		strbuf_addf(&buf, "refs/heads/%s", short_name);
+		if (branch_checked_out(buf.buf))
+			continue;
+
+		if (string_list_has_string(&protected_default_names,
+					   short_name))
+			continue;
+
+		if (!refs_ref_exists(refs, upstream))
+			continue;
+
+		strvec_push(&deletable, short_name);
+	}
+	strbuf_release(&buf);
+
+	if (deletable.nr)
+		ret = delete_branches(deletable.nr, deletable.v,
+				      0, FILTER_REFS_BRANCHES, quiet,
+				      1, &n_not_merged);
+
+	if (n_not_merged && !quiet)
+		fprintf(stderr,
+			Q_("Skipped %d branch that is not fully merged; "
+			   "delete it with 'git branch -D' if you are sure.\n",
+			   "Skipped %d branches that are not fully merged; "
+			   "delete them with 'git branch -D' if you are sure.\n",
+			   n_not_merged),
+			n_not_merged);
+
+	strvec_clear(&deletable);
+	string_list_clear(&candidates, 1);
+	string_list_clear(&protected_default_names, 0);
+	return ret;
 }
 
 static GIT_PATH_FUNC(edit_description, "EDIT_DESCRIPTION")
@@ -823,6 +901,7 @@ int cmd_branch(int argc,
 	int delete = 0, rename = 0, copy = 0, list = 0,
 	    unset_upstream = 0, show_current = 0, edit_description = 0;
 	int forked = 0;
+	int prune_merged = 0;
 	const char *new_upstream = NULL;
 	int noncreate_actions = 0;
 	/* possible options */
@@ -878,6 +957,8 @@ int cmd_branch(int argc,
 			 N_("edit the description for the branch")),
 		OPT_BOOL(0, "forked", &forked,
 			N_("list local branches whose upstream matches the given <branch>...")),
+		OPT_BOOL(0, "prune-merged", &prune_merged,
+			N_("delete local branches whose upstream matches the given <branch>... and that are merged into it")),
 		OPT__FORCE(&force, N_("force creation, move/rename, deletion"), PARSE_OPT_NOCOMPLETE),
 		OPT_MERGED(&filter, N_("print only branches that are merged")),
 		OPT_NO_MERGED(&filter, N_("print only branches that are not merged")),
@@ -922,7 +1003,8 @@ int cmd_branch(int argc,
 			     0);
 
 	if (!delete && !rename && !copy && !edit_description && !new_upstream &&
-	    !show_current && !unset_upstream && !forked && argc == 0)
+	    !show_current && !unset_upstream && !forked && !prune_merged &&
+	    argc == 0)
 		list = 1;
 
 	if (filter.with_commit || filter.no_commit ||
@@ -931,7 +1013,7 @@ int cmd_branch(int argc,
 
 	noncreate_actions = !!delete + !!rename + !!copy + !!new_upstream +
 			    !!show_current + !!list + !!edit_description +
-			    !!unset_upstream + !!forked;
+			    !!unset_upstream + !!forked + !!prune_merged;
 	if (noncreate_actions > 1)
 		usage_with_options(builtin_branch_usage, options);
 
@@ -974,6 +1056,9 @@ int cmd_branch(int argc,
 		goto out;
 	} else if (forked) {
 		ret = list_forked_branches(argc, argv);
+		goto out;
+	} else if (prune_merged) {
+		ret = prune_merged_branches(argc, argv, quiet);
 		goto out;
 	} else if (show_current) {
 		print_current_branch_name();

@@ -25,6 +25,7 @@ git branch (-c|-C) [<old-branch>] <new-branch>
 git branch (-d|-D) [-r] <branch-name>...
 git branch --edit-description [<branch-name>]
 git branch --forked <branch>...
+git branch --prune-merged <branch>...
 
 DESCRIPTION
 -----------
@@ -205,6 +206,26 @@ This option is only applicable in non-verbose mode.
 	of the given _<branch>_ arguments. Each argument is either
 	a ref (e.g. `origin/master`, `master`) or a shell-style
 	glob (e.g. `'origin/*'`). Multiple arguments are unioned.
+
+`--prune-merged`::
+	Delete the local branches that `--forked` would list for
+	the same _<branch>_ arguments, but only those whose tip is
+	reachable from their configured upstream.
++
+For arguments that refer to remote-tracking branches, run
+`git fetch` first so reachability is checked against the
+current upstream state; refs are read locally.
++
+The following branches are always preserved:
++
+--
+* the currently checked-out branch in any worktree;
+* any local branch whose name matches the default branch of
+  any configured remote (the target of
+  `refs/remotes/<remote>/HEAD`) -- typically `main` or
+  `master`;
+* any branch whose upstream no longer resolves locally.
+--
 
 `-v`::
 `-vv`::
