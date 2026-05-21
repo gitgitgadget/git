@@ -224,6 +224,7 @@ The following branches are always preserved:
   any configured remote (the target of
   `refs/remotes/<remote>/HEAD`) -- typically `main` or
   `master`;
+* any branch with `branch.<name>.pruneMerged` set to `false`;
 * any branch whose upstream no longer resolves locally.
 --
 

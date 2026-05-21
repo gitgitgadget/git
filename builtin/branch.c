@@ -822,6 +822,7 @@ static int prune_merged_branches(int argc, const char **argv, int quiet)
 	for_each_string_list_item(item, &candidates) {
 		const char *short_name = item->string;
 		const char *upstream = item->util;
+		int prune_allowed = 1;
 
 		strbuf_reset(&buf);
 		strbuf_addf(&buf, "refs/heads/%s", short_name);
@@ -834,6 +835,18 @@ static int prune_merged_branches(int argc, const char **argv, int quiet)
 
 		if (!refs_ref_exists(refs, upstream))
 			continue;
+
+		strbuf_reset(&buf);
+		strbuf_addf(&buf, "branch.%s.prunemerged", short_name);
+		if (!repo_config_get_bool(the_repository, buf.buf,
+					  &prune_allowed) &&
+		    !prune_allowed) {
+			if (!quiet)
+				fprintf(stderr, _("Skipping '%s' "
+						  "(branch.%s.pruneMerged is false)\n"),
+					short_name, short_name);
+			continue;
+		}
 
 		strvec_push(&deletable, short_name);
 	}
