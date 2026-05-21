@@ -1085,16 +1085,108 @@ static void xdl_mark_ignorable_regex(xdchange_t *xscr, const xdfenv_t *xe,
 	}
 }
 
+/*
+ * Populate the changed[] arrays from externally supplied hunks,
+ * bypassing the diff algorithm.  Validates that hunks are in order,
+ * non-overlapping, and within bounds.
+ *
+ * Returns 0 on success, -1 on validation failure.
+ */
+static int xdl_populate_hunks_from_external(xdfenv_t *xe,
+					    const struct xdl_hunk *hunks,
+					    size_t nr_hunks)
+{
+	size_t i;
+	long j, prev_old_end = 0, prev_new_end = 0;
+	long total_old = 0, total_new = 0;
+
+	/*
+	 * Clear changed[] arrays.  xdl_prepare_env() may have dirtied
+	 * them via xdl_cleanup_records().  The allocation is nrec + 2
+	 * elements; changed points one past the start (see xprepare.c).
+	 */
+	memset(xe->xdf1.changed - 1, 0,
+	       (xe->xdf1.nrec + 2) * sizeof(bool));
+	memset(xe->xdf2.changed - 1, 0,
+	       (xe->xdf2.nrec + 2) * sizeof(bool));
+
+	for (i = 0; i < nr_hunks; i++) {
+		const struct xdl_hunk *h = &hunks[i];
+
+		if (h->old_count < 0 || h->new_count < 0)
+			return -1;
+
+		/* Bounds check (1-based line numbers) */
+		if (h->old_count > 0 &&
+		    (h->old_start < 1 ||
+		     h->old_start + h->old_count - 1 > xe->xdf1.nrec))
+			return -1;
+		if (h->new_count > 0 &&
+		    (h->new_start < 1 ||
+		     h->new_start + h->new_count - 1 > xe->xdf2.nrec))
+			return -1;
+
+		/* Zero-count hunks: start must still be in [1, nrec+1] */
+		if (h->old_count == 0 &&
+		    (h->old_start < 1 || h->old_start > xe->xdf1.nrec + 1))
+			return -1;
+		if (h->new_count == 0 &&
+		    (h->new_start < 1 || h->new_start > xe->xdf2.nrec + 1))
+			return -1;
+
+		/* Ordering: no overlap with previous hunk */
+		if (h->old_start < prev_old_end ||
+		    h->new_start < prev_new_end)
+			return -1;
+
+		for (j = 0; j < h->old_count; j++)
+			xe->xdf1.changed[h->old_start - 1 + j] = true;
+		for (j = 0; j < h->new_count; j++)
+			xe->xdf2.changed[h->new_start - 1 + j] = true;
+
+		prev_old_end = h->old_start + h->old_count;
+		prev_new_end = h->new_start + h->new_count;
+		total_old += h->old_count;
+		total_new += h->new_count;
+	}
+
+	/*
+	 * Synchronization invariant: unchanged line counts must match.
+	 * Otherwise xdl_build_script() would walk off one array.
+	 */
+	if ((long)xe->xdf1.nrec - total_old !=
+	    (long)xe->xdf2.nrec - total_new)
+		return -1;
+
+	return 0;
+}
+
 int xdl_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	     xdemitconf_t const *xecfg, xdemitcb_t *ecb) {
 	xdchange_t *xscr;
 	xdfenv_t xe;
 	emit_func_t ef = xecfg->hunk_func ? xdl_call_hunk_func : xdl_emit_diff;
 
-	if (xdl_do_diff(mf1, mf2, xpp, &xe) < 0) {
-
-		return -1;
+	if (xpp->external_hunks) {
+		if (xdl_prepare_env(mf1, mf2, xpp, &xe) < 0)
+			return -1;
+		if (xdl_populate_hunks_from_external(&xe,
+						     xpp->external_hunks,
+						     xpp->external_hunks_nr) < 0) {
+			/*
+			 * Invalid external hunks; fall back to the
+			 * builtin diff algorithm.  Re-runs
+			 * xdl_prepare_env() via xdl_do_diff().
+			 */
+			xdl_free_env(&xe);
+			if (xdl_do_diff(mf1, mf2, xpp, &xe) < 0)
+				return -1;
+		}
+	} else {
+		if (xdl_do_diff(mf1, mf2, xpp, &xe) < 0)
+			return -1;
 	}
+
 	if (xdl_change_compact(&xe.xdf1, &xe.xdf2, xpp->flags) < 0 ||
 	    xdl_change_compact(&xe.xdf2, &xe.xdf1, xpp->flags) < 0 ||
 	    xdl_build_script(&xe, &xscr) < 0) {
