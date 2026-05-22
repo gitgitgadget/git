@@ -1973,6 +1973,7 @@ scripts_sh = [
   'git-mergetool.sh',
   'git-quiltimport.sh',
   'git-request-pull.sh',
+  'git-son.sh',
   'git-sh-i18n.sh',
   'git-sh-setup.sh',
   'git-submodule.sh',
