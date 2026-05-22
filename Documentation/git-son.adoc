@@ -1,0 +1,64 @@
+git-son(1)
+==========
+
+NAME
+----
+git-son - Create an independent child repository that knows its parent
+
+SYNOPSIS
+--------
+[verse]
+'git son' [--inherit] [--branch <branch>] <name>
+
+DESCRIPTION
+-----------
+
+Create a new independent Git repository inside the current working
+tree as a subdirectory named `<name>`. Unlike a submodule, the child
+repository is not tracked by the parent; instead, `<name>/` is added
+to the parent's `.gitignore`.
+
+The child repository is configured with a remote called `parent`
+pointing back to the parent repository's origin URL (or local path
+if no origin is set), allowing the child to fetch from the parent
+at any time.
+
+OPTIONS
+-------
+--inherit::
+	Fetch the parent's history into the child repository at
+	creation time. Without this flag, the child starts with a
+	single initial commit.
+
+--branch <branch>::
+	When used with `--inherit`, check out the given branch from
+	the parent instead of the default branch. This option
+	requires `--inherit`.
+
+<name>::
+	The name of the subdirectory (and child repository) to create.
+	Must not already exist.
+
+EXAMPLES
+--------
+
+Create a simple child repository:
+
+	git son my-tool
+
+Create a child that inherits the parent's history:
+
+	git son --inherit my-fork
+
+Create a child starting from a specific parent branch:
+
+	git son --inherit --branch feature my-experiment
+
+Later, from within the child, fetch updates from the parent:
+
+	cd my-tool
+	git fetch parent
+
+GIT
+---
+Part of the linkgit:git[1] suite
