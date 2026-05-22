@@ -24,6 +24,7 @@ git branch (-m|-M) [<old-branch>] <new-branch>
 git branch (-c|-C) [<old-branch>] <new-branch>
 git branch (-d|-D) [-r] <branch-name>...
 git branch --edit-description [<branch-name>]
+git branch --forked <branch>...
 
 DESCRIPTION
 -----------
@@ -198,6 +199,18 @@ This option is only applicable in non-verbose mode.
 `--show-current`::
 	Print the name of the current branch. In detached `HEAD` state,
 	nothing is printed.
+
+`--forked`::
+	List local branches whose configured upstream
+	(`branch.<name>.merge` resolved against `branch.<name>.remote`)
+	matches any of the given _<branch>_ arguments.
++
+Each _<branch>_ is interpreted against the local repository: a literal
+upstream like `origin/main` or a local branch like `master`, or a
+wildmatch pattern like `'origin/*'`.  A bare configured-remote name
+(e.g. `origin`) resolves to the target of `refs/remotes/<remote>/HEAD`,
+to match the way `git checkout -b topic origin` picks a starting
+point.  Multiple _<branch>_ arguments are unioned.
 
 `-v`::
 `-vv`::
