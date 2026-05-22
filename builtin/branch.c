@@ -821,32 +821,90 @@ static int collect_forked_branch(const struct reference *ref, void *cb_data)
 	return 0;
 }
 
-static int list_forked_branches(int argc, const char **argv)
+static void collect_forked_set(int argc, const char **argv,
+			       struct string_list *out)
 {
 	struct upstream_pattern *patterns = NULL;
 	size_t nr_patterns = 0;
-	struct string_list out = STRING_LIST_INIT_DUP;
-	struct string_list_item *item;
 	struct forked_cb cb;
-
-	if (!argc)
-		die(_("--forked requires at least one <branch>"));
 
 	parse_forked_args(argc, argv, &patterns, &nr_patterns);
 	cb.patterns = patterns;
 	cb.nr_patterns = nr_patterns;
-	cb.out = &out;
+	cb.out = out;
 
 	refs_for_each_branch_ref(get_main_ref_store(the_repository),
 				 collect_forked_branch, &cb);
 
-	string_list_sort(&out);
+	string_list_sort(out);
+
+	upstream_pattern_list_clear(patterns, nr_patterns);
+}
+
+static int list_forked_branches(int argc, const char **argv)
+{
+	struct string_list out = STRING_LIST_INIT_DUP;
+	struct string_list_item *item;
+
+	if (!argc)
+		die(_("--forked requires at least one <branch>"));
+
+	collect_forked_set(argc, argv, &out);
 	for_each_string_list_item(item, &out)
 		puts(item->string);
 
-	upstream_pattern_list_clear(patterns, nr_patterns);
 	string_list_clear(&out, 0);
 	return 0;
+}
+
+static int prune_merged_branches(int argc, const char **argv, int quiet)
+{
+	struct ref_store *refs = get_main_ref_store(the_repository);
+	struct string_list candidates = STRING_LIST_INIT_DUP;
+	struct strvec deletable = STRVEC_INIT;
+	struct string_list_item *item;
+	int ret = 0;
+
+	if (!argc)
+		die(_("--prune-merged requires at least one <branch>"));
+
+	collect_forked_set(argc, argv, &candidates);
+
+	for_each_string_list_item(item, &candidates) {
+		const char *short_name = item->string;
+		struct branch *branch = branch_get(short_name);
+		const char *upstream, *push;
+		struct strbuf full = STRBUF_INIT;
+		int skip;
+
+		strbuf_addf(&full, "refs/heads/%s", short_name);
+		skip = !!branch_checked_out(full.buf);
+		strbuf_release(&full);
+		if (skip)
+			continue;
+
+		upstream = branch ? branch_get_upstream(branch, NULL) : NULL;
+		if (!upstream || !refs_ref_exists(refs, upstream))
+			continue;
+		push = branch ? branch_get_push(branch, NULL) : NULL;
+		if (!push || !strcmp(push, upstream))
+			continue;
+
+		strvec_push(&deletable, short_name);
+	}
+
+	if (deletable.nr)
+		ret = delete_branches(deletable.nr, deletable.v,
+				      0, /* force */
+				      FILTER_REFS_BRANCHES,
+				      quiet,
+				      1, /* warn_only */
+				      1, /* no_head_fallback */
+				      0  /* dry_run */);
+
+	strvec_clear(&deletable);
+	string_list_clear(&candidates, 0);
+	return ret;
 }
 
 static GIT_PATH_FUNC(edit_description, "EDIT_DESCRIPTION")
@@ -891,6 +949,7 @@ int cmd_branch(int argc,
 	int delete = 0, rename = 0, copy = 0, list = 0,
 	    unset_upstream = 0, show_current = 0, edit_description = 0;
 	int forked = 0;
+	int prune_merged = 0;
 	const char *new_upstream = NULL;
 	int noncreate_actions = 0;
 	/* possible options */
@@ -946,6 +1005,8 @@ int cmd_branch(int argc,
 			 N_("edit the description for the branch")),
 		OPT_BOOL(0, "forked", &forked,
 			N_("list local branches whose upstream matches the given <branch>...")),
+		OPT_BOOL(0, "prune-merged", &prune_merged,
+			N_("delete local branches whose upstream matches the given <branch>... and is merged")),
 		OPT__FORCE(&force, N_("force creation, move/rename, deletion"), PARSE_OPT_NOCOMPLETE),
 		OPT_MERGED(&filter, N_("print only branches that are merged")),
 		OPT_NO_MERGED(&filter, N_("print only branches that are not merged")),
@@ -990,7 +1051,8 @@ int cmd_branch(int argc,
 			     0);
 
 	if (!delete && !rename && !copy && !edit_description && !new_upstream &&
-	    !show_current && !unset_upstream && !forked && argc == 0)
+	    !show_current && !unset_upstream && !forked && !prune_merged &&
+	    argc == 0)
 		list = 1;
 
 	if (filter.with_commit || filter.no_commit ||
@@ -999,7 +1061,7 @@ int cmd_branch(int argc,
 
 	noncreate_actions = !!delete + !!rename + !!copy + !!new_upstream +
 			    !!show_current + !!list + !!edit_description +
-			    !!unset_upstream + !!forked;
+			    !!unset_upstream + !!forked + !!prune_merged;
 	if (noncreate_actions > 1)
 		usage_with_options(builtin_branch_usage, options);
 
@@ -1042,6 +1104,9 @@ int cmd_branch(int argc,
 		goto out;
 	} else if (forked) {
 		ret = list_forked_branches(argc, argv);
+		goto out;
+	} else if (prune_merged) {
+		ret = prune_merged_branches(argc, argv, quiet);
 		goto out;
 	} else if (show_current) {
 		print_current_branch_name();
