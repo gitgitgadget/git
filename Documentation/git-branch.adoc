@@ -25,6 +25,7 @@ git branch (-m|-M) [<old-branch>] <new-branch>
 git branch (-c|-C) [<old-branch>] <new-branch>
 git branch (-d|-D) [-r] <branch-name>...
 git branch --edit-description [<branch-name>]
+git branch (--prune-merged <branch>)...
 
 DESCRIPTION
 -----------
@@ -205,6 +206,28 @@ This option is only applicable in non-verbose mode.
 	_<branch>_. The argument can be a ref (e.g. `origin/main`,
 	`master`) or a shell-style glob (e.g. `'origin/*'`). The
 	option can be repeated to widen the filter.
+
+`--prune-merged <branch>`::
+	Delete the local branches that `--forked` would list for the
+	same _<branch>_, but only those whose tip is reachable from
+	their configured upstream. In other words, the work on the
+	branch has already landed on the upstream it tracks, so the
+	local copy is no longer needed. May be given more than once to
+	union the matches; positional arguments are not accepted.
++
+Reachability is checked against whatever the upstream refs say
+locally; nothing is fetched. Run `git fetch` first if you want
+the upstream refs refreshed.
++
+A branch is left alone if any of the following holds:
+its upstream no longer resolves locally; it is checked out in any
+worktree; or its push destination (`<branch>@{push}`) equals its
+upstream (`<branch>@{upstream}`), so it cannot be distinguished
+from a freshly pulled trunk that just looks "fully merged".
++
+Branches refused by the "fully merged" safety check are listed as
+warnings and skipped; pass them to `git branch -D` explicitly if
+you want them gone.
 
 `-v`::
 `-vv`::
