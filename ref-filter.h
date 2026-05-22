@@ -155,6 +155,8 @@ void filter_and_format_refs(struct ref_filter *filter, unsigned int type,
 			    struct ref_format *format);
 /*  Clear all memory allocated to ref_array */
 void ref_array_clear(struct ref_array *array);
+/*  Free a single item from a ref_array */
+void free_ref_array_item(struct ref_array_item *item);
 /*  Used to verify if the given format is correct and to parse out the used atoms */
 int verify_ref_format(struct ref_format *format);
 /*  Sort the given ref_array as per the ref_sorting provided */

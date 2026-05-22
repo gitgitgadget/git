@@ -28,9 +28,10 @@
 #include "help.h"
 #include "advice.h"
 #include "commit-reach.h"
+#include "wildmatch.h"
 
 static const char * const builtin_branch_usage[] = {
-	N_("git branch [<options>] [-r | -a] [--merged] [--no-merged]"),
+	N_("git branch [<options>] [-r | -a] [--merged] [--no-merged] [(--forked <branch>)...]"),
 	N_("git branch [<options>] [-f] [--recurse-submodules] <branch-name> [<start-point>]"),
 	N_("git branch [<options>] [-l] [<pattern>...]"),
 	N_("git branch [<options>] [-r] (-d | -D) <branch-name>..."),
@@ -442,8 +443,12 @@ static char *build_format(struct ref_filter *filter, int maxwidth, const char *r
 	return strbuf_detach(&fmt, NULL);
 }
 
+static void filter_array_by_forked(struct ref_array *array,
+				   const struct string_list *upstreams);
+
 static void print_ref_list(struct ref_filter *filter, struct ref_sorting *sorting,
-			   struct ref_format *format, struct string_list *output)
+			   struct ref_format *format, struct string_list *output,
+			   const struct string_list *forked_upstreams)
 {
 	int i;
 	struct ref_array array;
@@ -462,6 +467,9 @@ static void print_ref_list(struct ref_filter *filter, struct ref_sorting *sortin
 	memset(&array, 0, sizeof(array));
 
 	filter_refs(&array, filter, filter->kind);
+
+	if (forked_upstreams->nr)
+		filter_array_by_forked(&array, forked_upstreams);
 
 	if (filter->verbose)
 		maxwidth = calc_maxwidth(&array, strlen(remote_prefix));
@@ -673,6 +681,131 @@ static void copy_or_rename_branch(const char *oldname, const char *newname, int 
 	free_worktrees(worktrees);
 }
 
+struct upstream_pattern {
+	char *name;
+	int is_wildcard;
+};
+
+static void upstream_pattern_list_clear(struct upstream_pattern *items,
+					size_t nr)
+{
+	size_t i;
+	for (i = 0; i < nr; i++)
+		free(items[i].name);
+	free(items);
+}
+
+static const char *short_upstream_name(const char *full_ref)
+{
+	const char *short_name = full_ref;
+	(void)(skip_prefix(short_name, "refs/heads/", &short_name) ||
+	       skip_prefix(short_name, "refs/remotes/", &short_name));
+	return short_name;
+}
+
+static int parse_one_forked_arg(const char *arg, struct upstream_pattern *out)
+{
+	struct object_id oid;
+	char *full_ref = NULL;
+
+	if (has_glob_specials(arg)) {
+		out->name = xstrdup(arg);
+		out->is_wildcard = 1;
+		return 0;
+	}
+
+	if (repo_dwim_ref(the_repository, arg, strlen(arg), &oid,
+			  &full_ref, 0) == 1 &&
+	    (starts_with(full_ref, "refs/heads/") ||
+	     starts_with(full_ref, "refs/remotes/"))) {
+		out->name = xstrdup(short_upstream_name(full_ref));
+		out->is_wildcard = 0;
+		free(full_ref);
+		return 0;
+	}
+	free(full_ref);
+	return -1;
+}
+
+static void parse_forked_args(const struct string_list *args,
+			      struct upstream_pattern **patterns_out,
+			      size_t *nr_out)
+{
+	struct upstream_pattern *patterns;
+	size_t i;
+
+	ALLOC_ARRAY(patterns, args->nr);
+	for (i = 0; i < args->nr; i++) {
+		const char *arg = args->items[i].string;
+		if (parse_one_forked_arg(arg, &patterns[i]) < 0) {
+			upstream_pattern_list_clear(patterns, i);
+			die(_("'%s' is not a valid branch or pattern"), arg);
+		}
+	}
+	*patterns_out = patterns;
+	*nr_out = args->nr;
+}
+
+static int upstream_matches(const char *short_upstream,
+			    const struct upstream_pattern *patterns,
+			    size_t nr)
+{
+	size_t i;
+
+	for (i = 0; i < nr; i++) {
+		const struct upstream_pattern *p = &patterns[i];
+		if (p->is_wildcard) {
+			if (!wildmatch(p->name, short_upstream, WM_PATHNAME))
+				return 1;
+		} else if (!strcmp(p->name, short_upstream)) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static int branch_upstream_matches(const char *full_refname,
+				   const struct upstream_pattern *patterns,
+				   size_t nr_patterns)
+{
+	const char *short_name;
+	struct branch *branch;
+	const char *upstream;
+
+	if (!skip_prefix(full_refname, "refs/heads/", &short_name))
+		return 0;
+	branch = branch_get(short_name);
+	if (!branch)
+		return 0;
+	upstream = branch_get_upstream(branch, NULL);
+	if (!upstream)
+		return 0;
+	return upstream_matches(short_upstream_name(upstream),
+				patterns, nr_patterns);
+}
+
+static void filter_array_by_forked(struct ref_array *array,
+				   const struct string_list *upstreams)
+{
+	struct upstream_pattern *patterns = NULL;
+	size_t nr_patterns = 0;
+	int i, kept = 0;
+
+	parse_forked_args(upstreams, &patterns, &nr_patterns);
+
+	for (i = 0; i < array->nr; i++) {
+		struct ref_array_item *item = array->items[i];
+		if (branch_upstream_matches(item->refname,
+					    patterns, nr_patterns))
+			array->items[kept++] = item;
+		else
+			free_ref_array_item(item);
+	}
+	array->nr = kept;
+
+	upstream_pattern_list_clear(patterns, nr_patterns);
+}
+
 static GIT_PATH_FUNC(edit_description, "EDIT_DESCRIPTION")
 
 static int edit_branch_description(const char *branch_name)
@@ -714,6 +847,7 @@ int cmd_branch(int argc,
 	/* possible actions */
 	int delete = 0, rename = 0, copy = 0, list = 0,
 	    unset_upstream = 0, show_current = 0, edit_description = 0;
+	struct string_list forked_upstreams = STRING_LIST_INIT_DUP;
 	const char *new_upstream = NULL;
 	int noncreate_actions = 0;
 	/* possible options */
@@ -767,6 +901,8 @@ int cmd_branch(int argc,
 		OPT_BOOL(0, "create-reflog", &reflog, N_("create the branch's reflog")),
 		OPT_BOOL(0, "edit-description", &edit_description,
 			 N_("edit the description for the branch")),
+		OPT_STRING_LIST(0, "forked", &forked_upstreams, N_("branch"),
+			N_("list local branches whose upstream matches <branch> (repeatable)")),
 		OPT__FORCE(&force, N_("force creation, move/rename, deletion"), PARSE_OPT_NOCOMPLETE),
 		OPT_MERGED(&filter, N_("print only branches that are merged")),
 		OPT_NO_MERGED(&filter, N_("print only branches that are not merged")),
@@ -815,7 +951,8 @@ int cmd_branch(int argc,
 		list = 1;
 
 	if (filter.with_commit || filter.no_commit ||
-	    filter.reachable_from || filter.unreachable_from || filter.points_at.nr)
+	    filter.reachable_from || filter.unreachable_from ||
+	    filter.points_at.nr || forked_upstreams.nr)
 		list = 1;
 
 	noncreate_actions = !!delete + !!rename + !!copy + !!new_upstream +
@@ -880,7 +1017,8 @@ int cmd_branch(int argc,
 		ref_sorting_set_sort_flags_all(sorting, REF_SORTING_ICASE, icase);
 		ref_sorting_set_sort_flags_all(
 			sorting, REF_SORTING_DETACHED_HEAD_FIRST, 1);
-		print_ref_list(&filter, sorting, &format, &output);
+		print_ref_list(&filter, sorting, &format, &output,
+			       &forked_upstreams);
 		print_columns(&output, colopts, NULL);
 		string_list_clear(&output, 0);
 		ref_sorting_release(sorting);
@@ -1020,5 +1158,6 @@ int cmd_branch(int argc,
 
 out:
 	string_list_clear(&sorting_options, 0);
+	string_list_clear(&forked_upstreams, 0);
 	return ret;
 }

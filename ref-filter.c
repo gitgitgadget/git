@@ -3035,7 +3035,7 @@ static int filter_one(const struct reference *ref, void *cb_data)
 }
 
 /*  Free memory allocated for a ref_array_item */
-static void free_array_item(struct ref_array_item *item)
+void free_ref_array_item(struct ref_array_item *item)
 {
 	free((char *)item->symref);
 	if (item->value) {
@@ -3078,7 +3078,7 @@ static int filter_and_format_one(const struct reference *ref, void *cb_data)
 
 	strbuf_release(&output);
 	strbuf_release(&err);
-	free_array_item(item);
+	free_ref_array_item(item);
 
 	/*
 	 * Increment the running count of refs that match the filter. If
@@ -3098,7 +3098,7 @@ void ref_array_clear(struct ref_array *array)
 	int i;
 
 	for (i = 0; i < array->nr; i++)
-		free_array_item(array->items[i]);
+		free_ref_array_item(array->items[i]);
 	FREE_AND_NULL(array->items);
 	array->nr = array->alloc = 0;
 
@@ -3171,7 +3171,7 @@ static void reach_filter(struct ref_array *array,
 		if (is_merged == include_reached)
 			array->items[array->nr++] = array->items[i];
 		else
-			free_array_item(item);
+			free_ref_array_item(item);
 	}
 
 	clear_commit_marks_many(old_nr, to_clear, ALL_REV_FLAGS);
@@ -3667,7 +3667,7 @@ void pretty_print_ref(const char *name, const struct object_id *oid,
 
 	strbuf_release(&err);
 	strbuf_release(&output);
-	free_array_item(ref_item);
+	free_ref_array_item(ref_item);
 }
 
 static int parse_sorting_atom(const char *atom)

@@ -14,6 +14,7 @@ git branch [--color[=<when>] | --no-color] [--show-current]
 	   [--merged [<commit>]] [--no-merged [<commit>]]
 	   [--contains [<commit>]] [--no-contains [<commit>]]
 	   [--points-at <object>] [--format=<format>]
+	   [(--forked <branch>)...]
 	   [(-r|--remotes) | (-a|--all)]
 	   [--list] [<pattern>...]
 git branch [--track[=(direct|inherit)] | --no-track] [-f]
@@ -198,6 +199,12 @@ This option is only applicable in non-verbose mode.
 `--show-current`::
 	Print the name of the current branch. In detached `HEAD` state,
 	nothing is printed.
+
+`--forked <branch>`::
+	List only branches whose configured upstream matches
+	_<branch>_. The argument can be a ref (e.g. `origin/main`,
+	`master`) or a shell-style glob (e.g. `'origin/*'`). The
+	option can be repeated to widen the filter.
 
 `-v`::
 `-vv`::
