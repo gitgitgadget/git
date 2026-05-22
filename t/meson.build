@@ -591,6 +591,7 @@ integration_tests = [
   't5004-archive-corner-cases.sh',
   't5100-mailinfo.sh',
   't5150-request-pull.sh',
+  't5151-son.sh',
   't5200-update-server-info.sh',
   't5300-pack-object.sh',
   't5301-sliding-window.sh',
