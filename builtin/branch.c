@@ -860,7 +860,7 @@ static void collect_forked_set(const struct string_list *upstreams,
 }
 
 static int prune_merged_branches(const struct string_list *upstreams,
-				 int quiet)
+				 int quiet, int dry_run)
 {
 	struct ref_store *refs = get_main_ref_store(the_repository);
 	struct string_list candidates = STRING_LIST_INIT_DUP;
@@ -917,7 +917,7 @@ static int prune_merged_branches(const struct string_list *upstreams,
 				      quiet,
 				      1, /* warn_only */
 				      1, /* no_head_fallback */
-				      0  /* dry_run */);
+				      dry_run);
 
 	strvec_clear(&deletable);
 	string_list_clear(&candidates, 0);
@@ -967,6 +967,7 @@ int cmd_branch(int argc,
 	    unset_upstream = 0, show_current = 0, edit_description = 0;
 	struct string_list forked_upstreams = STRING_LIST_INIT_DUP;
 	struct string_list prune_merged_upstreams = STRING_LIST_INIT_DUP;
+	int dry_run = 0;
 	const char *new_upstream = NULL;
 	int noncreate_actions = 0;
 	/* possible options */
@@ -1024,6 +1025,8 @@ int cmd_branch(int argc,
 			N_("list local branches whose upstream matches <branch> (repeatable)")),
 		OPT_STRING_LIST(0, "prune-merged", &prune_merged_upstreams, N_("branch"),
 			N_("delete local branches whose upstream matches <branch> and is merged (repeatable)")),
+		OPT_BOOL(0, "dry-run", &dry_run,
+			N_("with --prune-merged, only print which branches would be deleted")),
 		OPT__FORCE(&force, N_("force creation, move/rename, deletion"), PARSE_OPT_NOCOMPLETE),
 		OPT_MERGED(&filter, N_("print only branches that are merged")),
 		OPT_NO_MERGED(&filter, N_("print only branches that are not merged")),
@@ -1083,6 +1086,9 @@ int cmd_branch(int argc,
 	if (noncreate_actions > 1)
 		usage_with_options(builtin_branch_usage, options);
 
+	if (dry_run && !prune_merged_upstreams.nr)
+		die(_("--dry-run requires --prune-merged"));
+
 	if (recurse_submodules_explicit) {
 		if (!submodule_propagate_branches)
 			die(_("branch with --recurse-submodules can only be used if submodule.propagateBranches is enabled"));
@@ -1124,7 +1130,7 @@ int cmd_branch(int argc,
 		if (argc)
 			die(_("--prune-merged does not take positional arguments; "
 			      "repeat --prune-merged for each <branch>"));
-		ret = prune_merged_branches(&prune_merged_upstreams, quiet);
+		ret = prune_merged_branches(&prune_merged_upstreams, quiet, dry_run);
 		goto out;
 	} else if (show_current) {
 		print_current_branch_name();
