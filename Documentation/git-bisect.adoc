@@ -96,9 +96,8 @@ Bisect reset
 After a bisect session, to clean up the bisection state and return to
 the original `HEAD`, issue the following command:
 
-------------------------------------------------
-$ git bisect reset
-------------------------------------------------
+[synopsis]
+git bisect reset
 
 By default, this will return your tree to the commit that was checked
 out before `git bisect start`.  (A new `git bisect start` will also do
@@ -108,7 +107,8 @@ With an optional argument, you can return to a different commit
 instead:
 
 [synopsis]
-$ git bisect reset <commit>
+git bisect reset <commit>
+
 
 For example, `git bisect reset bisect/bad` will check out the first
 bad revision, while `git bisect reset HEAD` will leave you on the
@@ -174,13 +174,13 @@ For example, if you are looking for a commit that introduced a
 performance regression, you might use
 
 ------------------------------------------------
-git bisect start --term-old fast --term-new slow
+$ git bisect start --term-old fast --term-new slow
 ------------------------------------------------
 
 Or if you are looking for the commit that fixed a bug, you might use
 
 ------------------------------------------------
-git bisect start --term-new fixed --term-old broken
+$ git bisect start --term-new fixed --term-old broken
 ------------------------------------------------
 
 Then, use `git bisect <term-old>` and `git bisect <term-new>` instead
@@ -328,11 +328,10 @@ Bisect run
 If you have a script that can tell if the current source code is good
 or bad, you can bisect by issuing the command:
 
-------------
-$ git bisect run my_script arguments
-------------
+[synopsis]
+git bisect run <cmd> [<arg>...]
 
-Note that the script (`my_script` in the above example) should exit
+Note that _<cmd>_ run with _<arg>_  should exit
 with code 0 if the current source code is good/old, and exit with a
 code between 1 and 127 (inclusive), except 125, if the current source
 code is bad/new.
