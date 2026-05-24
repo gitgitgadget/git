@@ -61,16 +61,6 @@ static void mark_stale(struct commit *c, unsigned queued_flag,
 	}
 }
 
-static int queue_has_nonstale(struct prio_queue *queue)
-{
-	for (size_t i = 0; i < queue->nr; i++) {
-		struct commit *commit = queue->array[i].data;
-		if (!(commit->object.flags & STALE))
-			return 1;
-	}
-	return 0;
-}
-
 /* all input commits in one and twos[] must have been parsed! */
 static int paint_down_to_common(struct repository *r,
 				struct commit *one, int n,
@@ -1051,12 +1041,15 @@ struct commit_list *get_reachable_subset(struct commit **from, size_t nr_from,
 define_commit_slab(bit_arrays, struct bitmap *);
 static struct bit_arrays bit_arrays;
 
-static void insert_no_dup(struct prio_queue *queue, struct commit *c)
+static void insert_no_dup(struct prio_queue *queue, struct commit *c,
+			  int *nonstale_count)
 {
 	if (c->object.flags & PARENT2)
 		return;
 	prio_queue_put(queue, c);
 	c->object.flags |= PARENT2;
+	if (!(c->object.flags & STALE))
+		(*nonstale_count)++;
 }
 
 static struct bitmap *get_bit_array(struct commit *c, int width)
@@ -1082,6 +1075,7 @@ void ahead_behind(struct repository *r,
 {
 	struct prio_queue queue = { .compare = compare_commits_by_gen_then_commit_date };
 	size_t width = DIV_ROUND_UP(commits_nr, BITS_IN_EWORD);
+	int nonstale_count = 0;
 
 	if (!commits_nr || !counts_nr)
 		return;
@@ -1100,13 +1094,16 @@ void ahead_behind(struct repository *r,
 		struct bitmap *bitmap = get_bit_array(c, width);
 
 		bitmap_set(bitmap, i);
-		insert_no_dup(&queue, c);
+		insert_no_dup(&queue, c, &nonstale_count);
 	}
 
-	while (queue_has_nonstale(&queue)) {
+	while (nonstale_count > 0) {
 		struct commit *c = prio_queue_get(&queue);
 		struct commit_list *p;
 		struct bitmap *bitmap_c = get_bit_array(c, width);
+
+		if (!(c->object.flags & STALE))
+			nonstale_count--;
 
 		for (size_t i = 0; i < counts_nr; i++) {
 			int reach_from_tip = !!bitmap_get(bitmap_c, counts[i].tip_index);
@@ -1136,9 +1133,9 @@ void ahead_behind(struct repository *r,
 			 * queue is STALE.
 			 */
 			if (bitmap_popcount(bitmap_p) == commits_nr)
-				p->item->object.flags |= STALE;
+				mark_stale(p->item, PARENT2, &nonstale_count);
 
-			insert_no_dup(&queue, p->item);
+			insert_no_dup(&queue, p->item, &nonstale_count);
 		}
 
 		free_bit_array(c);
