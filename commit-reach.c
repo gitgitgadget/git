@@ -17,8 +17,9 @@
 #define PARENT2		(1u<<17)
 #define STALE		(1u<<18)
 #define RESULT		(1u<<19)
+#define ENQUEUED	(1u<<20)
 
-static const unsigned all_flags = (PARENT1 | PARENT2 | STALE | RESULT);
+static const unsigned all_flags = (PARENT1 | PARENT2 | STALE | RESULT | ENQUEUED);
 
 static int compare_commits_by_gen(const void *_a, const void *_b)
 {
@@ -37,6 +38,14 @@ static int compare_commits_by_gen(const void *_a, const void *_b)
 	if (a->date > b->date)
 		return 1;
 	return 0;
+}
+
+static void maybe_enqueue(struct prio_queue *queue, struct commit *c)
+{
+	if (c->object.flags & ENQUEUED)
+		return;
+	c->object.flags |= ENQUEUED;
+	prio_queue_put(queue, c);
 }
 
 static int queue_has_nonstale(struct prio_queue *queue)
@@ -70,11 +79,11 @@ static int paint_down_to_common(struct repository *r,
 		commit_list_append(one, result);
 		return 0;
 	}
-	prio_queue_put(&queue, one);
+	maybe_enqueue(&queue, one);
 
 	for (i = 0; i < n; i++) {
 		twos[i]->object.flags |= PARENT2;
-		prio_queue_put(&queue, twos[i]);
+		maybe_enqueue(&queue, twos[i]);
 	}
 
 	while (queue_has_nonstale(&queue)) {
@@ -82,6 +91,8 @@ static int paint_down_to_common(struct repository *r,
 		struct commit_list *parents;
 		int flags;
 		timestamp_t generation = commit_graph_generation(commit);
+
+		commit->object.flags &= ~ENQUEUED;
 
 		if (min_generation && generation > last_gen)
 			BUG("bad generation skip %"PRItime" > %"PRItime" at %s",
@@ -124,7 +135,7 @@ static int paint_down_to_common(struct repository *r,
 					     oid_to_hex(&p->object.oid));
 			}
 			p->object.flags |= flags;
-			prio_queue_put(&queue, p);
+			maybe_enqueue(&queue, p);
 		}
 	}
 
