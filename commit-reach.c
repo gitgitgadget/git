@@ -40,12 +40,25 @@ static int compare_commits_by_gen(const void *_a, const void *_b)
 	return 0;
 }
 
-static void maybe_enqueue(struct prio_queue *queue, struct commit *c)
+static void maybe_enqueue(struct prio_queue *queue, struct commit *c,
+			  int *nonstale_count)
 {
 	if (c->object.flags & ENQUEUED)
 		return;
 	c->object.flags |= ENQUEUED;
 	prio_queue_put(queue, c);
+	if (!(c->object.flags & STALE))
+		(*nonstale_count)++;
+}
+
+static void mark_stale(struct commit *c, unsigned queued_flag,
+		       int *nonstale_count)
+{
+	if (!(c->object.flags & STALE)) {
+		if (c->object.flags & queued_flag)
+			(*nonstale_count)--;
+		c->object.flags |= STALE;
+	}
 }
 
 static int queue_has_nonstale(struct prio_queue *queue)
@@ -68,6 +81,7 @@ static int paint_down_to_common(struct repository *r,
 {
 	struct prio_queue queue = { compare_commits_by_gen_then_commit_date };
 	int i;
+	int nonstale_count = 0;
 	timestamp_t last_gen = GENERATION_NUMBER_INFINITY;
 	struct commit_list **tail = result;
 
@@ -79,20 +93,22 @@ static int paint_down_to_common(struct repository *r,
 		commit_list_append(one, result);
 		return 0;
 	}
-	maybe_enqueue(&queue, one);
+	maybe_enqueue(&queue, one, &nonstale_count);
 
 	for (i = 0; i < n; i++) {
 		twos[i]->object.flags |= PARENT2;
-		maybe_enqueue(&queue, twos[i]);
+		maybe_enqueue(&queue, twos[i], &nonstale_count);
 	}
 
-	while (queue_has_nonstale(&queue)) {
+	while (nonstale_count > 0) {
 		struct commit *commit = prio_queue_get(&queue);
 		struct commit_list *parents;
 		int flags;
 		timestamp_t generation = commit_graph_generation(commit);
 
 		commit->object.flags &= ~ENQUEUED;
+		if (!(commit->object.flags & STALE))
+			nonstale_count--;
 
 		if (min_generation && generation > last_gen)
 			BUG("bad generation skip %"PRItime" > %"PRItime" at %s",
@@ -134,8 +150,10 @@ static int paint_down_to_common(struct repository *r,
 				return error(_("could not parse commit %s"),
 					     oid_to_hex(&p->object.oid));
 			}
+			if (flags & STALE)
+				mark_stale(p, ENQUEUED, &nonstale_count);
 			p->object.flags |= flags;
-			maybe_enqueue(&queue, p);
+			maybe_enqueue(&queue, p, &nonstale_count);
 		}
 	}
 
