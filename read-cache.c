@@ -1520,7 +1520,7 @@ int refresh_index(struct index_state *istate, unsigned int flags,
 	 * cache entries quickly then in the single threaded loop below,
 	 * we only have to do the special cases that are left.
 	 */
-	preload_index(istate, pathspec, 0);
+	preload_index(istate, pathspec, flags & REFRESH_REALLY);
 	trace2_region_enter("index", "refresh", NULL);
 
 	for (i = 0; i < istate->cache_nr; i++) {

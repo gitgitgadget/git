@@ -24,4 +24,15 @@ test_expect_success 'do not switch branches with dirty file' '
 	test_grep overwritten err
 '
 
+test_expect_success '--really-refresh overrides assume-unchanged under preload' '
+	git reset --hard &&
+	test_commit really-refresh really-refresh original &&
+	git update-index --assume-unchanged really-refresh &&
+	printf "modified\n" >really-refresh &&
+	test-tool chmtime -100000 really-refresh &&
+	test_must_fail env GIT_TEST_PRELOAD_INDEX=1 \
+		git update-index --really-refresh >out 2>err &&
+	test_grep "needs update" out
+'
+
 test_done

@@ -42,6 +42,7 @@ struct thread_data {
 	struct progress_data *progress;
 	int offset, nr;
 	int t2_nr_lstat;
+	unsigned int refresh_flags;
 };
 
 static void *preload_thread(void *_data)
@@ -60,6 +61,7 @@ static void *preload_thread(void *_data)
 	do {
 		struct cache_entry *ce = *cep++;
 		struct stat st;
+		unsigned int ce_option = CE_MATCH_RACY_IS_DIRTY | CE_MATCH_IGNORE_FSMONITOR;
 
 		if (ce_stage(ce))
 			continue;
@@ -87,7 +89,9 @@ static void *preload_thread(void *_data)
 		p->t2_nr_lstat++;
 		if (lstat(ce->name, &st))
 			continue;
-		if (ie_match_stat(index, ce, &st, CE_MATCH_RACY_IS_DIRTY|CE_MATCH_IGNORE_FSMONITOR))
+		if (p->refresh_flags & REFRESH_REALLY)
+			ce_option |= CE_MATCH_IGNORE_VALID;
+		if (ie_match_stat(index, ce, &st, ce_option))
 			continue;
 		ce_mark_uptodate(ce);
 		mark_fsmonitor_valid(index, ce);
@@ -150,6 +154,7 @@ void preload_index(struct index_state *index,
 			copy_pathspec(&p->pathspec, pathspec);
 		p->offset = offset;
 		p->nr = work;
+		p->refresh_flags = refresh_flags;
 		if (pd.progress)
 			p->progress = &pd;
 		offset += work;
