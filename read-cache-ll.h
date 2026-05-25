@@ -425,6 +425,8 @@ void *read_blob_data_from_index(struct index_state *, const char *, unsigned lon
 #define CE_MATCH_REFRESH		0x10
 /* don't refresh_fsmonitor state or do stat comparison even if CE_FSMONITOR_VALID is true */
 #define CE_MATCH_IGNORE_FSMONITOR 0X20
+/* update stat info without checking content */
+#define CE_MATCH_STAT_ONLY		0x40
 int is_racy_timestamp(const struct index_state *istate,
 		      const struct cache_entry *ce);
 int has_racy_timestamp(struct index_state *istate);
@@ -452,6 +454,7 @@ int fake_lstat(const struct cache_entry *ce, struct stat *st);
 #define REFRESH_IN_PORCELAIN             (1 << 5) /* user friendly output, not "needs update" */
 #define REFRESH_PROGRESS                 (1 << 6) /* show progress bar if stderr is tty */
 #define REFRESH_IGNORE_SKIP_WORKTREE     (1 << 7) /* ignore skip_worktree entries */
+#define REFRESH_STAT_ONLY                (1 << 8) /* update stat info without checking content */
 int refresh_index(struct index_state *, unsigned int flags, const struct pathspec *pathspec, char *seen, const char *header_msg);
 /*
  * Refresh the index and write it to disk.

@@ -291,6 +291,7 @@ integration_tests = [
   't2106-update-index-assume-unchanged.sh',
   't2107-update-index-basic.sh',
   't2108-update-index-refresh-racy.sh',
+  't2109-update-index-refresh-stat-only.sh',
   't2200-add-update.sh',
   't2201-add-update-typechange.sh',
   't2202-add-addremove.sh',

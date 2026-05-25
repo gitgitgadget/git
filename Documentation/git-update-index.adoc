@@ -109,6 +109,25 @@ you will need to handle the situation manually.
 	Like `--refresh`, but checks stat information unconditionally,
 	without regard to the "assume unchanged" setting.
 
+--refresh-stat-only::
+	Like `--refresh`, but updates only the stat information
+	in the index, without rehashing the file contents. This is
+	useful for large repositories after a working tree has been
+	produced or restored by means other than a normal checkout --
+	for example, a CI cache restore, container provisioning, or
+	copying a working tree from another machine -- when the file
+	contents are known to be correct but the cached stat
+	information no longer matches. Some backup and syncing tools
+	preserve mtimes, but inode numbers, device identifiers, and
+	other filesystem-specific stat fields generally cannot be
+	preserved across machines or even across mounts on the same
+	machine. Like `--really-refresh`, this option disregards the
+	"assume unchanged" setting so that stale stat data on those
+	entries is still updated. Use with care: if the worktree
+	content does not actually match what the index records, the
+	affected entries will appear clean while the recorded object
+	ID remains stale.
+
 --skip-worktree::
 --no-skip-worktree::
 	When one of these flags is specified, the object names recorded

@@ -89,7 +89,7 @@ static void *preload_thread(void *_data)
 		p->t2_nr_lstat++;
 		if (lstat(ce->name, &st))
 			continue;
-		if (p->refresh_flags & REFRESH_REALLY)
+		if (p->refresh_flags & (REFRESH_REALLY | REFRESH_STAT_ONLY))
 			ce_option |= CE_MATCH_IGNORE_VALID;
 		if (ie_match_stat(index, ce, &st, ce_option))
 			continue;

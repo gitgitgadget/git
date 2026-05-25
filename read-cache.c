@@ -1350,6 +1350,7 @@ static struct cache_entry *refresh_cache_ent(struct index_state *istate,
 	int ignore_skip_worktree = options & CE_MATCH_IGNORE_SKIP_WORKTREE;
 	int ignore_missing = options & CE_MATCH_IGNORE_MISSING;
 	int ignore_fsmonitor = options & CE_MATCH_IGNORE_FSMONITOR;
+	int stat_only = options & CE_MATCH_STAT_ONLY;
 
 	if (!refresh || ce_uptodate(ce))
 		return ce;
@@ -1420,12 +1421,14 @@ static struct cache_entry *refresh_cache_ent(struct index_state *istate,
 		}
 	}
 
-	if (t2_did_scan)
-		*t2_did_scan = 1;
-	if (ie_modified(istate, ce, &st, options)) {
-		if (err)
-			*err = EINVAL;
-		return NULL;
+	if (!stat_only) {
+		if (t2_did_scan)
+			*t2_did_scan = 1;
+		if (ie_modified(istate, ce, &st, options)) {
+			if (err)
+				*err = EINVAL;
+			return NULL;
+		}
 	}
 
 	updated = make_empty_cache_entry(istate, ce_namelen(ce));
@@ -1490,11 +1493,14 @@ int refresh_index(struct index_state *istate, unsigned int flags,
 	int not_new = (flags & REFRESH_IGNORE_MISSING) != 0;
 	int ignore_submodules = (flags & REFRESH_IGNORE_SUBMODULES) != 0;
 	int ignore_skip_worktree = (flags & REFRESH_IGNORE_SKIP_WORKTREE) != 0;
+	int stat_only = (flags & REFRESH_STAT_ONLY) != 0;
 	int first = 1;
 	int in_porcelain = (flags & REFRESH_IN_PORCELAIN);
 	unsigned int options = (CE_MATCH_REFRESH |
-				(really ? CE_MATCH_IGNORE_VALID : 0) |
-				(not_new ? CE_MATCH_IGNORE_MISSING : 0));
+				((really || stat_only) ? CE_MATCH_IGNORE_VALID : 0) |
+				(not_new ? CE_MATCH_IGNORE_MISSING : 0) |
+				(stat_only ? (CE_MATCH_STAT_ONLY |
+					      CE_MATCH_RACY_IS_DIRTY) : 0));
 	const char *modified_fmt;
 	const char *deleted_fmt;
 	const char *typechange_fmt;
@@ -1520,7 +1526,7 @@ int refresh_index(struct index_state *istate, unsigned int flags,
 	 * cache entries quickly then in the single threaded loop below,
 	 * we only have to do the special cases that are left.
 	 */
-	preload_index(istate, pathspec, flags & REFRESH_REALLY);
+	preload_index(istate, pathspec, flags & (REFRESH_REALLY | REFRESH_STAT_ONLY));
 	trace2_region_enter("index", "refresh", NULL);
 
 	for (i = 0; i < istate->cache_nr; i++) {
