@@ -40,30 +40,60 @@ static int compare_commits_by_gen(const void *_a, const void *_b)
 	return 0;
 }
 
-static void prio_queue_put_dedup(struct prio_queue *queue, struct commit *c)
+/*
+ * A prio_queue with O(1) termination check.  'max_nonstale' tracks
+ * the lowest-priority non-stale commit enqueued so far; once it is
+ * popped, every remaining entry is known to be STALE.
+ */
+struct nonstale_queue {
+	struct prio_queue pq;
+	struct commit *max_nonstale;
+};
+
+static void nonstale_queue_put(struct nonstale_queue *queue,
+			       struct commit *c)
+{
+	struct commit *old = queue->max_nonstale;
+
+	prio_queue_put(&queue->pq, c);
+	if (c->object.flags & STALE)
+		return;
+	if (!old || queue->pq.compare(old, c, queue->pq.cb_data) <= 0)
+		queue->max_nonstale = c;
+}
+
+static struct commit *nonstale_queue_get(struct nonstale_queue *queue)
+{
+	struct commit *commit = prio_queue_get(&queue->pq);
+
+	if (commit == queue->max_nonstale)
+		queue->max_nonstale = NULL;
+
+	return commit;
+}
+
+static void clear_nonstale_queue(struct nonstale_queue *queue)
+{
+	clear_prio_queue(&queue->pq);
+	queue->max_nonstale = NULL;
+}
+
+static void nonstale_queue_put_dedup(struct nonstale_queue *queue,
+				     struct commit *c)
 {
 	if (c->object.flags & ENQUEUED)
 		return;
 	c->object.flags |= ENQUEUED;
-	prio_queue_put(queue, c);
+	nonstale_queue_put(queue, c);
 }
 
-static struct commit *prio_queue_get_dedup(struct prio_queue *queue)
+static struct commit *nonstale_queue_get_dedup(struct nonstale_queue *queue)
 {
-	struct commit *commit = prio_queue_get(queue);
+	struct commit *commit = nonstale_queue_get(queue);
+
 	if (commit)
 		commit->object.flags &= ~ENQUEUED;
 	return commit;
-}
-
-static int queue_has_nonstale(struct prio_queue *queue)
-{
-	for (size_t i = 0; i < queue->nr; i++) {
-		struct commit *commit = queue->array[i].data;
-		if (!(commit->object.flags & STALE))
-			return 1;
-	}
-	return 0;
 }
 
 /* all input commits in one and twos[] must have been parsed! */
@@ -74,28 +104,30 @@ static int paint_down_to_common(struct repository *r,
 				enum merge_base_flags mb_flags,
 				struct commit_list **result)
 {
-	struct prio_queue queue = { compare_commits_by_gen_then_commit_date };
+	struct nonstale_queue queue = {
+		{ compare_commits_by_gen_then_commit_date }
+	};
 	int i;
 	timestamp_t last_gen = GENERATION_NUMBER_INFINITY;
 	struct commit_list **tail = result;
 
 	if (!min_generation && !corrected_commit_dates_enabled(r))
-		queue.compare = compare_commits_by_commit_date;
+		queue.pq.compare = compare_commits_by_commit_date;
 
 	one->object.flags |= PARENT1;
 	if (!n) {
 		commit_list_append(one, result);
 		return 0;
 	}
-	prio_queue_put_dedup(&queue, one);
+	nonstale_queue_put_dedup(&queue, one);
 
 	for (i = 0; i < n; i++) {
 		twos[i]->object.flags |= PARENT2;
-		prio_queue_put_dedup(&queue, twos[i]);
+		nonstale_queue_put_dedup(&queue, twos[i]);
 	}
 
-	while (queue_has_nonstale(&queue)) {
-		struct commit *commit = prio_queue_get_dedup(&queue);
+	while (queue.max_nonstale) {
+		struct commit *commit = nonstale_queue_get_dedup(&queue);
 		struct commit_list *parents;
 		int flags;
 		timestamp_t generation = commit_graph_generation(commit);
@@ -133,7 +165,7 @@ static int paint_down_to_common(struct repository *r,
 			if ((p->object.flags & flags) == flags)
 				continue;
 			if (repo_parse_commit(r, p)) {
-				clear_prio_queue(&queue);
+				clear_nonstale_queue(&queue);
 				commit_list_free(*result);
 				*result = NULL;
 				/*
@@ -149,11 +181,11 @@ static int paint_down_to_common(struct repository *r,
 					     oid_to_hex(&p->object.oid));
 			}
 			p->object.flags |= flags;
-			prio_queue_put_dedup(&queue, p);
+			nonstale_queue_put_dedup(&queue, p);
 		}
 	}
 
-	clear_prio_queue(&queue);
+	clear_nonstale_queue(&queue);
 	commit_list_sort_by_date(result);
 	return 0;
 }
@@ -1057,11 +1089,11 @@ struct commit_list *get_reachable_subset(struct commit **from, size_t nr_from,
 define_commit_slab(bit_arrays, struct bitmap *);
 static struct bit_arrays bit_arrays;
 
-static void insert_no_dup(struct prio_queue *queue, struct commit *c)
+static void insert_no_dup(struct nonstale_queue *queue, struct commit *c)
 {
 	if (c->object.flags & PARENT2)
 		return;
-	prio_queue_put(queue, c);
+	nonstale_queue_put(queue, c);
 	c->object.flags |= PARENT2;
 }
 
@@ -1086,7 +1118,9 @@ void ahead_behind(struct repository *r,
 		  struct commit **commits, size_t commits_nr,
 		  struct ahead_behind_count *counts, size_t counts_nr)
 {
-	struct prio_queue queue = { .compare = compare_commits_by_gen_then_commit_date };
+	struct nonstale_queue queue = {
+		{ .compare = compare_commits_by_gen_then_commit_date }
+	};
 	size_t width = DIV_ROUND_UP(commits_nr, BITS_IN_EWORD);
 
 	if (!commits_nr || !counts_nr)
@@ -1109,8 +1143,8 @@ void ahead_behind(struct repository *r,
 		insert_no_dup(&queue, c);
 	}
 
-	while (queue_has_nonstale(&queue)) {
-		struct commit *c = prio_queue_get(&queue);
+	while (queue.max_nonstale) {
+		struct commit *c = nonstale_queue_get(&queue);
 		struct commit_list *p;
 		struct bitmap *bitmap_c = get_bit_array(c, width);
 
@@ -1152,10 +1186,10 @@ void ahead_behind(struct repository *r,
 
 	/* STALE is used here, PARENT2 is used by insert_no_dup(). */
 	repo_clear_commit_marks(r, PARENT2 | STALE);
-	for (size_t i = 0; i < queue.nr; i++)
-		free_bit_array(queue.array[i].data);
+	for (size_t i = 0; i < queue.pq.nr; i++)
+		free_bit_array(queue.pq.array[i].data);
 	clear_bit_arrays(&bit_arrays);
-	clear_prio_queue(&queue);
+	clear_nonstale_queue(&queue);
 }
 
 struct commit_and_index {
