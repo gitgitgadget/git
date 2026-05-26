@@ -1,10 +1,10 @@
 To: git@vger.kernel.org
-Subject: What's cooking in git.git (May 2026, #06)
-X-master-at: 6a4418c36d6bad69a599044b3cf49dcbd049cb45
-X-next-at: c82f188059a6ca12355cd6ca567c0dcd507f510f
+Subject: What's cooking in git.git (May 2026, #07)
+X-master-at: 56a4f3c3a221adf1df9b39da69b8a6890f803157
+X-next-at: 208068f2d8ae29d7edaa245d9975b1b22ec65738
 Bcc: lwn@lwn.net, gitster@pobox.com
 
-What's cooking in git.git (May 2026, #06)
+What's cooking in git.git (May 2026, #07)
 -----------------------------------------
 
 Here are the topics that have been cooking in my tree.  Commits
@@ -48,132 +48,151 @@ Release tarballs are available at:
 --------------------------------------------------
 [Graduated to 'master']
 
-* aw/validate-proxy-url-scheme (2026-05-05) 1 commit
-  (merged to 'next' on 2026-05-15 at da9c1b71d7)
- + http: reject unsupported proxy URL schemes
+* ag/sequencer-remove-unused-struct-member (2026-05-11) 1 commit
+  (merged to 'next' on 2026-05-17 at 8553437ae1)
+ + sequencer: remove todo_add_branch_context.commit
 
- Misspelt proxy URL (e.g., httt://...) did not trigger any warning
- or failure, which has been corrected.
- source: <20260505091941.1825-2-aminnimaj@gmail.com>
-
-
-* jc/ci-enable-expensive (2026-05-10) 2 commits
-  (merged to 'next' on 2026-05-15 at d258bb5e55)
- + ci: enable EXPENSIVE for contributor builds
- + Merge branch 'js/objects-larger-than-4gb-on-windows' into jc/ci-enable-expensive
-
- Enable expensive tests to catch topics that may cause breakages on
- integration branches closer to their origin in the contributor PR
- builds.
- source: <xmqqjyta9630.fsf@gitster.g>
+ Code clean-up.
+ cf. <agLKVn6RF4UBYd_8@pks.im>
+ source: <pull.2111.git.1778502113485.gitgitgadget@gmail.com>
 
 
-* jk/apply-leakfix (2026-05-15) 1 commit
-  (merged to 'next' on 2026-05-20 at 725a20bf93)
- + apply: plug leak on "patch too large" error
+* dk/doc-exclude-is-shared-per-repo (2026-05-12) 1 commit
+  (merged to 'next' on 2026-05-17 at ddc761aec6)
+ + ignore: note info/exclude lives in GIT_COMMON_DIR, not GIT_DIR
 
- Leakfix.
- source: <20260516021622.GA744303@coredump.intra.peff.net>
-
-
-* jk/commit-sign-overflow-fix (2026-05-15) 1 commit
-  (merged to 'next' on 2026-05-20 at e1a320d4e5)
- + commit: handle large commit messages in utf8 verification
-
- Leakfix.
- source: <20260516022310.GB744303@coredump.intra.peff.net>
+ Document the fact that .git/info/exclude is shared across worktrees
+ linked to the same repository.
+ cf. <bea48414-217b-4860-9279-fe94e3687c28@gmail.com>
+ source: <ec97ad3f054e90b675f099a36a81a23bb4b2a0ed.1778620784.git.ben.knoble+github@gmail.com>
 
 
-* kh/doc-log-decorate-list (2026-04-27) 2 commits
-  (merged to 'next' on 2026-05-15 at f740311a37)
- + doc: log: use the same delimiter in description list
- + doc: log: fix --decorate description list
+* jk/dumb-http-alternate-fix (2026-05-12) 1 commit
+  (merged to 'next' on 2026-05-17 at c1a51214fb)
+ + http: handle absolute-path alternates from server root
 
- Doc update.
- cf. <xmqqpl31np0l.fsf@gitster.g>
- source: <CV_doc_log_--decorate_list.626@msgid.xyz>
-
-
-* kn/refs-generic-helpers (2026-05-04) 9 commits
-  (merged to 'next' on 2026-05-15 at 62cb4e0ce2)
- + refs: use peeled tag values in reference backends
- + refs: add peeled object ID to the `ref_update` struct
- + refs: move object parsing to the generic layer
- + update-ref: handle rejections while adding updates
- + update-ref: move `print_rejected_refs()` up
- + refs: return `ref_transaction_error` from `ref_transaction_update()`
- + refs: extract out reflog config to generic layer
- + refs: introduce `ref_store_init_options`
- + refs: remove unused typedef 'ref_transaction_commit_fn'
-
- Refactor service routines in the ref subsystem backends.
- cf. <afmFmGo_Sg33Rv6V@pks.im>
- cf. <87o6isqq4q.fsf@toon--20250203-5JQV3.mail-host-address-is-not-set>
- source: <20260504-refs-move-to-generic-layer-v4-0-936ac2f0b1a3@gmail.com>
+ The HTTP walker misinterpreted the alternates file that gives an
+ absolute path when the server URL does not have the final slash
+ (i.e., "https://example.com" not "https://example.com/").
+ source: <20260512162619.GA69813@coredump.intra.peff.net>
 
 
-* mm/git-url-parse (2026-05-01) 8 commits
-  (merged to 'next' on 2026-05-15 at 416deceeeb)
- + t9904: add tests for the new url-parse builtin
- + doc: describe the url-parse builtin
- + builtin: create url-parse command
- + urlmatch: define url_parse function
- + url: return URL_SCHEME_UNKNOWN instead of dying
- + url: move scheme detection to URL header/source
- + url: move url_is_local_not_ssh to url.h
- + connect: rename enum protocol to url_scheme
+* jk/pretty-no-strbuf-presizing (2026-05-12) 1 commit
+  (merged to 'next' on 2026-05-17 at ee684c614f)
+ + pretty: drop strbuf pre-sizing from add_rfc2047()
 
- The internal URL parsing logic has been made accessible via a new
- subcommand "git url-parse".
- cf. <xmqqjyt9p9pk.fsf@gitster.g>
- cf. <20260512085734.GA26769@tb-raspi4>
- source: <pull.1715.v3.git.git.1777699722.gitgitgadget@gmail.com>
+ Remove ineffective strbuf presizing that would have computed an
+ allocation that would not have fit in the available memory anyway,
+ or too small due to integer wraparound to cause immediate automatic
+ growing.
+ source: <20260512162022.GA69669@coredump.intra.peff.net>
 
 
-* ps/maintenance-daemonize-lockfix (2026-05-13) 2 commits
-  (merged to 'next' on 2026-05-21 at 9b7fa37559)
- + run-command: honor "gc.auto" for auto-maintenance
- + builtin/maintenance: fix locking with "--detach"
+* kk/paint-down-to-common-optim (2026-05-11) 2 commits
+  (merged to 'next' on 2026-05-17 at 2e39c767e5)
+ + commit-reach: early exit paint_down_to_common for single merge-base
+ + commit-reach: introduce merge_base_flags enum
 
- "git maintenance" that goes background did not use the lockfile to
- prevent multiple maintenance processes from running at the same
- time, which has been corrected.
- cf. <ag1MHje6-C6nmcO4@pks.im>
- source: <20260513-pks-maintenance-fix-lock-with-detach-v3-0-f27a1ac82891@pks.im>
+ "git merge-base" optimization.
+ source: <pull.2109.v4.git.1778504352.gitgitgadget@gmail.com>
 
 
-* pw/xdiff-shrink-memory-consumption (2026-05-04) 5 commits
-  (merged to 'next' on 2026-05-15 at 7a867909d2)
- + xdiff: reduce the size of array
- + xprepare: simplify error handling
- + xdiff: cleanup xdl_clean_mmatch()
- + xdiff: reduce size of action arrays
- + Merge branch 'en/xdiff-cleanup-3' into pw/xdiff-shrink-memory-consumption
+* mm/diff-U-takes-no-negative-values (2026-05-12) 4 commits
+  (merged to 'next' on 2026-05-17 at d81439a049)
+ + parse-options: clarify what "negated" means for PARSE_OPT_NONEG
+ + xdiff: guard against negative context lengths
+ + diff: reject negative values for -U/--unified
+ + diff: reject negative values for --inter-hunk-context
 
- Shrink wasted memory in Myers diff that does not account for common
- prefix and suffix removal.
- source: <cover.1777903579.git.phillip.wood@dunelm.org.uk>
-
-
-* sp/shallow-deepen-on-non-shallow-repo-fix (2026-05-11) 1 commit
-  (merged to 'next' on 2026-05-15 at 67dd491aae)
- + shallow: fix relative deepen on non-shallow repositories
-
- "git fetch --deepen=<n>" in a full clone truncated the history to <n>
- commits deep, which has been corrected to be a no-op instead.
- source: <20260511192044.169557-1-samo_pogacnik@t-2.net>
-
-
-* za/t2000-modernise-more (2026-04-29) 1 commit
-  (merged to 'next' on 2026-05-15 at 3b524d0ba5)
- + t2000: consolidate second scenario into a single test block
-
- Test update.
- cf. <xmqqfr3xnofn.fsf@gitster.g>
- source: <20260429103607.406339-1-zakariyahali100@gmail.com>
+ The command line parser for "git diff" learned a few options take
+ only non-negative integers.
+ source: <pull.2105.v2.git.1778609423.gitgitgadget@gmail.com>
 
 --------------------------------------------------
 [New Topics]
+
+* kk/fetch-store-ref-optimization (2026-05-24) 1 commit
+ - fetch: pass transport to post-fetch connectivity check
+
+ When fetching from a transport that provides a self-contained pack,
+ pass the transport pointer to the post-fetch `check_connected()` call
+ to optimize connectivity check.
+
+ Will merge to 'next'?
+ source: <pull.2123.git.1779625693328.gitgitgadget@gmail.com>
+
+
+* ds/restore-sparse-index (2026-05-24) 2 commits
+ - restore: avoid sparse index expansion
+ - t1092: test 'git restore' with sparse index
+
+ 'git restore --staged' has been optimized to avoid unnecessarily expanding
+ the sparse index when operating on paths within the sparse checkout
+ definition, by handling sparse directory entries at the tree level.
+
+ Will merge to 'next'?
+ source: <pull.2121.git.1779644412.gitgitgadget@gmail.com>
+
+
+* kk/commit-reach-optim (2026-05-25) 3 commits
+ - commit-reach: replace queue_has_nonstale() scan with O(1) tracking
+ - commit-reach: deduplicate queue entries in paint_down_to_common
+ - object.h: fix stale entries in object flag allocation table
+
+ The check for non-stale commits in the priority queue used by
+ `paint_down_to_common` and `ahead_behind` has been optimized by
+ replacing an O(N) scan with an O(1) counter, yielding performance
+ improvements in repositories with wide histories.
+
+ Will merge to 'next'?
+ source: <pull.2124.v2.git.1779719286.gitgitgadget@gmail.com>
+
+
+* ar/receive-pack-worktree-env (2026-05-25) 1 commit
+ - receive-pack: fix updateInstead with core.worktree
+
+ The GIT_WORK_TREE variable prepared to invoke the push-to-checkout
+ hook was leaking into the environment even when there was no hook
+ used and broke the default push-to-deploy (i.e., let "git checkout"
+ update the working tree only when the working tree is clean).
+
+ Will merge to 'next'.
+ source: <20260525162311.66240-2-hi@alyssa.is>
+
+
+* ib/doc-push-default-simple (2026-05-25) 1 commit
+ - doc: clarify push.default=simple behavior
+
+ The documentation for `push.default = simple` has been clarified to
+ better explain its behavior, making it clear that it pushes the
+ current branch to a same-named branch on the remote, and detailing
+ the upstream requirements for centralized workflows.
+
+ Comments?
+ source: <pull.2115.v2.git.1779767888508.gitgitgadget@gmail.com>
+
+
+* jc/doc-monitor-ghci (2026-05-24) 1 commit
+ - SubmittingPatches: proactively monitor GHCI pages
+
+ Encourage original authors to monitor the CI status.
+
+ Will merge to 'next'?
+ source: <xmqq1pf0gpp3.fsf@gitster.g>
+
+
+* ec/commit-fixup-options (2026-05-26) 2 commits
+ - commit: allow -c/-C for all kinds of --fixup
+ - commit: allow -m/-F for all kinds of --fixup
+
+ The -m/-F/-c/-C options to supply commit log message from outside the
+ editor are now supported for all "git commit --fixup" variations.
+
+ Comments?
+ source: <cover.1779792311.git.erik@cervined.in>
+
+--------------------------------------------------
+[Cooking]
 
 * gh/jump-auto-mode (2026-05-21) 1 commit
  - git-jump: pick a mode automatically when invoked without arguments
@@ -189,7 +208,7 @@ Release tarballs are available at:
   (merged to 'next' on 2026-05-22 at 020bec81b7)
  + Documentation/git-range-diff: add missing notes options in synopsis
 
- Doxfix.
+ Docfix.
 
  Will merge to 'master'.
  source: <20260521052841.73775-1-siddh.raman.pant@oracle.com>
@@ -224,7 +243,7 @@ Release tarballs are available at:
  source: <20260521-b4-pks-odb-source-loose-v1-0-6553b399be2d@pks.im>
 
 
-* ps/setup-centralize-odb-creation (2026-05-21) 9 commits
+* ps/setup-centralize-odb-creation (2026-05-25) 9 commits
  - setup: construct object database in `apply_repository_format()`
  - repository: stop reading loose object map twice on repo init
  - setup: stop initializing object database without repository
@@ -241,7 +260,7 @@ Release tarballs are available at:
  centralized.
 
  Comments?
- source: <20260521-b4-pks-setup-centralize-odb-creation-v1-0-f130d2a7e8ae@pks.im>
+ source: <20260526-b4-pks-setup-centralize-odb-creation-v2-0-2fa5b385c13e@pks.im>
 
 
 * ps/gitlab-ci-macOS-improvements (2026-05-21) 2 commits
@@ -256,14 +275,16 @@ Release tarballs are available at:
 
 
 * kh/doc-hook (2026-05-21) 4 commits
- - doc: hook: don’t self-link via config include
- - doc: config: include existing git-hook(1) section
- - doc: hook: consistently capitalize Git
- - doc: hook: remove stray backtick
+  (merged to 'next' on 2026-05-25 at 5e41d13adf)
+ + doc: hook: don’t self-link via config include
+ + doc: config: include existing git-hook(1) section
+ + doc: hook: consistently capitalize Git
+ + doc: hook: remove stray backtick
 
  Doc updates.
 
- Comments?
+ Will merge to 'master'.
+ cf. <2832179.mvXUDI8C0e@piment-oiseau>
  source: <CV_doc_hook.6f0@msgid.xyz>
 
 
@@ -279,8 +300,6 @@ Release tarballs are available at:
  Comments?
  source: <CV_doc_replay_config.709@msgid.xyz>
 
---------------------------------------------------
-[Cooking]
 
 * jk/commit-graph-lazy-load-fallback (2026-05-18) 1 commit
   (merged to 'next' on 2026-05-22 at d1188df466)
@@ -295,7 +314,8 @@ Release tarballs are available at:
 
 
 * jk/connect-service-enum (2026-05-21) 2 commits
- - transport-helper: fix typo in BUG() message
+  (merged to 'next' on 2026-05-24 at 293561cbc5)
+ + transport-helper: fix typo in BUG() message
   (merged to 'next' on 2026-05-21 at fd80c61e21)
  + connect: use "service" enum for "name" argument
 
@@ -303,7 +323,7 @@ Release tarballs are available at:
  converted to a "service" enum to improve type safety and clarify its
  purpose.
 
- Will merge to 'next' and then to 'master'.
+ Will merge to 'master'.
  source: <20260519052219.GA1703179@coredump.intra.peff.net>
  source: <20260522044352.GA861761@coredump.intra.peff.net>
 
@@ -320,13 +340,15 @@ Release tarballs are available at:
  source: <20260519011837.GA1615637@coredump.intra.peff.net>
 
 
-* aj/stash-patch-optimize-temporary-index (2026-05-19) 1 commit
+* aj/stash-patch-optimize-temporary-index (2026-05-22) 1 commit
  - stash: reuse cached index entries in --patch temporary index
 
  "git stash -p" has been optimized by reusing cached index
  entries in its temporary index, avoiding unnecessary lstat()
  calls on unchanged files.
- source: <pull.2306.git.git.1779194605735.gitgitgadget@gmail.com>
+
+ Will merge to 'next'?
+ source: <pull.2306.v2.git.git.1779491545531.gitgitgadget@gmail.com>
 
 
 * tb/bitmap-build-performance (2026-05-19) 9 commits
@@ -360,31 +382,6 @@ Release tarballs are available at:
  source: <pull.2301.v4.git.git.1779372367317.gitgitgadget@gmail.com>
 
 
-* jk/dumb-http-alternate-fix (2026-05-12) 1 commit
-  (merged to 'next' on 2026-05-17 at c1a51214fb)
- + http: handle absolute-path alternates from server root
-
- The HTTP walker misinterpreted the alternates file that gives an
- absolute path when the server URL does not have the final slash
- (i.e., "https://example.com" not "https://example.com/").
-
- Will merge to 'master'.
- source: <20260512162619.GA69813@coredump.intra.peff.net>
-
-
-* jk/pretty-no-strbuf-presizing (2026-05-12) 1 commit
-  (merged to 'next' on 2026-05-17 at ee684c614f)
- + pretty: drop strbuf pre-sizing from add_rfc2047()
-
- Remove ineffective strbuf presizing that would have computed an
- allocation that would not have fit in the available memory anyway,
- or too small due to integer wraparound to cause immediate automatic
- growing.
-
- Will merge to 'master'.
- source: <20260512162022.GA69669@coredump.intra.peff.net>
-
-
 * kk/merge-octopus-optim (2026-05-11) 1 commit
   (merged to 'next' on 2026-05-20 at afe427dc66)
  + merge: use repo_in_merge_bases for octopus up-to-date check
@@ -411,15 +408,16 @@ Release tarballs are available at:
 
 
 * ta/approxidate-noon-fix (2026-05-21) 4 commits
- - approxidate: use deferred mday adjustments for "specials"
- - approxidate: make "specials" respect fixed day-of-month
- - t0006: add support for approxidate test date adjustment
- - approxidate: make "today" wrap to midnight
+  (merged to 'next' on 2026-05-25 at 2dd9ce3c54)
+ + approxidate: use deferred mday adjustments for "specials"
+ + approxidate: make "specials" respect fixed day-of-month
+ + t0006: add support for approxidate test date adjustment
+ + approxidate: make "today" wrap to midnight
 
  "Friday noon" asked in the morning on Sunday was parsed to be one
  day before the specified time, which has been corrected.
 
- Will merge to 'next'.
+ Will merge to 'master'.
  source: <20260521105408.8222-1-taahol@utu.fi>
 
 
@@ -541,7 +539,7 @@ Release tarballs are available at:
  source: <20260515-toon-fix-almalinux8-v3-1-b545a0647f0f@iotcl.com>
 
 
-* hn/config-typo-advice (2026-05-16) 1 commit
+* hn/config-typo-advice (2026-05-25) 1 commit
  - config: suggest the correct form when key contains "=" in set context
 
  "git config foo.bar=baz" is not likely to be a request to read the
@@ -550,21 +548,22 @@ Release tarballs are available at:
  giving an error message.
 
  Comments?
- source: <pull.2302.v2.git.git.1778935976330.gitgitgadget@gmail.com>
+ source: <pull.2302.v3.git.git.1779697995418.gitgitgadget@gmail.com>
 
 
-* ja/doc-synopsis-style-again (2026-05-17) 5 commits
+* ja/doc-synopsis-style-again (2026-05-25) 6 commits
  - doc: convert git-imap-send synopsis and options to new style
  - doc: convert git-apply synopsis and options to new style
  - doc: convert git-am synopsis and options to new style
  - doc: convert git-grep synopsis and options to new style
+ - doc: git bisect: clarify the usage of the synopsis vs actual command
  - doc: convert git-bisect to synopsis style
 
  A batch of documentation pages has been updated to use the modern
  synopsis style.
 
- Comments?
- source: <pull.2117.git.1779049615.gitgitgadget@gmail.com>
+ Will merge to 'next'?
+ source: <pull.2117.v2.git.1779704908.gitgitgadget@gmail.com>
 
 
 * kn/refs-fsck-skip-lock-files (2026-05-17) 1 commit
@@ -591,21 +590,12 @@ Release tarballs are available at:
  source: <20260517132111.1014901-1-joerg@thalheim.io>
 
 
-* ag/sequencer-remove-unused-struct-member (2026-05-11) 1 commit
-  (merged to 'next' on 2026-05-17 at 8553437ae1)
- + sequencer: remove todo_add_branch_context.commit
-
- Code clean-up.
-
- Will merge to 'master'.
- cf. <agLKVn6RF4UBYd_8@pks.im>
- source: <pull.2111.git.1778502113485.gitgitgadget@gmail.com>
-
-
-* hn/branch-prune-merged (2026-05-21) 4 commits
+* hn/branch-prune-merged (2026-05-22) 6 commits
  - branch: add --dry-run for --prune-merged
  - branch: add branch.<name>.pruneMerged opt-out
  - branch: add --prune-merged <branch>
+ - branch: prepare delete_branches for a bulk caller
+ - branch: let delete_branches warn instead of error on bulk refusal
  - branch: add --forked <branch>
 
  "git branch" command learned "--prune-merged" option to remove
@@ -613,44 +603,7 @@ Release tarballs are available at:
  branches they track.
 
  Comments?
- source: <pull.2285.v10.git.git.1779403204.gitgitgadget@gmail.com>
-
-
-* mm/diff-U-takes-no-negative-values (2026-05-12) 4 commits
-  (merged to 'next' on 2026-05-17 at d81439a049)
- + parse-options: clarify what "negated" means for PARSE_OPT_NONEG
- + xdiff: guard against negative context lengths
- + diff: reject negative values for -U/--unified
- + diff: reject negative values for --inter-hunk-context
-
- The command line parser for "git diff" learned a few options take
- only non-negative integers.
-
- Will merge to 'master'.
- source: <pull.2105.v2.git.1778609423.gitgitgadget@gmail.com>
-
-
-* dk/doc-exclude-is-shared-per-repo (2026-05-12) 1 commit
-  (merged to 'next' on 2026-05-17 at ddc761aec6)
- + ignore: note info/exclude lives in GIT_COMMON_DIR, not GIT_DIR
-
- Document the fact that .git/info/exclude is shared across worktrees
- linked to the same repository.
-
- Will merge to 'master'.
- cf. <bea48414-217b-4860-9279-fe94e3687c28@gmail.com>
- source: <ec97ad3f054e90b675f099a36a81a23bb4b2a0ed.1778620784.git.ben.knoble+github@gmail.com>
-
-
-* kk/paint-down-to-common-optim (2026-05-11) 2 commits
-  (merged to 'next' on 2026-05-17 at 2e39c767e5)
- + commit-reach: early exit paint_down_to_common for single merge-base
- + commit-reach: introduce merge_base_flags enum
-
- "git merge-base" optimization.
-
- Will merge to 'master'.
- source: <pull.2109.v4.git.1778504352.gitgitgadget@gmail.com>
+ source: <pull.2285.v11.git.git.1779449498.gitgitgadget@gmail.com>
 
 
 * st/daemon-sockaddr-fixes (2026-05-14) 3 commits
@@ -701,14 +654,15 @@ Release tarballs are available at:
  source: <20260519153808.494105-1-christian.couder@gmail.com>
 
 
-* hn/checkout-track-fetch (2026-05-21) 1 commit
+* hn/checkout-track-fetch (2026-05-23) 2 commits
  - checkout: extend --track with a "fetch" mode to refresh start-point
+ - branch: expose helpers for finding the remote owning a tracking ref
 
  "git checkout --track=..." learned to optionally fetch the branch
  from the remote the new branch will work with.
 
  Comments?
- source: <pull.2281.v12.git.git.1779358803652.gitgitgadget@gmail.com>
+ source: <pull.2281.v13.git.git.1779565714.gitgitgadget@gmail.com>
 
 
 * mf/revision-max-count-oldest (2026-05-18) 1 commit
@@ -721,39 +675,42 @@ Release tarballs are available at:
  source: <8210d60832b9a58aa4d71fc3790e44d8989564ce.1779152064.git.mroik@delayed.space>
 
 
-* mm/line-log-cleanup (2026-04-27) 3 commits
+* mm/line-log-cleanup (2026-05-25) 3 commits
  - line-log: allow non-patch diff formats with -L
  - line-log: integrate -L output with the standard log-tree pipeline
  - revision: move -L setup before output_format-to-diff derivation
 
- Code clean-up.
+ The `git log -L` implementation has been refactored to use the
+ standard diff output pipeline, enabling pickaxe and diff-filter to
+ work as expected. Additionally, metadata-only diff formats like
+ --raw and --name-only are now supported with -L.
 
- Comments?
- cf. <xmqqfr3xp98b.fsf@gitster.g>
- source: <pull.2094.git.1777349126.gitgitgadget@gmail.com>
+ Will merge to 'next'?
+ source: <pull.2120.v2.git.1779733799.gitgitgadget@gmail.com>
 
 
-* ds/path-walk-filters (2026-05-13) 14 commits
- - path-walk: support `combine` filter
- - path-walk: support `object:type` filter
- - path-walk: support `tree:0` filter
- - t6601: tag otherwise-unreachable trees
- - pack-objects: support sparse:oid filter with path-walk
- - path-walk: add pl_sparse_trees to control tree pruning
- - path-walk: support blob size limit filter
- - backfill: die on incompatible filter options
- - path-walk: support blobless filter
- - path-walk: always emit directly-requested objects
- - t/perf: add pack-objects filter and path-walk benchmark
- - pack-objects: pass --objects with --path-walk
- - t5620: make test work with path-walk var
- - Merge branch 'en/backfill-fixes-and-edges' into ds/path-walk-filters
+* ds/path-walk-filters (2026-05-22) 14 commits
+  (merged to 'next' on 2026-05-25 at eccb829b10)
+ + path-walk: support `combine` filter
+ + path-walk: support `object:type` filter
+ + path-walk: support `tree:0` filter
+ + t6601: tag otherwise-unreachable trees
+ + pack-objects: support sparse:oid filter with path-walk
+ + path-walk: add pl_sparse_trees to control tree pruning
+ + path-walk: support blob size limit filter
+ + backfill: die on incompatible filter options
+ + path-walk: support blobless filter
+ + path-walk: always emit directly-requested objects
+ + t/perf: add pack-objects filter and path-walk benchmark
+ + pack-objects: pass --objects with --path-walk
+ + t5620: make test work with path-walk var
+ + Merge branch 'en/backfill-fixes-and-edges' into ds/path-walk-filters
 
  The "git pack-objects --path-walk" traversal has been integrated
  with several object filters, including blobless and sparse filters.
 
- Comments?
- source: <pull.2101.v4.git.1778707135.gitgitgadget@gmail.com>
+ Will merge to 'master'.
+ source: <pull.2101.v5.git.1779474277.gitgitgadget@gmail.com>
 
 
 * en/ort-harden-against-corrupt-trees (2026-04-20) 5 commits
@@ -867,18 +824,16 @@ Release tarballs are available at:
  source: <20260410-b4-pks-odb-source-inmemory-v3-0-22fd0fad58fe@pks.im>
 
 
-* cl/conditional-config-on-worktree-path (2026-05-13) 2 commits
-  (merged to 'next' on 2026-05-22 at 7851f494ae)
- + config: add "worktree" and "worktree/i" includeIf conditions
- + config: refactor include_by_gitdir() into include_by_path()
+* cl/conditional-config-on-worktree-path (2026-05-24) 2 commits
+ - config: add "worktree" and "worktree/i" includeIf conditions
+ - config: refactor include_by_gitdir() into include_by_path()
 
  The [includeIf "condition"] conditional inclusion facility for
  configuration files has learned to use the location of worktree
  in its condition.
 
- Will merge to 'master'.
- cf. <2989eb07-2933-4b5a-9e5c-33ef9b805528@gmail.com>
- source: <20260513-includeif-worktree-v4-0-f8e6212d1fba@black-desk.cn>
+ Ready?
+ source: <20260525-includeif-worktree-v5-0-1efe525d025a@black-desk.cn>
 
 
 * ps/shift-root-in-graph (2026-04-27) 1 commit
