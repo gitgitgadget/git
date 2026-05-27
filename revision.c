@@ -4327,22 +4327,48 @@ static void track_linear(struct rev_info *revs, struct commit *commit)
 	revs->previous_parents = commit_list_copy(commit->parents);
 }
 
+enum rev_walk_mode {
+	REV_WALK_REFLOG,
+	REV_WALK_TOPO,
+	REV_WALK_LIMITED,
+	REV_WALK_STREAMING,
+};
+
+static enum rev_walk_mode get_walk_mode(struct rev_info *revs)
+{
+	if (revs->reflog_info)
+		return REV_WALK_REFLOG;
+	if (revs->topo_walk_info)
+		return REV_WALK_TOPO;
+	if (revs->limited)
+		return REV_WALK_LIMITED;
+	return REV_WALK_STREAMING;
+}
+
 static struct commit *get_revision_1(struct rev_info *revs)
 {
+	enum rev_walk_mode mode = get_walk_mode(revs);
+
 	while (1) {
 		struct commit *commit;
 
-		if (revs->reflog_info)
+		switch (mode) {
+		case REV_WALK_REFLOG:
 			commit = next_reflog_entry(revs->reflog_info);
-		else if (revs->topo_walk_info)
+			break;
+		case REV_WALK_TOPO:
 			commit = next_topo_commit(revs);
-		else
+			break;
+		case REV_WALK_LIMITED:
+		case REV_WALK_STREAMING:
 			commit = pop_commit(&revs->commits);
+			break;
+		}
 
 		if (!commit)
 			return NULL;
 
-		if (revs->reflog_info)
+		if (mode == REV_WALK_REFLOG)
 			commit->object.flags &= ~(ADDED | SEEN | SHOWN);
 
 		/*
@@ -4350,20 +4376,28 @@ static struct commit *get_revision_1(struct rev_info *revs)
 		 * the parents here. We also need to do the date-based limiting
 		 * that we'd otherwise have done in limit_list().
 		 */
-		if (!revs->limited) {
-			if (revs->max_age != -1 &&
-			    comparison_date(revs, commit) < revs->max_age)
-				continue;
+		if (mode != REV_WALK_LIMITED &&
+		    revs->max_age != -1 &&
+		    comparison_date(revs, commit) < revs->max_age)
+			continue;
 
-			if (revs->reflog_info)
-				try_to_simplify_commit(revs, commit);
-			else if (revs->topo_walk_info)
-				expand_topo_walk(revs, commit);
-			else if (process_parents(revs, commit, &revs->commits, NULL) < 0) {
+		switch (mode) {
+		case REV_WALK_REFLOG:
+			try_to_simplify_commit(revs, commit);
+			break;
+		case REV_WALK_TOPO:
+			expand_topo_walk(revs, commit);
+			break;
+		case REV_WALK_STREAMING:
+			if (process_parents(revs, commit,
+					    &revs->commits, NULL) < 0) {
 				if (!revs->ignore_missing_links)
 					die("Failed to traverse parents of commit %s",
-						oid_to_hex(&commit->object.oid));
+					    oid_to_hex(&commit->object.oid));
 			}
+			break;
+		case REV_WALK_LIMITED:
+			break;
 		}
 
 		switch (simplify_commit(revs, commit)) {
