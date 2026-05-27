@@ -1978,7 +1978,7 @@ test_expect_success '--update-refs ignores non-branch decorations' '
 	test_cmp expect actual
 '
 
-test_expect_failure '--update-refs skips branch symrefs to current branch' '
+test_expect_success '--update-refs skips branch symrefs to current branch' '
 	test_when_finished "
 		test_might_fail git rebase --abort &&
 		git checkout primary &&

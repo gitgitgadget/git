@@ -6445,15 +6445,22 @@ static int add_decorations_to_list(const struct commit *commit,
 				   struct todo_add_branch_context *ctx)
 {
 	const struct name_decoration *decoration = get_name_decoration(&commit->object);
-	const char *head_ref = refs_resolve_ref_unsafe(get_main_ref_store(the_repository),
-						       "HEAD",
+	struct ref_store *refs = get_main_ref_store(the_repository);
+	const char *head_ref = refs_resolve_ref_unsafe(refs, "HEAD",
 						       RESOLVE_REF_READING,
-						       NULL,
-						       NULL);
+						       NULL, NULL);
+	char *resolved_head_ref = refs_resolve_refdup(refs, "HEAD",
+						       RESOLVE_REF_READING,
+						       NULL, NULL);
+	struct strbuf update_ref = STRBUF_INIT;
 
 	while (decoration) {
 		struct todo_item *item;
 		const char *path;
+		const char *ref = decoration->name;
+		const char *resolved_ref;
+		int is_symref = 0;
+		int flags = 0;
 		size_t base_offset = ctx->buf->len;
 
 		/*
@@ -6461,12 +6468,44 @@ static int add_decorations_to_list(const struct commit *commit,
 		 * updated by the default rebase behavior.
 		 * Exclude it from the list of refs to update,
 		 * as well as any non-branch decorations.
+		 *
+		 * Resolve branch symrefs after checking for the current HEAD so
+		 * that aliases do not schedule duplicate updates for their
+		 * referents.
+		 *
 		 * Non-branch decorations may be present if the pretty format
 		 * includes "%d", which would have loaded all refs
 		 * into the global decoration table.
 		 */
-		if ((head_ref && !strcmp(head_ref, decoration->name)) ||
-		    (decoration->type != DECORATION_REF_LOCAL)) {
+		if (decoration->type != DECORATION_REF_LOCAL) {
+			decoration = decoration->next;
+			continue;
+		}
+
+		if (head_ref && !strcmp(head_ref, ref)) {
+			decoration = decoration->next;
+			continue;
+		}
+
+		strbuf_reset(&update_ref);
+		resolved_ref = refs_resolve_ref_unsafe(refs, ref,
+						       RESOLVE_REF_READING |
+						       RESOLVE_REF_NO_RECURSE,
+						       NULL, &flags);
+		if ((flags & REF_ISSYMREF) && resolved_ref) {
+			if (!starts_with(resolved_ref, "refs/heads/")) {
+				decoration = decoration->next;
+				continue;
+			}
+
+			strbuf_addstr(&update_ref, resolved_ref);
+			ref = update_ref.buf;
+			is_symref = 1;
+		}
+
+		if ((is_symref && resolved_head_ref &&
+		     !strcmp(resolved_head_ref, ref)) ||
+		    string_list_has_string(&ctx->refs_to_oids, ref)) {
 			decoration = decoration->next;
 			continue;
 		}
@@ -6478,19 +6517,19 @@ static int add_decorations_to_list(const struct commit *commit,
 		memset(item, 0, sizeof(*item));
 
 		/* If the branch is checked out, then leave a comment instead. */
-		if ((path = branch_checked_out(decoration->name))) {
+		if ((path = branch_checked_out(ref))) {
 			item->command = TODO_COMMENT;
 			strbuf_commented_addf(ctx->buf, comment_line_str,
 					      "Ref %s checked out at '%s'\n",
-					      decoration->name, path);
+					      ref, path);
 		} else {
 			struct string_list_item *sti;
 			item->command = TODO_UPDATE_REF;
-			strbuf_addf(ctx->buf, "%s\n", decoration->name);
+			strbuf_addf(ctx->buf, "%s\n", ref);
 
 			sti = string_list_insert(&ctx->refs_to_oids,
-						 decoration->name);
-			sti->util = init_update_ref_record(decoration->name);
+						 ref);
+			sti->util = init_update_ref_record(ref);
 		}
 
 		item->offset_in_buf = base_offset;
@@ -6501,6 +6540,8 @@ static int add_decorations_to_list(const struct commit *commit,
 		decoration = decoration->next;
 	}
 
+	strbuf_release(&update_ref);
+	free(resolved_head_ref);
 	return 0;
 }
 
