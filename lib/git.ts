@@ -131,7 +131,8 @@ export function git(args: string[], options?: IGitOptions): Promise<string> {
                             process.kill();
                         });
                     } catch (reason) {
-                        reject(reason as Error);
+                        const error = reason as Error;
+                        reject(error);
                         process.kill();
                         return false;
                     }

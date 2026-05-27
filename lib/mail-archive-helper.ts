@@ -234,7 +234,7 @@ export class MailArchiveGitHelper {
                 messageID: parsed.messageID,
                 originalCommit,
                 pullRequestURL,
-            } as IMailMetadata);
+            });
 
             /* It is now known */
             keys.add(MailArchiveGitHelper.hashKey(parsed.messageID));

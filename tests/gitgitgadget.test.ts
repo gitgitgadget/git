@@ -294,7 +294,7 @@ to have included in git.git [https://github.com/git/git].`);
         latestTag: "pr-1/somebody/master-v2",
         pullRequestURL,
         referencesMessageIds: [refMid],
-    } as IPatchSeriesMetadata);
+    });
 
     // verify that the tag was generated correctly
     expect((await git(["cat-file", "tag", "pr-1/somebody/master-v2"], repo.options)).replace(/^[^]*?\n\n/, ""))
@@ -348,7 +348,7 @@ test("allow/disallow", async () => {
     const gitGitGadget = await GitGitGadget.get(defaultConfig, workDir);
 
     // pretend that the notes ref had been changed in the meantime
-    await notes.set("", { allowedUsers: ["first-one"] } as IGitGitGadgetOptions, true);
+    await notes.set("", { allowedUsers: ["first-one"] }, true);
 
     expect(gitGitGadget.isUserAllowed("second-one")).toBeFalsy();
     expect(await gitGitGadget.allowUser("first-one", "second-one")).toBeTruthy();
@@ -376,7 +376,7 @@ test("allow/disallow with env vars", async () => {
     const gitGitGadget = await GitGitGadget.get(defaultConfig, workDir);
 
     // pretend that the notes ref had been changed in the meantime
-    await notes.set("", { allowedUsers: ["first-one"] } as IGitGitGadgetOptions, true);
+    await notes.set("", { allowedUsers: ["first-one"] }, true);
 
     expect(gitGitGadget.isUserAllowed("second-one")).toBeFalsy();
     expect(await gitGitGadget.allowUser("first-one", "second-one")).toBeTruthy();
