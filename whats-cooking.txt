@@ -1,10 +1,10 @@
 To: git@vger.kernel.org
-Subject: What's cooking in git.git (May 2026, #07)
-X-master-at: 56a4f3c3a221adf1df9b39da69b8a6890f803157
-X-next-at: 208068f2d8ae29d7edaa245d9975b1b22ec65738
+Subject: What's cooking in git.git (May 2026, #08)
+X-master-at: c69baaf57ba26cf117c2b6793802877f19738b0d
+X-next-at: 2f8565e1d14d2de4cfbc9da0132131bf0d0dc087
 Bcc: lwn@lwn.net, gitster@pobox.com
 
-What's cooking in git.git (May 2026, #07)
+What's cooking in git.git (May 2026, #08)
 -----------------------------------------
 
 Here are the topics that have been cooking in my tree.  Commits
@@ -48,68 +48,240 @@ Release tarballs are available at:
 --------------------------------------------------
 [Graduated to 'master']
 
-* ag/sequencer-remove-unused-struct-member (2026-05-11) 1 commit
-  (merged to 'next' on 2026-05-17 at 8553437ae1)
- + sequencer: remove todo_add_branch_context.commit
+* ds/fetch-negotiation-options (2026-05-19) 8 commits
+  (merged to 'next' on 2026-05-21 at ff57fd9c97)
+ + send-pack: pass negotiation config in push
+ + remote: add remote.*.negotiationInclude config
+ + fetch: add --negotiation-include option for negotiation
+ + negotiator: add have_sent() interface
+ + remote: add remote.*.negotiationRestrict config
+ + transport: rename negotiation_tips
+ + fetch: add --negotiation-restrict option
+ + t5516: fix test order flakiness
 
- Code clean-up.
- cf. <agLKVn6RF4UBYd_8@pks.im>
- source: <pull.2111.git.1778502113485.gitgitgadget@gmail.com>
-
-
-* dk/doc-exclude-is-shared-per-repo (2026-05-12) 1 commit
-  (merged to 'next' on 2026-05-17 at ddc761aec6)
- + ignore: note info/exclude lives in GIT_COMMON_DIR, not GIT_DIR
-
- Document the fact that .git/info/exclude is shared across worktrees
- linked to the same repository.
- cf. <bea48414-217b-4860-9279-fe94e3687c28@gmail.com>
- source: <ec97ad3f054e90b675f099a36a81a23bb4b2a0ed.1778620784.git.ben.knoble+github@gmail.com>
+ The negotiation tip options in "git fetch" have been reworked to
+ allow requiring certain refs to be sent as "have" lines, and to
+ restrict negotiation to a specific set of refs.
+ source: <pull.2085.v6.git.1779207896.gitgitgadget@gmail.com>
 
 
-* jk/dumb-http-alternate-fix (2026-05-12) 1 commit
-  (merged to 'next' on 2026-05-17 at c1a51214fb)
- + http: handle absolute-path alternates from server root
+* en/batch-prefetch (2026-05-14) 4 commits
+  (merged to 'next' on 2026-05-20 at 722acf81c8)
+ + grep: prefetch necessary blobs
+ + builtin/log: prefetch necessary blobs for `git cherry`
+ + patch-ids.h: add missing trailing parenthesis in documentation comment
+ + promisor-remote: document caller filtering contract
 
- The HTTP walker misinterpreted the alternates file that gives an
- absolute path when the server URL does not have the final slash
- (i.e., "https://example.com" not "https://example.com/").
- source: <20260512162619.GA69813@coredump.intra.peff.net>
-
-
-* jk/pretty-no-strbuf-presizing (2026-05-12) 1 commit
-  (merged to 'next' on 2026-05-17 at ee684c614f)
- + pretty: drop strbuf pre-sizing from add_rfc2047()
-
- Remove ineffective strbuf presizing that would have computed an
- allocation that would not have fit in the available memory anyway,
- or too small due to integer wraparound to cause immediate automatic
- growing.
- source: <20260512162022.GA69669@coredump.intra.peff.net>
+ In a lazy clone, "git cherry" and "git grep" often fetch necessary
+ blob objects one by one from promisor remotes.  It has been corrected
+ to collect necessary object names and fetch them in bulk to gain
+ reasonable performance.
+ cf. <0da4f159-8d4b-49e2-93c1-25aa0bf69371@gmail.com>
+ source: <pull.2089.v3.git.1778775928.gitgitgadget@gmail.com>
 
 
-* kk/paint-down-to-common-optim (2026-05-11) 2 commits
-  (merged to 'next' on 2026-05-17 at 2e39c767e5)
- + commit-reach: early exit paint_down_to_common for single merge-base
- + commit-reach: introduce merge_base_flags enum
+* jk/sq-dequote-cleanup (2026-05-18) 3 commits
+  (merged to 'next' on 2026-05-21 at fbedf2daea)
+ + quote: simplify internals of dequoting
+ + quote: drop sq_dequote_to_argv()
+ + quote.h: bump strvec forward declaration to the top
 
- "git merge-base" optimization.
- source: <pull.2109.v4.git.1778504352.gitgitgadget@gmail.com>
+ Code simplification.
+ source: <20260519011837.GA1615637@coredump.intra.peff.net>
 
 
-* mm/diff-U-takes-no-negative-values (2026-05-12) 4 commits
-  (merged to 'next' on 2026-05-17 at d81439a049)
- + parse-options: clarify what "negated" means for PARSE_OPT_NONEG
- + xdiff: guard against negative context lengths
- + diff: reject negative values for -U/--unified
- + diff: reject negative values for --inter-hunk-context
+* jt/odb-transaction-write (2026-05-14) 7 commits
+  (merged to 'next' on 2026-05-21 at 61108abe4d)
+ + odb/transaction: make `write_object_stream()` pluggable
+ + object-file: generalize packfile writes to use odb_write_stream
+ + object-file: avoid fd seekback by checking object size upfront
+ + object-file: remove flags from transaction packfile writes
+ + odb: update `struct odb_write_stream` read() callback
+ + odb/transaction: use pluggable `begin_transaction()`
+ + odb: split `struct odb_transaction` into separate header
+ (this branch is used by ps/odb-in-memory and ps/odb-source-loose.)
 
- The command line parser for "git diff" learned a few options take
- only non-negative integers.
- source: <pull.2105.v2.git.1778609423.gitgitgadget@gmail.com>
+ ODB transaction interface is being reworked to explicitly handle
+ object writes.
+ source: <20260514183740.1505171-1-jltobler@gmail.com>
+
+
+* kk/limit-list-optim (2026-05-14) 1 commit
+  (merged to 'next' on 2026-05-19 at f17450dd1b)
+ + revision: use priority queue in limit_list()
+
+ The limit_list() function that is one of the core part of the
+ revision traversal infrastructure has been optimized by replacing
+ its use of linear list with priority queue.
+ source: <pull.2114.git.1778777491939.gitgitgadget@gmail.com>
+
+
+* kk/merge-octopus-optim (2026-05-11) 1 commit
+  (merged to 'next' on 2026-05-20 at afe427dc66)
+ + merge: use repo_in_merge_bases for octopus up-to-date check
+
+ The logic to determine that branches in an octopus merge are
+ independent has been optimized.
+ cf. <c5b333f1-0db6-4aec-a369-6503cb924e7f@gmail.com>
+ source: <pull.2110.git.1778566286543.gitgitgadget@gmail.com>
+
+
+* kn/refs-fsck-skip-lock-files (2026-05-17) 1 commit
+  (merged to 'next' on 2026-05-21 at 91e30e3543)
+ + refs/files: skip lock files during consistency checks
+
+ The consistency checks for the files reference backend have been updated
+ to skip lock files earlier, avoiding unnecessary parsing of
+ intermediate files.
+ source: <20260517-refs-fsck-skip-lock-files-v3-1-b24dfd673c7e@gmail.com>
+
+
+* pb/doc-diff-format-updates (2026-05-15) 3 commits
+  (merged to 'next' on 2026-05-20 at fe8d31e9f9)
+ + diff-format.adoc: mode and hash are 0* for unmerged paths from index only
+ + diff-format.adoc: 'git diff-files' prints two lines for unmerged files
+ + diff-format.adoc: remove mention of diff-tree specific output
+
+ Doc updates.
+ source: <pull.2304.git.git.1778860091.gitgitgadget@gmail.com>
+
+
+* ps/odb-in-memory (2026-04-10) 18 commits
+  (merged to 'next' on 2026-05-21 at c8709aa17f)
+ + t/unit-tests: add tests for the in-memory object source
+ + odb: generic in-memory source
+ + odb/source-inmemory: stub out remaining functions
+ + odb/source-inmemory: implement `freshen_object()` callback
+ + odb/source-inmemory: implement `count_objects()` callback
+ + odb/source-inmemory: implement `find_abbrev_len()` callback
+ + odb/source-inmemory: implement `for_each_object()` callback
+ + odb/source-inmemory: convert to use oidtree
+ + oidtree: add ability to store data
+ + cbtree: allow using arbitrary wrapper structures for nodes
+ + odb/source-inmemory: implement `write_object_stream()` callback
+ + odb/source-inmemory: implement `write_object()` callback
+ + odb/source-inmemory: implement `read_object_stream()` callback
+ + odb/source-inmemory: implement `read_object_info()` callback
+ + odb: fix unnecessary call to `find_cached_object()`
+ + odb/source-inmemory: implement `free()` callback
+ + odb: introduce "in-memory" source
+ + Merge branch 'jt/odb-transaction-write' into ps/odb-in-memory
+ (this branch is used by ps/odb-source-loose; uses jt/odb-transaction-write.)
+
+ Add a new odb "in-memory" source that is meant to only hold
+ tentative objects (like the virtual blob object that represents the
+ working tree file used by "git blame").
+ source: <20260410-b4-pks-odb-source-inmemory-v3-0-22fd0fad58fe@pks.im>
+
+
+* ps/setup-wo-the-repository (2026-05-19) 18 commits
+  (merged to 'next' on 2026-05-21 at d8fb5a7b3e)
+ + setup: stop using `the_repository` in `init_db()`
+ + setup: stop using `the_repository` in `create_reference_database()`
+ + setup: stop using `the_repository` in `initialize_repository_version()`
+ + setup: stop using `the_repository` in `check_repository_format()`
+ + setup: stop using `the_repository` in `upgrade_repository_format()`
+ + setup: stop using `the_repository` in `setup_git_directory()`
+ + setup: stop using `the_repository` in `setup_git_directory_gently()`
+ + setup: stop using `the_repository` in `setup_git_env()`
+ + setup: stop using `the_repository` in `set_git_work_tree()`
+ + setup: stop using `the_repository` in `setup_work_tree()`
+ + setup: stop using `the_repository` in `enter_repo()`
+ + setup: stop using `the_repository` in `verify_non_filename()`
+ + setup: stop using `the_repository` in `verify_filename()`
+ + setup: stop using `the_repository` in `path_inside_repo()`
+ + setup: stop using `the_repository` in `prefix_path()`
+ + setup: stop using `the_repository` in `is_inside_work_tree()`
+ + setup: stop using `the_repository` in `is_inside_git_dir()`
+ + setup: replace use of `the_repository` in static functions
+ (this branch is used by ps/setup-centralize-odb-creation.)
+
+ Many uses of the_repository has been updated to use a more
+ appropriate struct repository instance in setup.c codepath.
+ source: <20260519-pks-setup-wo-the-repository-v3-0-a00d8ea8b07f@pks.im>
+
+
+* ps/t3903-cover-stash-include-untracked (2026-05-16) 1 commit
+  (merged to 'next' on 2026-05-20 at f1e7ac1cbd)
+ + stash: add coverage for show --include-untracked
+
+ Test coverage has been added to "git stash --include-untracked".
+ source: <20260516183347.4323-2-pushkarkumarsingh1970@gmail.com>
+
+
+* rs/trailer-fold-optim (2026-05-15) 1 commit
+  (merged to 'next' on 2026-05-20 at 38c9fb15c2)
+ + trailer: change strbuf in-place in unfold_value()
+
+ Code simplification.
+ source: <816be07e-2cd6-48fe-ae93-57fa0f2543ed@web.de>
+
+
+* rs/use-builtin-add-overflow-explicitly-on-clang (2026-05-18) 2 commits
+  (merged to 'next' on 2026-05-21 at c223b71079)
+ + use __builtin_add_overflow() in st_add() with Clang
+ + strbuf: use st_add3() in strbuf_grow()
+
+ Micro optimization of codepaths that compute allocation sizes carefully.
+ source: <20260518202502.25682-1-l.s.r@web.de>
+
+
+* tb/incremental-midx-part-3.3 (2026-05-19) 16 commits
+  (merged to 'next' on 2026-05-21 at 6c11c1a739)
+ + repack: allow `--write-midx=incremental` without `--geometric`
+ + repack: introduce `--write-midx=incremental`
+ + repack: implement incremental MIDX repacking
+ + packfile: ensure `close_pack_revindex()` frees in-memory revindex
+ + builtin/repack.c: convert `--write-midx` to an `OPT_CALLBACK`
+ + repack-geometry: prepare for incremental MIDX repacking
+ + repack-midx: extract `repack_fill_midx_stdin_packs()`
+ + repack-midx: factor out `repack_prepare_midx_command()`
+ + midx: expose `midx_layer_contains_pack()`
+ + repack: track the ODB source via existing_packs
+ + midx: support custom `--base` for incremental MIDX writes
+ + midx: introduce `--no-write-chain-file` for incremental MIDX writes
+ + midx: use `strvec` for `keep_hashes`
+ + midx: build `keep_hashes` array in order
+ + midx: use `strset` for retained MIDX files
+ + midx-write: handle noop writes when converting incremental chains
+
+ The repacking code has been refactored and compaction of MIDX layers
+ have been implemented, and incremental strategy that does not require
+ all-into-one repacking has been introduced.
+ source: <cover.1779206239.git.me@ttaylorr.com>
+
+
+* tb/pseudo-merge-bugfixes (2026-05-11) 9 commits
+  (merged to 'next' on 2026-05-19 at ecee155d5c)
+ + pack-bitmap: prevent pattern leak on pseudo-merge re-assignment
+ + Documentation: fix broken `sampleRate` in gitpacking(7)
+ + pack-bitmap: reject pseudo-merge "sampleRate" of 0
+ + pack-bitmap: parse commits in `find_pseudo_merge_group_for_ref()`
+ + pack-bitmap: fix pseudo-merge lookup for shared commits
+ + pack-bitmap: fix inverted binary search in `pseudo_merge_at()`
+ + pack-bitmap-write: sort pseudo-merge commit lookup table in pack order
+ + t5333: demonstrate various pseudo-merge bugs
+ + t/helper: add 'test-tool bitmap write' subcommand
+ (this branch is used by tb/bitmap-build-performance.)
+
+ Fixes many bugs in pseudo-merge code.
+ source: <cover.1778546804.git.me@ttaylorr.com>
 
 --------------------------------------------------
 [New Topics]
+
+* za/completion-hide-dotfiles (2026-05-26) 1 commit
+ - completion: hide dotfiles for selected path completion
+
+ The path completion for commands like `git rm` and `git mv`, is being
+ updated to hide dotfiles by default, unless the user explicitly starts
+ the path with a dot, matching standard shell-completion behavior.
+
+ Will merge to 'next'?
+ source: <pull.2311.v2.git.git.1779808987825.gitgitgadget@gmail.com>
+
+--------------------------------------------------
+[Cooking]
 
 * kk/fetch-store-ref-optimization (2026-05-24) 1 commit
  - fetch: pass transport to post-fetch connectivity check
@@ -122,7 +294,7 @@ Release tarballs are available at:
  source: <pull.2123.git.1779625693328.gitgitgadget@gmail.com>
 
 
-* ds/restore-sparse-index (2026-05-24) 2 commits
+* ds/restore-sparse-index (2026-05-26) 2 commits
  - restore: avoid sparse index expansion
  - t1092: test 'git restore' with sparse index
 
@@ -130,8 +302,8 @@ Release tarballs are available at:
  the sparse index when operating on paths within the sparse checkout
  definition, by handling sparse directory entries at the tree level.
 
- Will merge to 'next'?
- source: <pull.2121.git.1779644412.gitgitgadget@gmail.com>
+ Will merge to 'next'.
+ source: <pull.2121.v2.git.1779827195.gitgitgadget@gmail.com>
 
 
 * kk/commit-reach-optim (2026-05-25) 3 commits
@@ -149,14 +321,15 @@ Release tarballs are available at:
 
 
 * ar/receive-pack-worktree-env (2026-05-25) 1 commit
- - receive-pack: fix updateInstead with core.worktree
+  (merged to 'next' on 2026-05-27 at 9c246d1969)
+ + receive-pack: fix updateInstead with core.worktree
 
  The GIT_WORK_TREE variable prepared to invoke the push-to-checkout
  hook was leaking into the environment even when there was no hook
  used and broke the default push-to-deploy (i.e., let "git checkout"
  update the working tree only when the working tree is clean).
 
- Will merge to 'next'.
+ Will merge to 'master'.
  source: <20260525162311.66240-2-hi@alyssa.is>
 
 
@@ -191,8 +364,6 @@ Release tarballs are available at:
  Comments?
  source: <cover.1779792311.git.erik@cervined.in>
 
---------------------------------------------------
-[Cooking]
 
 * gh/jump-auto-mode (2026-05-21) 1 commit
  - git-jump: pick a mode automatically when invoked without arguments
@@ -234,7 +405,6 @@ Release tarballs are available at:
  - odb/source-loose: store pointer to "files" instead of generic source
  - odb/source-loose: move loose source into "odb/" subsystem
  - Merge branch 'ps/odb-in-memory' into ps/odb-source-loose
- (this branch uses jt/odb-transaction-write and ps/odb-in-memory.)
 
  The loose object source has been refactored into a proper `struct
  odb_source`.
@@ -253,7 +423,6 @@ Release tarballs are available at:
  - setup: drop `setup_git_env()`
  - t0001: plug test gaps for git-init(1) with GIT_OBJECT_DIRECTORY
  - Merge branch 'ps/setup-wo-the-repository' into ps/setup-centralize-odb-creation
- (this branch uses ps/setup-wo-the-repository.)
 
  The setup logic to discover and configure repositories has been
  refactored, and the initialization of the object database has been
@@ -328,18 +497,6 @@ Release tarballs are available at:
  source: <20260522044352.GA861761@coredump.intra.peff.net>
 
 
-* jk/sq-dequote-cleanup (2026-05-18) 3 commits
-  (merged to 'next' on 2026-05-21 at fbedf2daea)
- + quote: simplify internals of dequoting
- + quote: drop sq_dequote_to_argv()
- + quote.h: bump strvec forward declaration to the top
-
- Code simplification.
-
- Will merge to 'master'.
- source: <20260519011837.GA1615637@coredump.intra.peff.net>
-
-
 * aj/stash-patch-optimize-temporary-index (2026-05-22) 1 commit
  - stash: reuse cached index entries in --patch temporary index
 
@@ -361,13 +518,14 @@ Release tarballs are available at:
  - pack-bitmap: check subtree bits before recursing
  - pack-bitmap: pass object position to `fill_bitmap_tree()`
  - Merge branch 'tb/pseudo-merge-bugfixes' into tb/bitmap-build-performance
- (this branch uses tb/pseudo-merge-bugfixes.)
 
  Reachability bitmap generation has been significantly optimized. By
  reordering tree traversal, caching object positions, and refining how
  pseudo-merge bitmaps are constructed, the performance of "git repack
  --write-midx-bitmaps" is improved, especially for large repositories
  and when using pseudo-merges.
+
+ Comments?
  source: <cover.1779207127.git.me@ttaylorr.com>
 
 
@@ -380,18 +538,6 @@ Release tarballs are available at:
 
  Comments?
  source: <pull.2301.v4.git.git.1779372367317.gitgitgadget@gmail.com>
-
-
-* kk/merge-octopus-optim (2026-05-11) 1 commit
-  (merged to 'next' on 2026-05-20 at afe427dc66)
- + merge: use repo_in_merge_bases for octopus up-to-date check
-
- The logic to determine that branches in an octopus merge are
- independent has been optimized.
-
- Will merge to 'master'.
- cf. <c5b333f1-0db6-4aec-a369-6503cb924e7f@gmail.com>
- source: <pull.2110.git.1778566286543.gitgitgadget@gmail.com>
 
 
 * rs/strbuf-add-uint (2026-05-12) 4 commits
@@ -441,18 +587,6 @@ Release tarballs are available at:
  source: <183aa0fd-d455-4ec9-9c42-d511fac8b3e4@web.de>
 
 
-* kk/limit-list-optim (2026-05-14) 1 commit
-  (merged to 'next' on 2026-05-19 at f17450dd1b)
- + revision: use priority queue in limit_list()
-
- The limit_list() function that is one of the core part of the
- revision traversal infrastructure has been optimized by replacing
- its use of linear list with priority queue.
-
- Will merge to 'master'.
- source: <pull.2114.git.1778777491939.gitgitgadget@gmail.com>
-
-
 * ed/check-connected-close-err-fd (2026-05-16) 1 commit
   (merged to 'next' on 2026-05-22 at 00d592399e)
  + Merge branch 'ed/check-connected-close-err-fd-2.53' into ed/check-connected-close-err-fd
@@ -484,49 +618,6 @@ Release tarballs are available at:
 
  Will merge to 'master'.
  source: <pull.2116.v3.git.1778947182.gitgitgadget@gmail.com>
-
-
-* pb/doc-diff-format-updates (2026-05-15) 3 commits
-  (merged to 'next' on 2026-05-20 at fe8d31e9f9)
- + diff-format.adoc: mode and hash are 0* for unmerged paths from index only
- + diff-format.adoc: 'git diff-files' prints two lines for unmerged files
- + diff-format.adoc: remove mention of diff-tree specific output
-
- Doc updates.
-
- Will merge to 'master'.
- source: <pull.2304.git.git.1778860091.gitgitgadget@gmail.com>
-
-
-* ps/t3903-cover-stash-include-untracked (2026-05-16) 1 commit
-  (merged to 'next' on 2026-05-20 at f1e7ac1cbd)
- + stash: add coverage for show --include-untracked
-
- Test coverage has been added to "git stash --include-untracked".
-
- Will merge to 'master'.
- source: <20260516183347.4323-2-pushkarkumarsingh1970@gmail.com>
-
-
-* rs/trailer-fold-optim (2026-05-15) 1 commit
-  (merged to 'next' on 2026-05-20 at 38c9fb15c2)
- + trailer: change strbuf in-place in unfold_value()
-
- Code simplification.
-
- Will merge to 'master'.
- source: <816be07e-2cd6-48fe-ae93-57fa0f2543ed@web.de>
-
-
-* rs/use-builtin-add-overflow-explicitly-on-clang (2026-05-18) 2 commits
-  (merged to 'next' on 2026-05-21 at c223b71079)
- + use __builtin_add_overflow() in st_add() with Clang
- + strbuf: use st_add3() in strbuf_grow()
-
- Micro optimization of codepaths that compute allocation sizes carefully.
-
- Will merge to 'master'.
- source: <20260518202502.25682-1-l.s.r@web.de>
 
 
 * tc/generate-configlist-fix-for-older-ninja (2026-05-15) 1 commit
@@ -564,18 +655,6 @@ Release tarballs are available at:
 
  Will merge to 'next'?
  source: <pull.2117.v2.git.1779704908.gitgitgadget@gmail.com>
-
-
-* kn/refs-fsck-skip-lock-files (2026-05-17) 1 commit
-  (merged to 'next' on 2026-05-21 at 91e30e3543)
- + refs/files: skip lock files during consistency checks
-
- The consistency checks for the files reference backend have been updated
- to skip lock files earlier, avoiding unnecessary parsing of
- intermediate files.
-
- Will merge to 'master'.
- source: <20260517-refs-fsck-skip-lock-files-v3-1-b24dfd673c7e@gmail.com>
 
 
 * jt/config-lock-timeout (2026-05-17) 1 commit
@@ -739,91 +818,6 @@ Release tarballs are available at:
  source: <cover.1777648598.git.phillip.wood@dunelm.org.uk>
 
 
-* tb/pseudo-merge-bugfixes (2026-05-11) 9 commits
-  (merged to 'next' on 2026-05-19 at ecee155d5c)
- + pack-bitmap: prevent pattern leak on pseudo-merge re-assignment
- + Documentation: fix broken `sampleRate` in gitpacking(7)
- + pack-bitmap: reject pseudo-merge "sampleRate" of 0
- + pack-bitmap: parse commits in `find_pseudo_merge_group_for_ref()`
- + pack-bitmap: fix pseudo-merge lookup for shared commits
- + pack-bitmap: fix inverted binary search in `pseudo_merge_at()`
- + pack-bitmap-write: sort pseudo-merge commit lookup table in pack order
- + t5333: demonstrate various pseudo-merge bugs
- + t/helper: add 'test-tool bitmap write' subcommand
- (this branch is used by tb/bitmap-build-performance.)
-
- Fixes many bugs in pseudo-merge code.
-
- Will merge to 'master'.
- source: <cover.1778546804.git.me@ttaylorr.com>
-
-
-* ds/fetch-negotiation-options (2026-05-19) 8 commits
-  (merged to 'next' on 2026-05-21 at ff57fd9c97)
- + send-pack: pass negotiation config in push
- + remote: add remote.*.negotiationInclude config
- + fetch: add --negotiation-include option for negotiation
- + negotiator: add have_sent() interface
- + remote: add remote.*.negotiationRestrict config
- + transport: rename negotiation_tips
- + fetch: add --negotiation-restrict option
- + t5516: fix test order flakiness
-
- The negotiation tip options in "git fetch" have been reworked to
- allow requiring certain refs to be sent as "have" lines, and to
- restrict negotiation to a specific set of refs.
-
- Will merge to 'master'.
- source: <pull.2085.v6.git.1779207896.gitgitgadget@gmail.com>
-
-
-* en/batch-prefetch (2026-05-14) 4 commits
-  (merged to 'next' on 2026-05-20 at 722acf81c8)
- + grep: prefetch necessary blobs
- + builtin/log: prefetch necessary blobs for `git cherry`
- + patch-ids.h: add missing trailing parenthesis in documentation comment
- + promisor-remote: document caller filtering contract
-
- In a lazy clone, "git cherry" and "git grep" often fetch necessary
- blob objects one by one from promisor remotes.  It has been corrected
- to collect necessary object names and fetch them in bulk to gain
- reasonable performance.
-
- Will merge to 'master'.
- cf. <0da4f159-8d4b-49e2-93c1-25aa0bf69371@gmail.com>
- source: <pull.2089.v3.git.1778775928.gitgitgadget@gmail.com>
-
-
-* ps/odb-in-memory (2026-04-10) 18 commits
-  (merged to 'next' on 2026-05-21 at c8709aa17f)
- + t/unit-tests: add tests for the in-memory object source
- + odb: generic in-memory source
- + odb/source-inmemory: stub out remaining functions
- + odb/source-inmemory: implement `freshen_object()` callback
- + odb/source-inmemory: implement `count_objects()` callback
- + odb/source-inmemory: implement `find_abbrev_len()` callback
- + odb/source-inmemory: implement `for_each_object()` callback
- + odb/source-inmemory: convert to use oidtree
- + oidtree: add ability to store data
- + cbtree: allow using arbitrary wrapper structures for nodes
- + odb/source-inmemory: implement `write_object_stream()` callback
- + odb/source-inmemory: implement `write_object()` callback
- + odb/source-inmemory: implement `read_object_stream()` callback
- + odb/source-inmemory: implement `read_object_info()` callback
- + odb: fix unnecessary call to `find_cached_object()`
- + odb/source-inmemory: implement `free()` callback
- + odb: introduce "in-memory" source
- + Merge branch 'jt/odb-transaction-write' into ps/odb-in-memory
- (this branch is used by ps/odb-source-loose; uses jt/odb-transaction-write.)
-
- Add a new odb "in-memory" source that is meant to only hold
- tentative objects (like the virtual blob object that represents the
- working tree file used by "git blame").
-
- Will merge to 'master'.
- source: <20260410-b4-pks-odb-source-inmemory-v3-0-22fd0fad58fe@pks.im>
-
-
 * cl/conditional-config-on-worktree-path (2026-05-24) 2 commits
  - config: add "worktree" and "worktree/i" includeIf conditions
  - config: refactor include_by_gitdir() into include_by_path()
@@ -878,24 +872,6 @@ Release tarballs are available at:
  source: <20260406183041.783800-1-vikingtc4@gmail.com>
 
 
-* jt/odb-transaction-write (2026-05-14) 7 commits
-  (merged to 'next' on 2026-05-21 at 61108abe4d)
- + odb/transaction: make `write_object_stream()` pluggable
- + object-file: generalize packfile writes to use odb_write_stream
- + object-file: avoid fd seekback by checking object size upfront
- + object-file: remove flags from transaction packfile writes
- + odb: update `struct odb_write_stream` read() callback
- + odb/transaction: use pluggable `begin_transaction()`
- + odb: split `struct odb_transaction` into separate header
- (this branch is used by ps/odb-in-memory and ps/odb-source-loose.)
-
- ODB transaction interface is being reworked to explicitly handle
- object writes.
-
- Will merge to 'master'.
- source: <20260514183740.1505171-1-jltobler@gmail.com>
-
-
 * sa/cat-file-batch-mailmap-switch (2026-04-15) 1 commit
   (merged to 'next' on 2026-05-22 at 197a9bad73)
  + cat-file: add mailmap subcommand to --batch-command
@@ -908,33 +884,6 @@ Release tarballs are available at:
  source: <20260416033250.4327-2-siddharthasthana31@gmail.com>
 
 
-* tb/incremental-midx-part-3.3 (2026-05-19) 16 commits
-  (merged to 'next' on 2026-05-21 at 6c11c1a739)
- + repack: allow `--write-midx=incremental` without `--geometric`
- + repack: introduce `--write-midx=incremental`
- + repack: implement incremental MIDX repacking
- + packfile: ensure `close_pack_revindex()` frees in-memory revindex
- + builtin/repack.c: convert `--write-midx` to an `OPT_CALLBACK`
- + repack-geometry: prepare for incremental MIDX repacking
- + repack-midx: extract `repack_fill_midx_stdin_packs()`
- + repack-midx: factor out `repack_prepare_midx_command()`
- + midx: expose `midx_layer_contains_pack()`
- + repack: track the ODB source via existing_packs
- + midx: support custom `--base` for incremental MIDX writes
- + midx: introduce `--no-write-chain-file` for incremental MIDX writes
- + midx: use `strvec` for `keep_hashes`
- + midx: build `keep_hashes` array in order
- + midx: use `strset` for retained MIDX files
- + midx-write: handle noop writes when converting incremental chains
-
- The repacking code has been refactored and compaction of MIDX layers
- have been implemented, and incremental strategy that does not require
- all-into-one repacking has been introduced.
-
- Will merge to 'master'.
- source: <cover.1779206239.git.me@ttaylorr.com>
-
-
 * jd/unpack-trees-wo-the-repository (2026-03-31) 2 commits
  - unpack-trees: use repository from index instead of global
  - unpack-trees: use repository from index instead of global
@@ -945,35 +894,6 @@ Release tarballs are available at:
 
  Comments?
  source: <pull.2258.v2.git.git.1774971267.gitgitgadget@gmail.com>
-
-
-* ps/setup-wo-the-repository (2026-05-19) 18 commits
-  (merged to 'next' on 2026-05-21 at d8fb5a7b3e)
- + setup: stop using `the_repository` in `init_db()`
- + setup: stop using `the_repository` in `create_reference_database()`
- + setup: stop using `the_repository` in `initialize_repository_version()`
- + setup: stop using `the_repository` in `check_repository_format()`
- + setup: stop using `the_repository` in `upgrade_repository_format()`
- + setup: stop using `the_repository` in `setup_git_directory()`
- + setup: stop using `the_repository` in `setup_git_directory_gently()`
- + setup: stop using `the_repository` in `setup_git_env()`
- + setup: stop using `the_repository` in `set_git_work_tree()`
- + setup: stop using `the_repository` in `setup_work_tree()`
- + setup: stop using `the_repository` in `enter_repo()`
- + setup: stop using `the_repository` in `verify_non_filename()`
- + setup: stop using `the_repository` in `verify_filename()`
- + setup: stop using `the_repository` in `path_inside_repo()`
- + setup: stop using `the_repository` in `prefix_path()`
- + setup: stop using `the_repository` in `is_inside_work_tree()`
- + setup: stop using `the_repository` in `is_inside_git_dir()`
- + setup: replace use of `the_repository` in static functions
- (this branch is used by ps/setup-centralize-odb-creation.)
-
- Many uses of the_repository has been updated to use a more
- appropriate struct repository instance in setup.c codepath.
-
- Will merge to 'master'.
- source: <20260519-pks-setup-wo-the-repository-v3-0-a00d8ea8b07f@pks.im>
 
 
 * kh/doc-trailers (2026-04-13) 9 commits
