@@ -8,7 +8,7 @@
 #include "trace.h"
 #include "write-or-die.h"
 
-char packet_buffer[LARGE_PACKET_MAX];
+char packet_buffer[LARGE_PACKET_MAX] = {0};
 static const char *packet_trace_prefix = "git";
 static struct trace_key trace_packet = TRACE_KEY_INIT(PACKET);
 static struct trace_key trace_pack = TRACE_KEY_INIT(PACKFILE);
