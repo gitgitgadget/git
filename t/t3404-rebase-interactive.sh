@@ -1978,6 +1978,31 @@ test_expect_success '--update-refs ignores non-branch decorations' '
 	test_cmp expect actual
 '
 
+test_expect_failure '--update-refs skips branch symrefs to current branch' '
+	test_when_finished "
+		test_might_fail git rebase --abort &&
+		git checkout primary &&
+		test_might_fail git symbolic-ref -d refs/heads/update-refs-symref-alias &&
+		test_might_fail git branch -D update-refs-symref update-refs-symref-base
+	" &&
+	git checkout -B update-refs-symref-base primary &&
+	test_commit --no-tag update-refs-symref-base symref-base.t &&
+	git checkout -B update-refs-symref &&
+	test_commit --no-tag update-refs-symref-topic symref-topic.t &&
+	git checkout update-refs-symref-base &&
+	test_commit --no-tag update-refs-symref-newbase symref-newbase.t &&
+	git checkout update-refs-symref &&
+	git symbolic-ref refs/heads/update-refs-symref-alias refs/heads/update-refs-symref &&
+
+	git rebase --update-refs update-refs-symref-base 2>err &&
+
+	test_cmp_rev update-refs-symref-base update-refs-symref^ &&
+	test_cmp_rev refs/heads/update-refs-symref refs/heads/update-refs-symref-alias &&
+	test_write_lines refs/heads/update-refs-symref >expect &&
+	git symbolic-ref refs/heads/update-refs-symref-alias >actual &&
+	test_cmp expect actual
+'
+
 test_expect_success '--update-refs updates refs correctly' '
 	git checkout -B update-refs no-conflict-branch &&
 	git branch -f base HEAD~4 &&
