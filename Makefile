@@ -2503,7 +2503,9 @@ endif
 #
 # where we use it as a dependency. Since we also pull object files
 # from the dependency list, that would make each entry appear twice.
-LIBS = $(filter-out %.o, $(GITLIBS)) $(EXTLIBS)
+# Archives from $^ come first, then the rest with those archives
+# filtered out so each appears only once.
+LIBS = $(filter %.a,$^) $(filter-out $(filter %.a,$^),$(filter-out %.o,$(GITLIBS)) $(EXTLIBS))
 
 BASIC_CFLAGS += $(COMPAT_CFLAGS)
 LIB_OBJS += $(COMPAT_OBJS)
@@ -3392,7 +3394,7 @@ perf: all
 t/helper/test-tool$X: $(patsubst %,t/helper/%,$(TEST_BUILTINS_OBJS)) $(UNIT_TEST_DIR)/test-lib.o
 
 t/helper/test-%$X: t/helper/test-%.o GIT-LDFLAGS $(GITLIBS)
-	$(QUIET_LINK)$(CC) $(ALL_CFLAGS) -o $@ $(ALL_LDFLAGS) $(filter %.o,$^) $(filter %.a,$^) $(LIBS)
+	$(QUIET_LINK)$(CC) $(ALL_CFLAGS) -o $@ $(ALL_LDFLAGS) $(filter %.o,$^) $(LIBS)
 
 check-sha1:: t/helper/test-tool$X
 	t/helper/test-sha1.sh
@@ -4015,13 +4017,13 @@ fuzz-all: $(FUZZ_PROGRAMS)
 $(FUZZ_PROGRAMS): %: %.o oss-fuzz/dummy-cmd-main.o $(GITLIBS) GIT-LDFLAGS
 	$(QUIET_LINK)$(FUZZ_CXX) $(FUZZ_CXXFLAGS) -o $@ $(ALL_LDFLAGS) \
 		-Wl,--allow-multiple-definition \
-		$(filter %.o,$^) $(filter %.a,$^) $(LIBS) $(LIB_FUZZING_ENGINE)
+		$(filter %.o,$^) $(LIBS) $(LIB_FUZZING_ENGINE)
 
 $(UNIT_TEST_PROGS): $(UNIT_TEST_BIN)/%$X: $(UNIT_TEST_DIR)/%.o $(UNIT_TEST_OBJS) \
 	$(GITLIBS) GIT-LDFLAGS
 	$(call mkdir_p_parent_template)
 	$(QUIET_LINK)$(CC) $(ALL_CFLAGS) -o $@ $(ALL_LDFLAGS) \
-		$(filter %.o,$^) $(filter %.a,$^) $(LIBS)
+		$(filter %.o,$^) $(LIBS)
 
 GIT-TEST-SUITES: FORCE
 	@FLAGS='$(CLAR_TEST_SUITES)'; \
