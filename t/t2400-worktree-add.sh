@@ -40,10 +40,24 @@ test_expect_success '"add" using - shorthand' '
 	test_cmp expect actual
 '
 
-test_expect_success '"add" refuses to checkout locked branch' '
-	test_must_fail git worktree add zere main &&
-	test_path_is_missing zere &&
-	test_path_is_missing .git/worktrees/zere
+test_expect_success '"add" can check out a branch in use by another worktree' '
+	test_when_finished "git worktree remove -f zere || :" &&
+	git worktree add zere main &&
+	echo refs/heads/main >expect &&
+	git -C zere symbolic-ref HEAD >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'the same branch can be checked out in several worktrees' '
+	test_when_finished "git worktree remove -f shared1 || :; git worktree remove -f shared2 || :" &&
+	git branch -f sharedbr main &&
+	git worktree add shared1 sharedbr &&
+	git worktree add shared2 sharedbr &&
+	echo refs/heads/sharedbr >expect &&
+	git -C shared1 symbolic-ref HEAD >actual &&
+	test_cmp expect actual &&
+	git -C shared2 symbolic-ref HEAD >actual &&
+	test_cmp expect actual
 '
 
 test_expect_success 'checking out paths not complaining about linked checkouts' '
@@ -304,10 +318,13 @@ test_expect_success '"add" checks out existing branch of dwimd name' '
 	)
 '
 
-test_expect_success '"add <path>" dwim fails with checked out branch' '
+test_expect_success '"add <path>" dwim shares a checked out branch' '
 	git checkout -b test-branch &&
-	test_must_fail git worktree add test-branch &&
-	test_path_is_missing test-branch
+	git worktree add test-branch &&
+	echo refs/heads/test-branch >expect &&
+	git -C test-branch symbolic-ref HEAD >actual &&
+	test_cmp expect actual &&
+	git worktree remove test-branch
 '
 
 test_expect_success '"add --force" with existing dwimd name doesnt die' '

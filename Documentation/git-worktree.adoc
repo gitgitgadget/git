@@ -93,8 +93,9 @@ then, as a convenience, the new worktree is associated with a branch (call
 it _<branch>_) named after `$(basename <path>)`.  If _<branch>_ doesn't
 exist, a new branch based on `HEAD` is automatically created as if
 `-b <branch>` was given.  If _<branch>_ does exist, it will be checked out
-in the new worktree, if it's not checked out anywhere else, otherwise the
-command will refuse to create the worktree (unless `--force` is used).
+in the new worktree, even if it is already checked out in another worktree.
+(A branch that another worktree is in the middle of rebasing or bisecting is
+refused unless `--force` is used.)
 +
 If _<commit-ish>_ is omitted, neither `--detach`, or `--orphan` is
 used, and there are no valid local branches (or remote branches if
@@ -177,12 +178,12 @@ OPTIONS
 
 `-f`::
 `--force`::
-	By default, `add` refuses to create a new worktree when
-	_<commit-ish>_ is a branch name and is already checked out by
-	another worktree, or if _<path>_ is already assigned to some
-	worktree but is missing (for instance, if _<path>_ was deleted
-	manually). This option overrides these safeguards. To add a missing but
-	locked worktree path, specify `--force` twice.
+	`add` refuses to create a new worktree when _<commit-ish>_ is a
+	branch that another worktree is in the middle of rebasing or
+	bisecting, or if _<path>_ is already assigned to some worktree but
+	is missing (for instance, if _<path>_ was deleted manually). This
+	option overrides these safeguards. To add a missing but locked
+	worktree path, specify `--force` twice.
 +
 `move` refuses to move a locked worktree unless `--force` is specified
 twice. If the destination is already assigned to some other worktree but is

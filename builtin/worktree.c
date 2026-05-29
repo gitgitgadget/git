@@ -648,6 +648,34 @@ static void setup_alternate_ref_dir(struct worktree *wt, const char *wt_git_path
 	strbuf_release(&sb);
 }
 
+/*
+ * Checking out a branch that is already checked out in another worktree is
+ * fine -- it is exactly what you want when spinning up several worktrees on
+ * the same checkout for parallel work. The one case that is still unsafe is a
+ * branch that another worktree is in the middle of rebasing or bisecting,
+ * since a second checkout could corrupt that operation, so refuse only that.
+ */
+static void die_if_branch_busy(const char *branch)
+{
+	struct worktree **worktrees = get_worktrees();
+	int i;
+
+	for (i = 0; worktrees[i]; i++) {
+		const struct worktree *wt = worktrees[i];
+
+		if (is_worktree_being_rebased(wt, branch) ||
+		    is_worktree_being_bisected(wt, branch)) {
+			const char *shortname = branch;
+
+			skip_prefix(branch, "refs/heads/", &shortname);
+			die(_("'%s' is already used by worktree at '%s'"),
+			    shortname, wt->path);
+		}
+	}
+
+	free_worktrees(worktrees);
+}
+
 static int add_worktree(const char *path, const char *refname,
 			const struct add_opts *opts)
 {
@@ -675,7 +703,7 @@ static int add_worktree(const char *path, const char *refname,
 	    refs_ref_exists(get_main_ref_store(the_repository), symref.buf)) {
 		is_branch = 1;
 		if (!opts->force)
-			die_if_checked_out(symref.buf, 0);
+			die_if_branch_busy(symref.buf);
 	}
 	commit = lookup_commit_reference_by_name(refname);
 	if (!commit && !opts->orphan)
