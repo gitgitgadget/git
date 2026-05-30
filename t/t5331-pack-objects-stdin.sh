@@ -520,4 +520,104 @@ test_expect_success '--stdin-packs with !-delimited pack without follow' '
 	)
 '
 
+test_expect_success '--stdin-packs skips rev walk when delta search is off' '
+	test_when_finished "rm -fr repo" &&
+	git init repo &&
+	(
+		cd repo &&
+
+		for c in A B C D
+		do
+			test_commit "$c" || return 1
+		done &&
+
+		A="$(echo A | git pack-objects --revs $packdir/pack)" &&
+		B="$(echo A..B | git pack-objects --revs $packdir/pack)" &&
+		C="$(echo B..C | git pack-objects --revs $packdir/pack)" &&
+		D="$(echo C..D | git pack-objects --revs $packdir/pack)" &&
+		git prune-packed &&
+
+		cat >in <<-EOF &&
+		pack-$B.pack
+		^pack-$C.pack
+		pack-$D.pack
+		EOF
+
+		# In STANDARD mode (no "=follow"), the rev walk only
+		# fills in namehash hints used during delta selection,
+		# so it is unnecessary when delta search is disabled by
+		# --window=0 or --depth=0. The trace2 counter
+		# "stdin_packs_hints" is incremented only when the walk
+		# populates a hint, so seeing a value of zero implies
+		# that the walk was skipped.
+		Pdef=$(GIT_TRACE2_EVENT="$(pwd)/walk-def.event" \
+			git pack-objects --stdin-packs $packdir/pack <in) &&
+		! grep "\"key\":\"stdin_packs_hints\",\"value\":\"0\"" walk-def.event &&
+
+		Pw0=$(GIT_TRACE2_EVENT="$(pwd)/walk-w0.event" \
+			git pack-objects --stdin-packs --window=0 $packdir/pack <in) &&
+		grep "\"key\":\"stdin_packs_hints\",\"value\":\"0\"" walk-w0.event &&
+
+		Pd0=$(GIT_TRACE2_EVENT="$(pwd)/walk-d0.event" \
+			git pack-objects --stdin-packs --depth=0 $packdir/pack <in) &&
+		grep "\"key\":\"stdin_packs_hints\",\"value\":\"0\"" walk-d0.event &&
+
+		# All three runs must produce the same object set
+		# (those in the included packs B and D, since the
+		# walk plays no role in STANDARD mode beyond hints).
+		objects_in_packs $B $D >expect &&
+		objects_in_packs $Pdef >actual &&
+		test_cmp expect actual &&
+		objects_in_packs $Pw0 >actual &&
+		test_cmp expect actual &&
+		objects_in_packs $Pd0 >actual &&
+		test_cmp expect actual
+	)
+'
+
+test_expect_success '--stdin-packs=follow walks even with delta search off' '
+	test_when_finished "rm -fr repo" &&
+	git init repo &&
+	(
+		cd repo &&
+
+		for c in A B C D
+		do
+			test_commit "$c" || return 1
+		done &&
+
+		A="$(echo A | git pack-objects --revs $packdir/pack)" &&
+		B="$(echo A..B | git pack-objects --revs $packdir/pack)" &&
+		C="$(echo B..C | git pack-objects --revs $packdir/pack)" &&
+		D="$(echo C..D | git pack-objects --revs $packdir/pack)" &&
+		git prune-packed &&
+
+		cat >in <<-EOF &&
+		pack-$B.pack
+		^pack-$C.pack
+		pack-$D.pack
+		EOF
+
+		# In FOLLOW mode, the walk also pulls in objects that
+		# live outside the included packs (here, in pack A) to
+		# close the set under reachability, so the walk must
+		# run regardless of --window/--depth.
+		objects_in_packs $A $B $D >expect &&
+
+		Pdef=$(git pack-objects --stdin-packs=follow $packdir/pack <in) &&
+		objects_in_packs $Pdef >actual &&
+		test_cmp expect actual &&
+
+		Pw0=$(git pack-objects --stdin-packs=follow --window=0 \
+			$packdir/pack <in) &&
+		objects_in_packs $Pw0 >actual &&
+		test_cmp expect actual &&
+
+		Pd0=$(git pack-objects --stdin-packs=follow --depth=0 \
+			$packdir/pack <in) &&
+		objects_in_packs $Pd0 >actual &&
+		test_cmp expect actual
+	)
+'
+
 test_done

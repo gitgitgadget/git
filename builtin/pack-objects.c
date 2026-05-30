@@ -4082,6 +4082,7 @@ static void read_stdin_packs(enum stdin_packs_mode mode, int rev_list_unpacked)
 {
 	int prev_fetch_if_missing = fetch_if_missing;
 	struct rev_info revs;
+	int need_walk;
 
 	/*
 	 * The revision walk may hit objects that are promised, only. As the
@@ -4099,7 +4100,14 @@ static void read_stdin_packs(enum stdin_packs_mode mode, int rev_list_unpacked)
 	 * That may cause us to avoid populating all of the namehash fields of
 	 * all included objects, but our goal is best-effort, since this is only
 	 * an optimization during delta selection.
+	 *
+	 * However, the walk is only needed for delta selection (which
+	 * consumes the namehash) and for STDIN_PACKS_MODE_FOLLOW (which
+	 * uses the walk to discover additional reachable objects); skip
+	 * it when neither applies.
 	 */
+	need_walk = (window && depth) || mode == STDIN_PACKS_MODE_FOLLOW;
+
 	revs.no_kept_objects = 1;
 	revs.keep_pack_cache_flags |= KEPT_PACK_IN_CORE;
 	revs.blob_objects = 1;
@@ -4122,12 +4130,14 @@ static void read_stdin_packs(enum stdin_packs_mode mode, int rev_list_unpacked)
 	if (rev_list_unpacked)
 		add_unreachable_loose_objects(&revs);
 
-	if (prepare_revision_walk(&revs))
-		die(_("revision walk setup failed"));
-	traverse_commit_list(&revs,
-			     show_commit_pack_hint,
-			     show_object_pack_hint,
-			     &mode);
+	if (need_walk) {
+		if (prepare_revision_walk(&revs))
+			die(_("revision walk setup failed"));
+		traverse_commit_list(&revs,
+				     show_commit_pack_hint,
+				     show_object_pack_hint,
+				     &mode);
+	}
 
 	release_revisions(&revs);
 
