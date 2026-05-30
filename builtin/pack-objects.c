@@ -3820,6 +3820,8 @@ static int git_pack_config(const char *k, const char *v,
 static int stdin_packs_found_nr;
 static int stdin_packs_hints_nr;
 
+static int stdin_packs_need_walk;
+
 static int add_object_entry_from_pack(const struct object_id *oid,
 				      struct packed_git *p,
 				      uint32_t pos,
@@ -3842,7 +3844,7 @@ static int add_object_entry_from_pack(const struct object_id *oid,
 	if (packed_object_info(NULL, p, ofs, &oi) < 0) {
 		die(_("could not get type of object %s in pack %s"),
 		    oid_to_hex(oid), p->pack_name);
-	} else if (type == OBJ_COMMIT) {
+	} else if (type == OBJ_COMMIT && stdin_packs_need_walk) {
 		struct rev_info *revs = _data;
 		/*
 		 * commits in included packs are used as starting points
@@ -4128,7 +4130,13 @@ static void read_stdin_packs(struct repository *repo,
 	 * That may cause us to avoid populating all of the namehash fields of
 	 * all included objects, but our goal is best-effort, since this is only
 	 * an optimization during delta selection.
+	 *
+	 * Skip both commit seeding and walking unless delta search needs
+	 * namehash hints or FOLLOW mode needs reachability.
 	 */
+	stdin_packs_need_walk = (window && depth) ||
+				mode == STDIN_PACKS_MODE_FOLLOW;
+
 	revs.no_kept_objects = 1;
 	revs.keep_pack_cache_flags |= KEPT_PACK_IN_CORE;
 	revs.blob_objects = 1;
@@ -4151,12 +4159,14 @@ static void read_stdin_packs(struct repository *repo,
 	if (rev_list_unpacked)
 		add_unreachable_loose_objects(&revs);
 
-	if (prepare_revision_walk(&revs))
-		die(_("revision walk setup failed"));
-	traverse_commit_list(&revs,
-			     show_commit_pack_hint,
-			     show_object_pack_hint,
-			     &mode);
+	if (stdin_packs_need_walk) {
+		if (prepare_revision_walk(&revs))
+			die(_("revision walk setup failed"));
+		traverse_commit_list(&revs,
+				     show_commit_pack_hint,
+				     show_object_pack_hint,
+				     &mode);
+	}
 
 	release_revisions(&revs);
 

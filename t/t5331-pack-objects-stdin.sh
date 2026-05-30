@@ -520,4 +520,78 @@ test_expect_success '--stdin-packs with !-delimited pack without follow' '
 	)
 '
 
+test_expect_success 'setup for --stdin-packs hint walks' '
+	git init hint-walk &&
+	(
+		cd hint-walk &&
+
+		for c in A B C D
+		do
+			test_commit "$c" || return 1
+		done &&
+
+		A="$(echo A | git pack-objects --revs $packdir/pack)" &&
+		B="$(echo A..B | git pack-objects --revs $packdir/pack)" &&
+		C="$(echo B..C | git pack-objects --revs $packdir/pack)" &&
+		D="$(echo C..D | git pack-objects --revs $packdir/pack)" &&
+		git prune-packed &&
+
+		cat >in <<-EOF &&
+		pack-$B.pack
+		^pack-$C.pack
+		pack-$D.pack
+		EOF
+
+		objects_in_packs $B $D >expect-standard &&
+		objects_in_packs $A $B $D >expect-follow
+	)
+'
+
+test_expect_success '--stdin-packs skips rev walk when delta search is off' '
+	(
+		cd hint-walk &&
+
+		# Without =follow, disabling delta search needs no namehash hints.
+		default_pack=$(GIT_TRACE2_EVENT="$(pwd)/walk-default.event" \
+			git pack-objects --stdin-packs pack <in) &&
+		test_grep ! "\"key\":\"stdin_packs_hints\",\"value\":\"0\"" walk-default.event &&
+
+		no_window_pack=$(GIT_TRACE2_EVENT="$(pwd)/walk-window.event" \
+			git pack-objects --stdin-packs --window=0 pack <in) &&
+		test_grep "\"key\":\"stdin_packs_hints\",\"value\":\"0\"" walk-window.event &&
+
+		no_depth_pack=$(GIT_TRACE2_EVENT="$(pwd)/walk-depth.event" \
+			git pack-objects --stdin-packs --depth=0 pack <in) &&
+		test_grep "\"key\":\"stdin_packs_hints\",\"value\":\"0\"" walk-depth.event &&
+
+		packed_objects "pack-$default_pack.idx" >actual &&
+		test_cmp expect-standard actual &&
+		packed_objects "pack-$no_window_pack.idx" >actual &&
+		test_cmp expect-standard actual &&
+		packed_objects "pack-$no_depth_pack.idx" >actual &&
+		test_cmp expect-standard actual
+	)
+'
+
+test_expect_success '--stdin-packs=follow walks even with delta search off' '
+	(
+		cd hint-walk &&
+
+		# Follow mode must still include the reachable objects in pack A.
+		default_pack=$(git pack-objects --stdin-packs=follow pack <in) &&
+		packed_objects "pack-$default_pack.idx" >actual &&
+		test_cmp expect-follow actual &&
+
+		no_window_pack=$(git pack-objects --stdin-packs=follow --window=0 \
+			pack <in) &&
+		packed_objects "pack-$no_window_pack.idx" >actual &&
+		test_cmp expect-follow actual &&
+
+		no_depth_pack=$(git pack-objects --stdin-packs=follow --depth=0 \
+			pack <in) &&
+		packed_objects "pack-$no_depth_pack.idx" >actual &&
+		test_cmp expect-follow actual
+	)
+'
+
 test_done
