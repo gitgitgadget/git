@@ -1,15 +1,21 @@
 #!/bin/sh
 
+tmp=/var/tmp/TopicCheck.$$
+trap 'rm -fr "$tmp" "$tmp."*' 0 1 2 3 15
+
 usage () {
-	echo >&2 "usage: $0 [--stdin | <topics>...]"
+	echo >&2 "usage: $0 [--with <base>] [--stdin | <topics>...]"
 }
 
-stdin=
+stdin= with=
 while case "$1" in -*) ;; *) break; esac
 do
 	case "$1" in
 	--stdin)
 		stdin=stdin ;;
+	--with)
+		with="${2?<base>}"
+		shift ;;
 	*)
 		usage
 		exit 1 ;;
@@ -36,13 +42,25 @@ mkdir -p "$logbase"
 exec 3>&2
 
 onetopic () {
-	topic="$1"
+	topic="$1" rest="$2"
+	label=${rest:-$topic}
 	log="$logbase/$(echo "$topic" | tr '/' '-')"
 	exec >"$log" 2>&1
-	git reset --hard "$topic"
+
+	if test -n "$with"
+	then
+		git reset --hard "$with" &&
+		git merge --quiet "$topic"
+	else
+		git reset --hard "$topic"
+	fi || {
+		echo >&2 "cannot prepare $label"
+		return
+	}
+
 	failed=
 
-	section "$topic - leaks" &&
+	section "$label - leaks" &&
 	(
 		export SANITIZE=leak GIT_TEST_PASSING_SANITIZE_LEAK=true &&
 		Meta/Make -j32  CC=clang test
@@ -51,7 +69,7 @@ onetopic () {
 		exit $st
 	) || failed="leaks"
 
-	section "$topic - sha256" &&
+	section "$label - sha256" &&
 	(
 		export GIT_TEST_DEFAULT_HASH=sha256 &&
 		Meta/Make -j32 test
@@ -60,16 +78,16 @@ onetopic () {
 		exit $st
 	) || failed="$failed${failed:+" "}sha256"
 
-	section "$topic - test" &&
+	section "$label - test" &&
 	(
-		: export GIT_TEST_LONG=YesPlease &&
+		export GIT_TEST_LONG=YesPlease &&
 		Meta/Make -j32 test
 		st=$?
 		Meta/Make >/dev/null 2>&1 distclean
 		exit $st
 	) || failed="$failed${failed:+" "}test"
 
-	section "$topic - breaking" &&
+	section "$label - breaking" &&
 	(
 		Meta/Make $jobs WITH_BREAKING_CHANGES=YesPlease $T test
 		st=$?
@@ -81,8 +99,8 @@ onetopic () {
 	then
 		rm -f "$log"
 	else
-		echo >&3 "failed ($failed) $topic"
-		echo >&2 "failed ($failed) $topic"
+		echo >&3 "failed ($failed) $label"
+		echo >&2 "failed ($failed) $label"
 	fi
 }
 
@@ -90,11 +108,18 @@ if test "$stdin" = stdin
 then
 	while read topic
 	do
-		onetopic "$topic"
+		echo $(git rev-parse "$topic") "$topic"
 	done
 else
 	for topic
 	do
-		onetopic "$topic"
+		echo $(git rev-parse "$topic") "$topic"
 	done
-fi
+fi >"$tmp".lst
+
+while read oid topic
+do
+	onetopic "$oid" "$topic"
+done <"$tmp".lst
+
+rmdir 2>/dev/null "$logbase" || :
