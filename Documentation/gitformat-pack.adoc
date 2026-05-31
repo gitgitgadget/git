@@ -12,6 +12,7 @@ SYNOPSIS
 $GIT_DIR/objects/pack/pack-*.{pack,idx}
 $GIT_DIR/objects/pack/pack-*.rev
 $GIT_DIR/objects/pack/pack-*.mtimes
+$GIT_DIR/objects/pack/pack-*.baddeltas
 $GIT_DIR/objects/pack/multi-pack-index
 
 DESCRIPTION
@@ -356,6 +357,32 @@ All 4-byte numbers are in network byte order.
   - A trailer, containing a checksum of the corresponding packfile,
     and a checksum of all of the above (each having length according
     to the specified hash function).
+
+== pack-*.baddeltas files
+
+The optional `.baddeltas` file is an empty marker sitting alongside a
+`pack-*.pack` (and its `.idx`).  It signals to `git pack-objects` that
+the delta layout of the pack should not be trusted: even when two
+objects appear together in the same pack and neither is stored as a
+delta, the next packing run should still call out to its delta search
+routine for the pair instead of assuming a prior pack-objects already
+considered (and rejected) the pair.
+
+This is intended for producers that intentionally skip delta search
+when writing a pack (for example, processes that bulk-import objects
+or aggregate multiple existing packs without recomputing deltas).
+Without this marker, the same-pack delta skip in `git pack-objects`
+would silently inherit those producers' lack of delta search into
+future repacks.
+
+The contents of the file are currently ignored.  Producers should
+write an empty file; consumers must tolerate (and ignore) any
+content.
+
+The marker only affects whether `git pack-objects` will attempt to
+compute new deltas for object pairs that share the marked pack.  It
+does not disable reuse of existing on-disk deltas, nor does it affect
+multi-pack-index, bitmap, or pack reuse for transfer.
 
 == multi-pack-index (MIDX) files have the following format:
 

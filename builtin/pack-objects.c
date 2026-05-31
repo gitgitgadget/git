@@ -2794,9 +2794,15 @@ static int try_delta(struct unpacked *trg, struct unpacked *src,
 	 * be considered, as even if we produce a suboptimal delta against
 	 * it, we will still save the transfer cost, as we already know
 	 * the other side has it and we won't send src_entry at all.
+	 *
+	 * If the source pack carries a ".baddeltas" marker, we treat its
+	 * existing delta layout as untrusted: even if the two objects are
+	 * in the same pack and neither is a delta, we have no reason to
+	 * believe a previous packing run actually considered the pair.
 	 */
 	if (reuse_delta && IN_PACK(trg_entry) &&
 	    IN_PACK(trg_entry) == IN_PACK(src_entry) &&
+	    !IN_PACK(trg_entry)->has_bad_deltas &&
 	    !src_entry->preferred_base &&
 	    trg_entry->in_pack_type != OBJ_REF_DELTA &&
 	    trg_entry->in_pack_type != OBJ_OFS_DELTA)

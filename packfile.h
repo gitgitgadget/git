@@ -33,7 +33,8 @@ struct packed_git {
 		 do_not_close:1,
 		 pack_promisor:1,
 		 multi_pack_index:1,
-		 is_cruft:1;
+		 is_cruft:1,
+		 has_bad_deltas:1;
 	unsigned char hash[GIT_MAX_RAWSZ];
 	struct revindex_entry *revindex;
 	const uint32_t *revindex_data;
