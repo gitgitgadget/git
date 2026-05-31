@@ -121,4 +121,37 @@ test_expect_success '.baddeltas is removed by git repack -d' '
 	)
 '
 
+test_expect_success 'pack-objects --mark-bad-deltas writes .baddeltas' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		A=$(git hash-object -w a) &&
+		B=$(git hash-object -w b) &&
+		printf "%s\n%s\n" "$A" "$B" |
+			git pack-objects --window=0 --mark-bad-deltas \
+				.git/objects/pack/pack >/dev/null &&
+		pack=$(basename "$(ls .git/objects/pack/pack-*.pack)") &&
+		test_path_is_file .git/objects/pack/${pack%.pack}.baddeltas &&
+		test 0 -eq "$(count_deltas .git/objects/pack/${pack%.pack}.idx)" &&
+		git prune-packed &&
+
+		out_pack=$(repack_blobs) &&
+		test 1 -le "$(count_deltas .git/objects/pack/${out_pack%.pack}.idx)"
+	)
+'
+
+test_expect_success 'pack-objects --mark-bad-deltas is incompatible with --stdout' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		A=$(git hash-object -w a) &&
+		printf "%s\n" "$A" >in &&
+		test_must_fail git pack-objects --mark-bad-deltas --stdout \
+			<in >/dev/null 2>err &&
+		test_grep "cannot be used together" err
+	)
+'
+
 test_done
