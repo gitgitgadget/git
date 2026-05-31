@@ -132,18 +132,19 @@ static int handshake_version(struct child_process *process,
 	if (packet_flush_gently(process->in))
 		return error("Could not write flush packet");
 
-	if (!(line = packet_read_line(process->out, NULL)) ||
+	if (packet_read_line_gently(process->out, NULL, &line) <= 0 ||
 	    !skip_prefix(line, welcome_prefix, &p) ||
 	    strcmp(p, "-server"))
 		return error("Unexpected line '%s', expected %s-server",
 			     line ? line : "<flush packet>", welcome_prefix);
-	if (!(line = packet_read_line(process->out, NULL)) ||
+	if (packet_read_line_gently(process->out, NULL, &line) <= 0 ||
 	    !skip_prefix(line, "version=", &p) ||
 	    strtol_i(p, 10, chosen_version))
 		return error("Unexpected line '%s', expected version",
 			     line ? line : "<flush packet>");
-	if ((line = packet_read_line(process->out, NULL)))
-		return error("Unexpected line '%s', expected flush", line);
+	if (packet_read_line_gently(process->out, NULL, &line) < 0 || line)
+		return error("Unexpected line '%s', expected flush",
+			     line ? line : "<read error>");
 
 	/* Check to make sure that the version received is supported */
 	for (i = 0; versions[i]; i++) {
@@ -171,7 +172,7 @@ static int handshake_capabilities(struct child_process *process,
 	if (packet_flush_gently(process->in))
 		return error("Could not write flush packet");
 
-	while ((line = packet_read_line(process->out, NULL))) {
+	while (packet_read_line_gently(process->out, NULL, &line) > 0) {
 		const char *p;
 		if (!skip_prefix(line, "capability=", &p))
 			continue;
