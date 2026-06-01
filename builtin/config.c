@@ -1618,6 +1618,12 @@ int cmd_config(int argc,
 	 */
 	argc = parse_options(argc, argv, prefix, subcommand_opts, builtin_config_usage,
 			     PARSE_OPT_SUBCOMMAND_OPTIONAL|PARSE_OPT_KEEP_ARGV0|PARSE_OPT_KEEP_UNKNOWN_OPT);
+	if (startup_info->have_repository) {
+		repo_config(repo, git_default_config, NULL);
+		prepare_repo_settings(repo);
+		repo->settings.command_requires_full_index = 0;
+	}
+
 	if (subcommand) {
 		argc = parse_options(argc, argv, prefix, subcommand_opts, builtin_config_usage,
 		       PARSE_OPT_SUBCOMMAND_OPTIONAL|PARSE_OPT_KEEP_UNKNOWN_OPT);
