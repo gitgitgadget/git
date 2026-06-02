@@ -555,7 +555,7 @@ static int get_value(const struct config_location_options *opts,
 			goto free_strings;
 		}
 	} else {
-		if (git_config_parse_key(key_, &key, NULL)) {
+		if (git_config_parse_key(key_, &key, NULL, 0)) {
 			ret = CONFIG_INVALID_KEY;
 			goto free_strings;
 		}

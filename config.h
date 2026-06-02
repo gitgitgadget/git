@@ -341,7 +341,7 @@ int repo_config_set_worktree_gently(struct repository *, const char *, const cha
  */
 void repo_config_set(struct repository *, const char *, const char *);
 
-int git_config_parse_key(const char *, char **, size_t *);
+int git_config_parse_key(const char *, char **, size_t *, int quiet);
 
 /*
  * The following macros specify flag bits that alter the behavior

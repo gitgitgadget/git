@@ -970,7 +970,7 @@ int print_config_from_gitmodules(struct repository *repo, const char *key)
 	int ret;
 	char *store_key;
 
-	ret = git_config_parse_key(key, &store_key, NULL);
+	ret = git_config_parse_key(key, &store_key, NULL, 0);
 	if (ret < 0)
 		return CONFIG_INVALID_KEY;
 
