@@ -2573,4 +2573,67 @@ test_expect_success 'sparse-index is not expanded: merge-ours' '
 	ensure_not_expanded merge -s ours merge-right
 '
 
+test_expect_success 'sparse-index is not expanded: config --blob with index path' '
+	init_repos &&
+
+	# Stage valid config blobs at in-cone locations.
+	for repo in full-checkout sparse-checkout sparse-index
+	do
+		test_write_lines "[test]" "value = root" \
+			>"$repo/test-config" &&
+		git -C "$repo" add test-config &&
+		test_write_lines "[test]" "value = deep" \
+			>"$repo/deep/test-config" &&
+		git -C "$repo" add deep/test-config || return 1
+	done &&
+
+	# Nonexistent file: must not expand.
+	rm -f trace2.txt &&
+	GIT_TRACE2_EVENT="$(pwd)/trace2.txt" GIT_TRACE2_EVENT_NESTING=10 \
+		test_must_fail \
+		git -C sparse-index config --blob ":.lfsconfig" -l &&
+	test_region ! index ensure_full_index trace2.txt &&
+
+	# Root-level file (always in-cone): must not expand, and must
+	# successfully parse the config values.
+	rm -f trace2.txt &&
+	GIT_TRACE2_EVENT="$(pwd)/trace2.txt" GIT_TRACE2_EVENT_NESTING=10 \
+		git -C sparse-index config --blob ":test-config" -l >actual &&
+	echo "test.value=root" >expect &&
+	test_cmp expect actual &&
+	test_region ! index ensure_full_index trace2.txt &&
+
+	# File inside sparse cone (deep/): must not expand.
+	rm -f trace2.txt &&
+	GIT_TRACE2_EVENT="$(pwd)/trace2.txt" GIT_TRACE2_EVENT_NESTING=10 \
+		git -C sparse-index config --blob ":deep/test-config" -l >actual &&
+	echo "test.value=deep" >expect &&
+	test_cmp expect actual &&
+	test_region ! index ensure_full_index trace2.txt &&
+
+	# File outside sparse cone (folder1/a): must expand because
+	# it is behind a sparse directory entry. The blob contains
+	# "a\n" from the initial setup, which git config parses as
+	# a valueless key.
+	rm -f trace2.txt &&
+	GIT_TRACE2_EVENT="$(pwd)/trace2.txt" GIT_TRACE2_EVENT_NESTING=10 \
+		git -C sparse-index config --blob ":folder1/a" -l &&
+	test_region index ensure_full_index trace2.txt
+'
+
+test_expect_success 'config --file and --blob do not expand sparse index' '
+	init_repos &&
+
+	test_write_lines "[test]" "value = external" >external-config &&
+
+	# --file reads an external config file; the sparse index
+	# should not be read or expanded.
+	rm -f trace2.txt &&
+	GIT_TRACE2_EVENT="$(pwd)/trace2.txt" GIT_TRACE2_EVENT_NESTING=10 \
+		git -C sparse-index config --file ../external-config -l >actual &&
+	echo "test.value=external" >expect &&
+	test_cmp expect actual &&
+	test_region ! index ensure_full_index trace2.txt
+'
+
 test_done
