@@ -8,13 +8,14 @@
 #include "sigchain.h"
 #include "connected.h"
 #include "transport.h"
+#include "object-name.h"
 #include "packfile.h"
 #include "promisor-remote.h"
 
 /*
  * If we feed all the commits we want to verify to this command
  *
- *  $ git rev-list --objects --stdin --not --all
+ *  $ git rev-list --objects --stdin --not ${main_branches}
  *
  * and if it does not error out, that means everything reachable from
  * these commits locally exists and is connected to our existing refs.
@@ -93,13 +94,22 @@ no_promisor_pack_found:
 		strvec_push(&rev_list.args, "--exclude-promisor-objects");
 	if (!opt->is_deepening_fetch) {
 		strvec_push(&rev_list.args, "--not");
-		if (opt->exclude_hidden_refs_section)
-			strvec_pushf(&rev_list.args, "--exclude-hidden=%s",
-				     opt->exclude_hidden_refs_section);
-		strvec_push(&rev_list.args, "--all");
+		if (opt->use_toplevel_branches_for_reachability) {
+			struct object_id head_oid;
+			strvec_push(&rev_list.args, "--exclude=*/*");
+			strvec_push(&rev_list.args, "--branches");
+			if (!repo_get_oid(the_repository, "HEAD", &head_oid))
+				strvec_push(&rev_list.args, "HEAD");
+		} else {
+			if (opt->exclude_hidden_refs_section)
+				strvec_pushf(&rev_list.args, "--exclude-hidden=%s",
+					     opt->exclude_hidden_refs_section);
+			strvec_push(&rev_list.args, "--all");
+		}
 	}
 	strvec_push(&rev_list.args, "--quiet");
-	strvec_push(&rev_list.args, "--alternate-refs");
+	if (!opt->use_toplevel_branches_for_reachability)
+		strvec_push(&rev_list.args, "--alternate-refs");
 	if (opt->progress)
 		strvec_pushf(&rev_list.args, "--progress=%s",
 			     _("Checking connectivity"));

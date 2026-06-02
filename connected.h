@@ -50,9 +50,22 @@ struct check_connected_options {
 	/*
 	 * If not NULL, use `--exclude-hidden=$section` to exclude all refs
 	 * hidden via the `$section.hideRefs` config from the set of
-	 * already-reachable refs.
+	 * already-reachable refs; irrelevant if
+	 * use_toplevel_branches_for_reachability is set.
 	 */
 	const char *exclude_hidden_refs_section;
+
+	/*
+	 * If set, use only toplevel branches (and HEAD) for the
+	 * reachability check, and skip the `--alternate-refs` stoppers
+	 * that the fetch/clone code path relies on.  This avoids the
+	 * linear-in-refcount enumeration of every visible ref in
+	 * repositories with many branches/tags (and the analogous
+	 * expansion of the alternate's ref set in fork-network
+	 * setups), at the cost of walking a little further into
+	 * already-reachable history.
+	 */
+	unsigned use_toplevel_branches_for_reachability : 1;
 };
 
 #define CHECK_CONNECTED_INIT { 0 }

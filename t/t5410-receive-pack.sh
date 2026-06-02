@@ -97,4 +97,62 @@ test_expect_success TEE_DOES_NOT_HANG \
 	test_must_fail git -C remote.git rev-list $(git -C repo rev-parse HEAD)
 '
 
+test_expect_success 'connectivity check uses narrow stopper, omits --alternate-refs' '
+	test_when_finished "rm -rf src dst trace" &&
+
+	git init src &&
+	test_commit -C src one &&
+
+	# Clone first so that HEAD in the bare repo resolves; this lets us
+	# observe HEAD in the stopper args.
+	git clone --bare src dst &&
+	test_commit -C src two &&
+
+	GIT_TRACE="$(pwd)/trace" \
+		git -C src push ../dst HEAD:refs/heads/main &&
+
+	# Receive-pack should request the narrow stopper.  GIT_TRACE may
+	# single-quote arguments containing shell metacharacters, so allow
+	# an optional quote before/after --exclude=*/*.
+	grep "rev-list .*--not .\{0,1\}--exclude=\*/\*.\{0,1\} --branches HEAD" \
+		trace &&
+	# And not fall back to --alternate-refs in this code path.
+	! grep "rev-list .*--alternate-refs" trace
+'
+
+test_expect_success 'push to bare repo with unborn HEAD succeeds' '
+	test_when_finished "rm -rf src dst" &&
+
+	git init src &&
+	test_commit -C src one &&
+
+	# Fresh bare repo: HEAD points at an unborn branch and no
+	# branches exist yet, so the narrow stopper code must omit HEAD
+	# and "--branches" expands to nothing.
+	git init --bare dst &&
+	git -C src push ../dst HEAD:refs/heads/main &&
+	git -C src rev-parse HEAD >expect &&
+	git -C dst rev-parse refs/heads/main >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'push to bare repo whose HEAD resolves to a nested branch succeeds' '
+	test_when_finished "rm -rf src dst" &&
+
+	git init src &&
+	test_commit -C src one &&
+
+	git init --bare dst &&
+	git -C src push ../dst HEAD:refs/heads/team/feature &&
+	# Point HEAD at the nested branch so HEAD resolves, but the
+	# only branch in the repo is excluded by "--exclude=*/*".
+	git -C dst symbolic-ref HEAD refs/heads/team/feature &&
+
+	test_commit -C src two &&
+	git -C src push ../dst HEAD:refs/heads/team/feature &&
+	git -C src rev-parse HEAD >expect &&
+	git -C dst rev-parse refs/heads/team/feature >actual &&
+	test_cmp expect actual
+'
+
 test_done
