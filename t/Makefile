@@ -46,6 +46,7 @@ TPERF = $(sort $(wildcard perf/p[0-9][0-9][0-9][0-9]-*.sh))
 TINTEROP = $(sort $(wildcard interop/i[0-9][0-9][0-9][0-9]-*.sh))
 CHAINLINTTESTS = $(sort $(patsubst chainlint/%.test,%,$(wildcard chainlint/*.test)))
 CHAINLINT = '$(PERL_PATH_SQ)' chainlint.pl
+LINT_STYLE_TESTS = $(sort $(wildcard lint-style/*.test))
 UNIT_TEST_SOURCES = $(wildcard unit-tests/t-*.c)
 UNIT_TEST_PROGRAMS = $(patsubst unit-tests/%.c,unit-tests/bin/%$(X),$(UNIT_TEST_SOURCES))
 UNIT_TEST_PROGRAMS += unit-tests/bin/unit-tests$(X)
@@ -139,7 +140,7 @@ check-meson:
 test-lint: test-lint-duplicates test-lint-executable \
 	test-lint-filenames
 ifneq ($(PERL_PATH),)
-test-lint: test-lint-shell-syntax check-shell-parser
+test-lint: test-lint-shell-syntax test-lint-style check-lint-style check-shell-parser
 else
 GIT_TEST_CHAIN_LINT = 0
 endif
@@ -162,6 +163,32 @@ test-lint-shell-syntax:
 
 check-shell-parser:
 	@'$(PERL_PATH_SQ)' check-shell-parser.pl
+
+test-lint-style:
+	@'$(PERL_PATH_SQ)' lint-style.pl $(T) $(THELPERS) $(TPERF)
+
+check-lint-style:
+	@rc=0; for t in $(LINT_STYLE_TESTS); do \
+		base=$${t%.test}; \
+		case $$base in \
+		*-fix) \
+			cp "$$t" "$$t.tmp" && \
+			'$(PERL_PATH_SQ)' lint-style.pl --fix "$$t.tmp" >/dev/null 2>&1; \
+			fix_rc=$$?; \
+			if test $$fix_rc != 0; then \
+				echo "FAIL: $$t (--fix exit code $$fix_rc)"; rc=1; \
+			elif ! diff -u "$$base.expect" "$$t.tmp"; then \
+				echo "FAIL: $$t (--fix output)"; rc=1; \
+			fi; \
+			rm -f "$$t.tmp" ;; \
+		*) \
+			if ! '$(PERL_PATH_SQ)' lint-style.pl "$$t" 2>&1 | \
+				diff -u "$$base.expect" -; then \
+				echo "FAIL: $$t"; rc=1; \
+			fi ;; \
+		esac; \
+	done; test $$rc = 0
+
 test-lint-filenames:
 	@# We do *not* pass a glob to ls-files but use grep instead, to catch
 	@# non-ASCII characters (which are quoted within double-quotes)
@@ -188,7 +215,8 @@ perf:
 
 .PHONY: pre-clean $(T) aggregate-results clean valgrind perf \
 	check-chainlint clean-chainlint test-chainlint \
-	check-shell-parser $(UNIT_TESTS)
+	check-shell-parser \
+	check-lint-style test-lint-style $(UNIT_TESTS)
 
 .PHONY: libgit-sys-test libgit-rs-test
 libgit-sys-test:

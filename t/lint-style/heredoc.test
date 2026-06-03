@@ -1,0 +1,14 @@
+test_expect_success 'greps inside heredocs are skipped' '
+	cat <<-EOF &&
+	grep "inside-strip-tabs" file
+	EOF
+	cat <<-\EOF &&
+	grep "inside-no-expand" file
+	EOF
+	! test_grep "after-heredoc-is-caught" actual
+'
+
+test_expect_success 'sed with << does not start a heredoc' '
+	sed "s/<< foo/bar/" file &&
+	! test_grep "not-inside-sed-heredoc" actual
+'

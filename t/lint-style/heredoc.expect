@@ -1,0 +1,3 @@
+lint-style/heredoc.test:8: error: replace '! test_grep' with 'test_grep !': ! test_grep "after-heredoc-is-caught" actual
+lint-style/heredoc.test:13: error: replace '! test_grep' with 'test_grep !': ! test_grep "not-inside-sed-heredoc" actual
+hint: run with --fix to apply the suggested replacements.

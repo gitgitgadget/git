@@ -1,0 +1,3 @@
+lint-style/test-grep-negation.test:2: error: replace '! test_grep' with 'test_grep !': ! test_grep "pattern" actual
+lint-style/test-grep-negation.test:3: error: replace '! test_grep' with 'test_grep !': ! test_grep -i "insensitive" actual
+hint: run with --fix to apply the suggested replacements.

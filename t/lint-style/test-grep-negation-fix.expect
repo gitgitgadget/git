@@ -1,0 +1,4 @@
+test_expect_success 'negated test_grep' '
+	test_grep ! "pattern" actual &&
+	test_grep ! -i "insensitive" actual
+'

@@ -720,7 +720,7 @@ test_expect_success '--name-hash-version=2 and --write-bitmap-index are incompat
 
 	# --stdout option silently removes --write-bitmap-index
 	git pack-objects --stdout --all --name-hash-version=2 --write-bitmap-index >out 2>err &&
-	! test_grep "currently, --write-bitmap-index requires --name-hash-version=1" err
+	test_grep ! "currently, --write-bitmap-index requires --name-hash-version=1" err
 '
 
 test_expect_success '--path-walk pack everything' '

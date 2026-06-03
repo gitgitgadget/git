@@ -664,7 +664,7 @@ test_geometric_repack_needed () {
 	true)
 		test_grep "\[\"git\",\"repack\"," trace2.txt;;
 	false)
-		! test_grep "\[\"git\",\"repack\"," trace2.txt;;
+		test_grep ! "\[\"git\",\"repack\"," trace2.txt;;
 	*)
 		BUG "invalid parameter: $NEEDED";;
 	esac
