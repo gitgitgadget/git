@@ -139,7 +139,7 @@ check-meson:
 test-lint: test-lint-duplicates test-lint-executable \
 	test-lint-filenames
 ifneq ($(PERL_PATH),)
-test-lint: test-lint-shell-syntax
+test-lint: test-lint-shell-syntax check-shell-parser
 else
 GIT_TEST_CHAIN_LINT = 0
 endif
@@ -160,6 +160,8 @@ test-lint-executable:
 test-lint-shell-syntax:
 	@'$(PERL_PATH_SQ)' check-non-portable-shell.pl $(T) $(THELPERS) $(TPERF)
 
+check-shell-parser:
+	@'$(PERL_PATH_SQ)' check-shell-parser.pl
 test-lint-filenames:
 	@# We do *not* pass a glob to ls-files but use grep instead, to catch
 	@# non-ASCII characters (which are quoted within double-quotes)
@@ -185,7 +187,8 @@ perf:
 	$(MAKE) -C perf/ all
 
 .PHONY: pre-clean $(T) aggregate-results clean valgrind perf \
-	check-chainlint clean-chainlint test-chainlint $(UNIT_TESTS)
+	check-chainlint clean-chainlint test-chainlint \
+	check-shell-parser $(UNIT_TESTS)
 
 .PHONY: libgit-sys-test libgit-rs-test
 libgit-sys-test:

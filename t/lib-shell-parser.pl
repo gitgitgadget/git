@@ -89,8 +89,14 @@ sub scan_dqstring {
 	my $b = $self->{buff};
 	my $s = '"';
 	while (1) {
-		# slurp up non-special characters
-		$s .= $1 if $$b =~ /\G([^"\$\\]+)/gc;
+		# slurp up non-special characters; count newlines
+		# inline so we don't need a catch-all counter that
+		# would miscount newlines from recursive $() parsing
+		if ($$b =~ /\G([^"\$\\]+)/gc) {
+			my $chunk = $1;
+			$self->{lineno} += () = $chunk =~ /\n/sg;
+			$s .= $chunk;
+		}
 		# handle special characters
 		last unless $$b =~ /\G(.)/sgc;
 		my $c = $1;
@@ -107,7 +113,6 @@ sub scan_dqstring {
 		}
 		die("internal error scanning dq-string '$c'\n");
 	}
-	$self->{lineno} += () = $s =~ /\n/sg;
 	return $s;
 }
 
