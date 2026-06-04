@@ -1,0 +1,6 @@
+test_expect_success 'grep missing file argument' '
+	grep "pattern" &&
+	! grep "negated" &&
+	grep -e "pattern-flag-no-file" &&
+	grep -f patterns.txt
+'

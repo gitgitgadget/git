@@ -1,0 +1,16 @@
+test_expect_success 'all fixable forms' '
+	grep "pattern" actual &&
+	grep -E "extended" actual &&
+	grep -q "quiet" actual &&
+	grep -qF "combined" actual &&
+	grep -qi "quiet-insensitive" actual &&
+	! grep "negated" actual &&
+	! grep -q "neg-quiet" actual &&
+	! test_grep "shell-neg" actual &&
+	grep -e "explicit" actual &&
+	grep -Fe "fixed-explicit" actual &&
+	grep -f patterns.txt actual &&
+	grep -- "-e" actual &&
+	grep "continuation" \
+		actual
+'

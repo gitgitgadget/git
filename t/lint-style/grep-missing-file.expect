@@ -1,0 +1,4 @@
+lint-style/grep-missing-file.test:2: error: grep assertion appears to be missing a file argument: grep "pattern"
+lint-style/grep-missing-file.test:3: error: grep assertion appears to be missing a file argument: ! grep "negated"
+lint-style/grep-missing-file.test:4: error: grep assertion appears to be missing a file argument: grep -e "pattern-flag-no-file"
+lint-style/grep-missing-file.test:5: error: grep assertion appears to be missing a file argument: grep -f patterns.txt

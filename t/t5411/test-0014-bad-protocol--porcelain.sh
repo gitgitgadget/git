@@ -62,8 +62,8 @@ test_expect_success "proc-receive: bad protocol (hook --die-read-version, $PROTO
 	Done
 	EOF
 	test_cmp expect actual &&
-	grep "remote: fatal: die with the --die-read-version option" out-$test_count &&
-	grep "remote: error: fail to negotiate version with proc-receive hook" out-$test_count &&
+	test_grep "remote: fatal: die with the --die-read-version option" out-$test_count &&
+	test_grep "remote: error: fail to negotiate version with proc-receive hook" out-$test_count &&
 
 	test_cmp_refs -C "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
@@ -93,8 +93,8 @@ test_expect_success "proc-receive: bad protocol (hook --die-write-version, $PROT
 	Done
 	EOF
 	test_cmp expect actual &&
-	grep "remote: fatal: die with the --die-write-version option" out-$test_count &&
-	grep "remote: error: fail to negotiate version with proc-receive hook" out-$test_count &&
+	test_grep "remote: fatal: die with the --die-write-version option" out-$test_count &&
+	test_grep "remote: error: fail to negotiate version with proc-receive hook" out-$test_count &&
 
 	test_cmp_refs -C "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
@@ -124,7 +124,7 @@ test_expect_success "proc-receive: bad protocol (hook --die-read-commands, $PROT
 	Done
 	EOF
 	test_cmp expect actual &&
-	grep "remote: fatal: die with the --die-read-commands option" out-$test_count &&
+	test_grep "remote: fatal: die with the --die-read-commands option" out-$test_count &&
 
 	test_cmp_refs -C "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
@@ -156,7 +156,7 @@ test_expect_success "proc-receive: bad protocol (hook --die-read-push-options, $
 	Done
 	EOF
 	test_cmp expect actual &&
-	grep "remote: fatal: die with the --die-read-push-options option" out-$test_count &&
+	test_grep "remote: fatal: die with the --die-read-push-options option" out-$test_count &&
 
 	test_cmp_refs -C "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main
@@ -186,7 +186,7 @@ test_expect_success "proc-receive: bad protocol (hook --die-write-report, $PROTO
 	Done
 	EOF
 	test_cmp expect actual &&
-	grep "remote: fatal: die with the --die-write-report option" out-$test_count &&
+	test_grep "remote: fatal: die with the --die-write-report option" out-$test_count &&
 
 	test_cmp_refs -C "$upstream" <<-EOF
 	<COMMIT-A> refs/heads/main

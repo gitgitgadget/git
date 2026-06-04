@@ -1,0 +1,13 @@
+lint-style/grep-assert.test:2: error: replace 'grep' with 'test_grep': grep "pattern" actual
+lint-style/grep-assert.test:3: error: replace 'grep' with 'test_grep': grep -E "extended" actual
+lint-style/grep-assert.test:4: error: replace 'grep' with 'test_grep': grep -e "explicit" actual
+lint-style/grep-assert.test:5: error: replace 'grep' with 'test_grep': grep -f patterns.txt actual
+lint-style/grep-assert.test:6: error: replace 'grep' with 'test_grep': grep -Fe "fixed-explicit" actual
+lint-style/grep-assert.test:7: error: replace 'grep' with 'test_grep': grep "^-looks-like-flag" actual
+lint-style/grep-assert.test:8: error: replace 'grep' with 'test_grep': grep -v "inverted" actual
+lint-style/grep-assert.test:9: error: replace 'grep' with 'test_grep': grep -- "-e" actual
+lint-style/grep-assert.test:10: error: replace 'grep' with 'test_grep': grep "with-stderr-redirect" actual 2 > err
+lint-style/grep-assert.test:12: error: replace 'grep' with 'test_grep': grep "after-or" actual
+lint-style/grep-assert.test:17: error: replace 'grep' with 'test_grep': grep "after-pipe" actual
+lint-style/grep-assert.test:22: error: replace 'grep' with 'test_grep': grep "inside-case" actual
+hint: run with --fix to apply the suggested replacements.

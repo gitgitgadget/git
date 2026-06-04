@@ -1,0 +1,43 @@
+test_expect_success 'grep used as filter (not assertion)' '
+	grep "pattern" file | wc -l &&
+	grep "pattern" file >output &&
+	grep "pattern" file 1>output &&
+	grep -c "count" file &&
+	grep -ci "count-insensitive" file &&
+	grep -l "list" file &&
+	grep -rl "recursive-list" dir &&
+	grep -L "list-without" file1 file2 &&
+	result=$(grep "pattern" file) &&
+	result=$(echo $(grep "nested-subshell" file)) &&
+	grep "pattern" <stdin &&
+	grep "pattern" file && # lint-ok
+	cmd | grep "pattern-only" &&
+	cmd |
+	grep "cross-line-pipe" &&
+	grep -r "recursive" dir
+'
+
+test_expect_success 'grep in control flow (not assertion)' '
+	if grep "condition" file
+	then
+		echo yes
+	elif grep "other-condition" file
+	then
+		echo no
+	fi
+'
+
+test_expect_success 'grep in brace group with redirect' '
+	{ grep "captured" out; } >result
+'
+
+test_expect_success 'grep in for-in value list' '
+	for cmd in grep sed awk; do
+		echo "$cmd"
+	done
+'
+
+test_expect_success 'grep in subshell' '
+	(cd sub && grep "pattern" file >output) &&
+	(cmd | grep "piped-in-subshell")
+'

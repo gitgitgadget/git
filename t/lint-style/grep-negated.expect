@@ -1,0 +1,5 @@
+lint-style/grep-negated.test:2: error: replace '! grep' with 'test_grep !': ! grep "pattern" actual
+lint-style/grep-negated.test:3: error: replace '! grep' with 'test_grep !': ! grep -i "insensitive" actual
+lint-style/grep-negated.test:7: error: replace '! grep -q' with 'test_grep !': ! grep -q "pattern" actual
+lint-style/grep-negated.test:8: error: replace '! grep -qF' with 'test_grep ! -F': ! grep -qF "combined" actual
+hint: run with --fix to apply the suggested replacements.

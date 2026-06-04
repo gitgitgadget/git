@@ -164,8 +164,10 @@ test-lint-shell-syntax:
 check-shell-parser:
 	@'$(PERL_PATH_SQ)' check-shell-parser.pl
 
+TSOURCED = $(sort $(wildcard t[0-9]*/*.sh))
+
 test-lint-style:
-	@'$(PERL_PATH_SQ)' lint-style.pl $(T) $(THELPERS) $(TPERF)
+	@'$(PERL_PATH_SQ)' lint-style.pl $(T) $(THELPERS) $(TPERF) $(TSOURCED)
 
 check-lint-style:
 	@rc=0; for t in $(LINT_STYLE_TESTS); do \

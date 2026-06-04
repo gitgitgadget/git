@@ -1,0 +1,24 @@
+test_expect_success 'grep assertions' '
+	grep "pattern" actual &&
+	grep -E "extended" actual &&
+	grep -e "explicit" actual &&
+	grep -f patterns.txt actual &&
+	grep -Fe "fixed-explicit" actual &&
+	grep "^-looks-like-flag" actual &&
+	grep -v "inverted" actual &&
+	grep -- "-e" actual &&
+	grep "with-stderr-redirect" actual 2>err &&
+	cmd ||
+	grep "after-or" actual
+'
+
+test_expect_success 'pipe only suppresses first command' '
+	cmd |
+	grep "piped" && grep "after-pipe" actual
+'
+
+test_expect_success 'case pattern does not hide assertion' '
+	case foo in
+	*) grep "inside-case" actual ;;
+	esac
+'

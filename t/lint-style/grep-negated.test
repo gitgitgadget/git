@@ -1,0 +1,9 @@
+test_expect_success 'negated grep' '
+	! grep "pattern" actual &&
+	! grep -i "insensitive" actual
+'
+
+test_expect_success 'negated grep -q' '
+	! grep -q "pattern" actual &&
+	! grep -qF "combined" actual
+'
