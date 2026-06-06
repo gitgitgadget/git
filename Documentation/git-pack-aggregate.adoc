@@ -1,0 +1,72 @@
+git-pack-aggregate(1)
+=====================
+
+NAME
+----
+git-pack-aggregate - Quickly roll up loose objects and small packs
+without doing any delta compression or search
+
+SYNOPSIS
+--------
+[verse]
+'git pack-aggregate' --once [--min-loose=<n>] [--min-packs=<n>]
+
+DESCRIPTION
+-----------
+
+`git pack-aggregate` rolls accumulated loose objects and small
+packfiles into new packs in two steps:
+
+1. Bundle local loose objects into new packs and unlink the loose copies.
+2. Aggregate small local packs (minus those referenced by the
+   multi-pack-index or carrying a `.keep`, `.promisor`, `.mtimes`, or
+   `.bitmap` sidecar) into new packs and unlink the source packs.
+   If step 1 writes a single pack, it is naturally a candidate here
+   and will normally be folded into the step-2 output.  Multiple
+   loose-rollup packs are left for a later aggregation pass.
+
+No delta search is performed and no bitmaps or commit-graphs are updated.
+Existing packed representations are reused where possible.  When an
+object has both delta and full-object representations in the input
+packs, aggregation prefers the existing delta.  All output packs are
+written with `pack-objects --window=0 --mark-bad-deltas`, so each one
+ships with a `.baddeltas` sidecar (see linkgit:gitformat-pack[5]).  A
+subsequent thorough repack (linkgit:git-repack[1]) honors that marker
+and reconsiders intra-pack deltas at that time.
+
+The `pack.packSizeLimit` setting can split either step's output into
+multiple packs.  All outputs from a batch are installed before its
+input packs or loose objects are removed.  Size-based splitting may
+require expanding deltas whose bases are in another output pack.
+
+This command provides a quick recovery step for a repository that has
+accumulated many loose objects or small packs.  It reduces the number
+of files that unrelated `git` operations must scan, while leaving a
+later thorough linkgit:git-repack[1] to optimize deltas and pack layout.
+
+Like `git repack`, `git pack-aggregate` takes no locks of its own.  Do
+not run it concurrently with other pack-rewriting maintenance.
+
+OPTIONS
+-------
+
+--once::
+	Run one aggregation pass and exit.  This option is required.
+
+--min-loose=<n>::
+	Skip aggregation of loose objects if fewer than `<n>` are present.
+	Defaults to 5.
+
+--min-packs=<n>::
+	Skip aggregation of small packfiles if fewer than `<n>` aggregatable
+	packs are present.
+	Defaults to 5.
+
+SEE ALSO
+--------
+linkgit:git-repack[1], linkgit:git-pack-objects[1],
+linkgit:gitformat-pack[5]
+
+GIT
+---
+Part of the linkgit:git[1] suite
