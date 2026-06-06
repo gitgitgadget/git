@@ -213,6 +213,8 @@ static timestamp_t unpack_unreachable_expiration;
 static int pack_loose_unreachable;
 static int cruft;
 static int mark_bad_deltas;
+static const char *emit_input_packs_path;
+static const char *emit_input_loose_path;
 static int shallow = 0;
 static timestamp_t cruft_expiration;
 static int local;
@@ -5040,6 +5042,62 @@ static int parse_stdin_packs_mode(const struct option *opt, const char *arg,
 	return 0;
 }
 
+static void emit_input_packs_to_file(const char *path)
+{
+	struct strbuf tmp = STRBUF_INIT;
+	struct packed_git *p;
+	FILE *fp;
+
+	strbuf_addf(&tmp, "%s.tmp", path);
+	fp = fopen(tmp.buf, "w");
+	if (!fp)
+		die_errno(_("unable to write '%s'"), tmp.buf);
+	repo_for_each_pack(the_repository, p) {
+		/* Exclude alternates */
+		if (!p->pack_local)
+			continue;
+		fprintf(fp, "%s\n", pack_basename(p));
+	}
+	if (fclose(fp))
+		die_errno(_("unable to write '%s'"), tmp.buf);
+	if (rename(tmp.buf, path))
+		die_errno(_("unable to rename '%s' to '%s'"), tmp.buf, path);
+	strbuf_release(&tmp);
+}
+
+static int emit_input_loose_cb(const struct object_id *oid,
+			       const char *path UNUSED,
+			       void *data)
+{
+	FILE *fp = data;
+	fprintf(fp, "%s\n", oid_to_hex(oid));
+	return 0;
+}
+
+static void emit_input_loose_to_file(const char *path)
+{
+	struct strbuf tmp = STRBUF_INIT;
+	FILE *fp;
+
+	strbuf_addf(&tmp, "%s.tmp", path);
+	fp = fopen(tmp.buf, "w");
+	if (!fp)
+		die_errno(_("unable to write '%s'"), tmp.buf);
+	/*
+	 * Note: for_each_loose_file_in_source() walks only the local
+	 * source (sources->next is skipped), thus excluding
+	 * alternates and matching the "p->pack_local" check in
+	 * emit_input_packs_to_file().
+	 */
+	for_each_loose_file_in_source(the_repository->objects->sources,
+				      emit_input_loose_cb, NULL, NULL, fp);
+	if (fclose(fp))
+		die_errno(_("unable to write '%s'"), tmp.buf);
+	if (rename(tmp.buf, path))
+		die_errno(_("unable to rename '%s' to '%s'"), tmp.buf, path);
+	strbuf_release(&tmp);
+}
+
 int cmd_pack_objects(int argc,
 		     const char **argv,
 		     const char *prefix,
@@ -5137,6 +5195,14 @@ int cmd_pack_objects(int argc,
 			 N_("ignore packs that have companion .keep file")),
 		OPT_STRING_LIST(0, "keep-pack", &keep_pack_list, N_("name"),
 				N_("ignore this pack")),
+		OPT_STRING(0, "emit-input-packs", &emit_input_packs_path,
+			   N_("file"),
+			   N_("write basenames of input packs to <file> "
+			      "(plumbing, undocumented)")),
+		OPT_STRING(0, "emit-input-loose", &emit_input_loose_path,
+			   N_("file"),
+			   N_("write OIDs of input loose objects to <file> "
+			      "(plumbing, undocumented)")),
 		OPT_INTEGER(0, "compression", &pack_compression_level,
 			    N_("pack compression level")),
 		OPT_BOOL(0, "keep-true-parents", &grafts_keep_true_parents,
@@ -5399,6 +5465,11 @@ int cmd_pack_objects(int argc,
 	trace2_region_enter("pack-objects", "enumerate-objects",
 			    the_repository);
 	prepare_packing_data(the_repository, &to_pack);
+
+	if (emit_input_packs_path)
+		emit_input_packs_to_file(emit_input_packs_path);
+	if (emit_input_loose_path)
+		emit_input_loose_to_file(emit_input_loose_path);
 
 	if (progress && !cruft)
 		progress_state = start_progress(the_repository,
