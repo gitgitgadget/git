@@ -514,6 +514,7 @@ static int fill_bitmap_commit(struct bitmap_writer *writer,
 			      const uint32_t *mapping)
 {
 	struct commit *c;
+	struct tree *tree;
 	int found;
 	uint32_t pos;
 	if (!ent->bitmap)
@@ -574,9 +575,8 @@ static int fill_bitmap_commit(struct bitmap_writer *writer,
 		}
 	}
 
-	while (tree_queue->nr) {
-		if (fill_bitmap_tree(writer, ent->bitmap,
-				     prio_queue_get(tree_queue)) < 0)
+	while ((tree = prio_queue_get(tree_queue))) {
+		if (fill_bitmap_tree(writer, ent->bitmap, tree) < 0)
 			return -1;
 	}
 	return 0;

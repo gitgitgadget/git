@@ -22,16 +22,16 @@ void prio_queue_reverse(struct prio_queue *queue)
 
 	if (queue->compare)
 		BUG("prio_queue_reverse() on non-LIFO queue");
-	if (!queue->nr)
+	if (!queue->nr_internal)
 		return;
-	for (i = 0; i < (j = (queue->nr - 1) - i); i++)
+	for (i = 0; i < (j = (queue->nr_internal - 1) - i); i++)
 		swap(queue, i, j);
 }
 
 void clear_prio_queue(struct prio_queue *queue)
 {
 	FREE_AND_NULL(queue->array);
-	queue->nr = 0;
+	queue->nr_internal = 0;
 	queue->alloc = 0;
 	queue->insertion_ctr = 0;
 	queue->get_pending = 0;
@@ -44,9 +44,9 @@ static inline void flush_get(struct prio_queue *queue)
 	if (!queue->get_pending)
 		return;
 	queue->get_pending = 0;
-	if (!--queue->nr)
+	if (!--queue->nr_internal)
 		return;
-	queue->array[0] = queue->array[queue->nr];
+	queue->array[0] = queue->array[queue->nr_internal];
 	sift_down_root(queue);
 }
 
@@ -63,15 +63,15 @@ void prio_queue_put(struct prio_queue *queue, void *thing)
 	}
 
 	/* Append at the end */
-	ALLOC_GROW(queue->array, queue->nr + 1, queue->alloc);
-	queue->array[queue->nr].ctr = queue->insertion_ctr++;
-	queue->array[queue->nr].data = thing;
-	queue->nr++;
+	ALLOC_GROW(queue->array, queue->nr_internal + 1, queue->alloc);
+	queue->array[queue->nr_internal].ctr = queue->insertion_ctr++;
+	queue->array[queue->nr_internal].data = thing;
+	queue->nr_internal++;
 	if (!queue->compare)
 		return; /* LIFO */
 
 	/* Bubble up the new one */
-	for (ix = queue->nr - 1; ix; ix = parent) {
+	for (ix = queue->nr_internal - 1; ix; ix = parent) {
 		parent = (ix - 1) / 2;
 		if (compare(queue, parent, ix) <= 0)
 			break;
@@ -85,9 +85,9 @@ static void sift_down_root(struct prio_queue *queue)
 	size_t ix, child;
 
 	/* Push down the one at the root */
-	for (ix = 0; ix * 2 + 1 < queue->nr; ix = child) {
+	for (ix = 0; ix * 2 + 1 < queue->nr_internal; ix = child) {
 		child = ix * 2 + 1; /* left */
-		if (child + 1 < queue->nr &&
+		if (child + 1 < queue->nr_internal &&
 		    compare(queue, child, child + 1) >= 0)
 			child++; /* use right child */
 
@@ -102,10 +102,10 @@ void *prio_queue_get(struct prio_queue *queue)
 {
 	flush_get(queue);
 
-	if (!queue->nr)
+	if (!queue->nr_internal)
 		return NULL;
 	if (!queue->compare)
-		return queue->array[--queue->nr].data; /* LIFO */
+		return queue->array[--queue->nr_internal].data; /* LIFO */
 
 	queue->get_pending = 1;
 	return queue->array[0].data;
@@ -115,9 +115,9 @@ void *prio_queue_peek(struct prio_queue *queue)
 {
 	flush_get(queue);
 
-	if (!queue->nr)
+	if (!queue->nr_internal)
 		return NULL;
 	if (!queue->compare)
-		return queue->array[queue->nr - 1].data;
+		return queue->array[queue->nr_internal - 1].data;
 	return queue->array[0].data;
 }

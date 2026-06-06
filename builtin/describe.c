@@ -258,10 +258,9 @@ static unsigned long finish_depth_computation(struct prio_queue *queue,
 	struct oidset unflagged = OIDSET_INIT;
 	struct commit *c;
 
-	for (size_t i = queue->get_pending; i < queue->nr; i++) {
-		struct commit *commit = queue->array[i].data;
-		if (!(commit->object.flags & best->flag_within))
-			oidset_insert(&unflagged, &commit->object.oid);
+	prio_queue_for_each(queue, c) {
+		if (!(c->object.flags & best->flag_within))
+			oidset_insert(&unflagged, &c->object.oid);
 	}
 
 	while ((c = prio_queue_get(queue))) {
