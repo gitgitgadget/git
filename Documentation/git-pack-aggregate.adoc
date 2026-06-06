@@ -1,0 +1,115 @@
+git-pack-aggregate(1)
+=====================
+
+NAME
+----
+git-pack-aggregate - Periodically roll up loose objects and small packs
+into a single pack without doing any delta compression or search
+
+SYNOPSIS
+--------
+[verse]
+'git pack-aggregate' (--once | --loop) [--interval=<seconds>]
+                   [--min-loose=<n>] [--min-packs=<n>]
+                   [--exclude-pack-file=<path>]
+                   [--exclude-loose-file=<path>]
+                   [--parent-pipe-fd=<n>]
+
+DESCRIPTION
+-----------
+
+`git pack-aggregate` watches `$GIT_DIR/objects` for loose objects and
+small packfiles that have accumulated since the last cycle, and
+periodically rolls them up into a single new pack.  Each cycle has two
+steps:
+
+1. Bundle local loose objects (minus any listed in
+   `--exclude-loose-file`) into a new pack and unlink the loose copies.
+2. Aggregate small local packs (minus any listed in
+   `--exclude-pack-file`, or those referenced by the multi-pack-index,
+   or those carrying a `.keep`, `.promisor`, `.mtimes`, or `.bitmap`
+   sidecar) into another new pack and unlink the source packs.  The
+   pack written in step 1 is naturally a candidate here and will
+   normally be folded into the step-2 output.
+
+No delta search is performed, no bitmaps or commit-graphs are updated,
+and no objects are recompressed; the existing on-disk representation
+of each object is copied through unchanged.  Both new packs are
+written with `pack-objects --window=0 --mark-bad-deltas`, so each one
+ships with a `.baddeltas` sidecar (see linkgit:gitformat-pack[5]).  A
+subsequent thorough repack (linkgit:git-repack[1]) honors that marker
+and reconsiders intra-pack deltas at that time.
+
+The purpose of this command is to keep `objects/` from accumulating
+large numbers of loose objects or small packs while a long-running
+repack is in flight, so unrelated `git` operations are not slowed down
+by readdir cost in a sprawling object directory.  Used together with
+`repack.aggregate` (see linkgit:git-repack[1]), `git repack` will spawn
+this command for the duration of its own work.
+
+`git pack-aggregate` takes no locks of its own.  It mirrors
+linkgit:git-repack[1] in this regard: callers that need serialization
+must arrange it themselves (for example by running under `git gc`).
+The exclusion files supplied via `--exclude-pack-file` and
+`--exclude-loose-file` are the only mechanism by which a concurrent
+`pack-objects` or `git repack` declares "do not touch these inputs".
+
+OPTIONS
+-------
+
+--once::
+	Run a single cycle and exit.  Exactly one of `--once` or
+	`--loop` is required.
+
+--loop::
+	Run cycles forever, sleeping `--interval` seconds between
+	cycles.  Stops on `SIGTERM`, `SIGHUP`, or `SIGINT`.
+
+--interval=<seconds>::
+	Number of seconds to sleep between the end of one cycle and the
+	start of the next.  Defaults to 60.  Only meaningful with
+	`--loop`.
+
+--min-loose=<n>::
+	Skip step 1 if fewer than `<n>` loose objects (after applying
+	`--exclude-loose-file`) are present.  Defaults to 5.
+
+--min-packs=<n>::
+	Skip step 2 if fewer than `<n>` aggregatable packs (after
+	applying all exclusions) are present.  Defaults to 5.
+
+--exclude-pack-file=<path>::
+	Read a list of pack basenames (one per line) from `<path>` and
+	never touch any of those packs.  Lines may name a basename with
+	or without a `.pack` or `.idx` suffix; the suffix is stripped.
+	Blank lines and lines beginning with `#` are ignored.  When
+	`git pack-aggregate` is spawned by a long-running `git repack`,
+	this file is populated by that `pack-objects` itself via
+	`--emit-input-packs`, and may contain a conservative superset
+	of the packs it will actually consume (such as in `--geometric`
+	mode).
+
+--exclude-loose-file=<path>::
+	Read a list of loose object IDs (one per line) from `<path>`
+	and never pack or unlink any of those loose objects.  Blank
+	lines and lines beginning with `#` are ignored.  When `git
+	pack-aggregate` is spawned by a long-running `git repack`, this
+	file is populated by that `pack-objects` itself via
+	`--emit-input-loose`.
+
+--parent-pipe-fd=<n>::
+	An inherited pipe file descriptor whose write end the parent
+	process holds open.  When the parent exits the pipe is closed
+	and `git pack-aggregate` exits at the next cycle boundary,
+	without waiting out the remainder of `--interval`.  This is an
+	internal plumbing option used by `git repack` to keep its
+	companion aggregator from outliving it.
+
+SEE ALSO
+--------
+linkgit:git-repack[1], linkgit:git-pack-objects[1],
+linkgit:gitformat-pack[5]
+
+GIT
+---
+Part of the linkgit:git[1] suite
