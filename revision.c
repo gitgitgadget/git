@@ -476,16 +476,15 @@ static struct commit *handle_commit(struct rev_info *revs,
 static int everybody_uninteresting(struct prio_queue *orig,
 				   struct commit **interesting_cache)
 {
-	size_t i;
+	struct commit *commit;
 
 	if (*interesting_cache) {
-		struct commit *commit = *interesting_cache;
+		commit = *interesting_cache;
 		if (!(commit->object.flags & UNINTERESTING))
 			return 0;
 	}
 
-	for (i = 0; i < orig->nr; i++) {
-		struct commit *commit = orig->array[i].data;
+	prio_queue_for_each(orig, commit) {
 		if (commit->object.flags & UNINTERESTING)
 			continue;
 
@@ -4027,8 +4026,8 @@ static enum rewrite_result rewrite_one_1(struct rev_info *revs,
 
 static void merge_queue_into_list(struct prio_queue *q, struct commit_list **list)
 {
-	while (q->nr) {
-		struct commit *item = prio_queue_peek(q);
+	struct commit *item;
+	while ((item = prio_queue_peek(q))) {
 		struct commit_list *p = *list;
 
 		if (p && p->item->date >= item->date)

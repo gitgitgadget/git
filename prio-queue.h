@@ -30,7 +30,7 @@ struct prio_queue {
 	prio_queue_compare_fn compare;
 	size_t insertion_ctr;
 	void *cb_data;
-	size_t alloc, nr;
+	size_t alloc, nr_internal; /* use prio_queue_size() for logical count */
 	struct prio_queue_entry *array;
 	unsigned get_pending;
 };
@@ -55,8 +55,13 @@ void *prio_queue_peek(struct prio_queue *);
 
 static inline size_t prio_queue_size(struct prio_queue *queue)
 {
-	return queue->nr - queue->get_pending;
+	return queue->nr_internal - queue->get_pending;
 }
+
+#define prio_queue_for_each(queue, it) \
+	for (size_t pq_ix_ = (queue)->get_pending; \
+	     pq_ix_ < (queue)->nr_internal && ((it) = (queue)->array[pq_ix_].data, 1); \
+	     pq_ix_++)
 
 void clear_prio_queue(struct prio_queue *);
 

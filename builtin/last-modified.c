@@ -344,7 +344,7 @@ static void process_parent(struct last_modified *lm,
 static int last_modified_run(struct last_modified *lm)
 {
 	int max_count, queue_popped = 0;
-	struct commit *c;
+	struct commit *c, *n;
 	struct prio_queue queue = { compare_commits_by_gen_then_commit_date };
 	struct prio_queue not_queue = { compare_commits_by_gen_then_commit_date };
 	struct commit_list *list;
@@ -416,9 +416,8 @@ static int last_modified_run(struct last_modified *lm)
 		 */
 		repo_parse_commit(lm->rev.repo, c);
 
-		while (not_queue.nr) {
+		while ((n = prio_queue_get(&not_queue))) {
 			struct commit_list *np;
-			struct commit *n = prio_queue_get(&not_queue);
 
 			repo_parse_commit(lm->rev.repo, n);
 

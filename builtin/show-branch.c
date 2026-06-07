@@ -62,11 +62,10 @@ static const char *get_color_reset_code(void)
 
 static struct commit *interesting(struct prio_queue *queue)
 {
-	for (size_t i = queue->get_pending; i < queue->nr; i++) {
-		struct commit *commit = queue->array[i].data;
-		if (commit->object.flags & UNINTERESTING)
-			continue;
-		return commit;
+	struct commit *commit;
+	prio_queue_for_each(queue, commit) {
+		if (!(commit->object.flags & UNINTERESTING))
+			return commit;
 	}
 	return NULL;
 }

@@ -41,8 +41,8 @@ static int compare_commits_by_gen(const void *_a, const void *_b)
 
 static int queue_has_nonstale(struct prio_queue *queue)
 {
-	for (size_t i = 0; i < queue->nr; i++) {
-		struct commit *commit = queue->array[i].data;
+	struct commit *commit;
+	prio_queue_for_each(queue, commit) {
 		if (!(commit->object.flags & STALE))
 			return 1;
 	}
@@ -1069,6 +1069,7 @@ void ahead_behind(struct repository *r,
 		  struct commit **commits, size_t commits_nr,
 		  struct ahead_behind_count *counts, size_t counts_nr)
 {
+	struct commit *c;
 	struct prio_queue queue = { .compare = compare_commits_by_gen_then_commit_date };
 	size_t width = DIV_ROUND_UP(commits_nr, BITS_IN_EWORD);
 
@@ -1085,17 +1086,19 @@ void ahead_behind(struct repository *r,
 	init_bit_arrays(&bit_arrays);
 
 	for (size_t i = 0; i < commits_nr; i++) {
-		struct commit *c = commits[i];
-		struct bitmap *bitmap = get_bit_array(c, width);
+		struct bitmap *bitmap;
+		c = commits[i];
+		bitmap = get_bit_array(c, width);
 
 		bitmap_set(bitmap, i);
 		insert_no_dup(&queue, c);
 	}
 
 	while (queue_has_nonstale(&queue)) {
-		struct commit *c = prio_queue_get(&queue);
 		struct commit_list *p;
-		struct bitmap *bitmap_c = get_bit_array(c, width);
+		struct bitmap *bitmap_c;
+		c = prio_queue_get(&queue);
+		bitmap_c = get_bit_array(c, width);
 
 		for (size_t i = 0; i < counts_nr; i++) {
 			int reach_from_tip = !!bitmap_get(bitmap_c, counts[i].tip_index);
@@ -1135,8 +1138,8 @@ void ahead_behind(struct repository *r,
 
 	/* STALE is used here, PARENT2 is used by insert_no_dup(). */
 	repo_clear_commit_marks(r, PARENT2 | STALE);
-	for (size_t i = 0; i < queue.nr; i++)
-		free_bit_array(queue.array[i].data);
+	prio_queue_for_each(&queue, c)
+		free_bit_array(c);
 	clear_bit_arrays(&bit_arrays);
 	clear_prio_queue(&queue);
 }
