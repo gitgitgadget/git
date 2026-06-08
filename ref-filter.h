@@ -73,19 +73,13 @@ struct ref_filter {
 	struct commit_list *reachable_from;
 	struct commit_list *unreachable_from;
 
-	unsigned int with_commit_tag_algo : 1,
-		match_as_path : 1,
+	unsigned int match_as_path : 1,
 		ignore_case : 1,
 		detached : 1;
 	unsigned int kind,
 		lines;
 	int abbrev,
 		verbose;
-
-	struct {
-		struct contains_cache contains_cache;
-		struct contains_cache no_contains_cache;
-	} internal;
 };
 
 struct ref_format {

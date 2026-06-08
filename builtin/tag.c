@@ -71,7 +71,6 @@ static int list_tags(struct ref_filter *filter, struct ref_sorting *sorting,
 
 	if (verify_ref_format(format))
 		die(_("unable to parse format string"));
-	filter->with_commit_tag_algo = 1;
 	filter_and_format_refs(filter, FILTER_REFS_TAGS, sorting, format);
 
 	free(to_free);

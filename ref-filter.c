@@ -2989,14 +2989,6 @@ static struct ref_array_item *apply_ref_filter(const struct reference *ref,
 		commit = lookup_commit_reference_gently(the_repository, ref->oid, 1);
 		if (!commit)
 			return NULL;
-		/* We perform the filtering for the '--contains' option... */
-		if (filter->with_commit &&
-		    !commit_contains(filter, commit, filter->with_commit, &filter->internal.contains_cache))
-			return NULL;
-		/* ...or for the `--no-contains' option */
-		if (filter->no_commit &&
-		    commit_contains(filter, commit, filter->no_commit, &filter->internal.no_contains_cache))
-			return NULL;
 	}
 
 	/*
@@ -3134,6 +3126,37 @@ void ref_array_clear(struct ref_array *array)
 	}
 
 	FREE_AND_NULL(array->counts);
+}
+
+static void filter_by_reachability(struct ref_array *array,
+				   struct commit_list *targets,
+				   int keep_reachable)
+{
+	struct commit **tips;
+	size_t old_nr;
+
+	if (!targets || !array->nr)
+		return;
+
+	ALLOC_ARRAY(tips, array->nr);
+	for (size_t i = 0; i < array->nr; i++)
+		tips[i] = array->items[i]->commit;
+
+	if (find_reachable_list(the_repository, tips, array->nr,
+			       targets, UNINTERESTING) < 0)
+		die(_("could not check reachability"));
+
+	old_nr = array->nr;
+	array->nr = 0;
+	for (size_t i = 0; i < old_nr; i++) {
+		if (!!(tips[i]->object.flags & UNINTERESTING) == keep_reachable)
+			array->items[array->nr++] = array->items[i];
+		else
+			free_array_item(array->items[i]);
+	}
+	for (size_t i = 0; i < old_nr; i++)
+		tips[i]->object.flags &= ~UNINTERESTING;
+	free(tips);
 }
 
 #define EXCLUDE_REACHED 0
@@ -3294,9 +3317,6 @@ static int do_filter_refs(struct ref_filter *filter, unsigned int type, refs_for
 
 	filter->kind = type & FILTER_REFS_KIND_MASK;
 
-	init_contains_cache(&filter->internal.contains_cache);
-	init_contains_cache(&filter->internal.no_contains_cache);
-
 	/*  Simple per-ref filtering */
 	if (!filter->kind)
 		die("filter_refs: invalid type");
@@ -3342,9 +3362,6 @@ static int do_filter_refs(struct ref_filter *filter, unsigned int type, refs_for
 			      cb_data);
 
 
-	clear_contains_cache(&filter->internal.contains_cache);
-	clear_contains_cache(&filter->internal.no_contains_cache);
-
 	return ret;
 }
 
@@ -3369,6 +3386,8 @@ int filter_refs(struct ref_array *array, struct ref_filter *filter, unsigned int
 	ret = do_filter_refs(filter, type, filter_one, &ref_cbdata);
 
 	/*  Filters that need revision walking */
+	filter_by_reachability(array, filter->with_commit, 1);
+	filter_by_reachability(array, filter->no_commit, 0);
 	reach_filter(array, &filter->reachable_from, INCLUDE_REACHED);
 	reach_filter(array, &filter->unreachable_from, EXCLUDE_REACHED);
 
@@ -3413,7 +3432,8 @@ static inline int can_do_iterative_format(struct ref_filter *filter,
 		if (used_atom[i].atom_type == ATOM_ISBASE)
 			return 0;
 	}
-	return !(filter->reachable_from || filter->unreachable_from);
+	return !(filter->reachable_from || filter->unreachable_from ||
+		 filter->with_commit || filter->no_commit);
 }
 
 void filter_and_format_refs(struct ref_filter *filter, unsigned int type,

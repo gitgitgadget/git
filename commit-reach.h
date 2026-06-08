@@ -5,7 +5,6 @@
 #include "commit-slab.h"
 
 struct commit_list;
-struct ref_filter;
 struct object_id;
 struct object_array;
 
@@ -65,21 +64,6 @@ struct commit_list *reduce_heads(struct commit_list *heads);
 void reduce_heads_replace(struct commit_list **heads);
 
 int ref_newer(const struct object_id *new_oid, const struct object_id *old_oid);
-
-/*
- * Unknown has to be "0" here, because that's the default value for
- * contains_cache slab entries that have not yet been assigned.
- */
-enum contains_result {
-	CONTAINS_UNKNOWN = 0,
-	CONTAINS_NO,
-	CONTAINS_YES
-};
-
-define_commit_slab(contains_cache, enum contains_result);
-
-int commit_contains(struct ref_filter *filter, struct commit *commit,
-		    struct commit_list *list, struct contains_cache *cache);
 
 /*
  * Determine if every commit in 'from' can reach at least one commit
