@@ -109,6 +109,26 @@ struct commit_list *get_reachable_subset(struct commit **from, size_t nr_from,
 					 struct commit **to, size_t nr_to,
 					 unsigned int reachable_flag);
 
+/*
+ * For each 'from' commit, check if it can reach any 'to' commit via
+ * parent edges. Set 'mark' on each reachable 'from' commit; pass 0
+ * to skip marking. Returns the number of reachable 'from' commits,
+ * or -1 on error.
+ *
+ * Temporarily modifies PARENT1, PARENT2, and RESULT on visited
+ * commits; all three are cleared before returning. Callers must
+ * not rely on these flags across calls.
+ */
+int find_reachable(struct repository *r,
+		   struct commit **from, size_t from_nr,
+		   struct commit **to, size_t to_nr,
+		   unsigned int mark);
+
+int find_reachable_list(struct repository *r,
+			struct commit **from, size_t from_nr,
+			struct commit_list *to,
+			unsigned int mark);
+
 struct ahead_behind_count {
 	/**
 	 * As input, the *_index members indicate which positions in
