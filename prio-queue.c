@@ -34,28 +34,7 @@ void clear_prio_queue(struct prio_queue *queue)
 	queue->nr_ = 0;
 	queue->alloc = 0;
 	queue->insertion_ctr = 0;
-}
-
-void prio_queue_put(struct prio_queue *queue, void *thing)
-{
-	size_t ix, parent;
-
-	/* Append at the end */
-	ALLOC_GROW(queue->array, queue->nr_ + 1, queue->alloc);
-	queue->array[queue->nr_].ctr = queue->insertion_ctr++;
-	queue->array[queue->nr_].data = thing;
-	queue->nr_++;
-	if (!queue->compare)
-		return; /* LIFO */
-
-	/* Bubble up the new one */
-	for (ix = queue->nr_ - 1; ix; ix = parent) {
-		parent = (ix - 1) / 2;
-		if (compare(queue, parent, ix) <= 0)
-			break;
-
-		swap(queue, parent, ix);
-	}
+	queue->get_pending = 0;
 }
 
 static void sift_down_root(struct prio_queue *queue)
@@ -76,43 +55,72 @@ static void sift_down_root(struct prio_queue *queue)
 	}
 }
 
+static inline void flush_get(struct prio_queue *queue)
+{
+	if (!queue->get_pending)
+		return;
+	queue->get_pending = 0;
+	queue->array[0] = queue->array[--queue->nr_];
+	sift_down_root(queue);
+}
+
+void prio_queue_put(struct prio_queue *queue, void *thing)
+{
+	size_t ix, parent;
+
+	if (queue->get_pending) {
+		queue->get_pending = 0;
+		queue->array[0].ctr = queue->insertion_ctr++;
+		queue->array[0].data = thing;
+		sift_down_root(queue);
+		return;
+	}
+
+	/* Append at the end */
+	ALLOC_GROW(queue->array, queue->nr_ + 1, queue->alloc);
+	queue->array[queue->nr_].ctr = queue->insertion_ctr++;
+	queue->array[queue->nr_].data = thing;
+	queue->nr_++;
+	if (!queue->compare)
+		return; /* LIFO */
+
+	/* Bubble up the new one */
+	for (ix = queue->nr_ - 1; ix; ix = parent) {
+		parent = (ix - 1) / 2;
+		if (compare(queue, parent, ix) <= 0)
+			break;
+
+		swap(queue, parent, ix);
+	}
+}
+
 void *prio_queue_get(struct prio_queue *queue)
 {
-	void *result;
-
-	if (!queue->nr_)
+	if (queue->nr_ <= queue->get_pending) {
+		queue->nr_ = 0;
+		queue->get_pending = 0;
 		return NULL;
+	}
 	if (!queue->compare)
 		return queue->array[--queue->nr_].data; /* LIFO */
 
-	result = queue->array[0].data;
-	if (!--queue->nr_)
-		return result;
+	flush_get(queue);
 
-	queue->array[0] = queue->array[queue->nr_];
-	sift_down_root(queue);
-	return result;
+	queue->get_pending = 1;
+	return queue->array[0].data;
 }
 
 void *prio_queue_peek(struct prio_queue *queue)
 {
-	if (!queue->nr_)
+	if (queue->nr_ <= queue->get_pending) {
+		queue->nr_ = 0;
+		queue->get_pending = 0;
 		return NULL;
+	}
 	if (!queue->compare)
 		return queue->array[queue->nr_ - 1].data;
-	return queue->array[0].data;
-}
 
-void prio_queue_replace(struct prio_queue *queue, void *thing)
-{
-	if (!queue->nr_) {
-		prio_queue_put(queue, thing);
-	} else if (!queue->compare) {
-		queue->array[queue->nr_ - 1].ctr = queue->insertion_ctr++;
-		queue->array[queue->nr_ - 1].data = thing;
-	} else {
-		queue->array[0].ctr = queue->insertion_ctr++;
-		queue->array[0].data = thing;
-		sift_down_root(queue);
-	}
+	flush_get(queue);
+
+	return queue->array[0].data;
 }
