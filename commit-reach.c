@@ -809,6 +809,15 @@ int commit_contains(struct ref_filter *filter, struct commit *commit,
 	return repo_is_descendant_of(the_repository, commit, list);
 }
 
+static int find_reachable_core(struct repository *r,
+			       struct commit **from, size_t from_nr,
+			       unsigned int target_flag,
+			       unsigned int visited_flag,
+			       timestamp_t min_generation,
+			       timestamp_t min_commit_date,
+			       int fast_fail,
+			       unsigned int mark);
+
 int can_all_from_reach_with_flag(struct object_array *from,
 				 unsigned int with_flag,
 				 unsigned int assign_flag,
@@ -851,54 +860,12 @@ int can_all_from_reach_with_flag(struct object_array *from,
 		nr_commits++;
 	}
 
-	QSORT(list, nr_commits, compare_commits_by_gen);
-
-	for (i = 0; i < nr_commits; i++) {
-		/* DFS from list[i] */
-		struct commit_list *stack = NULL;
-
-		list[i]->object.flags |= assign_flag;
-		commit_list_insert(list[i], &stack);
-
-		while (stack) {
-			struct commit_list *parent;
-
-			if (stack->item->object.flags & (with_flag | RESULT)) {
-				pop_commit(&stack);
-				if (stack)
-					stack->item->object.flags |= RESULT;
-				continue;
-			}
-
-			for (parent = stack->item->parents; parent; parent = parent->next) {
-				if (parent->item->object.flags & (with_flag | RESULT))
-					stack->item->object.flags |= RESULT;
-
-				if (!(parent->item->object.flags & assign_flag)) {
-					parent->item->object.flags |= assign_flag;
-
-					if (repo_parse_commit(the_repository, parent->item) ||
-					    parent->item->date < min_commit_date ||
-					    commit_graph_generation(parent->item) < min_generation)
-						continue;
-
-					commit_list_insert(parent->item, &stack);
-					break;
-				}
-			}
-
-			if (!parent)
-				pop_commit(&stack);
-		}
-
-		if (!(list[i]->object.flags & (with_flag | RESULT))) {
-			result = 0;
-			goto cleanup;
-		}
-	}
+	result = find_reachable_core(the_repository, list, nr_commits,
+				    with_flag, assign_flag,
+				    min_generation, min_commit_date,
+				    1, 0) == (int)nr_commits;
 
 cleanup:
-	clear_commit_marks_many(nr_commits, list, RESULT | assign_flag);
 	free(list);
 
 	for (i = 0; i < from->nr; i++) {
@@ -908,64 +875,6 @@ cleanup:
 			from_one->flags &= ~assign_flag;
 	}
 
-	return result;
-}
-
-int can_all_from_reach(struct commit_list *from, struct commit_list *to,
-		       int cutoff_by_min_date)
-{
-	struct object_array from_objs = OBJECT_ARRAY_INIT;
-	struct commit_list *from_iter = from, *to_iter = to;
-	int result;
-	timestamp_t min_commit_date = cutoff_by_min_date ? from->item->date : 0;
-	timestamp_t min_generation = GENERATION_NUMBER_INFINITY;
-
-	while (from_iter) {
-		add_object_array(&from_iter->item->object, NULL, &from_objs);
-
-		if (!repo_parse_commit(the_repository, from_iter->item)) {
-			timestamp_t generation;
-			if (from_iter->item->date < min_commit_date)
-				min_commit_date = from_iter->item->date;
-
-			generation = commit_graph_generation(from_iter->item);
-			if (generation < min_generation)
-				min_generation = generation;
-		}
-
-		from_iter = from_iter->next;
-	}
-
-	while (to_iter) {
-		if (!repo_parse_commit(the_repository, to_iter->item)) {
-			timestamp_t generation;
-			if (to_iter->item->date < min_commit_date)
-				min_commit_date = to_iter->item->date;
-
-			generation = commit_graph_generation(to_iter->item);
-			if (generation < min_generation)
-				min_generation = generation;
-		}
-
-		to_iter->item->object.flags |= PARENT2;
-
-		to_iter = to_iter->next;
-	}
-
-	result = can_all_from_reach_with_flag(&from_objs, PARENT2, PARENT1,
-					      min_commit_date, min_generation);
-
-	while (from) {
-		clear_commit_marks(from->item, PARENT1);
-		from = from->next;
-	}
-
-	while (to) {
-		clear_commit_marks(to->item, PARENT2);
-		to = to->next;
-	}
-
-	object_array_clear(&from_objs);
 	return result;
 }
 

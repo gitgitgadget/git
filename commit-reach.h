@@ -93,9 +93,6 @@ int can_all_from_reach_with_flag(struct object_array *from,
 				 unsigned int assign_flag,
 				 timestamp_t min_commit_date,
 				 timestamp_t min_generation);
-int can_all_from_reach(struct commit_list *from, struct commit_list *to,
-		       int commit_date_cutoff);
-
 
 /*
  * Return a list of commits containing the commits in the 'to' array
