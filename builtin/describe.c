@@ -278,7 +278,7 @@ static void lazy_queue_put(struct lazy_queue *queue, void *thing)
 
 static bool lazy_queue_empty(const struct lazy_queue *queue)
 {
-	return queue->queue.nr == (queue->get_pending ? 1 : 0);
+	return prio_queue_size(&queue->queue) == (queue->get_pending ? 1 : 0);
 }
 
 static void lazy_queue_clear(struct lazy_queue *queue)
@@ -292,9 +292,14 @@ static unsigned long finish_depth_computation(struct lazy_queue *queue,
 {
 	unsigned long seen_commits = 0;
 	struct oidset unflagged = OIDSET_INIT;
+	struct commit *commit;
+	int skip = queue->get_pending ? 1 : 0;
 
-	for (size_t i = queue->get_pending ? 1 : 0; i < queue->queue.nr; i++) {
-		struct commit *commit = queue->queue.array[i].data;
+	prio_queue_for_each(&queue->queue, commit) {
+		if (skip) {
+			skip = 0;
+			continue;
+		}
 		if (!(commit->object.flags & best->flag_within))
 			oidset_insert(&unflagged, &commit->object.oid);
 	}
