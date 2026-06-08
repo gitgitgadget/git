@@ -30,7 +30,7 @@ struct prio_queue {
 	prio_queue_compare_fn compare;
 	size_t insertion_ctr;
 	void *cb_data;
-	size_t alloc, nr;
+	size_t alloc, nr_;
 	struct prio_queue_entry *array;
 };
 
@@ -51,6 +51,16 @@ void *prio_queue_get(struct prio_queue *);
  * prio_queue_get, but do not remove it from the queue.
  */
 void *prio_queue_peek(struct prio_queue *);
+
+static inline size_t prio_queue_size(const struct prio_queue *queue)
+{
+	return queue->nr_;
+}
+
+#define prio_queue_for_each(queue, it) \
+	for (size_t pq_ix_ = 0; \
+	     pq_ix_ < (queue)->nr_ && ((it) = (queue)->array[pq_ix_].data, 1); \
+	     pq_ix_++)
 
 /*
  * Replace the "thing" that compares the smallest with a new "thing",
