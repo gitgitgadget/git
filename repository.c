@@ -465,7 +465,7 @@ int repo_read_index(struct repository *repo)
 	res = read_index_from(repo->index, repo->index_file, repo->gitdir);
 
 	prepare_repo_settings(repo);
-	if (repo->settings.command_requires_full_index)
+	if (repo_settings_get_command_requires_full_index(repo))
 		ensure_full_index(repo->index);
 
 	/*
