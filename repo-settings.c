@@ -1,5 +1,6 @@
 #include "git-compat-util.h"
 #include "config.h"
+#include "gettext.h"
 #include "repo-settings.h"
 #include "repository.h"
 #include "midx.h"
@@ -131,14 +132,6 @@ void prepare_repo_settings(struct repository *r)
 			die("unknown fetch negotiation algorithm '%s'", strval);
 	}
 
-	/*
-	 * This setting guards all index reads to require a full index
-	 * over a sparse index. After suitable guards are placed in the
-	 * codebase around uses of the index, this setting will be
-	 * removed.
-	 */
-	r->settings.command_requires_full_index = 1;
-
 	if (!repo_config_get_ulong(r, "core.deltabasecachelimit", &ulongval))
 		r->settings.delta_base_cache_limit = ulongval;
 
@@ -154,6 +147,20 @@ void prepare_repo_settings(struct repository *r)
 
 	if (!repo_config_get_ulong(r, "core.packedgitlimit", &ulongval))
 		r->settings.packed_git_limit = ulongval;
+}
+
+int repo_settings_get_command_requires_full_index(struct repository *r)
+{
+	if (r->settings.command_requires_full_index >= 0)
+		return r->settings.command_requires_full_index;
+
+	if (git_env_bool("GIT_ALLOW_SPARSE_INDEX_WITHOUT_DECLARATION", 0)) {
+		r->settings.command_requires_full_index = 1;
+		return 1;
+	}
+
+	die(_("BUG: command has not declared sparse-index compatibility\n"
+	      "set GIT_ALLOW_SPARSE_INDEX_WITHOUT_DECLARATION=1 to bypass"));
 }
 
 void repo_settings_clear(struct repository *r)
