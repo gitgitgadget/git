@@ -22,6 +22,7 @@
 #include "string-list.h"
 #include "parse-options.h"
 #include "read-cache-ll.h"
+#include "repo-settings.h"
 
 #include "setup.h"
 #include "strvec.h"
@@ -246,6 +247,10 @@ int cmd_mv(int argc,
 			     builtin_mv_usage, 0);
 	if (--argc < 1)
 		usage_with_options(builtin_mv_usage, builtin_mv_options);
+
+	/* not yet verified whether this can use the sparse index */
+	prepare_repo_settings(the_repository);
+	the_repository->settings.command_requires_full_index = 1;
 
 	repo_hold_locked_index(the_repository, &lock_file, LOCK_DIE_ON_ERROR);
 	if (repo_read_index(the_repository) < 0)
