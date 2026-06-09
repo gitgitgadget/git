@@ -28,6 +28,7 @@
 #include "strvec.h"
 #include "submodule.h"
 #include "entry.h"
+#include "sparse-index.h"
 
 static const char * const builtin_mv_usage[] = {
 	N_("git mv [-v] [-f] [-n] [-k] <source> <destination>"),
@@ -153,7 +154,11 @@ static int empty_dir_has_sparse_contents(const char *name)
 	int pos = index_name_pos(the_repository->index, with_slash, length);
 	const struct cache_entry *ce;
 
-	if (pos < 0) {
+	if (pos >= 0) {
+		ce = the_repository->index->cache[pos];
+		if (S_ISSPARSEDIR(ce->ce_mode))
+			ret = 1;
+	} else {
 		pos = -pos - 1;
 		if (pos >= the_repository->index->cache_nr)
 			goto free_return;
@@ -249,11 +254,14 @@ int cmd_mv(int argc,
 		usage_with_options(builtin_mv_usage, builtin_mv_options);
 
 	prepare_repo_settings(the_repository);
-	the_repository->settings.command_requires_full_index = 1;
+	the_repository->settings.command_requires_full_index = 0;
 
 	repo_hold_locked_index(the_repository, &lock_file, LOCK_DIE_ON_ERROR);
 	if (repo_read_index(the_repository) < 0)
 		die(_("index file corrupt"));
+
+	if (ignore_sparse)
+		ensure_full_index(the_repository->index);
 
 	internal_prefix_pathspec(&sources, prefix, argv, argc, 0);
 	CALLOC_ARRAY(modes, argc);
@@ -317,6 +325,10 @@ int cmd_mv(int argc,
 				if (!path_in_sparse_checkout(src_w_slash, the_repository->index) &&
 				    empty_dir_has_sparse_contents(src)) {
 					free(src_w_slash);
+					if (!ignore_sparse) {
+						string_list_append(&only_match_skip_worktree, src);
+						goto act_on_entry;
+					}
 					modes[i] |= SKIP_WORKTREE_DIR;
 					goto dir_check;
 				}

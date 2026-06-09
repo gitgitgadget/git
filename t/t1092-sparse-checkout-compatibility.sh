@@ -1558,6 +1558,24 @@ test_expect_success 'sparse-index is not expanded' '
 	)
 '
 
+test_expect_success 'sparse-index is not expanded: git mv' '
+	init_repos &&
+
+	ensure_not_expanded mv deep/a deep/renamed-a &&
+	ensure_not_expanded mv deep/deeper2 deep/moved-deeper2 &&
+
+	ensure_not_expanded reset --hard &&
+
+	# mv of a sparse directory without --sparse should fail with
+	# a useful hint, without expanding the index.
+	run_sparse_index_trace2 ! mv folder1 deep &&
+	test_region ! index ensure_full_index trace2.txt &&
+	grep "Use the --sparse option" sparse-index-error &&
+
+	ensure_not_expanded reset --hard &&
+	ensure_expanded mv --sparse folder1 deep
+'
+
 test_expect_success 'sparse-index is not expanded: merge conflict in cone' '
 	init_repos &&
 
