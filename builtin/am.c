@@ -2465,9 +2465,8 @@ int cmd_am(int argc,
 	/* Ensure a valid committer ident can be constructed */
 	git_committer_info(IDENT_STRICT);
 
-	/* not yet verified whether this can use the sparse index */
 	prepare_repo_settings(the_repository);
-	the_repository->settings.command_requires_full_index = 1;
+	the_repository->settings.command_requires_full_index = 0;
 
 	if (repo_read_index_preload(the_repository, NULL, 0) < 0)
 		die(_("failed to read the index"));

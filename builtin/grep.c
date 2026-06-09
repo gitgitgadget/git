@@ -500,9 +500,8 @@ static int grep_submodule(struct grep_opt *opt,
 	 *
 	 * Note that this list is not exhaustive.
 	 */
-	/* not yet verified whether subrepo can use the sparse index */
 	prepare_repo_settings(subrepo);
-	subrepo->settings.command_requires_full_index = 1;
+	subrepo->settings.command_requires_full_index = 0;
 
 	repo_read_gitmodules(subrepo, 0);
 

@@ -3833,9 +3833,8 @@ int cmd_submodule__helper(int argc,
 	};
 	argc = parse_options(argc, argv, prefix, options, usage, 0);
 
-	/* not yet verified whether this can use the sparse index */
 	prepare_repo_settings(the_repository);
-	the_repository->settings.command_requires_full_index = 1;
+	the_repository->settings.command_requires_full_index = 0;
 
 	return fn(argc, argv, prefix, repo);
 }

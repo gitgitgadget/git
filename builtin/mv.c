@@ -28,6 +28,7 @@
 #include "strvec.h"
 #include "submodule.h"
 #include "entry.h"
+#include "sparse-index.h"
 
 static const char * const builtin_mv_usage[] = {
 	N_("git mv [-v] [-f] [-n] [-k] <source> <destination>"),
@@ -248,13 +249,15 @@ int cmd_mv(int argc,
 	if (--argc < 1)
 		usage_with_options(builtin_mv_usage, builtin_mv_options);
 
-	/* not yet verified whether this can use the sparse index */
 	prepare_repo_settings(the_repository);
-	the_repository->settings.command_requires_full_index = 1;
+	the_repository->settings.command_requires_full_index = 0;
 
 	repo_hold_locked_index(the_repository, &lock_file, LOCK_DIE_ON_ERROR);
 	if (repo_read_index(the_repository) < 0)
 		die(_("index file corrupt"));
+
+	if (ignore_sparse)
+		ensure_full_index(the_repository->index);
 
 	internal_prefix_pathspec(&sources, prefix, argv, argc, 0);
 	CALLOC_ARRAY(modes, argc);
