@@ -146,6 +146,52 @@ test_expect_success 'tracking info copied with autoSetupMerge=inherit' '
 	test_cmp_config "" --default "" branch.main2.merge
 '
 
+test_expect_success 'switch -e --track creates branch from current branch' '
+	test_when_finished "
+		git switch main || :
+		git branch -D ensure-new-current || :
+	" &&
+	git switch main &&
+	git switch -e ensure-new-current --track &&
+	test_cmp_rev refs/heads/main refs/heads/ensure-new-current &&
+	test_cmp_config . branch.ensure-new-current.remote &&
+	test_cmp_config refs/heads/main branch.ensure-new-current.merge
+'
+
+test_expect_success 'switch -e --track creates branch from remote-tracking branch' '
+	test_when_finished "
+		git switch main || :
+		git branch -D ensure-new || :
+	" &&
+	git switch -e ensure-new --track origin/foo &&
+	test_cmp_rev refs/remotes/origin/foo refs/heads/ensure-new &&
+	test_cmp_config origin branch.ensure-new.remote &&
+	test_cmp_config refs/heads/foo branch.ensure-new.merge
+'
+
+test_expect_success 'switch -e --track uses current branch for existing branch' '
+	test_when_finished "
+		git switch main || :
+		git branch -D ensure-existing source-for-track || :
+	" &&
+	git switch -c source-for-track main &&
+	git branch ensure-existing main &&
+	git switch -e ensure-existing --track &&
+	test_cmp_config . branch.ensure-existing.remote &&
+	test_cmp_config refs/heads/source-for-track branch.ensure-existing.merge
+'
+
+test_expect_success 'switch -e --track fails from detached HEAD without start-point' '
+	test_when_finished "
+		git switch main || :
+		git branch -D detached-target || :
+	" &&
+	git branch detached-target main &&
+	git switch --detach main &&
+	test_must_fail git switch -e detached-target --track 2>stderr &&
+	test_grep "cannot set up tracking information; starting point '\''HEAD'\'' is not a branch" stderr
+'
+
 test_expect_success 'switch back when temporarily detached and checked out elsewhere ' '
 	test_when_finished "
 		git worktree remove wt1 ||:

@@ -81,6 +81,8 @@ struct checkout_opts {
 	const char *new_branch;
 	const char *new_branch_force;
 	const char *new_orphan_branch;
+	const char *ensure_branch;
+	const char *ensure_branch_start;
 	int new_branch_log;
 	enum branch_track track;
 	struct diff_options diff_options;
@@ -988,6 +990,15 @@ static void update_refs_for_switch(const struct checkout_opts *opts,
 		free(new_branch_info->refname);
 		new_branch_info->name = xstrdup(opts->new_branch);
 		setup_branch_path(new_branch_info);
+	} else if (opts->ensure_branch && opts->branch_exists &&
+		   opts->track != BRANCH_TRACK_UNSPECIFIED) {
+		const char *tracking_source = opts->ensure_branch_start ?
+			opts->ensure_branch_start :
+			old_branch_info->name;
+		dwim_and_setup_tracking(the_repository, opts->ensure_branch,
+					tracking_source, opts->track,
+					opts->quiet);
+		remote_state_clear(the_repository->remote_state);
 	}
 
 	old_desc = old_branch_info->name;
@@ -1927,6 +1938,52 @@ static int checkout_main(int argc, const char **argv, const char *prefix,
 		die(_("options '-%c', '-%c', and '%s' cannot be used together"),
 			cb_option, toupper(cb_option), "--orphan");
 
+	if (opts->ensure_branch) {
+		struct strbuf ref = STRBUF_INIT;
+		int exists;
+
+		if (opts->new_branch || opts->new_branch_force || opts->new_orphan_branch)
+			die(_("'%s' cannot be used with '%s'"), "-e", "-c/-C/--orphan");
+		if (opts->force_detach)
+			die(_("'%s' cannot be used with '%s'"), "-e", "--detach");
+
+		exists = validate_branchname(opts->ensure_branch, &ref);
+		strbuf_release(&ref);
+
+		/* Save an explicit start point for tracking setup. */
+		if (argc > 0 && opts->track != BRANCH_TRACK_UNSPECIFIED)
+			opts->ensure_branch_start = argv[0];
+
+		if (exists) {
+			/*
+			 * Branch exists: just switch to it, don't reset.
+			 * We'll set up tracking after the switch if --track was given.
+			 */
+			opts->branch_exists = 1;
+		} else {
+			/* Branch doesn't exist: create it like -c */
+			opts->new_branch = opts->ensure_branch;
+		}
+	}
+
+	if (opts->ensure_branch && opts->branch_exists &&
+	    opts->track != BRANCH_TRACK_UNSPECIFIED &&
+	    !opts->ensure_branch_start) {
+		struct object_id head_oid;
+		char *head = refs_resolve_refdup(get_main_ref_store(the_repository),
+						 "HEAD", 0, &head_oid, NULL);
+		const char *branch;
+
+		if (!head)
+			die(_("failed to resolve HEAD as a valid ref"));
+		if (!strcmp(head, "HEAD"))
+			die(_("cannot set up tracking information; starting point '%s' is not a branch"),
+			    "HEAD");
+		if (!skip_prefix(head, "refs/heads/", &branch))
+			die(_("HEAD not found below refs/heads!"));
+		free(head);
+	}
+
 	if (opts->overlay_mode == 1 && opts->patch_mode)
 		die(_("options '%s' and '%s' cannot be used together"), "-p", "--overlay");
 
@@ -1961,8 +2018,9 @@ static int checkout_main(int argc, const char **argv, const char *prefix,
 	if (opts->new_orphan_branch)
 		opts->new_branch = opts->new_orphan_branch;
 
-	/* --track without -c/-C/-b/-B/--orphan should DWIM */
-	if (opts->track != BRANCH_TRACK_UNSPECIFIED && !opts->new_branch) {
+	/* --track without -c/-C/-b/-B/--orphan/-e should DWIM */
+	if (opts->track != BRANCH_TRACK_UNSPECIFIED && !opts->new_branch &&
+	    !(opts->ensure_branch && opts->branch_exists)) {
 		const char *argv0 = argv[0];
 		if (!argc || !strcmp(argv0, "--"))
 			die(_("--track needs a branch name"));
@@ -2010,6 +2068,28 @@ static int checkout_main(int argc, const char **argv, const char *prefix,
 
 		if (!opts->source_tree)
 			die(_("reference is not a tree: %s"), opts->from_treeish);
+	}
+
+	/*
+	 * Handle -e with existing branch: set up new_branch_info to switch
+	 * to the existing branch.
+	 */
+	if (opts->ensure_branch && opts->branch_exists) {
+		struct object_id rev;
+
+		branch_info_release(&new_branch_info);
+		memset(&new_branch_info, 0, sizeof(new_branch_info));
+		new_branch_info.name = xstrdup(opts->ensure_branch);
+		setup_branch_path(&new_branch_info);
+
+		if (new_branch_info.path &&
+		    !refs_read_ref(get_main_ref_store(the_repository),
+				   new_branch_info.path, &rev)) {
+			new_branch_info.commit = lookup_commit_reference_gently(
+				the_repository, &rev, 1);
+			if (new_branch_info.commit)
+				parse_commit_or_die(new_branch_info.commit);
+		}
 	}
 
 	if (argc) {
@@ -2150,6 +2230,8 @@ int cmd_switch(int argc,
 			   N_("create and switch to a new branch")),
 		OPT_STRING('C', "force-create", &opts.new_branch_force, N_("branch"),
 			   N_("create/reset and switch to a branch")),
+		OPT_STRING('e', "ensure", &opts.ensure_branch, N_("branch"),
+			   N_("create if needed and switch to branch")),
 		OPT_BOOL(0, "guess", &opts.dwim_new_local_branch,
 			 N_("second guess 'git switch <no-such-branch>'")),
 		OPT_BOOL(0, "discard-changes", &opts.discard_changes,
