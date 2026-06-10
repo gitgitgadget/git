@@ -25,6 +25,19 @@ have on list, so we should give something to prepare them by setting
 the stage and stating the objective first, before going into how the
 patch solved it.
 
+
+------------------------------------------------------------------------
+[trim your quote]
+
+Please do not force your readers scroll through huge quoted material
+to find your comments, when your comments do not address anything
+there.  Trim your quote and leave enough context to understand the
+discussion.  See Documentation/ReviewingGuidelines.adoc, which says
+
+- If a patch is long, you are encouraged to delete parts of it that are
+  unrelated to your review from the email reply. Make sure to leave enough
+  context for readers to understand your comments!
+
 ------------------------------------------------------------------------
 [polish your history before sending]
 
