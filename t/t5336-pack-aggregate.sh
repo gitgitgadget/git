@@ -250,4 +250,167 @@ test_expect_success 'loose then pack aggregation in one cycle' '
 	)
 '
 
+# ---- geometric .baddeltas demotion ----
+
+# Helper for the geometric tests: pack N unique blobs (default 1) into
+# one packfile.  The `tag` parameter must differ between callers so
+# that the blob contents do not collide with one another (otherwise
+# `git pack-objects --stdin-packs` would see the "rollup" objects
+# already present in the kept pack and emit nothing).
+make_unique_pack () {
+	tag=$1 &&
+	n=${2:-1} &&
+	i=0 &&
+	while test "$i" -lt "$n"
+	do
+		echo "unique-${tag}-${i}-$$" | git hash-object -w --stdin &&
+		i=$((i + 1)) || return 1
+	done >oids &&
+	git pack-objects --window=0 .git/objects/pack/pack \
+		<oids >pack_hash &&
+	git prune-packed
+}
+
+for scenario in middle already-geometric largest boundary larger-candidate \
+	multiple-markers factor-three factor-one
+do
+	test_expect_success "geometric demotion preserves spacing ($scenario)" '
+		test_when_finished "rm -fr work" &&
+		cp -R repo work &&
+		(
+			cd work &&
+			factor=2 &&
+			case "$scenario" in
+			middle)
+				sizes="1 1 4 8 16" &&
+				marked="8" &&
+				expected="4 26"
+				;;
+			already-geometric|factor-one)
+				sizes="1 2 4 8 16" &&
+				marked="4" &&
+				expected="$sizes" &&
+				if test "$scenario" = factor-one
+				then
+					factor=1
+				fi
+				;;
+			largest)
+				sizes="1 2 4 8 16" &&
+				marked="16" &&
+				expected="$sizes"
+				;;
+			boundary)
+				sizes="1 1 4 8 20" &&
+				marked="8" &&
+				expected="4 10 20"
+				;;
+			larger-candidate)
+				sizes="1 1 4 8 16 32 96" &&
+				marked="8" &&
+				expected="4 16 42 96"
+				;;
+			multiple-markers)
+				sizes="1 2 4 8 16 32 64" &&
+				marked="4 16" &&
+				expected="1 2 8 32 84"
+				;;
+			factor-three)
+				factor=3 &&
+				sizes="1 1 6 18 54" &&
+				marked="18" &&
+				expected="6 74"
+				;;
+			esac &&
+			batch=0 &&
+			for size in $sizes
+			do
+				make_unique_pack "batch-$batch" "$size" &&
+				hash=$(cat pack_hash) &&
+				pack_base=".git/objects/pack/pack-$hash" &&
+				case " $marked " in
+				*" $size "*)
+					>"$pack_base.baddeltas"
+					;;
+				esac &&
+				batch=$((batch + 1)) || return 1
+			done &&
+			git cat-file --batch-all-objects \
+				--batch-check="%(objectname)" >before &&
+			git repack -d --geometric="$factor" &&
+			for idx in .git/objects/pack/pack-*.idx
+			do
+				git show-index <"$idx" >index &&
+				awk "END { print NR }" index || return 1
+			done >counts &&
+			sort -n counts >actual &&
+			for size in $expected
+			do
+				echo "$size" || return 1
+			done >expect &&
+			test_cmp expect actual &&
+			test 0 -eq "$(count_baddeltas)" &&
+			git cat-file --batch-all-objects \
+				--batch-check="%(objectname)" >after &&
+			test_cmp before after &&
+			git fsck
+		)
+	'
+done
+
+test_expect_success 'geometric repack demotes .baddeltas packs into rollup' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		# Build several small packs and consolidate them into
+		# one larger pack that would normally sit above the
+		# geometric split.
+		build_n_packs 8 >/dev/null &&
+		git repack -d --geometric=2 &&
+		test 1 -eq "$(count_packs)" &&
+		big=$(ls .git/objects/pack/pack-*.pack) &&
+		# Drop a .baddeltas marker on it (simulating an
+		# aggregator output).
+		>"${big%.pack}.baddeltas" &&
+		test 1 -eq "$(count_baddeltas)" &&
+		# Add small packs that are individually far smaller
+		# than the big one; ordinarily the big pack would be
+		# kept above the geometric split.
+		make_unique_pack a &&
+		make_unique_pack b &&
+		make_unique_pack c &&
+		test 4 -eq "$(count_packs)" &&
+		# With the .baddeltas demotion, the big pack is rolled
+		# up despite being above the natural split, and the
+		# resulting pack carries no .baddeltas marker.
+		git repack -d --geometric=2 &&
+		test 1 -eq "$(count_packs)" &&
+		test 0 -eq "$(count_baddeltas)" &&
+		git fsck
+	)
+'
+
+test_expect_success 'geometric repack leaves non-baddeltas packs above the split alone' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 8 >/dev/null &&
+		git repack -d --geometric=2 &&
+		test 1 -eq "$(count_packs)" &&
+		# Add small packs; without any .baddeltas marker the
+		# big pack should be preserved above the split.
+		make_unique_pack a &&
+		make_unique_pack b &&
+		make_unique_pack c &&
+		test 4 -eq "$(count_packs)" &&
+		git repack -d --geometric=2 &&
+		# 1 kept big pack + 1 newly-aggregated rollup = 2.
+		test 2 -eq "$(count_packs)" &&
+		test 0 -eq "$(count_baddeltas)" &&
+		git fsck
+	)
+'
+
 test_done

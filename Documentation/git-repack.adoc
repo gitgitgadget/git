@@ -274,6 +274,9 @@ picks the smallest set of packfiles such that as many of the larger
 packfiles (by count of objects contained in that pack) may be left
 intact.
 +
+Selection also accounts for packs forced into the roll-up by `.baddeltas`
+markers, including another pack if needed to preserve the progression.
++
 Unlike other repack modes, the set of objects to pack is determined
 uniquely by the set of packs being "rolled-up"; in other words, the
 packs determined to need to be combined in order to restore a geometric
