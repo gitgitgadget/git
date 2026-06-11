@@ -957,6 +957,23 @@ int cmd_branch(int argc,
 		if (!refs_ref_exists(get_main_ref_store(the_repository), branch->refname)) {
 			if (!argc || branch_checked_out(branch->refname))
 				die(_("no commit on branch '%s' yet"), branch->name);
+			if (argc == 1 && !strchr(new_upstream, '/') &&
+			    remote_is_configured(remote_get(new_upstream), 0)) {
+				struct strbuf remote_ref = STRBUF_INIT;
+
+				strbuf_addf(&remote_ref, "refs/remotes/%s/%s",
+					    new_upstream, argv[0]);
+				if (refs_ref_exists(get_main_ref_store(the_repository),
+						    remote_ref.buf)) {
+					int code = die_message(_("--set-upstream-to takes a single <remote>/<branch> argument"));
+					advise_if_enabled(ADVICE_SET_UPSTREAM_FAILURE,
+							  _("Did you mean to use: git branch --set-upstream-to=%s/%s?"),
+							  new_upstream, argv[0]);
+					strbuf_release(&remote_ref);
+					exit(code);
+				}
+				strbuf_release(&remote_ref);
+			}
 			die(_("branch '%s' does not exist"), branch->name);
 		}
 
