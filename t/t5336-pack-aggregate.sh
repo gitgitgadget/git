@@ -406,12 +406,17 @@ test_expect_success 'startup cleans up stale .keep markers from dead pids' '
 	)
 '
 
-test_expect_success 'startup leaves live-pid .keep markers alone' '
+test_expect_success !MINGW 'startup leaves live-pid .keep markers alone' '
 	test_when_finished "rm -fr work" &&
 	cp -R repo work &&
 	# Use the test-runner shell pid, which is reliably alive
 	# for the duration of this test.  PID 1 (init) would also
 	# work since our code treats EPERM as "alive".
+	#
+	# !MINGW: on Windows, bash $$ is a virtualized MSYS pid that
+	# does not correspond to a process kill(pid, 0) can see, so
+	# our liveness check would treat it as dead and the marker
+	# would be removed.  Skip this test there.
 	live_pid=$$ &&
 	(
 		cd work &&
@@ -427,6 +432,76 @@ test_expect_success 'startup leaves live-pid .keep markers alone' '
 			git repack -d --geometric=2 --aggregate &&
 		test_path_is_file "$live" &&
 		grep -q "pid=${live_pid}" "$live"
+	)
+'
+
+# ---- geometric .baddeltas demotion ----
+
+# Helper for the geometric tests: pack a single unique blob into its
+# own packfile.  The `tag` parameter must differ between callers so
+# that the blob contents do not collide with one another (otherwise
+# `git pack-objects --stdin-packs` would see the "rollup" objects
+# already present in the kept pack and emit nothing).
+make_unique_pack () {
+	tag=$1 &&
+	blob=$(echo "unique-${tag}-$$" | git hash-object -w --stdin) &&
+	echo "$blob" |
+	git pack-objects --window=0 .git/objects/pack/pack >/dev/null &&
+	git prune-packed
+}
+
+test_expect_success 'geometric repack demotes .baddeltas packs into rollup' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		# Build several small packs and consolidate them into
+		# one larger pack that would normally sit above the
+		# geometric split.
+		build_n_packs 8 >/dev/null &&
+		git repack -d --geometric=2 &&
+		test 1 -eq "$(count_packs)" &&
+		big=$(ls .git/objects/pack/pack-*.pack) &&
+		# Drop a .baddeltas marker on it (simulating an
+		# aggregator output).
+		>"${big%.pack}.baddeltas" &&
+		test 1 -eq "$(count_baddeltas)" &&
+		# Add small packs that are individually far smaller
+		# than the big one; ordinarily the big pack would be
+		# kept above the geometric split.
+		make_unique_pack a &&
+		make_unique_pack b &&
+		make_unique_pack c &&
+		test 4 -eq "$(count_packs)" &&
+		# With the .baddeltas demotion, the big pack is rolled
+		# up despite being above the natural split, and the
+		# resulting pack carries no .baddeltas marker.
+		git repack -d --geometric=2 &&
+		test 1 -eq "$(count_packs)" &&
+		test 0 -eq "$(count_baddeltas)" &&
+		git fsck
+	)
+'
+
+test_expect_success 'geometric repack leaves non-baddeltas packs above the split alone' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 8 >/dev/null &&
+		git repack -d --geometric=2 &&
+		test 1 -eq "$(count_packs)" &&
+		# Add small packs; without any .baddeltas marker the
+		# big pack should be preserved above the split.
+		make_unique_pack a &&
+		make_unique_pack b &&
+		make_unique_pack c &&
+		test 4 -eq "$(count_packs)" &&
+		git repack -d --geometric=2 &&
+		# 1 kept big pack + 1 newly-aggregated rollup = 2.
+		test 2 -eq "$(count_packs)" &&
+		test 0 -eq "$(count_baddeltas)" &&
+		git fsck
 	)
 '
 
