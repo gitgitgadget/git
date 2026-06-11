@@ -8,6 +8,7 @@
 #include "advice.h"
 #include "branch.h"
 #include "config.h"
+#include "dir.h"
 #include "environment.h"
 #include "gettext.h"
 #include "hex.h"
@@ -744,6 +745,29 @@ int cmd_push(int argc,
 
 	if (repo) {
 		if (!add_remote_or_group(repo, &remote_group)) {
+			const char *slash = strchr(repo, '/');
+			struct remote *r;
+
+			/*
+			 * A "<remote>/<branch>" argument that does not name
+			 * a path is likely a slip for the separate
+			 * "<remote> <branch>" form, so suggest that instead.
+			 */
+			if (slash && slash[1] && !file_exists(repo)) {
+				struct strbuf name = STRBUF_INIT;
+
+				strbuf_add(&name, repo, slash - repo);
+				if (remote_is_configured(remote_get(name.buf), 0)) {
+					int code = die_message(_("'%s' is not a valid push target"), repo);
+					advise_if_enabled(ADVICE_PUSH_REPO_LOOKS_LIKE_REF,
+							  _("Did you mean to use: git push %s %s?"),
+							  name.buf, slash + 1);
+					strbuf_release(&name);
+					exit(code);
+				}
+				strbuf_release(&name);
+			}
+
 			/*
 			 * Not a configured remote name or group name.
 			 * Try treating it as a direct URL or path, e.g.
@@ -753,7 +777,7 @@ int cmd_push(int argc,
 			 * from the URL so the loop below can handle it
 			 * identically to a named remote.
 			 */
-			struct remote *r = pushremote_get(repo);
+			r = pushremote_get(repo);
 			if (!r)
 				die(_("bad repository '%s'"), repo);
 			string_list_append(&remote_group, r->name);
