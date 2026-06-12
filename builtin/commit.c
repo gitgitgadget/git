@@ -248,6 +248,14 @@ static int commit_index_files(void)
 	return err;
 }
 
+static void commit_index_files_or_die(void)
+{
+	if (commit_index_files())
+		die(_("repository has been updated, but unable to write\n"
+		      "new index file. Check that disk is not full and quota is\n"
+		      "not exceeded, and then \"git restore --staged :/\" to recover."));
+}
+
 /*
  * Take a union of paths in the index and the named tree (typically, "HEAD"),
  * and return the paths that match the given pattern in list.
@@ -1954,10 +1962,7 @@ int cmd_commit(int argc,
 	unlink(git_path_merge_mode(the_repository));
 	unlink(git_path_squash_msg(the_repository));
 
-	if (commit_index_files())
-		die(_("repository has been updated, but unable to write\n"
-		      "new index file. Check that disk is not full and quota is\n"
-		      "not exceeded, and then \"git restore --staged :/\" to recover."));
+	commit_index_files_or_die();
 
 	git_test_write_commit_graph_or_die(the_repository->objects->sources);
 
