@@ -11,6 +11,7 @@ export GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME
 
 . ./test-lib.sh
 . "$TEST_DIRECTORY/lib-diff.sh"
+. "$TEST_DIRECTORY/lib-gpg.sh"
 
 author='The Real Author <someguy@his.email.org>'
 
@@ -652,6 +653,124 @@ test_expect_success 'amend commit to fix author' '
 	git cat-file -p HEAD >current &&
 	test_cmp expected current
 
+'
+
+test_expect_success 'amend --no-edit that changes nothing keeps the commit' '
+	git reset --hard &&
+	old=$(git rev-parse HEAD) &&
+	test_tick &&
+	git commit --amend --no-edit 2>err &&
+	test_cmp_rev $old HEAD &&
+	test_grep "nothing to amend" err
+'
+
+test_expect_success 'amend --no-edit keeps the commit out of the reflog' '
+	git reset --hard &&
+	git rev-parse HEAD@{0} >before &&
+	test_tick &&
+	git commit --amend --no-edit &&
+	git rev-parse HEAD@{0} >after &&
+	test_cmp before after
+'
+
+test_expect_success 'amend --signoff is idempotent once signed off' '
+	git reset --hard &&
+	test_tick &&
+	git commit --amend --no-edit --signoff &&
+	signed=$(git rev-parse HEAD) &&
+	git log -1 --format=%B | grep "^Signed-off-by:" &&
+	test_tick &&
+	git commit --amend --no-edit --signoff &&
+	test_cmp_rev $signed HEAD
+'
+
+test_expect_success 'amend that changes the tree still rewrites the commit' '
+	git reset --hard &&
+	old=$(git rev-parse HEAD) &&
+	echo changed >>file &&
+	git add file &&
+	test_tick &&
+	git commit --amend --no-edit &&
+	test_cmp_rev ! $old HEAD
+'
+
+test_expect_success 'amend that changes the committer still rewrites the commit' '
+	git reset --hard &&
+	old=$(git rev-parse HEAD) &&
+	test_tick &&
+	GIT_COMMITTER_EMAIL=other@example.com \
+		git commit --amend --no-edit &&
+	test_cmp_rev ! $old HEAD
+'
+
+test_expect_success 'amend that changes only the message still rewrites the commit' '
+	git reset --hard &&
+	old=$(git rev-parse HEAD) &&
+	test_tick &&
+	git commit --amend -m "new message" &&
+	test_cmp_rev ! $old HEAD &&
+	echo "new message" >expect &&
+	git log -1 --format=%s >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'amend --allow-empty of an empty commit that changes nothing keeps it' '
+	test_when_finished "git reset --hard parent && git tag -d parent" &&
+	git tag parent &&
+	git commit --allow-empty -m "empty" &&
+	old=$(git rev-parse HEAD) &&
+	test_tick &&
+	git commit --amend --no-edit --allow-empty 2>err &&
+	test_cmp_rev $old HEAD &&
+	test_grep "nothing to amend" err
+'
+
+test_expect_success GPG 'amend --no-edit of a signed commit is not a no-op' '
+	git reset --hard &&
+	test_tick &&
+	git commit --amend --no-edit -S &&
+	signed=$(git rev-parse HEAD) &&
+	git verify-commit HEAD &&
+	test_tick &&
+	git commit --amend --no-edit -S &&
+	test_cmp_rev ! $signed HEAD &&
+	git verify-commit HEAD
+'
+
+test_expect_success GPG 'amend --no-edit with commit.gpgsign is not a no-op' '
+	git reset --hard &&
+	test_tick &&
+	old=$(git rev-parse HEAD) &&
+	git -c commit.gpgsign=true commit --amend --no-edit &&
+	test_cmp_rev ! $old HEAD &&
+	git verify-commit HEAD
+'
+
+test_expect_success 'amend --reset-author rewrites the commit' '
+	git reset --hard &&
+	old=$(git rev-parse HEAD) &&
+	test_tick &&
+	git commit --amend --no-edit --reset-author &&
+	test_cmp_rev ! $old HEAD
+'
+
+test_expect_success 'amend --date rewrites the commit' '
+	git reset --hard &&
+	old=$(git rev-parse HEAD) &&
+	test_tick &&
+	git commit --amend --no-edit --date="@1234567890 +0000" &&
+	test_cmp_rev ! $old HEAD
+'
+
+test_expect_success 'amend that changes nothing skips the post-commit hook' '
+	test_when_finished "rm -f post-commit.ran" &&
+	test_hook post-commit <<-\EOF &&
+	>post-commit.ran
+	EOF
+	git reset --hard &&
+	test_tick &&
+	git commit --amend --no-edit &&
+	test_path_is_missing post-commit.ran
 '
 
 test_expect_success 'git commit <file> with dirty index' '

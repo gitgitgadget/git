@@ -282,6 +282,12 @@ variable (see linkgit:git-config[1]).
 	parents and author as the current one (the `--reset-author`
 	option can countermand this).
 +
+If the amended commit would be identical to the original (its tree,
+message, author, parents, and committer are all unchanged), the original
+committer date is kept so that the commit, and thus the branch tip, is
+left untouched. A commit that is being signed (`-S`, or `commit.gpgsign`)
+is always rewritten, since its signature cannot reproduce the original.
++
 --
 It is a rough equivalent for:
 

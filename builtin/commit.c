@@ -17,6 +17,7 @@
 #include "dir.h"
 #include "editor.h"
 #include "environment.h"
+#include "ident.h"
 #include "diff.h"
 #include "commit.h"
 #include "add-interactive.h"
@@ -758,6 +759,49 @@ static void prepare_amend_commit(struct commit *commit, struct strbuf *sb,
 	fmt = starts_with(subject, "amend!") ? "%b" : "%B";
 	repo_format_commit_message(the_repository, commit, fmt, sb, ctx);
 	repo_unuse_commit_buffer(the_repository, commit, buffer);
+}
+
+/*
+ * Rebuild the amended commit reusing the existing committer date and report
+ * whether it reproduces the current commit. Because the committer date is the
+ * only field that an amend would otherwise replace with "now", an exact match
+ * means everything else (tree, message, author, parents, committer identity)
+ * is unchanged too.
+ */
+static int amend_is_noop(struct commit *current_head,
+				 const struct strbuf *message,
+				 const struct commit_list *parents,
+				 const char *author,
+				 const struct commit_extra_header *extra,
+				 struct object_id *oid)
+{
+	const char *buffer, *committer_line;
+	size_t len;
+	struct ident_split ident;
+	struct strbuf date = STRBUF_INIT;
+	int unchanged = 0;
+
+	buffer = repo_get_commit_buffer(the_repository, current_head, NULL);
+	committer_line = find_commit_header(buffer, "committer", &len);
+	if (committer_line && !split_ident_line(&ident, committer_line, len) &&
+	    ident.date_begin) {
+		const char *committer;
+
+		strbuf_add(&date, ident.date_begin,
+			   ident.tz_end - ident.date_begin);
+		committer = fmt_ident(getenv("GIT_COMMITTER_NAME"),
+				      getenv("GIT_COMMITTER_EMAIL"),
+				      WANT_COMMITTER_IDENT, date.buf,
+				      IDENT_STRICT);
+		if (!commit_tree_extended(message->buf, message->len,
+					  &the_repository->index->cache_tree->oid,
+					  parents, oid, author, committer, NULL,
+					  extra))
+			unchanged = oideq(oid, &current_head->object.oid);
+	}
+	repo_unuse_commit_buffer(the_repository, current_head, buffer);
+	strbuf_release(&date);
+	return unchanged;
 }
 
 static void change_data_free(void *util, const char *str UNUSED)
@@ -1941,6 +1985,18 @@ int cmd_commit(int argc,
 	} else {
 		struct commit_extra_header **tail = &extra;
 		append_merge_tag_headers(parents, &tail);
+	}
+
+	if (amend && current_head && !sign_commit &&
+	    amend_is_noop(current_head, &sb, parents, author_ident.buf,
+			  extra, &oid)) {
+		commit_index_files_or_die();
+		if (!quiet)
+			fprintf(stderr,
+				_("nothing to amend; %s left unchanged\n"),
+				repo_find_unique_abbrev(the_repository, &oid,
+							DEFAULT_ABBREV));
+		goto cleanup;
 	}
 
 	if (commit_tree_extended(sb.buf, sb.len, &the_repository->index->cache_tree->oid,
