@@ -1544,17 +1544,25 @@ int looks_like_command_line_option(const char *str)
 
 char *xdg_config_home_for(const char *subdir, const char *filename)
 {
-	const char *home, *config_home;
+	char *home, *config_home;
 
 	assert(subdir);
 	assert(filename);
 	config_home = getenv("XDG_CONFIG_HOME");
-	if (config_home && *config_home)
+	if (config_home && *config_home) {
+#ifdef GIT_WINDOWS_NATIVE
+		convert_slashes(config_home);
+#endif
 		return mkpathdup("%s/%s/%s", config_home, subdir, filename);
+	}
 
 	home = getenv("HOME");
-	if (home)
+	if (home) {
+#ifdef GIT_WINDOWS_NATIVE
+		convert_slashes(home);
+#endif
 		return mkpathdup("%s/.config/%s/%s", home, subdir, filename);
+	}
 
 	return NULL;
 }
