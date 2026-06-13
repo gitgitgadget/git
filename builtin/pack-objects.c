@@ -43,6 +43,7 @@
 #include "pack-mtimes.h"
 #include "parse-options.h"
 #include "pkt-line.h"
+#include "path.h"
 #include "blob.h"
 #include "tree.h"
 #include "path-walk.h"
@@ -211,6 +212,9 @@ static int keep_unreachable, unpack_unreachable, include_tag;
 static timestamp_t unpack_unreachable_expiration;
 static int pack_loose_unreachable;
 static int cruft;
+static int mark_bad_deltas;
+static const char *emit_input_packs_path;
+static const char *emit_input_loose_path;
 static int shallow = 0;
 static timestamp_t cruft_expiration;
 static int local;
@@ -1458,6 +1462,23 @@ static void write_pack_file(void)
 					    nr_written, &to_pack,
 					    &pack_idx_opts, hash,
 					    &idx_tmp_name);
+
+			if (mark_bad_deltas) {
+				size_t tmpname_len = tmpname.len;
+				int fd;
+
+				strbuf_addstr(&tmpname, "baddeltas");
+				fd = xopen(tmpname.buf,
+					   O_WRONLY | O_CREAT | O_TRUNC, 0444);
+				if (close(fd))
+					die_errno(_("unable to close '%s'"),
+						  tmpname.buf);
+				if (adjust_shared_perm(the_repository,
+						       tmpname.buf))
+					die_errno(_("unable to make '%s' readable"),
+						  tmpname.buf);
+				strbuf_setlen(&tmpname, tmpname_len);
+			}
 
 			if (write_bitmap_index) {
 				size_t tmpname_len = tmpname.len;
@@ -2796,9 +2817,15 @@ static int try_delta(struct unpacked *trg, struct unpacked *src,
 	 * be considered, as even if we produce a suboptimal delta against
 	 * it, we will still save the transfer cost, as we already know
 	 * the other side has it and we won't send src_entry at all.
+	 *
+	 * If the source pack carries a ".baddeltas" marker, we treat its
+	 * existing delta layout as untrusted: even if the two objects are
+	 * in the same pack and neither is a delta, we have no reason to
+	 * believe a previous packing run actually considered the pair.
 	 */
 	if (reuse_delta && IN_PACK(trg_entry) &&
 	    IN_PACK(trg_entry) == IN_PACK(src_entry) &&
+	    !IN_PACK(trg_entry)->has_bad_deltas &&
 	    !src_entry->preferred_base &&
 	    trg_entry->in_pack_type != OBJ_REF_DELTA &&
 	    trg_entry->in_pack_type != OBJ_OFS_DELTA)
@@ -4059,6 +4086,7 @@ static void read_stdin_packs(enum stdin_packs_mode mode, int rev_list_unpacked)
 {
 	int prev_fetch_if_missing = fetch_if_missing;
 	struct rev_info revs;
+	int need_walk;
 
 	/*
 	 * The revision walk may hit objects that are promised, only. As the
@@ -4076,7 +4104,14 @@ static void read_stdin_packs(enum stdin_packs_mode mode, int rev_list_unpacked)
 	 * That may cause us to avoid populating all of the namehash fields of
 	 * all included objects, but our goal is best-effort, since this is only
 	 * an optimization during delta selection.
+	 *
+	 * However, the walk is only needed for delta selection (which
+	 * consumes the namehash) and for STDIN_PACKS_MODE_FOLLOW (which
+	 * uses the walk to discover additional reachable objects); skip
+	 * it when neither applies.
 	 */
+	need_walk = (window && depth) || mode == STDIN_PACKS_MODE_FOLLOW;
+
 	revs.no_kept_objects = 1;
 	revs.keep_pack_cache_flags |= KEPT_PACK_IN_CORE;
 	revs.blob_objects = 1;
@@ -4099,12 +4134,14 @@ static void read_stdin_packs(enum stdin_packs_mode mode, int rev_list_unpacked)
 	if (rev_list_unpacked)
 		add_unreachable_loose_objects(&revs);
 
-	if (prepare_revision_walk(&revs))
-		die(_("revision walk setup failed"));
-	traverse_commit_list(&revs,
-			     show_commit_pack_hint,
-			     show_object_pack_hint,
-			     &mode);
+	if (need_walk) {
+		if (prepare_revision_walk(&revs))
+			die(_("revision walk setup failed"));
+		traverse_commit_list(&revs,
+				     show_commit_pack_hint,
+				     show_object_pack_hint,
+				     &mode);
+	}
 
 	release_revisions(&revs);
 
@@ -5009,6 +5046,62 @@ static int parse_stdin_packs_mode(const struct option *opt, const char *arg,
 	return 0;
 }
 
+static void emit_input_packs_to_file(const char *path)
+{
+	struct strbuf tmp = STRBUF_INIT;
+	struct packed_git *p;
+	FILE *fp;
+
+	strbuf_addf(&tmp, "%s.tmp", path);
+	fp = fopen(tmp.buf, "w");
+	if (!fp)
+		die_errno(_("unable to write '%s'"), tmp.buf);
+	repo_for_each_pack(the_repository, p) {
+		/* Exclude alternates */
+		if (!p->pack_local)
+			continue;
+		fprintf(fp, "%s\n", pack_basename(p));
+	}
+	if (fclose(fp))
+		die_errno(_("unable to write '%s'"), tmp.buf);
+	if (rename(tmp.buf, path))
+		die_errno(_("unable to rename '%s' to '%s'"), tmp.buf, path);
+	strbuf_release(&tmp);
+}
+
+static int emit_input_loose_cb(const struct object_id *oid,
+			       const char *path UNUSED,
+			       void *data)
+{
+	FILE *fp = data;
+	fprintf(fp, "%s\n", oid_to_hex(oid));
+	return 0;
+}
+
+static void emit_input_loose_to_file(const char *path)
+{
+	struct strbuf tmp = STRBUF_INIT;
+	FILE *fp;
+
+	strbuf_addf(&tmp, "%s.tmp", path);
+	fp = fopen(tmp.buf, "w");
+	if (!fp)
+		die_errno(_("unable to write '%s'"), tmp.buf);
+	/*
+	 * Note: for_each_loose_file_in_source() walks only the local
+	 * source (sources->next is skipped), thus excluding
+	 * alternates and matching the "p->pack_local" check in
+	 * emit_input_packs_to_file().
+	 */
+	for_each_loose_file_in_source(the_repository->objects->sources,
+				      emit_input_loose_cb, NULL, NULL, fp);
+	if (fclose(fp))
+		die_errno(_("unable to write '%s'"), tmp.buf);
+	if (rename(tmp.buf, path))
+		die_errno(_("unable to rename '%s' to '%s'"), tmp.buf, path);
+	strbuf_release(&tmp);
+}
+
 int cmd_pack_objects(int argc,
 		     const char **argv,
 		     const char *prefix,
@@ -5089,6 +5182,8 @@ int cmd_pack_objects(int argc,
 		  N_("unpack unreachable objects newer than <time>"),
 		  PARSE_OPT_OPTARG, option_parse_unpack_unreachable),
 		OPT_BOOL(0, "cruft", &cruft, N_("create a cruft pack")),
+		OPT_BOOL(0, "mark-bad-deltas", &mark_bad_deltas,
+			 N_("write a .baddeltas marker alongside the output pack(s)")),
 		OPT_CALLBACK_F(0, "cruft-expiration", NULL, N_("time"),
 		  N_("expire cruft objects older than <time>"),
 		  PARSE_OPT_OPTARG, option_parse_cruft_expiration),
@@ -5104,6 +5199,14 @@ int cmd_pack_objects(int argc,
 			 N_("ignore packs that have companion .keep file")),
 		OPT_STRING_LIST(0, "keep-pack", &keep_pack_list, N_("name"),
 				N_("ignore this pack")),
+		OPT_STRING(0, "emit-input-packs", &emit_input_packs_path,
+			   N_("file"),
+			   N_("write basenames of input packs to <file> "
+			      "(plumbing, undocumented)")),
+		OPT_STRING(0, "emit-input-loose", &emit_input_loose_path,
+			   N_("file"),
+			   N_("write OIDs of input loose objects to <file> "
+			      "(plumbing, undocumented)")),
 		OPT_INTEGER(0, "compression", &pack_compression_level,
 			    N_("pack compression level")),
 		OPT_BOOL(0, "keep-true-parents", &grafts_keep_true_parents,
@@ -5282,6 +5385,9 @@ int cmd_pack_objects(int argc,
 	if (!pack_to_stdout && thin)
 		die(_("--thin cannot be used to build an indexable pack"));
 
+	die_for_incompatible_opt2(mark_bad_deltas, "--mark-bad-deltas",
+				  pack_to_stdout, "--stdout");
+
 	die_for_incompatible_opt2(keep_unreachable, "--keep-unreachable",
 				  unpack_unreachable, "--unpack-unreachable");
 	if (!rev_list_all || !rev_list_reflog || !rev_list_index)
@@ -5363,6 +5469,11 @@ int cmd_pack_objects(int argc,
 	trace2_region_enter("pack-objects", "enumerate-objects",
 			    the_repository);
 	prepare_packing_data(the_repository, &to_pack);
+
+	if (emit_input_packs_path)
+		emit_input_packs_to_file(emit_input_packs_path);
+	if (emit_input_loose_path)
+		emit_input_loose_to_file(emit_input_loose_path);
 
 	if (progress && !cruft)
 		progress_state = start_progress(the_repository,

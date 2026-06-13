@@ -143,6 +143,14 @@ options which imply `--revs`.
 	have an mtime older than `<approxidate>`. If unspecified (and
 	given `--cruft`), then no objects are eliminated.
 
+--mark-bad-deltas::
+	Write a `.baddeltas` marker file alongside each output pack.  The
+	marker signals that objects within the pack have not been fully
+	delta-searched against other objects within the same pack and
+	that future repacking should consider them.  Any deltas that do
+	exist within this pack can still be reused, however.
+	Incompatible with `--stdout`.
+
 --window=<n>::
 --depth=<n>::
 	These two options affect how the objects contained in

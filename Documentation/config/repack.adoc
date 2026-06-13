@@ -64,3 +64,13 @@ repack.midxNewLayerThreshold::
 When the tip layer has fewer packs than this threshold, those packs are
 excluded from the geometric repack entirely, and are thus left
 unmodified. Must be at least 1. Defaults to 8.
+
+repack.aggregate::
+	If set to true, linkgit:git-repack[1] will spawn a background
+	linkgit:git-pack-aggregate[1] for the duration of its main
+	pack-objects run.  The aggregator rolls up small packs and
+	loose objects that arrive after pack-objects has enumerated
+	its inputs, preventing them from accumulating in
+	`objects/pack/` and slowing other Git operations on busy
+	servers.  Defaults to false.  Can be overridden on the
+	command line with `--aggregate` or `--no-aggregate`.

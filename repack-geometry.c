@@ -187,6 +187,58 @@ static uint32_t compute_pack_geometry_split(struct packed_git **pack, size_t pac
 	return split;
 }
 
+/*
+ * Move any packs marked with a `.baddeltas` sidecar from the kept
+ * region of `pack[]` into the rollup region.  A `.baddeltas` marker
+ * declares that the pack's existing deltas are stale (e.g. because
+ * the pack was assembled by `git pack-aggregate`, which concatenates
+ * input packs without performing a fresh delta search).  We do not
+ * want such packs to sit on the geometric ladder indefinitely:
+ * rolling them up forces the next `pack-objects` invocation to
+ * recompute deltas across their objects, while leaving any
+ * `.keep`-protected pack alone (those are filtered out by
+ * `pack_geometry_init()`).
+ *
+ * Demotion preserves the ascending sort order of the kept region so
+ * that `pack_geometry_preferred_pack()` continues to return the
+ * largest local kept pack.
+ */
+static void demote_bad_delta_packs(struct pack_geometry *geometry)
+{
+	struct packed_git **demoted, **retained;
+	uint32_t d_nr = 0, r_nr = 0, kept_nr;
+
+	if (geometry->split == geometry->pack_nr)
+		return;
+
+	kept_nr = geometry->pack_nr - geometry->split;
+	for (uint32_t k = geometry->split; k < geometry->pack_nr; k++) {
+		if (geometry->pack[k]->has_bad_deltas)
+			d_nr++;
+	}
+	if (!d_nr)
+		return;
+
+	ALLOC_ARRAY(demoted, d_nr);
+	ALLOC_ARRAY(retained, kept_nr - d_nr);
+	d_nr = 0;
+	for (uint32_t k = geometry->split; k < geometry->pack_nr; k++) {
+		if (geometry->pack[k]->has_bad_deltas)
+			demoted[d_nr++] = geometry->pack[k];
+		else
+			retained[r_nr++] = geometry->pack[k];
+	}
+
+	memcpy(&geometry->pack[geometry->split], demoted,
+	       d_nr * sizeof(*geometry->pack));
+	memcpy(&geometry->pack[geometry->split + d_nr], retained,
+	       r_nr * sizeof(*geometry->pack));
+	geometry->split += d_nr;
+
+	free(demoted);
+	free(retained);
+}
+
 void pack_geometry_split(struct pack_geometry *geometry)
 {
 	geometry->split = compute_pack_geometry_split(geometry->pack, geometry->pack_nr,
@@ -194,6 +246,7 @@ void pack_geometry_split(struct pack_geometry *geometry)
 	geometry->promisor_split = compute_pack_geometry_split(geometry->promisor_pack,
 							       geometry->promisor_pack_nr,
 							       geometry->split_factor);
+	demote_bad_delta_packs(geometry);
 	for (uint32_t i = 0; i < geometry->split; i++) {
 		struct packed_git *p = geometry->pack[i];
 		/*
