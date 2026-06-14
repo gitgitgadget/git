@@ -43,9 +43,15 @@ PO_TEMPLATE = po/gitk.pot
 ALL_POFILES = $(wildcard po/*.po)
 ALL_MSGFILES = $(subst .po,.msg,$(ALL_POFILES))
 
+MSGFMT_GEN = @:
+
+ifneq ($(findstring s,$(firstword -$(MAKEFLAGS))),s)
 ifndef V
 	QUIET          = @
 	QUIET_GEN      = $(QUIET)echo '   ' GEN $@ &&
+endif
+	MSGFMT_GEN   = @echo Generating catalog $@
+	MSGFMT_STATS = --statistics
 endif
 
 all:: gitk-wish $(ALL_MSGFILES)
@@ -75,8 +81,8 @@ update-po:: $(PO_TEMPLATE)
 	echo; \
 	echo "	git config filter.gettext-no-location.clean \"msgcat --no-location -\""
 $(ALL_MSGFILES): %.msg : %.po
-	@echo Generating catalog $@
-	$(MSGFMT) --statistics --tcl -l $(basename $(notdir $<)) -d $(dir $@) $<
+	$(MSGFMT_GEN)
+	$(MSGFMT) $(MSGFMT_STATS) --tcl -l $(basename $(notdir $<)) -d $(dir $@) $<
 
 .PHONY: all install uninstall clean update-po
 .PHONY: FORCE
