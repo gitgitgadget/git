@@ -453,6 +453,40 @@ test_expect_success '"git bisect run" simple case' '
 	git bisect reset
 '
 
+test_expect_success '"git bisect start --auto-reset" leaves the bisection' '
+	test_when_finished "git bisect reset" &&
+	git bisect start --auto-reset $HASH4 $HASH2 &&
+	git bisect bad &&
+	test_path_is_missing "$(git rev-parse --git-path BISECT_START)"
+'
+
+test_expect_success '"git bisect run --auto-reset" leaves the bisection' '
+	test_when_finished "git bisect reset" &&
+	write_script test_script.sh <<-\EOF &&
+	! grep Another hello >/dev/null
+	EOF
+	git bisect start $HASH4 $HASH2 &&
+	git bisect run --auto-reset ./test_script.sh >my_bisect_log.txt &&
+	grep "$HASH3 is the first .bad. commit" my_bisect_log.txt &&
+	test_path_is_missing "$(git rev-parse --git-path BISECT_START)"
+'
+
+test_expect_success 'without --auto-reset the bisection state is kept' '
+	test_when_finished "git bisect reset" &&
+	git bisect start $HASH4 $HASH2 &&
+	git bisect bad &&
+	test_path_is_file "$(git rev-parse --git-path BISECT_START)"
+'
+
+test_expect_success '--auto-reset does not leak into a later bisection' '
+	test_when_finished "git bisect reset" &&
+	git bisect start --auto-reset $HASH4 $HASH2 &&
+	git bisect bad &&
+	git bisect start $HASH4 $HASH2 &&
+	git bisect bad &&
+	test_path_is_file "$(git rev-parse --git-path BISECT_START)"
+'
+
 # We want to automatically find the commit that
 # added "Ciao" into hello.
 test_expect_success '"git bisect run" with more complex "git bisect start"' '
