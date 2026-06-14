@@ -490,6 +490,7 @@ test_expect_success 'pick and fixup respect commit.cleanup' '
 	git reset --hard base &&
 	test_commit --no-tag "fixup! second commit" file1 fixup &&
 	test_commit something &&
+	test_when_finished "rm -f .git/hooks/prepare-commit-msg" &&
 	write_script .git/hooks/prepare-commit-msg <<-\EOF &&
 	printf "\n# Prepared\n" >> "$1"
 	EOF
