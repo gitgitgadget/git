@@ -63,7 +63,8 @@ struct bisect_state {
 	unsigned int nr_bad;
 };
 
-enum bisect_error bisect_next_all(struct repository *r, const char *prefix);
+enum bisect_error bisect_next_all(struct repository *r, const char *prefix,
+				  struct object_id *first_bad);
 
 int estimate_bisect_steps(int all);
 

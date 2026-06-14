@@ -488,6 +488,7 @@ static GIT_PATH_FUNC(git_path_bisect_start, "BISECT_START")
 static GIT_PATH_FUNC(git_path_bisect_log, "BISECT_LOG")
 static GIT_PATH_FUNC(git_path_bisect_terms, "BISECT_TERMS")
 static GIT_PATH_FUNC(git_path_bisect_first_parent, "BISECT_FIRST_PARENT")
+static GIT_PATH_FUNC(git_path_bisect_reset_when_found, "BISECT_RESET_WHEN_FOUND")
 
 static void read_bisect_paths(struct strvec *array)
 {
@@ -1041,7 +1042,8 @@ void read_bisect_terms(char **read_bad, char **read_good)
  * the end of bisect_helper::cmd_bisect__helper() helps bypassing
  * all the code related to finding a commit to test.
  */
-enum bisect_error bisect_next_all(struct repository *r, const char *prefix)
+enum bisect_error bisect_next_all(struct repository *r, const char *prefix,
+				  struct object_id *first_bad)
 {
 	struct strvec rev_argv = STRVEC_INIT;
 	struct rev_info revs = REV_INFO_INIT;
@@ -1113,6 +1115,7 @@ enum bisect_error bisect_next_all(struct repository *r, const char *prefix)
 		res = error_if_skipped_commits(tried, current_bad_oid);
 		if (res)
 			goto cleanup;
+		oidcpy(first_bad, bisect_rev);
 		printf("%s is the first '%s' commit\n", oid_to_hex(bisect_rev),
 			term_bad);
 
@@ -1211,6 +1214,7 @@ int bisect_clean_state(void)
 	unlink_or_warn(git_path_bisect_run());
 	unlink_or_warn(git_path_bisect_terms());
 	unlink_or_warn(git_path_bisect_first_parent());
+	unlink_or_warn(git_path_bisect_reset_when_found());
 	/*
 	 * Cleanup BISECT_START last to support the --no-checkout option
 	 * introduced in the commit 4796e823a.
