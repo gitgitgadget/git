@@ -43,6 +43,37 @@ test_bisect_usage () {
 	test_cmp expect actual
 }
 
+test_bisect_state_file () {
+	test_path_is_file "$(git rev-parse --git-path "$1")"
+}
+
+test_bisect_state_missing () {
+	test_path_is_missing "$(git rev-parse --git-path "$1")"
+}
+
+bisect_start_and_finish () {
+	git bisect start "$1" $HASH4 $HASH2 &&
+	git bisect bad
+}
+
+bisect_run_auto_reset () {
+	write_script test_script.sh <<-\EOF &&
+	! grep Another hello >/dev/null
+	EOF
+	git bisect start $HASH4 $HASH2 &&
+	git bisect run "$1" ./test_script.sh >my_bisect_log.txt &&
+	test_grep "$HASH3 is the first .bad. commit" my_bisect_log.txt
+}
+
+test_auto_reset_fails () {
+	local pattern="$1" &&
+	local state_file="$2" &&
+	shift 2 &&
+	test_must_fail "$@" 2>err &&
+	test_grep -- "$pattern" err &&
+	test_bisect_state_missing "$state_file"
+}
+
 test_expect_success 'bisect usage' "
 	test_bisect_usage 1 git bisect reset extra1 extra2 <<-\EOF &&
 	error: 'git bisect reset' requires either no argument or a commit
@@ -451,6 +482,82 @@ test_expect_success '"git bisect run" simple case' '
 	git bisect run printf "%s %s\n" reset --bisect-skip >my_bisect_log.txt &&
 	grep -e "reset --bisect-skip" my_bisect_log.txt &&
 	git bisect reset
+'
+
+test_expect_success '"git bisect start --auto-reset" defaults to original' '
+	test_when_finished "git bisect reset; git checkout main" &&
+	git checkout main &&
+	bisect_start_and_finish --auto-reset &&
+	test "$HASH4" = "$(git rev-parse HEAD)" &&
+	test main = "$(git branch --show-current)" &&
+	test_bisect_state_missing BISECT_START &&
+
+	bisect_start_and_finish --auto-reset=original &&
+	test "$HASH4" = "$(git rev-parse HEAD)" &&
+	test main = "$(git branch --show-current)" &&
+	test_bisect_state_missing BISECT_START
+'
+
+test_expect_success '"git bisect start --auto-reset=found" leaves first bad checked out' '
+	test_when_finished "git bisect reset; git checkout main" &&
+	bisect_start_and_finish --auto-reset=found &&
+	test "$HASH3" = "$(git rev-parse HEAD)" &&
+	test_bisect_state_missing BISECT_START
+'
+
+test_expect_success '"git bisect run --auto-reset" defaults to original' '
+	test_when_finished "git bisect reset; git checkout main" &&
+	bisect_run_auto_reset --auto-reset &&
+	test "$HASH4" = "$(git rev-parse HEAD)" &&
+	test main = "$(git branch --show-current)" &&
+	test_bisect_state_missing BISECT_START
+'
+
+test_expect_success '"git bisect run --auto-reset=found" leaves first bad checked out' '
+	test_when_finished "git bisect reset; git checkout main" &&
+	bisect_run_auto_reset --auto-reset=found &&
+	test "$HASH3" = "$(git rev-parse HEAD)" &&
+	test_bisect_state_missing BISECT_START
+'
+
+test_expect_success '--auto-reset rejects an unknown reset target' '
+	test_when_finished "git bisect reset; git checkout main" &&
+	test_auto_reset_fails \
+		"invalid value for.*--auto-reset.*unknown" BISECT_START \
+		git bisect start --auto-reset=unknown $HASH4 $HASH2 &&
+
+	git bisect start $HASH4 $HASH2 &&
+	test_auto_reset_fails \
+		"invalid value for.*--auto-reset.*unknown" BISECT_AUTO_RESET \
+		git bisect run --auto-reset=unknown true
+'
+
+test_expect_success '--auto-reset cannot be used with --no-checkout' '
+	test_when_finished "git bisect reset" &&
+	test_auto_reset_fails \
+		"cannot be used with.*--no-checkout" BISECT_START \
+		git bisect start --auto-reset=original --no-checkout $HASH4 $HASH2 &&
+
+	git bisect start --no-checkout $HASH4 $HASH2 &&
+	test_auto_reset_fails \
+		"cannot be used with.*--no-checkout" BISECT_AUTO_RESET \
+		git bisect run --auto-reset=found true
+'
+
+test_expect_success 'without --auto-reset the bisection state is kept' '
+	test_when_finished "git bisect reset" &&
+	git bisect start $HASH4 $HASH2 &&
+	git bisect bad &&
+	test_bisect_state_file BISECT_START
+'
+
+test_expect_success '--auto-reset does not leak into a later bisection' '
+	test_when_finished "git bisect reset; git checkout main" &&
+	bisect_start_and_finish --auto-reset &&
+
+	git bisect start $HASH4 $HASH2 &&
+	git bisect bad &&
+	test_bisect_state_file BISECT_START
 '
 
 # We want to automatically find the commit that

@@ -24,11 +24,12 @@ static GIT_PATH_FUNC(git_path_bisect_start, "BISECT_START")
 static GIT_PATH_FUNC(git_path_bisect_log, "BISECT_LOG")
 static GIT_PATH_FUNC(git_path_bisect_names, "BISECT_NAMES")
 static GIT_PATH_FUNC(git_path_bisect_first_parent, "BISECT_FIRST_PARENT")
+static GIT_PATH_FUNC(git_path_bisect_auto_reset, "BISECT_AUTO_RESET")
 static GIT_PATH_FUNC(git_path_bisect_run, "BISECT_RUN")
 
 #define BUILTIN_GIT_BISECT_START_USAGE \
 	N_("git bisect start [--term-(bad|new)=<term-new> --term-(good|old)=<term-old>]\n" \
-	   "                 [--no-checkout] [--first-parent] [<bad> [<good>...]] [--] [<pathspec>...]")
+	   "                 [--no-checkout] [--first-parent] [--auto-reset[=<where>]] [<bad> [<good>...]] [--] [<pathspec>...]")
 #define BUILTIN_GIT_BISECT_BAD_USAGE \
 	N_("git bisect (bad|new|<term-new>) [<rev>]")
 #define BUILTIN_GIT_BISECT_GOOD_USAGE \
@@ -48,7 +49,7 @@ static GIT_PATH_FUNC(git_path_bisect_run, "BISECT_RUN")
 #define BUILTIN_GIT_BISECT_LOG_USAGE \
 	"git bisect log"
 #define BUILTIN_GIT_BISECT_RUN_USAGE \
-	N_("git bisect run <cmd> [<arg>...]")
+	N_("git bisect run [--auto-reset[=<where>]] <cmd> [<arg>...]")
 #define BUILTIN_GIT_BISECT_HELP_USAGE \
 	"git bisect help"
 
@@ -66,6 +67,12 @@ static const char * const git_bisect_usage[] = {
 	BUILTIN_GIT_BISECT_RUN_USAGE,
 	BUILTIN_GIT_BISECT_HELP_USAGE,
 	NULL
+};
+
+enum auto_reset_mode {
+	AUTO_RESET_NONE,
+	AUTO_RESET_ORIGINAL,
+	AUTO_RESET_FOUND,
 };
 
 struct add_bisect_ref_data {
@@ -266,6 +273,59 @@ static int bisect_reset(const char *commit, int quiet)
 
 	strbuf_release(&branch);
 	return bisect_clean_state();
+}
+
+static int parse_auto_reset(const char *value, enum auto_reset_mode *mode)
+{
+	if (!strcmp(value, "original"))
+		*mode = AUTO_RESET_ORIGINAL;
+	else if (!strcmp(value, "found"))
+		*mode = AUTO_RESET_FOUND;
+	else
+		return error(_("invalid value for '--auto-reset': '%s'"), value);
+
+	return 0;
+}
+
+static const char *auto_reset_mode_name(enum auto_reset_mode mode)
+{
+	switch (mode) {
+	case AUTO_RESET_ORIGINAL:
+		return "original";
+	case AUTO_RESET_FOUND:
+		return "found";
+	case AUTO_RESET_NONE:
+		BUG("no name for unset auto-reset mode");
+	}
+	BUG("unknown auto-reset mode %d", mode);
+}
+
+static int bisect_auto_reset(struct bisect_terms *terms)
+{
+	struct strbuf value = STRBUF_INIT;
+	enum auto_reset_mode mode;
+	char *commit = NULL;
+	int res;
+
+	if (strbuf_read_file(&value, git_path_bisect_auto_reset(), 0) < 0) {
+		res = error_errno(_("could not read '%s'"),
+				  git_path_bisect_auto_reset());
+		goto cleanup;
+	}
+	strbuf_trim(&value);
+	if (parse_auto_reset(value.buf, &mode)) {
+		res = -1;
+		goto cleanup;
+	}
+
+	if (mode == AUTO_RESET_FOUND)
+		commit = xstrfmt("refs/bisect/%s", terms->term_bad);
+	res = bisect_reset(commit, 1);
+
+cleanup:
+	free(commit);
+	strbuf_release(&value);
+	return res;
 }
 
 static void log_commit(FILE *fp,
@@ -688,6 +748,8 @@ static enum bisect_error bisect_next(struct bisect_terms *terms, const char *pre
 
 	if (res == BISECT_INTERNAL_SUCCESS_1ST_BAD_FOUND) {
 		res = bisect_successful(terms);
+		if (!res && !is_empty_or_missing_file(git_path_bisect_auto_reset()))
+			res = bisect_auto_reset(terms);
 		return res ? res : BISECT_INTERNAL_SUCCESS_1ST_BAD_FOUND;
 	} else if (res == BISECT_ONLY_SKIPPED_LEFT) {
 		res = bisect_skipped_commits(terms);
@@ -711,6 +773,7 @@ static enum bisect_error bisect_start(struct bisect_terms *terms, int argc,
 {
 	int no_checkout = 0;
 	int first_parent_only = 0;
+	enum auto_reset_mode auto_reset = AUTO_RESET_NONE;
 	int i, has_double_dash = 0, must_write_terms = 0, bad_seen = 0;
 	int flags, pathspec_pos;
 	enum bisect_error res = BISECT_OK;
@@ -743,6 +806,13 @@ static enum bisect_error bisect_start(struct bisect_terms *terms, int argc,
 			no_checkout = 1;
 		} else if (!strcmp(arg, "--first-parent")) {
 			first_parent_only = 1;
+		} else if (!strcmp(arg, "--auto-reset")) {
+			auto_reset = AUTO_RESET_ORIGINAL;
+		} else if (skip_prefix(arg, "--auto-reset=", &arg)) {
+			if (parse_auto_reset(arg, &auto_reset)) {
+				res = BISECT_FAILED;
+				goto finish;
+			}
 		} else if (!strcmp(arg, "--term-good") ||
 			 !strcmp(arg, "--term-old")) {
 			i++;
@@ -779,6 +849,10 @@ static enum bisect_error bisect_start(struct bisect_terms *terms, int argc,
 		} else {
 			break;
 		}
+	}
+	if (auto_reset != AUTO_RESET_NONE && no_checkout) {
+		res = error(_("'--auto-reset' cannot be used with '--no-checkout'"));
+		goto finish;
 	}
 	pathspec_pos = i;
 
@@ -856,6 +930,10 @@ static enum bisect_error bisect_start(struct bisect_terms *terms, int argc,
 
 	if (first_parent_only)
 		write_file(git_path_bisect_first_parent(), "\n");
+
+	if (auto_reset != AUTO_RESET_NONE)
+		write_file(git_path_bisect_auto_reset(), "%s\n",
+			   auto_reset_mode_name(auto_reset));
 
 	if (no_checkout) {
 		if (repo_get_oid(the_repository, start_head.buf, &oid) < 0) {
@@ -1235,12 +1313,30 @@ static int bisect_run(struct bisect_terms *terms, int argc, const char **argv)
 {
 	int res = BISECT_OK;
 	struct strbuf command = STRBUF_INIT;
+	enum auto_reset_mode auto_reset = AUTO_RESET_NONE;
+	const char *auto_reset_arg;
 	const char *new_state;
 	int temporary_stdout_fd, saved_stdout;
 	int is_first_run = 1;
 
 	if (bisect_next_check(terms, NULL))
 		return BISECT_FAILED;
+
+	if (argc && !strcmp(argv[0], "--auto-reset"))
+		auto_reset = AUTO_RESET_ORIGINAL;
+	else if (argc && skip_prefix(argv[0], "--auto-reset=", &auto_reset_arg)) {
+		if (parse_auto_reset(auto_reset_arg, &auto_reset))
+			return BISECT_FAILED;
+	}
+
+	if (auto_reset != AUTO_RESET_NONE) {
+		if (refs_ref_exists(get_main_ref_store(the_repository), "BISECT_HEAD"))
+			return error(_("'--auto-reset' cannot be used with '--no-checkout'"));
+		write_file(git_path_bisect_auto_reset(), "%s\n",
+			   auto_reset_mode_name(auto_reset));
+		argc--;
+		argv++;
+	}
 
 	if (!argc) {
 		error(_("bisect run failed: no command provided."));
