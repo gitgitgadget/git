@@ -178,17 +178,13 @@ static int append_to_file(const char *path, const char *format, ...)
 	return res;
 }
 
-static int print_file_to_stdout(const char *path)
+static int print_fd_to_stdout(int fd)
 {
-	int fd = open(path, O_RDONLY);
-	int ret = 0;
-
-	if (fd < 0)
-		return error_errno(_("cannot open file '%s' for reading"), path);
+	if (lseek(fd, 0, SEEK_SET) < 0)
+		return error_errno(_("failed to rewind BISECT_RUN output"));
 	if (copy_fd(fd, 1) < 0)
-		ret = error_errno(_("failed to read '%s'"), path);
-	close(fd);
-	return ret;
+		return error_errno(_("failed to read BISECT_RUN output"));
+	return 0;
 }
 
 static int check_term_format(const char *term, const char *orig_term)
@@ -1291,7 +1287,7 @@ static int bisect_run(struct bisect_terms *terms, int argc, const char **argv)
 		else
 			new_state = terms->term_bad;
 
-		temporary_stdout_fd = open(git_path_bisect_run(), O_CREAT | O_WRONLY | O_TRUNC, 0666);
+		temporary_stdout_fd = open(git_path_bisect_run(), O_CREAT | O_RDWR | O_TRUNC, 0666);
 
 		if (temporary_stdout_fd < 0) {
 			res = error_errno(_("cannot open file '%s' for writing"), git_path_bisect_run());
@@ -1307,9 +1303,9 @@ static int bisect_run(struct bisect_terms *terms, int argc, const char **argv)
 		fflush(stdout);
 		dup2(saved_stdout, 1);
 		close(saved_stdout);
-		close(temporary_stdout_fd);
 
-		print_file_to_stdout(git_path_bisect_run());
+		print_fd_to_stdout(temporary_stdout_fd);
+		close(temporary_stdout_fd);
 
 		if (res == BISECT_ONLY_SKIPPED_LEFT)
 			error(_("bisect run cannot continue any more"));
