@@ -602,6 +602,16 @@ option can be used to override that setting.
 +
 See also INCOMPATIBLE OPTIONS below.
 
+--fixup-all::
+	Valid only when used with `--autosquash`.  Keep the first commit in
+	the range as a `pick` and change every later commit to a `fixup`, so
+	the whole range is folded into a single commit that reuses the first
+	commit's message.  With no `<upstream>` argument this folds all commits
+	since `@{upstream}` into one.  The commits are folded in their original
+	order, so any `fixup!`/`squash!` commits already in the range are folded
+	in as well.  Cannot be combined with `--rebase-merges`, as a merge
+	commit cannot be folded into another commit.
+
 --autostash::
 --no-autostash::
 	Automatically create a temporary stash entry before the operation
@@ -652,6 +662,7 @@ are incompatible with the following options:
  * --strategy
  * --strategy-option
  * --autosquash
+ * --fixup-all
  * --rebase-merges
  * --interactive
  * --exec

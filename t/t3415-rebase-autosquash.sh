@@ -511,4 +511,109 @@ test_expect_success 'pick and fixup respect commit.cleanup' '
 	test_commit_message HEAD -m "something"
 '
 
+test_expect_success '--fixup-all folds the range into the first commit' '
+	git reset --hard base &&
+	test_commit --no-tag fold1 file_fold a &&
+	test_commit --no-tag fold2 file_fold b &&
+	test_commit --no-tag fold3 file_fold c &&
+	git rebase --autosquash --fixup-all HEAD~3 &&
+	test_cmp_rev base HEAD~1 &&
+	test_commit_message HEAD -m "fold1" &&
+	echo c >expect &&
+	test_cmp expect file_fold
+'
+
+test_expect_success '--fixup-all folds smoothly when a fixup! commit is in the series' '
+	git reset --hard base &&
+	test_commit --no-tag foldA file_fold a &&
+	test_commit --no-tag foldB file_fold b &&
+	git commit --allow-empty --fixup HEAD~1 &&
+	git rebase --autosquash --fixup-all HEAD~3 &&
+	test_cmp_rev base HEAD~1 &&
+	test_commit_message HEAD -m "foldA" &&
+	echo b >expect &&
+	test_cmp expect file_fold
+'
+
+test_expect_success '--fixup-all picks the first commit even if it is a fixup!' '
+	git reset --hard base &&
+	test_commit --no-tag fixupbase file_fix a &&
+	git commit --allow-empty --fixup HEAD &&
+	test_commit --no-tag fixuptail file_fix b &&
+	git rebase --autosquash --fixup-all HEAD~3 &&
+	test_cmp_rev base HEAD~1 &&
+	echo b >expect &&
+	test_cmp expect file_fix
+'
+
+test_expect_success '--fixup-all with a single commit in range is a no-op' '
+	git reset --hard base &&
+	test_commit --no-tag solo file_solo a &&
+	git rev-parse HEAD >expect &&
+	git rebase --autosquash --fixup-all HEAD~1 &&
+	git rev-parse HEAD >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success '--fixup-all with an empty range succeeds' '
+	git reset --hard base &&
+	git rebase --autosquash --fixup-all HEAD &&
+	test_cmp_rev base HEAD
+'
+
+test_expect_success '--fixup-all skips a dropped commit in the range' '
+	git reset --hard base &&
+	test_commit --no-tag fixdrop1 file_drop a &&
+	git commit --allow-empty -m "empty in the middle" &&
+	test_commit --no-tag fixdrop3 file_drop b &&
+	git rebase --autosquash --empty=drop --fixup-all HEAD~3 &&
+	test_cmp_rev base HEAD~1 &&
+	test_commit_message HEAD -m "fixdrop1" &&
+	echo b >expect &&
+	test_cmp expect file_drop
+'
+
+test_expect_success '--fixup-all folds a merge commit in the middle of the range' '
+	git reset --hard base &&
+	test_commit --no-tag mid-first &&
+	git checkout -b mid-side &&
+	test_commit --no-tag mid-merged &&
+	git checkout - &&
+	git merge --no-ff -m "merge mid-side" mid-side &&
+	test_commit --no-tag mid-last &&
+	git rebase --autosquash --fixup-all base &&
+	test_cmp_rev base HEAD~1 &&
+	test_commit_message HEAD -m "mid-first" &&
+	test_path_is_file mid-merged.t
+'
+
+test_expect_success '--fixup-all keeps the first flattened commit when a merge sorts first' '
+	git reset --hard base &&
+	git checkout -b head-side &&
+	test_commit --no-tag head-merged &&
+	git checkout - &&
+	git merge --no-ff -m "merge head-side" head-side &&
+	test_commit --no-tag head-last &&
+	git rebase --autosquash --fixup-all base &&
+	test_cmp_rev base HEAD~1 &&
+	test_commit_message HEAD -m "head-merged" &&
+	test_path_is_file head-merged.t
+'
+
+test_expect_success '--fixup-all requires --autosquash' '
+	git reset --hard base &&
+	test_must_fail git rebase --fixup-all HEAD~1 2>err &&
+	test_grep "fixup-all requires --autosquash" err &&
+	test_must_fail git rebase --no-autosquash --fixup-all HEAD~1 2>err &&
+	test_grep "fixup-all requires --autosquash" err
+'
+
+test_expect_success '--fixup-all and --rebase-merges cannot be combined' '
+	git reset --hard base &&
+	test_must_fail git rebase --autosquash --rebase-merges \
+		--fixup-all HEAD~1 2>err &&
+	test_grep "cannot be used together" err &&
+	test_path_is_missing .git/rebase-merge
+'
+
 test_done
