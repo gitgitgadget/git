@@ -227,6 +227,7 @@ __git_zsh_main ()
 		'(-p --paginate --no-pager)'{-p,--paginate}'[pipe all output into ''less'']' \
 		'(-p --paginate)--no-pager[do not pipe git output into a pager]' \
 		'--git-dir=-[set the path to the repository]: :_directories' \
+		'*-C[run as if git was started in <path>]: :_directories' \
 		'--bare[treat the repository as a bare repository]' \
 		'(- :)--version[prints the git suite version]' \
 		'--exec-path=-[path to where your core git programs are installed]:: :_directories' \
@@ -252,6 +253,14 @@ __git_zsh_main ()
 		;;
 	(arg)
 		local command="${words[1]}" __git_dir __git_cmd_idx=1
+		local -a __git_C_args
+		local -i i=2
+
+		while [[ ${orig_words[i]} == -C ]]; do
+			__git_C_args+=(-C ${orig_words[i+1]})
+			(( __git_cmd_idx += 2 ))
+			(( i += 2 ))
+		done
 
 		if (( $+opt_args[--bare] )); then
 			__git_dir='.'
