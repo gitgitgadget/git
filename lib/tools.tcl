@@ -38,7 +38,7 @@ proc tools_create_item {parent args} {
 }
 
 proc tools_populate_one {fullname} {
-	global tools_menubar tools_menutbl tools_id
+	global tools_menubar tools_menutbl tools_id repo_config
 
 	if {![info exists tools_id]} {
 		set tools_id 0
@@ -61,9 +61,25 @@ proc tools_populate_one {fullname} {
 		}
 	}
 
-	tools_create_item $parent command \
-		-label [lindex $names end] \
-		-command [list tools_exec $fullname]
+	set accel_key_bound 0
+	if {[info exists repo_config(guitool.$fullname.gitgui-shortcut)]} {
+		set accel_key $repo_config(guitool.$fullname.gitgui-shortcut)
+		if { [ catch { bind . <$accel_key> [list tools_exec $fullname] } msg ] } {
+			puts stderr "Failed to bind keyboard shortcut '$accel_key' for custom tool '$fullname'. Error: $msg"
+		} else {
+			tools_create_item $parent command \
+			-label [lindex $names end] \
+			-command [list tools_exec $fullname] \
+			-accelerator $accel_key
+			set accel_key_bound true
+		}
+	}
+
+	if { ! $accel_key_bound } {
+		tools_create_item $parent command \
+			-label [lindex $names end] \
+			-command [list tools_exec $fullname]
+	}
 }
 
 proc tools_exec {fullname} {
