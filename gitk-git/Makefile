@@ -75,8 +75,7 @@ update-po:: $(PO_TEMPLATE)
 	echo; \
 	echo "	git config filter.gettext-no-location.clean \"msgcat --no-location -\""
 $(ALL_MSGFILES): %.msg : %.po
-	@echo Generating catalog $@
-	$(MSGFMT) --statistics --tcl -l $(basename $(notdir $<)) -d $(dir $@) $<
+	$(MSGFMT) --tcl -l $(basename $(notdir $<)) -d $(dir $@) $<
 
 .PHONY: all install uninstall clean update-po
 .PHONY: FORCE
