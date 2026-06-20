@@ -1,0 +1,67 @@
+new discussions created by giscus after this option was introduced include the hash by default. For example, with the following discussion title:
+Welcome to giscus!
+
+
+giscus automatically appends the hash to the discussion body with the following format when initially creating the discussion:
+<!-- sha1: cad60a29d1b50cbeb42ec2ff630fc508afb1d2e3 -->
+
+Since it's written as an HTML comment, the SHA-1 is not shown when you're viewing the discussion on GitHub. It is not necessary to use the same format. As long as the SHA-1 hash is somewhere in the discussion body, giscus can find it.
+data-theme
+
+Instead of the built-in themes, you can supply a URL to a CSS file as the value for the data-theme attribute. The URL will be used by giscus to construct a <link rel="stylesheet"> element as the last child of the <head> element.
+For example, given the following <script> tag:
+<script src="https://giscus.app/client.js"
+        data-repo="giscus/giscus"
+        ...
+        data-theme="https://giscus.app/themes/custom_example.css"
+        ...>
+</script>
+
+then giscus will add the following element:
+<link id="giscus-theme" rel="stylesheet" crossorigin="anonymous" href="https://giscus.app/themes/custom_example.css">
+
+Please note that loading an external CSS file may be unsafe. Make sure that you trust the author and provider of the CSS file. We are not responsible if the CSS file that you use opens a security vulnerability to giscus users on your website. Make sure that your users are aware of this.
+For more details, see creating new themes.
+<meta> tags
+
+Your website can define additional <meta> tags to help giscus gather the context of the page that embeds the comments.
+giscus:backlink
+
+If the page that embeds giscus has a <meta> tag with a name="giscus:backlink" attribute, giscus will use that element's content attribute to link back to the page when creating a new discussion. Otherwise, giscus will use the value of window.location.href. For example, with the following element in your web page:
+<head>
+  <!-- ... -->
+  <meta name="giscus:backlink" content="https://bit.ly/RickRolled">
+  <!-- ... -->
+</head>
+
+When giscus creates a new discussion, the discussion body will contain a link to https://bit.ly/RickRolled instead of your web page's URL. This can be useful if you want to use short links for your web pages (e.g. to avoid expired links if you change your website's URL structure or domain).
+giscus-to-parent message events
+
+There are message events emitted by giscus to the parent window using window.parent.postMessage(). You can listen to these events to update your page based on giscus' state. For example:
+function handleMessage(event: MessageEvent) {
+  if (event.origin !== 'https://giscus.app') return;
+  if (!(typeof event.data === 'object' && event.data.giscus)) return;
+
+  const giscusData = event.data.giscus;
+  // Do whatever you want with it, e.g. `console.log(giscusData)`.
+  // You'll need to make sure that `giscusData` contains the message you're
+  // expecting, e.g. by using `if ('discussion' in giscusData)`.
+}
+
+window.addEventListener('message', handleMessage);
+// Some time later...
+window.removeEventListener('message', handleMessage);
+
+The giscusData constant in the above example will dynamically contain the message data as shown in the following interfaces. For more details of the interfaces, see lib/types/giscus.ts and the interfaces imported inside that module.
+IErrorMessage
+
+By default, giscus emits an error message to the parent whenever it encounters an error. This is used by the client script to automatically delete invalid or expired session data from the parent's localStorage. This isn't really useful for most users, but you can receive the data if you need it. The message interface is specified as the following:
+interface IErrorMessage {
+  error: string;
+}
+
+Following the handleMessage example above, that means giscusData will be of type IErrorMessage:
+if ('error' in giscusData) {
+  const errorMessage: IErrorMessage = giscusData;
+  console.error(errorMessage.error);
+}
