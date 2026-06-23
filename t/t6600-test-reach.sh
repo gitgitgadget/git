@@ -319,6 +319,27 @@ test_expect_success 'get_merge_bases_many:mixed-finite-infinity' '
 	test_all_modes get_merge_bases_many
 '
 
+test_expect_success 'merge-base --all commit-walk steps' '
+	test_when_finished rm -rf .git/objects/info/commit-graph \
+		.git/objects/info/commit-graphs &&
+	rm -rf .git/objects/info/commit-graph \
+		.git/objects/info/commit-graphs &&
+
+	GIT_TRACE2_EVENT="$(pwd)/trace-none.txt" \
+		git merge-base --all commit-9-9 commit-9-1 >actual &&
+	test_trace2_data paint_down_to_common steps 81 <trace-none.txt &&
+
+	cp commit-graph-full .git/objects/info/commit-graph &&
+	GIT_TRACE2_EVENT="$(pwd)/trace-full.txt" \
+		git merge-base --all commit-9-9 commit-9-1 >actual &&
+	test_trace2_data paint_down_to_common steps 80 <trace-full.txt &&
+
+	cp commit-graph-half .git/objects/info/commit-graph &&
+	GIT_TRACE2_EVENT="$(pwd)/trace-half.txt" \
+		git merge-base --all commit-9-9 commit-9-1 >actual &&
+	test_trace2_data paint_down_to_common steps 81 <trace-half.txt
+'
+
 test_expect_success 'reduce_heads' '
 	cat >input <<-\EOF &&
 	X:commit-1-10
