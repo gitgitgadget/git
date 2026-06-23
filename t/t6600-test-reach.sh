@@ -332,12 +332,12 @@ test_expect_success 'merge-base --all commit-walk steps' '
 	cp commit-graph-full .git/objects/info/commit-graph &&
 	GIT_TRACE2_EVENT="$(pwd)/trace-full.txt" \
 		git merge-base --all commit-9-9 commit-9-1 >actual &&
-	test_trace2_data paint_down_to_common steps 80 <trace-full.txt &&
+	test_trace2_data paint_down_to_common steps 9 <trace-full.txt &&
 
 	cp commit-graph-half .git/objects/info/commit-graph &&
 	GIT_TRACE2_EVENT="$(pwd)/trace-half.txt" \
 		git merge-base --all commit-9-9 commit-9-1 >actual &&
-	test_trace2_data paint_down_to_common steps 81 <trace-half.txt
+	test_trace2_data paint_down_to_common steps 57 <trace-half.txt
 '
 
 test_expect_success 'reduce_heads' '

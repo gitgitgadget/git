@@ -133,17 +133,30 @@ static void paint_queue_put(struct paint_state *state,
 
 static struct commit *paint_queue_get(struct paint_state *state)
 {
-	struct commit *commit;
+	struct commit *commit = prio_queue_get(&state->queue);
 
-	if (!state->p1_count && !state->p2_count &&
-	    !state->pending_merge_bases)
+	if (!commit)
 		return NULL;
 
-	commit = prio_queue_get(&state->queue);
-	if (commit) {
-		commit->object.flags &= ~ENQUEUED;
-		paint_count_update(state, commit->object.flags, -1);
+	commit->object.flags &= ~ENQUEUED;
+
+	if (!state->pending_merge_bases) {
+		if (!state->p1_count && !state->p2_count)
+			return NULL;
+		/*
+		 * Side exhaustion: a new merge-base can only form
+		 * when both PARENT1-only and PARENT2-only commits
+		 * remain in the queue. In the finite-generation
+		 * region the queue is ordered topologically, so
+		 * no future step can add paint to visited commits
+		 * and an exhausted side cannot reappear.
+		 */
+		if ((!state->p1_count || !state->p2_count) &&
+		    commit_graph_generation(commit) < GENERATION_NUMBER_INFINITY)
+			return NULL;
 	}
+
+	paint_count_update(state, commit->object.flags, -1);
 	return commit;
 }
 
