@@ -1,10 +1,10 @@
 To: git@vger.kernel.org
-Subject: What's cooking in git.git (Jun 2026, #08)
-X-master-at: 26d8d94e94df5535eecd036f16627493506a0614
-X-next-at: 0e7f024ab5a9fbe85f03c2e2a9e851d80bd6640a
+Subject: What's cooking in git.git (Jun 2026, #09)
+X-master-at: ab776a62a78576513ee121424adb19597fbb7613
+X-next-at: 234d366ad24a8ff7c16a867f3ef2bcd89aa774ae
 Bcc: lwn@lwn.net, gitster@pobox.com
 
-What's cooking in git.git (Jun 2026, #08)
+What's cooking in git.git (Jun 2026, #09)
 -----------------------------------------
 
 Here are the topics that have been cooking in my tree.  Commits
@@ -17,15 +17,9 @@ A topic without enough support may be discarded after a long period
 of no activity (of course they can be resubmitted when new interests
 arise).
 
-Git 2.55-rc2 will be tagged tomorrow.  There are a few topics I want
-to merge to 'master' before it happens, but other than these topics,
-I expect nothing will move to 'master' before the final.  The tree
-is feature-frozen, and remaining topics in 'next' will stay in "Will
-cook in 'next'" instead of "Will merge to 'master'" state.  We'd
-want to force ourselves to concentrate on addressing topics that are
-important fixes but still in the "Needs review" state, and of
-course, find any correct any regressions relative to Git 2.54, until
-we are ready to tag Git 2.55 final.
+Git 2.55-rc2 has been tagged.  The tree is in deep feature-freeze,
+and remaining topics in 'next' will stay in "Will cook in 'next'"
+instead of "Will merge to 'master'" state, until Git 2.55 final.
 
 Copies of the source code to Git live in many repositories, and the
 following is a list of the ones I push into or their mirrors.  Some
@@ -58,58 +52,14 @@ Release tarballs are available at:
 --------------------------------------------------
 [Graduated to 'master']
 
-* js/objects-larger-than-4gb-on-windows-more (2026-06-15) 7 commits
-  (merged to 'next' on 2026-06-18 at 2b3ac350e6)
- + odb: use size_t for object_info.sizep and the size APIs
- + packfile,delta: drop the `cast_size_t_to_ulong()` wrappers
- + pack-objects: use size_t for in-core object sizes
- + packfile: widen unpack_entry()'s size out-parameter to size_t
- + pack-objects(check_pack_inflate()): use size_t instead of unsigned long
- + patch-delta: use size_t for sizes
- + compat/msvc: use _chsize_s for ftruncate
+* hn/macos-linker-warning (2026-06-19) 1 commit
+  (merged to 'next' on 2026-06-22 at 0e7f024ab5)
+ + config.mak.uname: avoid macOS dup-library warning
 
- Will cook in 'next'.
- cf. <ajPhBn7n1wR-sii4@pks.im>
- source: <pull.2137.v2.git.1781524349.gitgitgadget@gmail.com>
-
-
-* kw/gitattributes-typofix (2026-06-15) 1 commit
-  (merged to 'next' on 2026-06-17 at 14ff167ef8)
- + gitattributes: fix eol attribute for Perl scripts
-
- Will cook in 'next'.
- cf. <ai-5vfY8D84UhsB4@pks.im>
- source: <pull.2151.v2.git.1781510039164.gitgitgadget@gmail.com>
-
---------------------------------------------------
-[New Topics]
-
-* kk/merge-base-exhaustion (2026-06-20) 6 commits
- - Documentation/technical: add paint-down-to-common doc
- - t6099, t6600: add side-exhaustion regression tests
- - t6600: add test cases for side-exhaustion edge cases
- - commit-reach: terminate merge-base walk when one paint side is exhausted
- - commit-reach: introduce struct paint_queue with per-side counters
- - commit-reach: decouple ahead_behind from nonstale_queue
-
- The merge-base computation has been optimized by stopping the walk
- early when one side's exclusive commits in the queue are exhausted,
- yielding significant speedups for queries with one-sided histories.
-
- Expecting a reroll.
- cf. <CAL71e4Pcw-UUbHBw_j6PFx2bXmxZ93VLMWG+3Qap=RmCJa_ZgA@mail.gmail.com>
- source: <pull.2149.git.1781951820.gitgitgadget@gmail.com>
-
-
-* dk/meson-enable-use-nsec-build (2026-06-20) 1 commit
- - meson: wire up USE_NSEC build knob
-
- The USE_NSEC build knob, which enables support for sub-second file
- timestamp resolution, has been wired up to the Meson build system.
-
- Waiting for response(s) to review comment(s).
- cf. <ajjuoS5Qc3K0nCRl@pks.im>
- source: <c4c5ade901ff95b0f95939ea818870e4f3d59da1.1781971201.git.ben.knoble+github@gmail.com>
+ Xcode 15 and later has a linker set to complain when the same library
+ archive is listed twice on the command line.  Squelch the annoyance.
+ cf. <ajjspU7lJ01GgrBw@pks.im>
+ source: <pull.2314.v3.git.git.1781901127385.gitgitgadget@gmail.com>
 
 
 * js/win32-localtime-r (2026-06-22) 1 commit
@@ -117,55 +67,17 @@ Release tarballs are available at:
  + win32: ensure that `localtime_r()` is declared even in i686 builds
 
  Build-fix for 32-bit Windows.
-
- Will merge to 'master'.
  source: <pull.2157.git.1782117847057.gitgitgadget@gmail.com>
 
 
-* ps/connected-generic-promisor-checks (2026-06-22) 4 commits
- - connected: search promisor objects generically
- - odb/source-packed: support flags when iterating an object prefix
- - odb/source-packed: extract logic to skip certain packs
- - Merge branch 'ps/odb-source-packed' into ps/connected-generic-promisor-checks
- (this branch uses ps/odb-source-packed.)
+* ps/gitlab-ci-windows (2026-06-15) 1 commit
+  (merged to 'next' on 2026-06-22 at 6d177c61ea)
+ + gitlab-ci: migrate Windows builds away from Chocolatey
 
- The connectivity check has been refactored to search for promisor
- objects in a generic way using the object database interface,
- rather than iterating packfiles directly. This allows connectivity
- checks to work properly in repositories that do not use packfiles.
-
- Waiting for response(s) to review comment(s).
- cf. <xmqq4iiu1mrt.fsf@gitster.g>
- source: <20260622-pks-connected-generic-promisor-checks-v1-0-25eba2698202@pks.im>
-
-
-* ps/libgit-in-subdir (2026-06-22) 3 commits
- - Move libgit.a sources into separate "lib/" directory
- - t/helper: prepare "test-example-tap.c" for introduction of "lib/"
- - Merge branch 'ps/odb-source-packed' into ps/libgit-in-subdir
- (this branch uses ps/odb-source-packed.)
-
- The source files for libgit.a have been moved into a new "lib/"
- directory to clean up the top-level directory and clearly separate
- library code.
-
- Needs review.
- source: <20260622-pks-libgit-in-subdir-v2-0-cb946c51ee7b@pks.im>
-
-
-* ps/odb-generalize-prepare (2026-06-22) 3 commits
- - odb: introduce `odb_prepare()`
- - odb/source: generalize `reprepare()` callback
- - Merge branch 'ps/odb-source-packed' into ps/odb-generalize-prepare
- (this branch uses ps/odb-source-packed.)
-
- The `reprepare()` callback for object database sources has been
- generalized into a `prepare()` callback with an optional flush cache
- flag, and a new `odb_prepare()` wrapper has been introduced to
- allow pre-opening object database sources.
-
- Needs review.
- source: <20260622-b4-pks-odb-generalize-prepare-v1-0-d2a5c5d13144@pks.im>
+ Wean the Windows builds in GitLab CI procedure away from
+ (unfortunately unreliable) Chocolatey to install dependencies.
+ cf. <ajP5owy3r_GyuLqk@denethor>
+ source: <20260615-b4-pks-gitlab-ci-drop-chocolatey-v1-1-51a6e7d5e388@pks.im>
 
 --------------------------------------------------
 [Stalled]
@@ -219,15 +131,90 @@ Release tarballs are available at:
 --------------------------------------------------
 [Cooking]
 
+* kk/merge-base-exhaustion (2026-06-20) 6 commits
+ - Documentation/technical: add paint-down-to-common doc
+ - t6099, t6600: add side-exhaustion regression tests
+ - t6600: add test cases for side-exhaustion edge cases
+ - commit-reach: terminate merge-base walk when one paint side is exhausted
+ - commit-reach: introduce struct paint_queue with per-side counters
+ - commit-reach: decouple ahead_behind from nonstale_queue
+
+ The merge-base computation has been optimized by stopping the walk
+ early when one side's exclusive commits in the queue are exhausted,
+ yielding significant speedups for queries with one-sided histories.
+
+ Expecting a reroll.
+ cf. <CAL71e4Pcw-UUbHBw_j6PFx2bXmxZ93VLMWG+3Qap=RmCJa_ZgA@mail.gmail.com>
+ source: <pull.2149.git.1781951820.gitgitgadget@gmail.com>
+
+
+* dk/meson-enable-use-nsec-build (2026-06-20) 1 commit
+ - meson: wire up USE_NSEC build knob
+
+ The USE_NSEC build knob, which enables support for sub-second file
+ timestamp resolution, has been wired up to the Meson build system.
+
+ Waiting for response(s) to review comment(s).
+ cf. <ajjuoS5Qc3K0nCRl@pks.im>
+ source: <c4c5ade901ff95b0f95939ea818870e4f3d59da1.1781971201.git.ben.knoble+github@gmail.com>
+
+
+* ps/connected-generic-promisor-checks (2026-06-22) 4 commits
+ - connected: search promisor objects generically
+ - odb/source-packed: support flags when iterating an object prefix
+ - odb/source-packed: extract logic to skip certain packs
+ - Merge branch 'ps/odb-source-packed' into ps/connected-generic-promisor-checks
+ (this branch uses ps/odb-source-packed.)
+
+ The connectivity check has been refactored to search for promisor
+ objects in a generic way using the object database interface,
+ rather than iterating packfiles directly. This allows connectivity
+ checks to work properly in repositories that do not use packfiles.
+
+ Waiting for response(s) to review comment(s).
+ cf. <xmqq4iiu1mrt.fsf@gitster.g>
+ source: <20260622-pks-connected-generic-promisor-checks-v1-0-25eba2698202@pks.im>
+
+
+* ps/libgit-in-subdir (2026-06-22) 3 commits
+ - Move libgit.a sources into separate "lib/" directory
+ - t/helper: prepare "test-example-tap.c" for introduction of "lib/"
+ - Merge branch 'ps/odb-source-packed' into ps/libgit-in-subdir
+ (this branch uses ps/odb-source-packed.)
+
+ The source files for libgit.a have been moved into a new "lib/"
+ directory to clean up the top-level directory and clearly separate
+ library code.
+
+ Needs review.
+ source: <20260622-pks-libgit-in-subdir-v2-0-cb946c51ee7b@pks.im>
+
+
+* ps/odb-generalize-prepare (2026-06-22) 3 commits
+ - odb: introduce `odb_prepare()`
+ - odb/source: generalize `reprepare()` callback
+ - Merge branch 'ps/odb-source-packed' into ps/odb-generalize-prepare
+ (this branch uses ps/odb-source-packed.)
+
+ The `reprepare()` callback for object database sources has been
+ generalized into a `prepare()` callback with an optional flush cache
+ flag, and a new `odb_prepare()` wrapper has been introduced to
+ allow pre-opening object database sources.
+
+ Needs review.
+ source: <20260622-b4-pks-odb-generalize-prepare-v1-0-d2a5c5d13144@pks.im>
+
+
 * jc/submittingpatches-design-critiques (2026-06-20) 1 commit
- - SubmittingPatches: address design critiques
+  (merged to 'next' on 2026-06-22 at 7495b5f9d6)
+ + SubmittingPatches: address design critiques
 
  The documentation in SubmittingPatches has been updated to clarify how
  patch contributors should respond to design and viability critiques,
  and how the resolution of such critiques should be recorded in the
  final commit messages.
 
- Will merge to 'next'.
+ Will cook in 'next'.
  cf. <ajjwYGWZ6hQWr600@pks.im>
  source: <xmqqeci0g4mz.fsf@gitster.g>
 
@@ -245,18 +232,6 @@ Release tarballs are available at:
  source: <cover.1782028813.git.wy@wyuan.org>
 
 
-* ps/gitlab-ci-windows (2026-06-15) 1 commit
-  (merged to 'next' on 2026-06-22 at 6d177c61ea)
- + gitlab-ci: migrate Windows builds away from Chocolatey
-
- Wean the Windows builds in GitLab CI procedure away from
- (unfortunately unreliable) Chocolatey to install dependencies.
-
- Will merge to 'master'.
- cf. <ajP5owy3r_GyuLqk@denethor>
- source: <20260615-b4-pks-gitlab-ci-drop-chocolatey-v1-1-51a6e7d5e388@pks.im>
-
-
 * ty/migrate-ignorecase (2026-06-19) 2 commits
  - config: use repo_ignore_case() to access core.ignorecase
  - environment: move ignore_case into repo_config_values
@@ -265,8 +240,8 @@ Release tarballs are available at:
  core.ignorecase configuration) has been migrated into struct
  repo_config_values to tie it to a specific repository instance.
 
- Waiting for response(s) to review comment(s).
- cf. <xmqqjyrr7ipf.fsf@gitster.g>
+ Waiting for comments from Johannes.
+ cf. <xmqqzf0mzc7j.fsf@gitster.g>
  source: <20260619155152.642760-1-cat@malon.dev>
 
 
@@ -283,7 +258,7 @@ Release tarballs are available at:
  like --stat, --check, -G, to the specified range:path.
 
  Waiting for response(s) to review comment(s).
- cf. <xmqq8q8bpl03.fsf@gitster.g>
+ cf. <CAC2QwmKEHb+LL4ZkQwq+Rw8eyDXzdBp_nxa_d+Ecx0K1icNqQA@mail.gmail.com>
  source: <pull.2152.git.1781806593.gitgitgadget@gmail.com>
 
 
@@ -311,18 +286,6 @@ Release tarballs are available at:
  cf. <xmqqa4sqlchz.fsf@gitster.g>
  cf. <ajjBmi39IFJW5p5V@pks.im>
  source: <20260619-pks-t4216-drop-unused-prereq-v1-1-2ce0d7bea088@pks.im>
-
-
-* hn/macos-linker-warning (2026-06-19) 1 commit
-  (merged to 'next' on 2026-06-22 at 0e7f024ab5)
- + config.mak.uname: avoid macOS dup-library warning
-
- Xcode 15 and later has a linker set to complain when the same library
- archive is listed twice on the command line.  Squelch the annoyance.
-
- Will merge to 'master'.
- cf. <ajjspU7lJ01GgrBw@pks.im>
- source: <pull.2314.v3.git.git.1781901127385.gitgitgadget@gmail.com>
 
 
 * mh/fetch-follow-remote-head-config (2026-06-19) 8 commits
@@ -395,13 +358,14 @@ Release tarballs are available at:
 
 
 * mv/log-follow-mergy (2026-06-21) 1 commit
- - log: improve --follow following renames for non-linear history
+  (merged to 'next' on 2026-06-22 at f7e984a003)
+ + log: improve --follow following renames for non-linear history
 
  "git log --follow" has been updated to handle non-linear history, in
  which the path being tracked gets renamed differently in multiple
  history lines, better.
 
- Will merge to 'next'.
+ Will cook in 'next'.
  source: <ajjU4w2B0NlZffw1@collabora.com>
 
 
@@ -462,7 +426,8 @@ Release tarballs are available at:
  into prio_queue itself, speeding up commit traversal workflows and
  simplifying callers.
 
- Needs review.
+ On hold, waiting for kk/prio-queue-get-put-fusion to land first.
+ cf. <CAL71e4MYNiScZjTwkApjDAjRh2LM0_SP59h5HCTywV-Pua03tw@mail.gmail.com>
  source: <pull.2140.v4.git.1780945851.gitgitgadget@gmail.com>
 
 
@@ -692,18 +657,19 @@ Release tarballs are available at:
 
 
 * tb/pack-path-walk-bitmap-delta-islands (2026-06-21) 5 commits
- - pack-objects: support `--delta-islands` with `--path-walk`
- - pack-objects: extract `record_tree_depth()` helper
- - pack-objects: support reachability bitmaps with `--path-walk`
- - t/perf: drop p5311's lookup-table permutation
- - Merge branch 'ds/path-walk-filters' into tb/pack-path-walk-bitmap-delta-islands
+  (merged to 'next' on 2026-06-22 at 59cf1663e7)
+ + pack-objects: support `--delta-islands` with `--path-walk`
+ + pack-objects: extract `record_tree_depth()` helper
+ + pack-objects: support reachability bitmaps with `--path-walk`
+ + t/perf: drop p5311's lookup-table permutation
+ + Merge branch 'ds/path-walk-filters' into tb/pack-path-walk-bitmap-delta-islands
 
  The pack-objects command now supports using reachability bitmaps and
  delta-islands concurrently with the `--path-walk` option, allowing
  faster packaging by falling back to path-walk when bitmaps cannot
  fully satisfy the request.
 
- Will merge to 'next'.
+ Will cook in 'next'.
  cf. <xmqqwlvq1qyy.fsf@gitster.g>
  source: <cover.1782082975.git.me@ttaylorr.com>
 
@@ -898,7 +864,8 @@ Release tarballs are available at:
  "git checkout --track=..." learned to optionally fetch the branch
  from the remote the new branch will work with.
 
- Needs review.
+ Waiting for response(s) to review comment(s).
+ cf. <12998c3a-ff69-4a98-9ed6-18aa0224e75e@gmail.com>
  source: <pull.2281.v14.git.git.1781786652.gitgitgadget@gmail.com>
 
 
@@ -919,14 +886,15 @@ Release tarballs are available at:
 
 
 * pw/status-rebase-todo (2026-06-22) 2 commits
- - status: improve rebase todo list parsing
- - sequencer: factor out parsing of todo commands
+  (merged to 'next' on 2026-06-22 at a32de5bd17)
+ + status: improve rebase todo list parsing
+ + sequencer: factor out parsing of todo commands
 
  The display of the rebase todo list in "git status" has been
  improved to correctly abbreviate object IDs for more commands and
  avoid misinterpreting refs as object IDs.
 
- Will merge to 'next'.
+ Will cook in 'next'.
  cf. <xmqqechy1o7p.fsf@gitster.g>
  source: <cover.1782117361.git.phillip.wood@dunelm.org.uk>
 
