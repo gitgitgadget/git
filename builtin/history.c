@@ -74,6 +74,14 @@ static int fill_commit_message(struct repository *repo,
 	wt_status_collect_free_buffers(&s);
 	string_list_clear_func(&s.change, change_data_free);
 
+	/*
+	 * Close the handle before launching the editor: on Windows an open
+	 * handle would prevent the editor from replacing the file (e.g.
+	 * BusyBox' `ash` cannot overwrite a file that another process keeps
+	 * open), and leaving it open leaks the descriptor everywhere else.
+	 */
+	fclose(s.fp);
+
 	strbuf_reset(out);
 	if (launch_editor(path, out, NULL)) {
 		fprintf(stderr, _("Aborting commit as launching the editor failed.\n"));
