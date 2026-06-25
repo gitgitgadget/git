@@ -1,10 +1,10 @@
 To: git@vger.kernel.org
-Subject: What's cooking in git.git (Jun 2026, #09)
+Subject: What's cooking in git.git (Jun 2026, #10)
 X-master-at: ab776a62a78576513ee121424adb19597fbb7613
-X-next-at: 234d366ad24a8ff7c16a867f3ef2bcd89aa774ae
+X-next-at: 42296fc12ea8e7025714869d102fa1a8ccc844f5
 Bcc: lwn@lwn.net, gitster@pobox.com
 
-What's cooking in git.git (Jun 2026, #09)
+What's cooking in git.git (Jun 2026, #10)
 -----------------------------------------
 
 Here are the topics that have been cooking in my tree.  Commits
@@ -50,34 +50,106 @@ Release tarballs are available at:
 	https://www.kernel.org/pub/software/scm/git/
 
 --------------------------------------------------
-[Graduated to 'master']
+[New Topics]
 
-* hn/macos-linker-warning (2026-06-19) 1 commit
-  (merged to 'next' on 2026-06-22 at 0e7f024ab5)
- + config.mak.uname: avoid macOS dup-library warning
+* ad/gpg-strip-cr-before-lf (2026-06-24) 1 commit
+ - gpg-interface: fix strip_cr_before_lf to only remove CR before LF
 
- Xcode 15 and later has a linker set to complain when the same library
- archive is listed twice on the command line.  Squelch the annoyance.
- cf. <ajjspU7lJ01GgrBw@pks.im>
- source: <pull.2314.v3.git.git.1781901127385.gitgitgadget@gmail.com>
+ The GPG and SSH signature parsing code has been corrected to strip
+ carriage return characters only when they immediately precede line
+ feeds, instead of unconditionally stripping all carriage returns.
 
-
-* js/win32-localtime-r (2026-06-22) 1 commit
-  (merged to 'next' on 2026-06-22 at 67d3fa726d)
- + win32: ensure that `localtime_r()` is declared even in i686 builds
-
- Build-fix for 32-bit Windows.
- source: <pull.2157.git.1782117847057.gitgitgadget@gmail.com>
+ Needs review.
+ source: <20260624093618.17456-1-antonio.destefani08@gmail.com>
 
 
-* ps/gitlab-ci-windows (2026-06-15) 1 commit
-  (merged to 'next' on 2026-06-22 at 6d177c61ea)
- + gitlab-ci: migrate Windows builds away from Chocolatey
+* jt/receive-pack-use-odb-transactions (2026-06-23) 6 commits
+ - builtin/receive-pack: stage incoming objects via ODB transactions
+ - odb/transaction: add transaction env interface
+ - odb/transaction: propagate commit errors
+ - odb/transaction: propagate begin errors
+ - object-file: propagate files transaction errors
+ - object-file: rename files transaction prepare function
 
- Wean the Windows builds in GitLab CI procedure away from
- (unfortunately unreliable) Chocolatey to install dependencies.
- cf. <ajP5owy3r_GyuLqk@denethor>
- source: <20260615-b4-pks-gitlab-ci-drop-chocolatey-v1-1-51a6e7d5e388@pks.im>
+ git-receive-pack has been refactored to use ODB transaction
+ interfaces instead of directly managing tmp_objdir for staging
+ incoming objects, bringing it closer to being ODB backend agnostic.
+
+ Waiting for response(s) to review comment(s).
+ cf. <aju_AmlKVi5UZaiQ@pks.im>
+ source: <20260624041920.2601961-1-jltobler@gmail.com>
+
+
+* ps/odb-drop-whence (2026-06-24) 7 commits
+ - odb: document object info fields
+ - odb: drop `whence` field from object info
+ - treewide: convert users of `whence` to the new source field
+ - odb: add `source` field to struct object_info_source
+ - odb: make backend-specific fields optional
+ - packfile: thread odb_source_packed through packed_object_info()
+ - Merge branch 'ps/odb-source-packed' into ps/odb-drop-whence
+ (this branch uses ps/odb-source-packed.)
+
+ The whence field in struct object_info has been removed,
+ refactoring backend-specific object information retrieval into an
+ opt-in struct object_info_source structure.
+
+ Needs review.
+ source: <20260624-b4-pks-odb-drop-whence-v1-0-8d1877b790ac@pks.im>
+
+
+* ps/reftable-hardening (2026-06-24) 11 commits
+ - reftable/table: fix OOB read on truncated table
+ - reftable/table: fix NULL pointer access when seeking to bogus offsets
+ - reftable/block: fix OOB read with bogus restart offset
+ - reftable/block: fix use of uninitialized memory when binsearch fails
+ - reftable/block: fix OOB read with bogus restart count
+ - reftable/block: fix OOB read with bogus block size
+ - reftable/block: fix OOB write with bogus inflated log size
+ - reftable/record: don't abort when decoding invalid ref value type
+ - reftable/basics: fix OOB read on binary search of empty range
+ - oss-fuzz: add fuzzer for parsing reftables
+ - meson: support building fuzzers with libFuzzer
+
+ The reftable code has been hardened against corrupted tables by
+ fixing out-of-bounds writes, out-of-bounds reads, and abort calls
+ during parsing.
+
+ Needs review.
+ source: <20260624-pks-reftable-hardening-v1-0-66e4ce87c6b9@pks.im>
+
+
+* hn/branch-push-slip-advice (2026-06-24) 3 commits
+ - SQUASH??? use test_grep
+ - push: suggest <remote> <branch> for a slash slip
+ - branch: suggest <remote>/<branch> on upstream slip
+
+ "git push origin/main" and "git branch origin main" could both be
+ an obvious typo, in which case offer the obvious typofix.
+
+ Waiting for response(s) to review comment(s).
+ cf. <xmqqfr2ae2wp.fsf@gitster.g>
+ source: <pull.2331.v2.git.git.1782338114.gitgitgadget@gmail.com>
+
+
+* jc/history-message-prep-fix (2026-06-25) 1 commit
+ - history: streamline message preparation and plug file stream leak
+
+ Code clean-up with leakfix for a write file stream.
+
+ Needs review.
+ source: <xmqqh5mqfkpv.fsf@gitster.g>
+
+
+* ty/migrate-excludes-file (2026-06-25) 2 commits
+ - environment: move excludes_file into repo_config_values
+ - dir: encapsulate excludes_file lazy-load
+
+ Move excludes_file global variable into per-repository structure.
+
+ Waiting for response(s) to review comment(s).
+ cf. <xmqqwlvme4lz.fsf@gitster.g>
+ source: <20260625161845.7543-1-cat@malon.dev>
 
 --------------------------------------------------
 [Stalled]
@@ -131,21 +203,22 @@ Release tarballs are available at:
 --------------------------------------------------
 [Cooking]
 
-* kk/merge-base-exhaustion (2026-06-20) 6 commits
- - Documentation/technical: add paint-down-to-common doc
+* kk/merge-base-exhaustion (2026-06-24) 7 commits
+ - commit-reach: terminate merge-base walk when one paint side is exhausted
+ - commit-reach: remove unused nonstale_queue dedup wrappers
+ - commit-reach: introduce struct paint_state with per-side counters
+ - commit-reach: add trace2 instrumentation to paint_down_to_common()
  - t6099, t6600: add side-exhaustion regression tests
  - t6600: add test cases for side-exhaustion edge cases
- - commit-reach: terminate merge-base walk when one paint side is exhausted
- - commit-reach: introduce struct paint_queue with per-side counters
- - commit-reach: decouple ahead_behind from nonstale_queue
+ - Documentation/technical: add paint-down-to-common doc
 
  The merge-base computation has been optimized by stopping the walk
  early when one side's exclusive commits in the queue are exhausted,
  yielding significant speedups for queries with one-sided histories.
 
  Expecting a reroll.
- cf. <CAL71e4Pcw-UUbHBw_j6PFx2bXmxZ93VLMWG+3Qap=RmCJa_ZgA@mail.gmail.com>
- source: <pull.2149.git.1781951820.gitgitgadget@gmail.com>
+ cf. <CAL71e4MnA36ZchLaUsMSoLcb9LO77aac274jES8+oV=yxuigOA@mail.gmail.com>
+ source: <pull.2149.v2.git.1782303254.gitgitgadget@gmail.com>
 
 
 * dk/meson-enable-use-nsec-build (2026-06-20) 1 commit
@@ -159,8 +232,9 @@ Release tarballs are available at:
  source: <c4c5ade901ff95b0f95939ea818870e4f3d59da1.1781971201.git.ben.knoble+github@gmail.com>
 
 
-* ps/connected-generic-promisor-checks (2026-06-22) 4 commits
+* ps/connected-generic-promisor-checks (2026-06-25) 5 commits
  - connected: search promisor objects generically
+ - connected: split out promisor-based connectivity check
  - odb/source-packed: support flags when iterating an object prefix
  - odb/source-packed: extract logic to skip certain packs
  - Merge branch 'ps/odb-source-packed' into ps/connected-generic-promisor-checks
@@ -171,9 +245,9 @@ Release tarballs are available at:
  rather than iterating packfiles directly. This allows connectivity
  checks to work properly in repositories that do not use packfiles.
 
- Waiting for response(s) to review comment(s).
- cf. <xmqq4iiu1mrt.fsf@gitster.g>
- source: <20260622-pks-connected-generic-promisor-checks-v1-0-25eba2698202@pks.im>
+ Will merge to 'next'?
+ cf. <xmqq4iiqfk0l.fsf@gitster.g>
+ source: <20260625-pks-connected-generic-promisor-checks-v3-0-7308f3b9dc44@pks.im>
 
 
 * ps/libgit-in-subdir (2026-06-22) 3 commits
@@ -228,7 +302,8 @@ Release tarballs are available at:
  a default limit of at most one reroll per day to give reviewers across
  different time zones enough time to participate.
 
- Needs review.
+ Will merge to 'next'?
+ cf. <ajvDuUiDsmyf5LnX@pks.im>
  source: <cover.1782028813.git.wy@wyuan.org>
 
 
@@ -257,12 +332,12 @@ Release tarballs are available at:
  "git log -L<range>:<path>" learned to limit various "diff" operations
  like --stat, --check, -G, to the specified range:path.
 
- Waiting for response(s) to review comment(s).
+ Expecting a reroll.
  cf. <CAC2QwmKEHb+LL4ZkQwq+Rw8eyDXzdBp_nxa_d+Ecx0K1icNqQA@mail.gmail.com>
  source: <pull.2152.git.1781806593.gitgitgadget@gmail.com>
 
 
-* hn/history-squash (2026-06-20) 4 commits
+* hn/history-squash (2026-06-24) 4 commits
  - history: re-edit a squash with every message
  - history: add squash subcommand to fold a range
  - history: give commit_tree_ext a message template
@@ -272,19 +347,18 @@ Release tarballs are available at:
  "squash" subcommand to fold a range of commits into a single commit,
  replaying any descendants on top.
 
- Waiting for response(s) to review comment(s).
- cf. <ajkijomPo_kXSXul@pks.im>
- source: <pull.2337.v4.git.git.1782021195.gitgitgadget@gmail.com>
+ Needs review.
+ source: <pull.2337.v5.git.git.1782338102.gitgitgadget@gmail.com>
 
 
 * ps/t4216-tap-fix (2026-06-19) 1 commit
- - t4216: fix no-op test that breaks TAP output
+  (merged to 'next' on 2026-06-25 at 42296fc12e)
+ + t4216: fix no-op test that breaks TAP output
 
  TAP output breakage fix.
 
- Waiting for response(s) to review comment(s).
- cf. <xmqqa4sqlchz.fsf@gitster.g>
- cf. <ajjBmi39IFJW5p5V@pks.im>
+ Will merge to 'master'.
+ cf. <xmqq8q82fk8r.fsf@gitster.g>
  source: <20260619-pks-t4216-drop-unused-prereq-v1-1-2ce0d7bea088@pks.im>
 
 
@@ -455,8 +529,8 @@ Release tarballs are available at:
  linearize the replayed history, mimicking git rebase
  --no-rebase-merges.
 
- Waiting for response(s) to review comment(s).
- cf. <xmqq7bnq37jm.fsf@gitster.g>
+ Expecting a reroll.
+ cf. <87tsqrycke.fsf@emacs.iotcl.com>
  source: <20260622-toon-git-replay-drop-merges-v4-0-ff257f534319@iotcl.com>
 
 
@@ -482,7 +556,7 @@ Release tarballs are available at:
  source: <20260611-b4-pks-setup-drop-global-state-v2-0-a6f7269c841d@pks.im>
 
 
-* ps/refs-avoid-chdir-notify-reparent (2026-06-22) 12 commits
+* ps/refs-avoid-chdir-notify-reparent (2026-06-25) 12 commits
  - refs: protect against chicken-and-egg recursion
  - refs/reftable: lazy-load configuration to fix chicken-and-egg
  - reftable: split up write options
@@ -501,8 +575,9 @@ Release tarballs are available at:
  `chdir_notify_reparent()` and fixes a memory leak in how the
  reference database is constructed with an "onbranch" condition.
 
- Needs review.
- source: <20260622-b4-pks-refs-avoid-chdir-notify-reparent-v5-0-018475013dbc@pks.im>
+ Will merge to 'next'?
+ cf. <aj1DuUzusBUqmF_C@denethor>
+ source: <20260625-b4-pks-refs-avoid-chdir-notify-reparent-v6-0-41fbca3cf5e3@pks.im>
 
 
 * ps/odb-source-packed (2026-06-16) 18 commits
@@ -525,7 +600,7 @@ Release tarballs are available at:
  + packfile: split out packfile list logic
  + packfile: rename `struct packfile_store` to `odb_source_packed`
  + Merge branch 'ps/odb-source-loose' into ps/odb-source-packed
- (this branch is used by ps/connected-generic-promisor-checks, ps/libgit-in-subdir and ps/odb-generalize-prepare.)
+ (this branch is used by ps/connected-generic-promisor-checks, ps/libgit-in-subdir, ps/odb-drop-whence and ps/odb-generalize-prepare.)
 
  The packed object source has been refactored into a proper struct
  odb_source.
@@ -566,7 +641,7 @@ Release tarballs are available at:
  source: <20260620140957.667820-1-cat@malon.dev>
 
 
-* ps/cat-file-remote-object-info (2026-06-19) 12 commits
+* ps/cat-file-remote-object-info (2026-06-25) 13 commits
  - cat-file: make remote-object-info allow-list dynamic
  - cat-file: validate remote atoms with allow_list
  - cat-file: add remote-object-info to batch-command
@@ -575,9 +650,10 @@ Release tarballs are available at:
  - fetch-pack: move fetch initialization
  - connect: refactor packet writing
  - fetch-pack: move function to connect.c
+ - fetch-pack: prepare function to be moved
  - t1006: split test utility functions into new "lib-cat-file.sh"
  - cat-file: declare loop counter inside for()
- - git-compat-util: add strtoul_ul() with error handling
+ - git-compat-util: add strtoul_szt() with error handling
  - transport-helper: fix memory leak of helper on disconnect
 
  The `remote-object-info` command has been added to `git cat-file
@@ -590,8 +666,8 @@ Release tarballs are available at:
  inapplicable or unsupported fields.
 
  Waiting for response(s) to review comment(s).
- cf. <CAOLa=ZSvxXuf_bSzKMvViNQ5MuDAqxnQdo4asF9vfMhJaDQcVw@mail.gmail.com>
- source: <20260619-ps-eric-work-rebase-v13-0-3d4c7315d2f8@gmail.com>
+ cf. <xmqqjyrme393.fsf@gitster.g>
+ source: <20260625-ps-eric-work-rebase-v14-0-09f7ffe21a53@gmail.com>
 
 
 * ap/http-redirect-wwwauth-fix (2026-06-02) 1 commit
@@ -652,7 +728,6 @@ Release tarballs are available at:
 
  Expecting a reroll.
  cf. <CAC2Qwm+P=fZOtpfMPeMiSXf3Afk6OLYpTP8Br78_PRA8WNL1Wg@mail.gmail.com>
- cf. <CAC2Qwm+P=fZOtpfMPeMiSXf3Afk6OLYpTP8Br78_PRA8WNL1Wg@mail.gmail.com>
  source: <pull.2120.v4.git.1781463564.gitgitgadget@gmail.com>
 
 
@@ -695,24 +770,23 @@ Release tarballs are available at:
  element from the leaf vacancy), which halves the number of comparisons
  per extract-min operation in the common case.
 
- Expecting a reroll.
- cf. <CAL71e4Ob-B5MJ5DPY+_tzpj6nyrbQ5WutxED2T93SWJV6kJGPA@mail.gmail.com>
+ On hold, waiting for kk/prio-queue-get-put-fusion to land first.
  cf. <CAL71e4MYNiScZjTwkApjDAjRh2LM0_SP59h5HCTywV-Pua03tw@mail.gmail.com>
  source: <pull.2132.v2.git.1780301856444.gitgitgadget@gmail.com>
 
 
-* jk/repo-info-path-keys (2026-06-20) 3 commits
+* jk/repo-info-path-keys (2026-06-23) 3 commits
  - repo: add path.gitdir with absolute and relative suffix formatting
  - repo: add path.commondir with absolute and relative suffix formatting
- - path: extract append_formatted_path() and use in rev-parse
+ - path: extract format_path() and use in rev-parse
 
  The "git repo info" command has been taught new keys to output both
  absolute and relative paths for "gitdir" and "commondir", supported by
  a new path-formatting helper extracted from "git rev-parse".
 
- Expecting a reroll.
- cf. <CA+rGoLcahV9pPqkSAKvz9o3g2cw2PsYXxzzwAC8XoseFzMB5rA@mail.gmail.com>
- source: <20260621055534.46798-1-jayatheerthkulkarni2005@gmail.com>
+ Will merge to 'next'?
+ cf. <xmqqy0g3iz38.fsf@gitster.g>
+ source: <20260624033748.108281-1-jayatheerthkulkarni2005@gmail.com>
 
 
 * ps/history-drop (2026-06-15) 10 commits
@@ -731,7 +805,8 @@ Release tarballs are available at:
  subcommand to remove a commit and replay its descendants onto its
  parent.
 
- Needs review.
+ Waiting for response(s) to review comment(s).
+ cf. <CAP8UFD1evTZqj1ymW9g5g2RmMkYMaE0rPa0Hzt+irH94M6LD6A@mail.gmail.com>
  source: <20260615-b4-pks-history-drop-v6-0-2e329e536d78@pks.im>
 
 
@@ -817,7 +892,7 @@ Release tarballs are available at:
  source: <pull.2301.v4.git.git.1779372367317.gitgitgadget@gmail.com>
 
 
-* hn/branch-delete-merged (2026-06-22) 7 commits
+* hn/branch-delete-merged (2026-06-24) 7 commits
  - branch: add --dry-run for --delete-merged
  - branch: add branch.<name>.deleteMerged opt-out
  - branch: add --delete-merged <branch>
@@ -830,9 +905,8 @@ Release tarballs are available at:
  local branches that have already been merged to the remote-tracking
  branches they track.
 
- Waiting for response(s) to review comment(s).
- cf. <cb6fcdfb-67b4-429d-b820-c4e623f28cfa@gmail.com>
- source: <pull.2285.v17.git.git.1782113388.gitgitgadget@gmail.com>
+ Needs review.
+ source: <pull.2285.v18.git.git.1782338106.gitgitgadget@gmail.com>
 
 
 * cc/promisor-auto-config-url-more (2026-05-27) 8 commits
@@ -857,7 +931,7 @@ Release tarballs are available at:
  source: <20260527140820.1438165-1-christian.couder@gmail.com>
 
 
-* hn/checkout-track-fetch (2026-06-18) 2 commits
+* hn/checkout-track-fetch (2026-06-24) 2 commits
  - checkout: extend --track with a "fetch" mode to refresh start-point
  - branch: expose helpers for finding the remote owning a tracking ref
 
@@ -866,7 +940,7 @@ Release tarballs are available at:
 
  Waiting for response(s) to review comment(s).
  cf. <12998c3a-ff69-4a98-9ed6-18aa0224e75e@gmail.com>
- source: <pull.2281.v14.git.git.1781786652.gitgitgadget@gmail.com>
+ source: <pull.2281.v15.git.git.1782338098.gitgitgadget@gmail.com>
 
 
 * en/ort-harden-against-corrupt-trees (2026-06-13) 5 commits
@@ -885,8 +959,8 @@ Release tarballs are available at:
  source: <pull.2096.v2.git.1781419047.gitgitgadget@gmail.com>
 
 
-* pw/status-rebase-todo (2026-06-22) 2 commits
-  (merged to 'next' on 2026-06-22 at a32de5bd17)
+* pw/status-rebase-todo (2026-06-23) 2 commits
+  (merged to 'next' on 2026-06-23 at a0fcde09dc)
  + status: improve rebase todo list parsing
  + sequencer: factor out parsing of todo commands
 
@@ -895,8 +969,7 @@ Release tarballs are available at:
  avoid misinterpreting refs as object IDs.
 
  Will cook in 'next'.
- cf. <xmqqechy1o7p.fsf@gitster.g>
- source: <cover.1782117361.git.phillip.wood@dunelm.org.uk>
+ source: <cover.1782230024.git.phillip.wood@dunelm.org.uk>
 
 
 * ps/shift-root-in-graph (2026-06-20) 3 commits
