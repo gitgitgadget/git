@@ -385,7 +385,7 @@ msgstr "Documentazione sul web"
 
 #: git-gui.sh:2786 lib/choose_repository.tcl:47 lib/choose_repository.tcl:56
 msgid "Show SSH Key"
-msgstr "Mostra chave SSH"
+msgstr "Mostra chiave SSH"
 
 #: git-gui.sh:2893
 #, tcl-format
