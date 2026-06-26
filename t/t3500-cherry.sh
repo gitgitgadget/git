@@ -92,7 +92,7 @@ test_expect_success 'cherry in partial clone does bulk prefetch' '
 
 		grep "child_start.*fetch.negotiationAlgorithm" trace.output >fetches &&
 		test_line_count = 1 fetches &&
-		test_trace2_data promisor fetch_count 4 <trace.output &&
+		test_trace2_data_singular promisor fetch_count 4 <trace.output &&
 
 		# A second invocation should not refetch any blobs, since
 		# the prefetch is expected to filter out OIDs that are

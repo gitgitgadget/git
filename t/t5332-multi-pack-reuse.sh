@@ -18,11 +18,11 @@ objdir=.git/objects
 packdir=$objdir/pack
 
 test_pack_reused () {
-	test_trace2_data pack-objects pack-reused "$1"
+	test_trace2_data_singular pack-objects pack-reused "$1"
 }
 
 test_packs_reused () {
-	test_trace2_data pack-objects packs-reused "$1"
+	test_trace2_data_singular pack-objects packs-reused "$1"
 }
 
 
