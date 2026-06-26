@@ -500,6 +500,9 @@ static int grep_submodule(struct grep_opt *opt,
 	 *
 	 * Note that this list is not exhaustive.
 	 */
+	prepare_repo_settings(subrepo);
+	subrepo->settings.command_requires_full_index = 0;
+
 	repo_read_gitmodules(subrepo, 0);
 
 	/*
