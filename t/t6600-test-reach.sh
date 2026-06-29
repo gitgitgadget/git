@@ -1003,7 +1003,7 @@ test_expect_success 'merge-base without --all is one of --all results' '
 	grep -F -f single all
 '
 
-test_expect_failure 'merge-base without --all, clock skew, v1 commit-graph' '
+test_expect_success 'merge-base without --all, clock skew, v1 commit-graph' '
 	git rev-parse skew-M2 >expect &&
 	merge_base_all_modes skew-P1 skew-P2
 '
