@@ -1,10 +1,10 @@
 To: git@vger.kernel.org
-Subject: What's cooking in git.git (Jul 2026, #01)
+Subject: What's cooking in git.git (Jul 2026, #02)
 X-master-at: e9019fcafe0040228b8631c30f97ae1adb61bcdc
-X-next-at: 602f6c329a7d99df269d382df353b4e1bbbbd8aa
+X-next-at: c42f45431d0ffbb231a771bbd65f8a334855ceed
 Bcc: lwn@lwn.net, gitster@pobox.com
 
-What's cooking in git.git (Jul 2026, #01)
+What's cooking in git.git (Jul 2026, #02)
 -----------------------------------------
 
 Here are the topics that have been cooking in my tree.  Commits
@@ -17,15 +17,15 @@ A topic without enough support may be discarded after a long period
 of no activity (of course, it can be resubmitted when new interest
 arises).
 
-Git 2.55 (final) has been tagged.  The next release is tentatively
-called Git 2.56.  This week is the 0th week of the cycle, which is
-time to see if there are any brown paper bag breakages and
-regressions we need to fix.  Next week, I plan to start merging the
-topics that have been cooking in 'next' down to 'master'.  It has
-been customary to rewind 'next' and rebuild it on top of 'master'
-soon after a major release, but IIRC, we didn't do so in Git 2.55;
-perhaps we can do without rebuilding it this cycle as well.  We'll
-see.
+As the zeroth week of the post-Git 2.55 cycle has passed without any
+reports of unexpected regressions, let's start merging things
+down. I plan to merge the topics that have been cooking in the
+'next' branch down to the 'master' branch early this week. The
+'next' branch may have to be frozen for a few days while I decide
+whether we want to rewind and rebuild it during the week, and we'll
+go from there. In the meantime, please help advance the topics
+waiting outside the 'next' branch by providing reviews,
+encouragement and testing.
 
 Copies of the source code to Git live in many repositories, and the
 following is a list of the ones I push into or their mirrors.  Some
@@ -58,6 +58,173 @@ Release tarballs are available at:
 --------------------------------------------------
 [New Topics]
 
+* bc/parse-options-exit-0-on-help (2026-07-01) 4 commits
+ - parse-options: exit 0 on -h
+ - rev-parse: have --parseopt callers exit 0 on --help
+ - parse-options: add a separate case for help output on error
+ - t1517: skip svn tests if svn is not installed
+
+ Option parsing with 'git rev-parse --parseopt' and most git
+ subcommands has been updated to exit with 0 (instead of 129) when the
+ help option (-h or --help) is requested directly by the user, aligning
+ with standard Unix convention.
+
+ Expecting a reroll.
+ cf. <akZ6H84Tzzgu8L5W@fruit.crustytoothpaste.net>
+ source: <20260701212442.1430084-1-sandals@crustytoothpaste.net>
+
+
+* mg/meson-hook-list-buildfix (2026-07-01) 1 commit
+ - meson: restore hook-list.h to builtin_sources
+
+ A racy build failure under Meson has been corrected by ensuring that
+ the generated header file hook-list.h is built before compiling files
+ in builtin_sources that depend on it.
+
+ Will merge to 'next'.
+ cf. <akZGJP1kVtjBFN_e@pks.im>
+ source: <20260701193928.358825-1-floppym@gentoo.org>
+
+
+* zy/apply-abandoned-header-fix (2026-07-01) 1 commit
+ - apply: avoid leaking abandoned git-header state
+
+ A candidate git diff header parsed by "git apply" is now isolated in a
+ temporary structure, preventing any partially parsed state from
+ polluting the main patch structure and causing assertions to trip if
+ the header is ultimately rejected.
+
+ Needs review.
+ source: <20260702041759.51572-1-zhihao.yao@njit.edu>
+
+
+* jk/hash-algo-leak-fixes (2026-07-02) 9 commits
+ - hash: add platform-specific discard functions
+ - hash: fix memory leak copying sha256 gcrypt handles
+ - http: discard hash in dumb-http http_object_request
+ - check_stream_oid(): discard hash on read error
+ - patch-id: discard hash when done
+ - csum-file: provide a function to release checkpoints
+ - csum-file: always finalize or discard hash
+ - hash: add discard primitive
+ - csum-file: drop discard_hashfile()
+
+ Various code paths that initialize a cryptographic hash context but
+ bail out or finish without calling git_hash_final() have been
+ taught to call git_hash_discard() to release allocated resources,
+ fixing memory leaks when Git is built with non-default backends
+ like OpenSSL or libgcrypt.
+
+ Will merge to 'next'?
+ cf. <aktIIKuReMxJmDsi@pks.im>
+ source: <20260702075234.GA1548258@coredump.intra.peff.net>
+
+
+* ml/t9811-replace-test-f (2026-07-02) 1 commit
+ - t9811: replace 'test -f' and '! test -f' with 'test_path_*'
+
+ The test script 't/t9811-git-p4-label-import.sh' has been
+ modernized to use 'test_path_is_file' and 'test_path_is_missing'
+ instead of raw 'test -f' and '! test -f' calls.
+
+ Waiting for response(s) to review comment(s).
+ cf. <akdwp_a2EuhVoGVW@pks.im>
+ source: <20260702140704.65805-1-marcelomlage@usp.br>
+
+
+* ps/t-fixes-for-git-test-long (2026-07-03) 9 commits
+ - gitlab-ci: enable "GIT_TEST_LONG"
+ - gitlab-ci: disable RAM disk on macOS jobs
+ - t: use `test_bool_env` to parse GIT_TEST_LONG
+ - t7900: clean up large EXPENSIVE repository
+ - t7508: skip EXPENSIVE test that is broken without SIZE_T_IS_32BIT
+ - t5608: reduce maximum disk usage
+ - t4141: fix inefficient use of dd(1)
+ - t0021: skip EXPENSIVE test that is broken without SIZE_T_IS_32BIT
+ - README: add GitLab CI badge to make it more discoverable
+
+ Various test scripts have been updated to clean up large temporary
+ files and repositories, reducing peak disk usage during testing.
+ Also, expensive tests have been disabled on platforms that lack
+ sufficient resources (like 32-bit platforms and Windows CI
+ runners), and the long test suite has been enabled in GitLab CI.
+
+ Waiting for response(s) to review comment(s).
+ cf. <xmqqse60ht57.fsf@gitster.g>
+ source: <20260703-b4-pks-t-fixes-for-GIT-TEST-LONG-v2-0-79076a7e0c62@pks.im>
+
+
+* ih/precompose-flex-array (2026-07-04) 1 commit
+ - precompose_utf8: use a flex array for d_name
+
+ The UTF-8 precomposition wrapper on macOS has been updated to use a
+ flexible array member to represent the name of a directory entry,
+ preventing fortified libc checks from failing when name is
+ reallocated to be larger than NAME_MAX bytes.
+
+ Will merge to 'next'?
+ cf. <20260703050800.GA29216@tb-raspi4>
+ source: <20260704233724.16928-1-ihar.hrachyshka@gmail.com>
+
+
+* sn/osxkeychain-rust-universal (2026-07-04) 2 commits
+ - Makefile: support universal macOS builds via RUST_TARGETS
+ - Makefile: add $(RUST_LIB) prerequisite to osxkeychain
+
+ The build system has been updated to support building universal
+ macOS binaries when Rust is enabled, by compiling separate static
+ archives for each target triple listed in RUST_TARGETS and
+ combining them using the macOS lipo tool. Additionally, the
+ git-credential-osxkeychain helper has been updated to link against
+ $(RUST_LIB) when Rust is enabled.
+
+ Waiting for response(s) to review comment(s).
+ cf. <akuIQADP_aRb5pY6@pks.im>
+ source: <pull.2288.v4.git.git.1783188355.gitgitgadget@gmail.com>
+
+--------------------------------------------------
+[Stalled]
+
+* ap/http-redirect-wwwauth-fix (2026-06-02) 1 commit
+ - http: preserve wwwauth_headers across redirects
+
+ When cURL follows a redirect, the WWW-Authenticate headers from the
+ redirect target were lost because credential_from_url() cleared the
+ credential state. This has been fixed by preserving the collected
+ headers across the redirect update.
+
+ Expecting a reroll for too long, stalled.
+ cf. <5144a29d-a53f-4446-beff-e1f549345bf9@nvidia.com>
+ source: <20260602161150.1527493-1-aplattner@nvidia.com>
+
+
+* jt/config-lock-timeout (2026-05-17) 1 commit
+ - config: retry acquiring config.lock, configurable via core.configLockTimeout
+
+ Configuration file locking now retries for a short period, avoiding
+ failures when multiple processes attempt to update the configuration
+ simultaneously.
+
+ Waiting for response(s) to review comment(s) for too long, stalled.
+ cf. <agrIrGwSMFlKTx9x@pks.im>
+ source: <20260517132111.1014901-1-joerg@thalheim.io>
+
+--------------------------------------------------
+[Cooking]
+
+* cl/conditional-config-on-worktree-path (2026-07-02) 2 commits
+ - config: add "worktree" and "worktree/i" includeIf conditions
+ - config: refactor include_by_gitdir() into include_by_path()
+
+ The [includeIf "condition"] conditional inclusion facility for
+ configuration files has learned to use the location of the worktree in
+ its condition.
+
+ Waiting for response(s) to review comment(s).
+ cf. <akeW4yFC8uuu2o8a@pks.im>
+ source: <20260703-includeif-worktree-v6-0-a13893ad9a7f@black-desk.cn>
+
+
 * kk/commit-reach-find-all-fix (2026-06-29) 2 commits
  - commit-reach: guard !FIND_ALL early exit with generation ordering check
  - t6600: add test for merge-base early exit with clock skew
@@ -85,14 +252,15 @@ Release tarballs are available at:
 
 
 * jk/format-patch-leakfix (2026-06-29) 2 commits
- - format-patch: fix leak of rev_info in prepare_bases()
- - t: move LSan errors from stdout to stderr
+  (merged to 'next' on 2026-07-05 at 072cbaa461)
+ + format-patch: fix leak of rev_info in prepare_bases()
+ + t: move LSan errors from stdout to stderr
 
  A memory leak in the '--base' handling of 'git format-patch' has been
  plugged, and the leak-reporting of the test suite when running under a
  TAP harness has been improved.
 
- Will merge to 'next'?
+ Will merge to 'master'.
  cf. <akOZy-BygZS8fqPM@pks.im>
  source: <20260630063944.GA3733670@coredump.intra.peff.net>
 
@@ -163,34 +331,34 @@ Release tarballs are available at:
  exposed when running tests with the
  `GIT_TEST_COMMIT_GRAPH_CHANGED_PATHS=1` environment variable.
 
- Will merge to 'next'?
+ Will merge to 'next'.
+ cf. <b641aed4-ad52-477b-b1d8-9d8e470be46f@gmail.com>
  cf. <xmqqo6gqobrt.fsf@gitster.g>
  source: <20260701063538.GA2579765@coredump.intra.peff.net>
 
 
-* js/ci-dockerized-pid-limit (2026-07-01) 1 commit
- - ci(dockerized): reduce the PID limit for private repositories
+* js/ci-dockerized-pid-limit (2026-07-04) 1 commit
+ - ci(dockerized): raise the PID limit for private repositories
 
  Dockerized CI jobs running in private GitHub repositories have been
  adjusted to use explicit process and file limits, preventing resource
  exhaustion errors on private runners.
 
- Waiting for response(s) to review comment(s).
- cf. <xmqq5x2yps4c.fsf@gitster.g>
- source: <pull.2164.git.1782889484346.gitgitgadget@gmail.com>
+ Will merge to 'next'?
+ cf. <xmqqh5medmzh.fsf@gitster.g>
+ source: <pull.2164.v2.git.1783155124926.gitgitgadget@gmail.com>
 
 
-* js/coverity-fixes (2026-07-01) 13 commits
- - mingw: make exit_process() own the process handle on all paths
+* js/coverity-fixes (2026-07-05) 12 commits
+ - mingw: make `exit_process()` own the process handle on all paths
  - fsmonitor: plug token-data leak on early daemon-startup failures
  - reftable/table: release filter on error path
  - imap-send: avoid leaking the IMAP upload buffer
  - worktree: fix resource leaks when branch creation fails
- - submodule: fix cwd leak in get_superproject_working_tree()
- - dir: free allocations on parse-error paths in read_one_dir()
+ - submodule: fix cwd leak in `get_superproject_working_tree()`
+ - dir: free allocations on parse-error paths in `read_one_dir()`
  - line-log: avoid redundant copy that leaks in process_ranges
- - run_diff_files: avoid memory leak
- - run-command: avoid close(-1) in start_command() error paths
+ - run-command: avoid `close(-1)` in `start_command()` error paths
  - download_https_uri_to_file(): do not leak fd upon failure
  - loose: avoid closing invalid fd on error path
  - load_one_loose_object_map(): fix resource leak
@@ -199,74 +367,9 @@ Release tarballs are available at:
  descriptor closures, and process handle ownership issues flagged by
  Coverity.
 
- Waiting for response(s) to review comment(s).
- cf. <akTIMM6qLfDNdg-a@pks.im>
- source: <pull.2163.git.1782889472.gitgitgadget@gmail.com>
+ Needs review.
+ source: <pull.2163.v2.git.1783239870.gitgitgadget@gmail.com>
 
---------------------------------------------------
-[Stalled]
-
-* ap/http-redirect-wwwauth-fix (2026-06-02) 1 commit
- - http: preserve wwwauth_headers across redirects
-
- When cURL follows a redirect, the WWW-Authenticate headers from the
- redirect target were lost because credential_from_url() cleared the
- credential state. This has been fixed by preserving the collected
- headers across the redirect update.
-
- Expecting a reroll for too long, stalled.
- cf. <5144a29d-a53f-4446-beff-e1f549345bf9@nvidia.com>
- source: <20260602161150.1527493-1-aplattner@nvidia.com>
-
-
-* jt/config-lock-timeout (2026-05-17) 1 commit
- - config: retry acquiring config.lock, configurable via core.configLockTimeout
-
- Configuration file locking now retries for a short period, avoiding
- failures when multiple processes attempt to update the configuration
- simultaneously.
-
- Waiting for response(s) to review comment(s) for too long, stalled.
- cf. <agrIrGwSMFlKTx9x@pks.im>
- source: <20260517132111.1014901-1-joerg@thalheim.io>
-
-
-* js/parseopt-subcommand-autocorrection (2026-04-27) 11 commits
- - SQUASH???
- - doc: document autocorrect API
- - parseopt: add tests for subcommand autocorrection
- - parseopt: enable subcommand autocorrection for git-remote and git-notes
- - parseopt: autocorrect mistyped subcommands
- - autocorrect: provide config resolution API
- - autocorrect: rename AUTOCORRECT_SHOW to AUTOCORRECT_HINT
- - autocorrect: use mode and delay instead of magic numbers
- - help: move tty check for autocorrection to autocorrect.c
- - help: make autocorrect handling reusable
- - parseopt: extract subcommand handling from parse_options_step()
-
- The parse-options library learned to auto-correct misspelled
- subcommand names.
-
- Waiting for response(s) to review comment(s) for too long, stalled.
- cf. <xmqq33yzd9yf.fsf@gitster.g>
- cf. <SY0P300MB0801E50FCB7EB2F45CD15208CE042@SY0P300MB0801.AUSP300.PROD.OUTLOOK.COM>
- source: <SY0P300MB0801677A2A1E0FD38D06A841CE2A2@SY0P300MB0801.AUSP300.PROD.OUTLOOK.COM>
-
-
-* cl/conditional-config-on-worktree-path (2026-05-24) 2 commits
- - config: add "worktree" and "worktree/i" includeIf conditions
- - config: refactor include_by_gitdir() into include_by_path()
-
- The [includeIf "condition"] conditional inclusion facility for
- configuration files has learned to use the location of worktree
- in its condition.
-
- Waiting for response(s) to review comment(s) for too long, stalled.
- cf. <xmqq8q97et9b.fsf@gitster.g>
- source: <20260525-includeif-worktree-v5-0-1efe525d025a@black-desk.cn>
-
---------------------------------------------------
-[Cooking]
 
 * tb/repack-geometric-cruft (2026-06-28) 11 commits
  - SQUASH??? bare grep !???
@@ -281,22 +384,25 @@ Release tarballs are available at:
  - repack: extract `locate_existing_pack()` helper
  - repack: unconditionally exclude non-kept packs
 
- Teach `git repack` to accept `--geometric` and `--cruft`
- together. When both are given, the geometric repack rolls up non-cruft
- packs as usual, while a separate cruft pack is written to collect
- unreachable objects.
+ Teach `git repack` to accept `--geometric` and `--cruft` together.
+ When both are given, the geometric repack rolls up non-cruft packs as
+ usual, while a separate cruft pack is written to collect unreachable
+ objects.
 
  Expecting a reroll.
- cf. <akTIMM6qLfDNdg-a@pks.im>
+ cf. <aj8cOhH6hGVZIFft@nand.local>
  source: <cover.1782500507.git.me@ttaylorr.com>
 
 
 * jk/reftable-leakfix (2026-06-28) 1 commit
- - reftable: fix unlikely leak on API error
+  (merged to 'next' on 2026-07-05 at e224acf508)
+ + reftable: fix unlikely leak on API error
 
- Leakfix.
+ A memory leak in the reftable_writer_new() initialization function has
+ been fixed by delaying the allocation of struct reftable_writer until
+ after input options are validated.
 
- Will merge to 'next'.
+ Will merge to 'master'.
  cf. <akIPBJLtPqDjQt-A@pks.im>
  source: <20260628090314.GA661068@coredump.intra.peff.net>
 
@@ -305,20 +411,24 @@ Release tarballs are available at:
   (merged to 'next' on 2026-06-29 at 2bf33c6a40)
  + t3420-rebase-autostash: don't try to grep non-existing files
 
- Test fix.
+ A test checking interactions between git rebase --quit and
+ autostash in t3420-rebase-autostash.sh has been corrected to use
+ test_path_is_missing instead of ! grep on a file that shouldn't
+ exist in the conflicted state.
 
  Will merge to 'master'.
  source: <20211010172809.1472914-1-szeder.dev@gmail.com>
 
 
 * ad/gpg-strip-cr-before-lf (2026-06-24) 1 commit
- - gpg-interface: fix strip_cr_before_lf to only remove CR before LF
+  (merged to 'next' on 2026-07-05 at 25ae7a9822)
+ + gpg-interface: fix strip_cr_before_lf to only remove CR before LF
 
  The GPG and SSH signature parsing code has been corrected to strip
  carriage return characters only when they immediately precede line
  feeds, instead of unconditionally stripping all carriage returns.
 
- Will merge to 'next'.
+ Will merge to 'master'.
  source: <20260624093618.17456-1-antonio.destefani08@gmail.com>
 
 
@@ -330,9 +440,9 @@ Release tarballs are available at:
  - object-file: propagate files transaction errors
  - object-file: rename files transaction prepare function
 
- git-receive-pack has been refactored to use ODB transaction
- interfaces instead of directly managing tmp_objdir for staging
- incoming objects, bringing it closer to being ODB backend agnostic.
+ git-receive-pack has been refactored to use ODB transaction interfaces
+ instead of directly managing tmp_objdir for staging incoming objects,
+ bringing it closer to being ODB backend agnostic.
 
  Expecting a reroll.
  cf. <aju_AmlKVi5UZaiQ@pks.im>
@@ -341,7 +451,7 @@ Release tarballs are available at:
  source: <20260624041920.2601961-1-jltobler@gmail.com>
 
 
-* ps/odb-drop-whence (2026-06-24) 7 commits
+* ps/odb-drop-whence (2026-07-02) 7 commits
  - odb: document object info fields
  - odb: drop `whence` field from object info
  - treewide: convert users of `whence` to the new source field
@@ -355,13 +465,12 @@ Release tarballs are available at:
  refactoring backend-specific object information retrieval into an
  opt-in struct object_info_source structure.
 
- Will merge to 'next'?
- cf. <akOod6X1a2axIXKZ@pks.im>
+ Will merge to 'next'.
  cf. <xmqqv7b0rmt6.fsf@gitster.g>
- source: <20260624-b4-pks-odb-drop-whence-v1-0-8d1877b790ac@pks.im>
+ source: <20260702-b4-pks-odb-drop-whence-v2-0-b0af7468ad95@pks.im>
 
 
-* ps/reftable-hardening (2026-06-29) 12 commits
+* ps/reftable-hardening (2026-07-03) 12 commits
  - reftable/table: fix OOB read on truncated table
  - reftable/table: fix NULL pointer access when seeking to bogus offsets
  - reftable/block: fix OOB read with bogus restart offset
@@ -380,38 +489,40 @@ Release tarballs are available at:
  during parsing.
 
  Needs review.
- source: <20260629-pks-reftable-hardening-v2-0-b0228e7d908d@pks.im>
+ source: <20260703-pks-reftable-hardening-v3-0-b87c555b9920@pks.im>
 
 
 * hn/branch-push-slip-advice (2026-06-27) 2 commits
- - push: suggest <remote> <branch> for a slash slip
- - branch: suggest <remote>/<branch> on upstream slip
+  (merged to 'next' on 2026-07-05 at 9620e1e4b2)
+ + push: suggest <remote> <branch> for a slash slip
+ + branch: suggest <remote>/<branch> on upstream slip
 
- "git push origin/main" and "git branch origin main" could both be
- an obvious typo, in which case offer the obvious typofix.
+ When 'git push origin/main' or 'git branch origin main' is run, the
+ tool recognizes it as a potential typo and offers a typofix.
 
- Will merge to 'next'.
+ Will merge to 'master'.
  cf. <xmqqfr272lq7.fsf@gitster.g>
  source: <pull.2331.v3.git.git.1782583345.gitgitgadget@gmail.com>
 
 
 * jc/history-message-prep-fix (2026-06-29) 1 commit
- - history: streamline message preparation and plug file stream leak
+  (merged to 'next' on 2026-07-05 at c42f45431d)
+ + history: streamline message preparation and plug file stream leak
 
  Code clean-up with leakfix for a write file stream.
 
- Will merge to 'next'?
+ Will merge to 'master'.
  cf. <akO1mhi2u2PntLbt@pks.im>
  source: <xmqqmrwdxrat.fsf@gitster.g>
 
 
-* ty/migrate-excludes-file (2026-06-30) 1 commit
+* ty/migrate-excludes-file (2026-07-01) 1 commit
  - environment: move excludes_file into repo_config_values
 
  Move excludes_file global variable into per-repository structure.
 
  Needs review.
- source: <20260630164401.2906091-2-cat@malon.dev>
+ source: <20260701180813.776173-2-cat@malon.dev>
 
 
 * kk/merge-base-exhaustion (2026-07-01) 10 commits
@@ -430,8 +541,8 @@ Release tarballs are available at:
  early when one side's exclusive commits in the queue are exhausted,
  yielding significant speedups for queries with one-sided histories.
 
- Needs review.
- passes t6600 standalone, breaks when merged to 'seen'.
+ Expecting a reroll.
+ cf. <CAL71e4PgcZDK-gJziJa_yjEqX9TE+PFMwZn0xbjAUzuUDDDBYA@mail.gmail.com>
  source: <pull.2149.v5.git.1782923832.gitgitgadget@gmail.com>
 
 
@@ -441,7 +552,8 @@ Release tarballs are available at:
  The USE_NSEC build knob, which enables support for sub-second file
  timestamp resolution, has been wired up to the Meson build system.
 
- Waiting for response(s) to review comment(s).
+ Expecting a reroll.
+ cf. <CALnO6CDm74rCBQu6Q0djsvtuw5U14V=PApptcZTgP+pic1f_AA@mail.gmail.com>
  cf. <ajjuoS5Qc3K0nCRl@pks.im>
  cf. <akIL6oJgUv8J8SB2@pks.im>
  source: <c4c5ade901ff95b0f95939ea818870e4f3d59da1.1781971201.git.ben.knoble+github@gmail.com>
@@ -476,15 +588,16 @@ Release tarballs are available at:
  directory to clean up the top-level directory and clearly separate
  library code.
 
- Waiting for response(s) to review comment(s).
- cf. <cbbb08fc-fd4d-45ef-927b-05ac44602ff1@gmail.com>
+ Comments?
+ cf. <akX1TMoRr87Id8Ss@pks.im>
  source: <20260701-pks-libgit-in-subdir-v3-0-5e4860056094@pks.im>
 
 
 * ps/odb-generalize-prepare (2026-06-22) 3 commits
- - odb: introduce `odb_prepare()`
- - odb/source: generalize `reprepare()` callback
- - Merge branch 'ps/odb-source-packed' into ps/odb-generalize-prepare
+  (merged to 'next' on 2026-07-05 at e33360c151)
+ + odb: introduce `odb_prepare()`
+ + odb/source: generalize `reprepare()` callback
+ + Merge branch 'ps/odb-source-packed' into ps/odb-generalize-prepare
  (this branch uses ps/odb-source-packed.)
 
  The `reprepare()` callback for object database sources has been
@@ -492,7 +605,7 @@ Release tarballs are available at:
  flag, and a new `odb_prepare()` wrapper has been introduced to
  allow pre-opening object database sources.
 
- Will merge to 'next'?
+ Will merge to 'master'.
  cf. <87ik704f1j.fsf@emacs.iotcl.com>
  source: <20260622-b4-pks-odb-generalize-prepare-v1-0-d2a5c5d13144@pks.im>
 
@@ -603,7 +716,7 @@ Release tarballs are available at:
  "update", and "rename" subcommands to create, delete, update, and
  rename references, respectively.
 
- Will merge to 'next'?
+ Will merge to 'next'.
  cf. <xmqqcxx7susi.fsf@gitster.g>
  source: <20260630-pks-refs-writing-subcommands-v3-0-deb04de1ecef@pks.im>
 
@@ -646,9 +759,9 @@ Release tarballs are available at:
   (merged to 'next' on 2026-06-22 at f7e984a003)
  + log: improve --follow following renames for non-linear history
 
- "git log --follow" has been updated to handle non-linear history, in
- which the path being tracked gets renamed differently in multiple
- history lines, better.
+ "git log --follow" has been updated to better handle non-linear
+ history, in which the path being tracked gets renamed differently in
+ multiple history lines.
 
  Will merge to 'master'.
  source: <ajjU4w2B0NlZffw1@collabora.com>
@@ -677,11 +790,11 @@ Release tarballs are available at:
  exclusion logic incorrectly skipped packs from layers above the
  selected base, breaking reachability closure for bitmaps.
 
- Needs review.
+ Comments?
  source: <cover.1781294771.git.me@ttaylorr.com>
 
 
-* mm/test-grep-lint (2026-06-12) 6 commits
+* mm/test-grep-lint (2026-07-02) 6 commits
  - t: add greplint to detect bare grep assertions
  - t: convert grep assertions to test_grep
  - t: fix Lexer line count for $() inside double-quoted strings
@@ -689,15 +802,24 @@ Release tarballs are available at:
  - t: fix grep assertions missing file arguments
  - t/README: document test_grep helper
 
- Waiting for response(s) to review comment(s).
- cf. <aj93BE8MYatQAjoy@szeder.dev>
+ The test suite has been updated to use the test_grep helper instead
+ of bare grep for test assertions, allowing file contents to be
+ printed on failure for easier debugging. A new greplint linter has
+ been introduced to detect and prevent new bare grep assertions from
+ being added to the test suite.
+
+ Will merge to 'next'.
  cf. <xmqqqzlpt543.fsf@gitster.g>
- source: <pull.2135.v2.git.1781323575.gitgitgadget@gmail.com>
+ source: <pull.2135.v3.git.1783054466.gitgitgadget@gmail.com>
 
 
 * rs/cat-file-default-format-optim (2026-06-14) 1 commit
   (merged to 'next' on 2026-06-17 at 43ed8b3969)
  + cat-file: speed up default format
+
+ The default format path of git cat-file --batch has been optimized
+ to use strbuf_add_oid_hex() and strbuf_add_uint() instead of
+ strbuf_addf(), yielding a noticeable speedup.
 
  Will merge to 'master'.
  cf. <20260615165326.GA91269@coredump.intra.peff.net>
@@ -705,15 +827,16 @@ Release tarballs are available at:
 
 
 * kk/prio-queue-get-put-fusion (2026-06-08) 2 commits
- - prio-queue: fold lazy_queue into prio_queue for automatic get+put fusion
- - prio-queue: rename .nr to .nr_ and add accessor helpers
+  (merged to 'next' on 2026-07-05 at 935d102244)
+ + prio-queue: fold lazy_queue into prio_queue for automatic get+put fusion
+ + prio-queue: rename .nr to .nr_ and add accessor helpers
 
  The lazy priority queue optimization pattern (deferring actual removal
  in prio_queue_get() to allow get+put fusion) has been folded directly
  into prio_queue itself, speeding up commit traversal workflows and
  simplifying callers.
 
- Will merge to 'next'?
+ Will merge to 'master'.
  cf. <xmqqh5mjrbgq.fsf@gitster.g>
  source: <pull.2140.v4.git.1780945851.gitgitgadget@gmail.com>
 
@@ -734,21 +857,18 @@ Release tarballs are available at:
  source: <20260612-ref-filter-memoized-contains-v4-0-5ed39fd001dd@gmail.com>
 
 
-* tc/replay-linearize (2026-06-25) 3 commits
+* tc/replay-linearize (2026-07-02) 3 commits
  - replay: offer an option to linearize the commit topology
- - replay: better explain how pick_regular_commit() picks a base
- - replay: add helper to put entry into mapped_commits
+ - replay: resolve the replay base outside pick_regular_commit()
+ - replay: add helper to put entry into replayed_commits
 
- git replay learns --linearize option to drop merge commits and
- linearize the replayed history, mimicking git rebase
+ The git replay command has learned the --linearize option to drop
+ merge commits and linearize the replayed history, mimicking git rebase
  --no-rebase-merges.
 
  Waiting for response(s) to review comment(s).
- cf. <xmqq5x358byf.fsf@gitster.g>
- cf. <b5d70a0b-ef32-49c9-84ba-8a64b7809574@gmail.com>
- cf. <f8b520d1-edeb-9e45-c503-025c8b5833c3@gmx.de>
- cf. <akOpOXeD_gS5U7rH@pks.im>
- source: <20260626-toon-git-replay-drop-merges-v5-0-5e120738b9d0@iotcl.com>
+ cf. <xmqqbjcnhjvk.fsf@gitster.g>
+ source: <20260702-toon-git-replay-drop-merges-v6-0-78a07cdd0382@iotcl.com>
 
 
 * ps/setup-drop-global-state (2026-06-10) 8 commits
@@ -888,6 +1008,7 @@ Release tarballs are available at:
 
  Waiting for response(s) to review comment(s).
  cf. <xmqq7bneo9mh.fsf@gitster.g>
+ cf. <xmqqse62obwh.fsf@gitster.g>
  source: <20260701-ps-eric-work-rebase-v15-0-c88a43b63917@gmail.com>
 
 
@@ -915,7 +1036,7 @@ Release tarballs are available at:
  underlying real branches, fixing failures when branch aliases (like a
  default branch rename) are present.
 
- Waiting for response(s) to review comment(s).
+ Waiting for response(s) to review comment(s) for too long, stalled.
  cf. <f982c386-e329-4ab0-b695-e540bcb9de3d@gmail.com>
  source: <pull.2126.v2.git.1780482436865.gitgitgadget@gmail.com>
 
@@ -929,8 +1050,8 @@ Release tarballs are available at:
  - xdiff: support external hunks via xpparam_t
 
  A new `diff.<driver>.process` configuration has been introduced to
- allow a long-running external process to act as a hunk provider to
- allows external tools to control which lines Git considers changed
+ allow a long-running external process to act as a hunk provider,
+ allowing external tools to control which lines Git considers changed
  while leaving all output formatting (word diff, color, blame, etc.) to
  Git's standard pipeline.
 
@@ -1017,7 +1138,9 @@ Release tarballs are available at:
  subcommand to remove a commit and replay its descendants onto its
  parent.
 
- Needs review.
+ Will merge to 'next'.
+ cf. <xmqq1pdmprbk.fsf@gitster.g>
+ cf. <CAP8UFD3OAktVQsLuqBNFH2uhEO31PH8ZF3ZT1ZW8k++XE8YLPw@mail.gmail.com>
  source: <20260701-b4-pks-history-drop-v8-0-19b5cdf1facd@pks.im>
 
 
@@ -1046,7 +1169,10 @@ Release tarballs are available at:
  - doc: interpret-trailers: replace “lines” with “metadata”
  - doc: interpret-trailers: stop fixating on RFC 822
 
- Documentation updates.
+ Documentation for git interpret-trailers has been updated to
+ explain the format of trailer keys (alphanumeric characters and
+ hyphens), replace outdated terminology, define key terms upfront,
+ and document how comment lines in the input are treated.
 
  Expecting a reroll.
  cf. <729baf6b-53ea-4e8d-95ab-5935667e66c2@app.fastmail.com>
@@ -1057,7 +1183,7 @@ Release tarballs are available at:
  - completion: hide dotfiles by default for path completion
  - completion: hide dotfiles for selected path completion
 
- The path completion for commands like `git rm` and `git mv`, is being
+ The path completion for commands like `git rm` and `git mv` is being
  updated to hide dotfiles by default, unless the user explicitly starts
  the path with a dot, matching standard shell-completion behavior.
 
@@ -1070,10 +1196,10 @@ Release tarballs are available at:
  - commit: allow -c/-C for all kinds of --fixup
  - commit: allow -m/-F for all kinds of --fixup
 
- The -m/-F/-c/-C options to supply commit log message from outside the
- editor are now supported for all "git commit --fixup" variations.
+ The -m/-F/-c/-C options to supply a commit log message from outside
+ the editor are now supported for all "git commit --fixup" variations.
 
- Needs review.
+ Comments?
  source: <cover.1779792311.git.erik@cervined.in>
 
 
@@ -1086,7 +1212,7 @@ Release tarballs are available at:
  Doc update for "git replay" to actually refer to its configuration
  variables.
 
- Needs review.
+ Comments?
  source: <V3_CV_doc_replay_config.780@msgid.xyz>
 
 
@@ -1149,7 +1275,7 @@ Release tarballs are available at:
  "git checkout --track=..." learned to optionally fetch the branch
  from the remote the new branch will work with.
 
- Waiting for response(s) to review comment(s).
+ Comments?
  cf. <12998c3a-ff69-4a98-9ed6-18aa0224e75e@gmail.com>
  cf. <CAL71e4MiijEiM26TKJcOYT7L4pfQeMM_F2oT3U3igP-wOZm2Ag@mail.gmail.com>
  source: <pull.2281.v15.git.git.1782338098.gitgitgadget@gmail.com>
@@ -1184,9 +1310,9 @@ Release tarballs are available at:
  source: <cover.1782230024.git.phillip.wood@dunelm.org.uk>
 
 
-* ps/shift-root-in-graph (2026-06-20) 3 commits
+* ps/shift-root-in-graph (2026-07-04) 3 commits
  - graph: indent visual root in graph
- - revision: add peek functions for lookahead
+ - graph: add a 2 commit buffer for lookahead
  - lib-log-graph: move check_graph function
 
  "git log --graph" has been modified to visually distinguish
@@ -1195,9 +1321,29 @@ Release tarballs are available at:
  appearing falsely related to unrelated commits rendered immediately
  above them.
 
- Expecting a reroll.
- The peek-ahead approach may need to be scratched.
- cf. <CAN5EUNSj-2hkEBF7N_M6RLsuujDNFNUF3w53zR7SN1_5i2BRyg@mail.gmail.com>
- cf. <CAL71e4OQ_kGb+UwHgikHG236-8BVtc7P9OdpV4i4UzYRCoPczw@mail.gmail.com>
- cf. <CAN5EUNTQV68_eofa7BGb0BukMe=U2d4-FEVmJwW4dObQ2r6LuA@mail.gmail.com>
- source: <20260620-ps-pre-commit-indent-v6-0-cdc6d8fd5fbc@gmail.com>
+ Needs review.
+ source: <20260704-ps-pre-commit-indent-v7-0-a94706cc8376@gmail.com>
+
+--------------------------------------------------
+[Discarded]
+
+* js/parseopt-subcommand-autocorrection (2026-04-27) 11 commits
+ . SQUASH???
+ . doc: document autocorrect API
+ . parseopt: add tests for subcommand autocorrection
+ . parseopt: enable subcommand autocorrection for git-remote and git-notes
+ . parseopt: autocorrect mistyped subcommands
+ . autocorrect: provide config resolution API
+ . autocorrect: rename AUTOCORRECT_SHOW to AUTOCORRECT_HINT
+ . autocorrect: use mode and delay instead of magic numbers
+ . help: move tty check for autocorrection to autocorrect.c
+ . help: make autocorrect handling reusable
+ . parseopt: extract subcommand handling from parse_options_step()
+
+ The parse-options library learned to auto-correct misspelled
+ subcommand names.
+
+ Discarded after waiting for response(s) to review comment(s) for too long.
+ cf. <xmqq33yzd9yf.fsf@gitster.g>
+ cf. <SY0P300MB0801E50FCB7EB2F45CD15208CE042@SY0P300MB0801.AUSP300.PROD.OUTLOOK.COM>
+ source: <SY0P300MB0801677A2A1E0FD38D06A841CE2A2@SY0P300MB0801.AUSP300.PROD.OUTLOOK.COM>
