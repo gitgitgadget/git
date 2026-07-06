@@ -124,14 +124,13 @@ void git_setup_gettext(void)
 	const char *podir = getenv(GIT_TEXT_DOMAIN_DIR_ENVIRONMENT);
 	char *p = NULL;
 
-	git_setup_gettext_no_podir();
-
 	if (!podir)
 		podir = p = system_path(GIT_LOCALE_PATH);
 
 	if (!is_directory(podir))
 		goto done;
 
+	git_setup_gettext_no_podir();
 	git_setup_gettext_podir(podir);
 done:
 	free(p);
