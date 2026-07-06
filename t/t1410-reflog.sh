@@ -244,26 +244,30 @@ test_expect_success 'delete' '
 	test_tick &&
 	git commit -m tiger C &&
 
-	HEAD_entry_count=$(git reflog | wc -l) &&
-	main_entry_count=$(git reflog show main | wc -l) &&
-
-	test $HEAD_entry_count = 5 &&
-	test $main_entry_count = 5 &&
-
+	test_stdout_line_count = 5 git reflog &&
+	git reflog >reflog_output &&
+	HEAD_entry_count=$(wc -l <reflog_output) &&
+	test_stdout_line_count = 5 git reflog show main &&
+	git reflog show main >reflog_main_output &&
+	main_entry_count=$(wc -l <reflog_main_output) &&
 
 	git reflog delete main@{1} &&
 	git reflog show main > output &&
 	test_line_count = $(($main_entry_count - 1)) output &&
-	test $HEAD_entry_count = $(git reflog | wc -l) &&
+	git reflog >reflog_output &&
+	test $HEAD_entry_count = $(wc -l <reflog_output) &&
 	! grep ox < output &&
 
 	main_entry_count=$(wc -l < output) &&
 
 	git reflog delete HEAD@{1} &&
-	test $(($HEAD_entry_count -1)) = $(git reflog | wc -l) &&
-	test $main_entry_count = $(git reflog show main | wc -l) &&
+	git reflog >reflog_output &&
+	test $(($HEAD_entry_count -1)) = $(wc -l <reflog_output) &&
+	git reflog show main >reflog_main_output &&
+	test $main_entry_count = $(wc -l <reflog_main_output) &&
 
-	HEAD_entry_count=$(git reflog | wc -l) &&
+	git reflog >reflog_output &&
+	HEAD_entry_count=$(wc -l <reflog_output) &&
 
 	git reflog delete main@{07.04.2005.15:15:00.-0700} &&
 	git reflog show main > output &&
@@ -319,13 +323,12 @@ test_expect_success 'git reflog expire unknown reference' '
 	test_must_fail git reflog expire does-not-exist 2>stderr &&
 	test_grep "error: reflog could not be found: ${SQ}does-not-exist${SQ}" stderr
 '
-
 test_expect_success 'checkout should not delete log for packed ref' '
-	test $(git reflog main | wc -l) = 4 &&
+	test_stdout_line_count = 4 git reflog main &&
 	git branch foo &&
 	git pack-refs --all &&
 	git checkout foo &&
-	test $(git reflog main | wc -l) = 4
+	test_stdout_line_count = 4 git reflog main
 '
 
 test_expect_success 'stale dirs do not cause d/f conflicts (reflogs on)' '
