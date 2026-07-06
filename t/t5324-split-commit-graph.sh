@@ -738,11 +738,7 @@ test_expect_success 'incremental write reads topo levels from all layers' '
 		GIT_TRACE2_EVENT="$(pwd)/trace.txt" \
 			git commit-graph write --reachable --split=no-merge &&
 
-		# BUG: topo levels from lower graph layers are not
-		# propagated, so the DFS re-walks from base-3 down to
-		# the root (7 steps) instead of reading topo levels
-		# from the existing graph (1 step).
-		test_trace2_data commit-graph generation-dfs-steps 7 <trace.txt
+		test_trace2_data commit-graph generation-dfs-steps 1 <trace.txt
 	)
 '
 
