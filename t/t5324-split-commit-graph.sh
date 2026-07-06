@@ -718,6 +718,34 @@ test_expect_success 'write generation data chunk when commit-graph chain is repl
 	)
 '
 
+test_expect_success 'incremental write reads topo levels from all layers' '
+	git init topo-from-lower &&
+	(
+		cd topo-from-lower &&
+
+		for i in $(test_seq 5)
+		do
+			test_commit base-$i || return 1
+		done &&
+		git commit-graph write --reachable &&
+
+		test_commit extra &&
+		git commit-graph write --reachable --split=no-merge &&
+
+		git checkout base-3 &&
+		test_commit new-branch &&
+
+		GIT_TRACE2_EVENT="$(pwd)/trace.txt" \
+			git commit-graph write --reachable --split=no-merge &&
+
+		# BUG: topo levels from lower graph layers are not
+		# propagated, so the DFS re-walks from base-3 down to
+		# the root (7 steps) instead of reading topo levels
+		# from the existing graph (1 step).
+		test_trace2_data commit-graph generation-dfs-steps 7 <trace.txt
+	)
+'
+
 test_expect_success 'temporary graph layer is discarded upon failure' '
 	git init layer-discard &&
 	(
