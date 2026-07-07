@@ -6,7 +6,6 @@
 #include "decorate.h"
 #include "hex.h"
 #include "prio-queue.h"
-#include "ref-filter.h"
 #include "revision.h"
 #include "tag.h"
 #include "commit-reach.h"
@@ -569,12 +568,7 @@ int repo_is_descendant_of(struct repository *r,
 		return 1;
 
 	if (generation_numbers_enabled(r)) {
-		struct commit_list *from_list = NULL;
-		int result;
-		commit_list_insert(commit, &from_list);
-		result = can_all_from_reach(from_list, with_commit, 0);
-		commit_list_free(from_list);
-		return result;
+		return find_reachable_list(r, &commit, 1, with_commit, 0);
 	} else {
 		while (with_commit) {
 			struct commit *other;
@@ -619,6 +613,16 @@ int repo_in_merge_bases_many(struct repository *r, struct commit *commit,
 	generation = commit_graph_generation(commit);
 	if (generation > max_generation)
 		return ret;
+
+	if (generation_numbers_enabled(r)) {
+		ret = find_reachable(r, reference, nr_reference,
+				     &commit, 1, 0);
+		if (ret > 0)
+			return 1;
+		if (ret < 0 && !ignore_missing_commits)
+			return ret;
+		return 0;
+	}
 
 	if (paint_down_to_common(r, commit,
 				 nr_reference, reference,
@@ -732,126 +736,14 @@ int ref_newer(const struct object_id *new_oid, const struct object_id *old_oid)
 	return ret;
 }
 
-/*
- * Mimicking the real stack, this stack lives on the heap, avoiding stack
- * overflows.
- *
- * At each recursion step, the stack items points to the commits whose
- * ancestors are to be inspected.
- */
-struct contains_stack {
-	int nr, alloc;
-	struct contains_stack_entry {
-		struct commit *commit;
-		struct commit_list *parents;
-	} *contains_stack;
-};
-
-static int in_commit_list(const struct commit_list *want, struct commit *c)
-{
-	for (; want; want = want->next)
-		if (oideq(&want->item->object.oid, &c->object.oid))
-			return 1;
-	return 0;
-}
-
-/*
- * Test whether the candidate is contained in the list.
- * Do not recurse to find out, though, but return -1 if inconclusive.
- */
-static enum contains_result contains_test(struct commit *candidate,
-					  const struct commit_list *want,
-					  struct contains_cache *cache,
-					  timestamp_t cutoff)
-{
-	enum contains_result *cached = contains_cache_at(cache, candidate);
-
-	/* If we already have the answer cached, return that. */
-	if (*cached)
-		return *cached;
-
-	/* or are we it? */
-	if (in_commit_list(want, candidate)) {
-		*cached = CONTAINS_YES;
-		return CONTAINS_YES;
-	}
-
-	/* Otherwise, we don't know; prepare to recurse */
-	parse_commit_or_die(candidate);
-
-	if (commit_graph_generation(candidate) < cutoff)
-		return CONTAINS_NO;
-
-	return CONTAINS_UNKNOWN;
-}
-
-static void push_to_contains_stack(struct commit *candidate, struct contains_stack *contains_stack)
-{
-	ALLOC_GROW(contains_stack->contains_stack, contains_stack->nr + 1, contains_stack->alloc);
-	contains_stack->contains_stack[contains_stack->nr].commit = candidate;
-	contains_stack->contains_stack[contains_stack->nr++].parents = candidate->parents;
-}
-
-static enum contains_result contains_tag_algo(struct commit *candidate,
-					      const struct commit_list *want,
-					      struct contains_cache *cache)
-{
-	struct contains_stack contains_stack = { 0, 0, NULL };
-	enum contains_result result;
-	timestamp_t cutoff = GENERATION_NUMBER_INFINITY;
-	const struct commit_list *p;
-
-	for (p = want; p; p = p->next) {
-		timestamp_t generation;
-		struct commit *c = p->item;
-		load_commit_graph_info(the_repository, c);
-		generation = commit_graph_generation(c);
-		if (generation < cutoff)
-			cutoff = generation;
-	}
-
-	result = contains_test(candidate, want, cache, cutoff);
-	if (result != CONTAINS_UNKNOWN)
-		return result;
-
-	push_to_contains_stack(candidate, &contains_stack);
-	while (contains_stack.nr) {
-		struct contains_stack_entry *entry = &contains_stack.contains_stack[contains_stack.nr - 1];
-		struct commit *commit = entry->commit;
-		struct commit_list *parents = entry->parents;
-
-		if (!parents) {
-			*contains_cache_at(cache, commit) = CONTAINS_NO;
-			contains_stack.nr--;
-		}
-		/*
-		 * If we just popped the stack, parents->item has been marked,
-		 * therefore contains_test will return a meaningful yes/no.
-		 */
-		else switch (contains_test(parents->item, want, cache, cutoff)) {
-		case CONTAINS_YES:
-			*contains_cache_at(cache, commit) = CONTAINS_YES;
-			contains_stack.nr--;
-			break;
-		case CONTAINS_NO:
-			entry->parents = parents->next;
-			break;
-		case CONTAINS_UNKNOWN:
-			push_to_contains_stack(parents->item, &contains_stack);
-			break;
-		}
-	}
-	free(contains_stack.contains_stack);
-	return contains_test(candidate, want, cache, cutoff);
-}
-
-int commit_contains(struct ref_filter *filter, struct commit *commit,
-		    struct commit_list *list, struct contains_cache *cache)
-{
-	if (filter->with_commit_tag_algo)
-		return contains_tag_algo(commit, list, cache) == CONTAINS_YES;
-	return repo_is_descendant_of(the_repository, commit, list);
-}
+static int find_reachable_core(struct repository *r,
+			       struct commit **from, size_t from_nr,
+			       unsigned int target_flag,
+			       unsigned int visited_flag,
+			       timestamp_t min_generation,
+			       timestamp_t min_commit_date,
+			       int fast_fail,
+			       unsigned int mark);
 
 int can_all_from_reach_with_flag(struct object_array *from,
 				 unsigned int with_flag,
@@ -895,54 +787,12 @@ int can_all_from_reach_with_flag(struct object_array *from,
 		nr_commits++;
 	}
 
-	QSORT(list, nr_commits, compare_commits_by_gen);
-
-	for (i = 0; i < nr_commits; i++) {
-		/* DFS from list[i] */
-		struct commit_list *stack = NULL;
-
-		list[i]->object.flags |= assign_flag;
-		commit_list_insert(list[i], &stack);
-
-		while (stack) {
-			struct commit_list *parent;
-
-			if (stack->item->object.flags & (with_flag | RESULT)) {
-				pop_commit(&stack);
-				if (stack)
-					stack->item->object.flags |= RESULT;
-				continue;
-			}
-
-			for (parent = stack->item->parents; parent; parent = parent->next) {
-				if (parent->item->object.flags & (with_flag | RESULT))
-					stack->item->object.flags |= RESULT;
-
-				if (!(parent->item->object.flags & assign_flag)) {
-					parent->item->object.flags |= assign_flag;
-
-					if (repo_parse_commit(the_repository, parent->item) ||
-					    parent->item->date < min_commit_date ||
-					    commit_graph_generation(parent->item) < min_generation)
-						continue;
-
-					commit_list_insert(parent->item, &stack);
-					break;
-				}
-			}
-
-			if (!parent)
-				pop_commit(&stack);
-		}
-
-		if (!(list[i]->object.flags & (with_flag | RESULT))) {
-			result = 0;
-			goto cleanup;
-		}
-	}
+	result = find_reachable_core(the_repository, list, nr_commits,
+				    with_flag, assign_flag,
+				    min_generation, min_commit_date,
+				    1, 0) == (int)nr_commits;
 
 cleanup:
-	clear_commit_marks_many(nr_commits, list, RESULT | assign_flag);
 	free(list);
 
 	for (i = 0; i < from->nr; i++) {
@@ -952,64 +802,6 @@ cleanup:
 			from_one->flags &= ~assign_flag;
 	}
 
-	return result;
-}
-
-int can_all_from_reach(struct commit_list *from, struct commit_list *to,
-		       int cutoff_by_min_date)
-{
-	struct object_array from_objs = OBJECT_ARRAY_INIT;
-	struct commit_list *from_iter = from, *to_iter = to;
-	int result;
-	timestamp_t min_commit_date = cutoff_by_min_date ? from->item->date : 0;
-	timestamp_t min_generation = GENERATION_NUMBER_INFINITY;
-
-	while (from_iter) {
-		add_object_array(&from_iter->item->object, NULL, &from_objs);
-
-		if (!repo_parse_commit(the_repository, from_iter->item)) {
-			timestamp_t generation;
-			if (from_iter->item->date < min_commit_date)
-				min_commit_date = from_iter->item->date;
-
-			generation = commit_graph_generation(from_iter->item);
-			if (generation < min_generation)
-				min_generation = generation;
-		}
-
-		from_iter = from_iter->next;
-	}
-
-	while (to_iter) {
-		if (!repo_parse_commit(the_repository, to_iter->item)) {
-			timestamp_t generation;
-			if (to_iter->item->date < min_commit_date)
-				min_commit_date = to_iter->item->date;
-
-			generation = commit_graph_generation(to_iter->item);
-			if (generation < min_generation)
-				min_generation = generation;
-		}
-
-		to_iter->item->object.flags |= PARENT2;
-
-		to_iter = to_iter->next;
-	}
-
-	result = can_all_from_reach_with_flag(&from_objs, PARENT2, PARENT1,
-					      min_commit_date, min_generation);
-
-	while (from) {
-		clear_commit_marks(from->item, PARENT1);
-		from = from->next;
-	}
-
-	while (to) {
-		clear_commit_marks(to->item, PARENT2);
-		to = to->next;
-	}
-
-	object_array_clear(&from_objs);
 	return result;
 }
 
@@ -1190,6 +982,159 @@ void ahead_behind(struct repository *r,
 		free_bit_array(queue.pq.array[i].data);
 	clear_bit_arrays(&bit_arrays);
 	clear_nonstale_queue(&queue);
+}
+
+static int find_reachable_one(struct repository *r, struct commit *from,
+			      unsigned int target_flag,
+			      unsigned int visited_flag,
+			      timestamp_t min_generation,
+			      timestamp_t min_commit_date)
+{
+	struct commit_list *stack = NULL;
+
+	if (repo_parse_commit(r, from))
+		return -1;
+	if (commit_graph_generation(from) < min_generation)
+		return 0;
+	if (from->object.flags & RESULT)
+		return 1;
+
+	from->object.flags |= visited_flag;
+	commit_list_insert(from, &stack);
+
+	while (stack) {
+		struct commit_list *parents;
+
+		if (stack->item->object.flags & target_flag)
+			stack->item->object.flags |= RESULT;
+
+		if (stack->item->object.flags & RESULT) {
+			pop_commit(&stack);
+			if (stack)
+				stack->item->object.flags |= RESULT;
+			continue;
+		}
+
+		for (parents = stack->item->parents; parents;
+		     parents = parents->next) {
+			struct commit *p = parents->item;
+
+			if (p->object.flags & (target_flag | RESULT))
+				stack->item->object.flags |= RESULT;
+
+			if (!(p->object.flags & visited_flag)) {
+				p->object.flags |= visited_flag;
+
+				if (repo_parse_commit(r, p)) {
+					while (stack)
+						pop_commit(&stack);
+					return -1;
+				}
+				if (commit_graph_generation(p) < min_generation ||
+				    p->date < min_commit_date)
+					continue;
+
+				commit_list_insert(p, &stack);
+				break;
+			}
+		}
+
+		if (!parents) {
+			int has_result = stack->item->object.flags & RESULT;
+			pop_commit(&stack);
+			if (has_result && stack)
+				stack->item->object.flags |= RESULT;
+		}
+	}
+
+	return from->object.flags & RESULT ? 1 : 0;
+}
+
+/* Clears visited_flag | RESULT; caller must clear target_flag. */
+static int find_reachable_core(struct repository *r,
+			       struct commit **from, size_t from_nr,
+			       unsigned int target_flag,
+			       unsigned int visited_flag,
+			       timestamp_t min_generation,
+			       timestamp_t min_commit_date,
+			       int fast_fail,
+			       unsigned int mark)
+{
+	struct commit **sorted;
+	int found = 0;
+
+	DUP_ARRAY(sorted, from, from_nr);
+	QSORT(sorted, from_nr, compare_commits_by_gen);
+
+	for (size_t i = 0; i < from_nr; i++) {
+		int result = find_reachable_one(r, sorted[i], target_flag,
+						visited_flag, min_generation,
+						min_commit_date);
+		if (result < 0) {
+			found = -1;
+			break;
+		}
+		if (result) {
+			sorted[i]->object.flags |= mark;
+			found++;
+		} else if (fast_fail) {
+			break;
+		}
+	}
+
+	clear_commit_marks_many(from_nr, sorted, visited_flag | RESULT);
+	free(sorted);
+
+	return found;
+}
+
+int find_reachable(struct repository *r,
+		   struct commit **from, size_t from_nr,
+		   struct commit **to, size_t to_nr,
+		   unsigned int mark)
+{
+	int found;
+	timestamp_t min_generation = GENERATION_NUMBER_INFINITY;
+
+	if (!from_nr || !to_nr)
+		return 0;
+
+	for (size_t i = 0; i < to_nr; i++) {
+		timestamp_t gen;
+		if (repo_parse_commit(r, to[i]))
+			die(_("could not parse commit %s"),
+			    oid_to_hex(&to[i]->object.oid));
+		gen = commit_graph_generation(to[i]);
+		if (gen < min_generation)
+			min_generation = gen;
+		to[i]->object.flags |= PARENT2;
+	}
+
+	found = find_reachable_core(r, from, from_nr, PARENT2, PARENT1,
+				    min_generation, 0, 0, mark);
+
+	for (size_t i = 0; i < to_nr; i++)
+		to[i]->object.flags &= ~PARENT2;
+
+	return found;
+}
+
+int find_reachable_list(struct repository *r,
+			struct commit **from, size_t from_nr,
+			struct commit_list *to,
+			unsigned int mark)
+{
+	size_t to_nr = commit_list_count(to);
+	struct commit **to_array;
+	int ret;
+
+	ALLOC_ARRAY(to_array, to_nr);
+	for (size_t i = 0; i < to_nr; i++, to = to->next)
+		to_array[i] = to->item;
+
+	ret = find_reachable(r, from, from_nr, to_array, to_nr, mark);
+	free(to_array);
+	return ret;
 }
 
 struct commit_and_index {

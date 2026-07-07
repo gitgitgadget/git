@@ -5,7 +5,6 @@
 #include "commit-slab.h"
 
 struct commit_list;
-struct ref_filter;
 struct object_id;
 struct object_array;
 
@@ -67,21 +66,6 @@ void reduce_heads_replace(struct commit_list **heads);
 int ref_newer(const struct object_id *new_oid, const struct object_id *old_oid);
 
 /*
- * Unknown has to be "0" here, because that's the default value for
- * contains_cache slab entries that have not yet been assigned.
- */
-enum contains_result {
-	CONTAINS_UNKNOWN = 0,
-	CONTAINS_NO,
-	CONTAINS_YES
-};
-
-define_commit_slab(contains_cache, enum contains_result);
-
-int commit_contains(struct ref_filter *filter, struct commit *commit,
-		    struct commit_list *list, struct contains_cache *cache);
-
-/*
  * Determine if every commit in 'from' can reach at least one commit
  * that is marked with 'with_flag'. As we traverse, use 'assign_flag'
  * as a marker for commits that are already visited. Do not walk
@@ -93,9 +77,6 @@ int can_all_from_reach_with_flag(struct object_array *from,
 				 unsigned int assign_flag,
 				 timestamp_t min_commit_date,
 				 timestamp_t min_generation);
-int can_all_from_reach(struct commit_list *from, struct commit_list *to,
-		       int commit_date_cutoff);
-
 
 /*
  * Return a list of commits containing the commits in the 'to' array
@@ -108,6 +89,26 @@ int can_all_from_reach(struct commit_list *from, struct commit_list *to,
 struct commit_list *get_reachable_subset(struct commit **from, size_t nr_from,
 					 struct commit **to, size_t nr_to,
 					 unsigned int reachable_flag);
+
+/*
+ * For each 'from' commit, check if it can reach any 'to' commit via
+ * parent edges. Set 'mark' on each reachable 'from' commit; pass 0
+ * to skip marking. Returns the number of reachable 'from' commits,
+ * or -1 on error.
+ *
+ * Temporarily modifies PARENT1, PARENT2, and RESULT on visited
+ * commits; all three are cleared before returning. Callers must
+ * not rely on these flags across calls.
+ */
+int find_reachable(struct repository *r,
+		   struct commit **from, size_t from_nr,
+		   struct commit **to, size_t to_nr,
+		   unsigned int mark);
+
+int find_reachable_list(struct repository *r,
+			struct commit **from, size_t from_nr,
+			struct commit_list *to,
+			unsigned int mark);
 
 struct ahead_behind_count {
 	/**
