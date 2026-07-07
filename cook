@@ -797,9 +797,9 @@ sub tweak_willdo {
 sub tweak_graduated {
 	my ($td) = @_;
 
-	# Remove the "Will merge" marker from topics that have graduated.
+	# Rename the "Will merge" marker from topics that have graduated.
 	for ($td->{'text'}) {
-		s/\n Will merge to '$MASTER'\.(\n|$)/ /s;
+		s/\n Will merge to '$MASTER'\.(\n|$)/\n Graduated to '$MASTER'.$1/s;
 	}
 }
 
