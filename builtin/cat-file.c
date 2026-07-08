@@ -458,9 +458,12 @@ static void print_object_or_die(struct batch_options *opt, struct expand_data *d
 static void print_default_format(struct strbuf *scratch, struct expand_data *data,
 				 struct batch_options *opt)
 {
-	strbuf_addf(scratch, "%s %s %"PRIuMAX"%c", oid_to_hex(&data->oid),
-		    type_name(data->type),
-		    (uintmax_t)data->size, opt->output_delim);
+	strbuf_add_oid_hex(scratch, &data->oid);
+	strbuf_addch(scratch, ' ');
+	strbuf_addstr(scratch, type_name(data->type));
+	strbuf_addch(scratch, ' ');
+	strbuf_add_uint(scratch, data->size);
+	strbuf_addch(scratch, opt->output_delim);
 }
 
 static void report_object_status(struct batch_options *opt,
@@ -910,8 +913,8 @@ static void batch_each_object(struct batch_options *opt,
 
 		for (source = the_repository->objects->sources; source; source = source->next) {
 			struct odb_source_files *files = odb_source_files_downcast(source);
-			int ret = packfile_store_for_each_object(files->packed, &oi,
-								 batch_one_object_oi, &payload, &opts);
+			int ret = odb_source_for_each_object(&files->packed->base, &oi,
+							     batch_one_object_oi, &payload, &opts);
 			if (ret)
 				break;
 		}
