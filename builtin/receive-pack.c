@@ -2058,7 +2058,7 @@ static void execute_commands(struct command *commands,
 		opt.err_fd = err_fd;
 		opt.progress = err_fd && !quiet;
 		opt.env = tmp_objdir_env(tmp_objdir);
-		opt.exclude_hidden_refs_section = "receive";
+		opt.use_toplevel_branches_for_reachability = 1;
 
 		if (check_connected(iterate_receive_command_list, &data, &opt))
 			set_connectivity_errors(commands, si);
