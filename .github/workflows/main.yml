@@ -340,6 +340,9 @@ jobs:
       CI_JOB_IMAGE: ${{matrix.vector.pool}}
       TEST_OUTPUT_DIRECTORY: ${{github.workspace}}/t
     runs-on: ${{matrix.vector.pool}}
+    # A stalled run otherwise idles until GitHub's 6h hard limit; fail
+    # sooner, shortly after the ci/ stall watchdog has dumped diagnostics.
+    timeout-minutes: 180
     steps:
     - uses: actions/checkout@v6
     - run: ci/install-dependencies.sh
@@ -420,6 +423,9 @@ jobs:
       CI_JOB_IMAGE: ${{matrix.vector.image}}
       CUSTOM_PATH: /custom
     runs-on: ubuntu-latest
+    # A stalled run otherwise idles until GitHub's 6h hard limit; fail
+    # sooner, shortly after the ci/ stall watchdog has dumped diagnostics.
+    timeout-minutes: 180
     container: ${{matrix.vector.image}}
     steps:
     - name: prepare libc6 for actions
