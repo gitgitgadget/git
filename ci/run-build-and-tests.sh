@@ -50,6 +50,25 @@ linux-reftable|linux-reftable-leaks|osx-reftable)
 
 esac
 
+# A hung test produces no output, so the job idles until the CI platform's
+# hard timeout with no hint which test stalled. Start a watchdog that dumps
+# diagnostics (see dump_stalled_test_state) if the run makes no progress for
+# GIT_TEST_STALL_TIMEOUT seconds. Count down in short steps rather than one
+# long "sleep" so that when we stop it on the happy path, no long-lived sleep
+# is left holding our output open and delaying the job from ending.
+stall_timeout="${GIT_TEST_STALL_TIMEOUT:-7200}"
+{
+	set +x
+	remaining=$stall_timeout
+	while test 0 -lt "$remaining"
+	do
+		sleep 5 || exit
+		remaining=$((remaining - 5))
+	done
+	dump_stalled_test_state "$stall_timeout"
+} &
+stall_watchdog_pid=$!
+
 case "$jobname" in
 *-meson)
 	group "Configure" meson setup build . \
@@ -71,6 +90,8 @@ case "$jobname" in
 	handle_failed_tests
 	;;
 esac
+
+kill "$stall_watchdog_pid" 2>/dev/null || :
 
 check_unignored_build_artifacts
 save_good_tree

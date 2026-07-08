@@ -57,6 +57,43 @@ group () {
 	return $res
 }
 
+# Dump diagnostics about a test run that appears stalled: which tests are
+# still in flight (test-lib only removes a test's trash directory once it
+# passes, so a surviving one has not finished), the tail of each such test's
+# --verbose-log trace (i.e. the command it is stuck on), the process table
+# sorted by memory use, and the machine's memory and kernel log. A hung test
+# otherwise produces no output at all, so the job merely idles until the CI
+# platform's hard timeout with no hint of the culprit.
+dump_stalled_test_state () {
+	# This is best-effort diagnostics run under "set -e"; never let a
+	# missing tool or file abort the dump halfway through.
+	set +e
+	results="${TEST_OUTPUT_DIRECTORY:-t}/test-results"
+
+	echo "==================================================================="
+	echo "No progress for ${1}s; the test run looks stalled. Diagnostics follow."
+	echo "==================================================================="
+
+	for trash in "${TEST_OUTPUT_DIRECTORY:-t}"/'trash directory.'*
+	do
+		test -d "$trash" || continue
+		name="${trash##*/trash directory.}"
+		echo "### still running: $name ###"
+		tail -n 20 "$results/$name.out" 2>/dev/null ||
+			echo "  (no --verbose-log trace captured)"
+	done
+
+	echo "### processes, sorted by resident set size ###"
+	ps -eo pid,ppid,etimes,rss,stat,args 2>/dev/null | sort -k 4 -nr | head -n 40
+
+	echo "### memory and load ###"
+	free -m 2>/dev/null || head -n 3 /proc/meminfo 2>/dev/null
+	cat /proc/loadavg 2>/dev/null
+
+	echo "### kernel log tail (the OOM killer records here) ###"
+	dmesg 2>/dev/null | tail -n 30 || echo "  (dmesg unavailable)"
+}
+
 begin_group "CI setup via $(basename $0)"
 
 # Set 'exit on error' for all CI scripts to let the caller know that
