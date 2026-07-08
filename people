@@ -33,5 +33,6 @@ else
 	sed -ne 's|\(.* \)*\* \([a-z][a-z]/[^ ]*\) ([-0-9]*) [0-9]* commit.*|\2|p' |
 	xargs git shortlog -e -s --no-merges ^master
 fi |
-sed -e 's/^[ 0-9]*[ 	]*//' -e 's/$/,/' -e '$s/,$//' |
-sort -u
+sed -e 's/^[ 0-9]*[ 	]*//' -e 's/$/,/' |
+sort -u |
+sed -e '$s/,$//' -e 's/^\([^<]*\.[^<]*[^ ]\) </"\1" </' -e 's/^/  /'
