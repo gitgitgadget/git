@@ -82,3 +82,5 @@ then
 		echo "$MASTER..$next..next..$jch..jch..$seen..seen"
 	fi
 fi
+
+exec sh "$(dirname $0)/onemerge.sh"
