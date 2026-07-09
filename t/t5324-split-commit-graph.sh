@@ -718,7 +718,7 @@ test_expect_success 'write generation data chunk when commit-graph chain is repl
 	)
 '
 
-test_expect_failure 'incremental write reads topo levels from all layers' '
+test_expect_success 'incremental write reads topo levels from all layers' '
 	git init topo-from-lower &&
 	(
 		cd topo-from-lower &&
