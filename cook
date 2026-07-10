@@ -1166,12 +1166,37 @@ sub doit {
 }
 
 ################################################################
+
+################################################################
+# Newer one exists?
+
+sub newer {
+	my $fn = 'Meta/whats-cooking.txt';
+	my $fh;
+	my $last_topic;
+
+	open ($fh, '<', $fn) or die "$!: open $fn";
+	while (<$fh>) {
+		chomp;
+		if (/^[*] (\S+) \(\d\d\d\d-\d\d-\d\d\)/) {
+			$last_topic = $1;
+			next;
+		}
+		if (/^ \(a newer iteration/) {
+			print "$last_topic\n$_\n";
+		}
+	}
+	close ($fh);
+}
+
+################################################################
 # Main
 
 use Getopt::Long;
 
-my ($wildo, $havedone);
+my ($wildo, $havedone, $newer);
 if (!GetOptions("wildo" => \$wildo,
+		"newer" => \$newer,
 		"havedone" => \$havedone)) {
 	print STDERR "$0 [--wildo|--havedone]\n";
 	exit 1;
@@ -1200,6 +1225,8 @@ if ($wildo) {
 		open($fd, "<", $ARGV[0]);
 	}
 	wildo($fd);
+} elsif ($newer) {
+	newer();
 } elsif ($havedone) {
 	havedone();
 } elsif (@ARGV) {
