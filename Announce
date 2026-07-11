@@ -54,7 +54,8 @@ people () {
 		--group=trailer:tested-by \
 		--group=trailer:reported-by \
 		"$@" |
-	sed -e 's/^[ 	0-9]*[ 	]//' -e 's/$/,/' |
+	sed -e '/: \(Claude\|Gemini\|ChatGPT\) /d' \
+	    -e 's/^[ 	0-9]*[ 	]//' -e 's/$/,/' |
 	sort -u
 }
 
