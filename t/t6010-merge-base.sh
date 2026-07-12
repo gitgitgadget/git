@@ -305,4 +305,38 @@ test_expect_success 'merge-base --octopus --all for complex tree' '
 	test_cmp expected actual
 '
 
+test_expect_success 'setup --is-ancestor' '
+	git init is-ancestor &&
+	(
+		cd is-ancestor &&
+		test_commit one &&
+		test_commit two &&
+		git checkout -b side one &&
+		test_commit three
+	)
+'
+
+test_expect_success '--is-ancestor parent and child' '
+	git -C is-ancestor merge-base --is-ancestor one two &&
+	test_expect_code 1 git -C is-ancestor merge-base --is-ancestor two one
+'
+
+test_expect_success '--is-ancestor self' '
+	git -C is-ancestor merge-base --is-ancestor two two
+'
+
+test_expect_success '--is-ancestor diverged commits' '
+	test_expect_code 1 git -C is-ancestor merge-base --is-ancestor three two
+'
+
+test_expect_success '--is-ancestor exit 128 non-existent commit' '
+	test_expect_code 128 git -C is-ancestor merge-base --is-ancestor one no-such-commit &&
+	test_expect_code 128 git -C is-ancestor merge-base --is-ancestor no-such-commit one
+'
+
+test_expect_success '--is-ancestor and --all cannot be used together' '
+	test_expect_code 128 git -C is-ancestor merge-base --is-ancestor --all one two 2>err &&
+	test_grep "options .--is-ancestor. and .--all. cannot be used together" err
+'
+
 test_done
