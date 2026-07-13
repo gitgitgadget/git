@@ -6,4 +6,7 @@
  * can cause Git to terminate. It must be included after all other headers.
  */
 
+#undef xsnprintf
+#define xsnprintf(...) BANNED(xsnprintf)
+
 #endif /* TR2_BANNED_H */
