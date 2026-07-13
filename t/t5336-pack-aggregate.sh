@@ -37,6 +37,26 @@ build_n_loose () {
 	done
 }
 
+# Build a single pack containing N distinct blobs.  Echoes the pack
+# basename (without .pack).
+build_big_pack () {
+	n=$1 &&
+	mkdir -p .git/objects/pack &&
+	i=0 &&
+	while test $i -lt "$n"
+	do
+		echo "big-$i-$$" | git hash-object -w --stdin &&
+		i=$((i + 1)) || return 1
+	done >big_oids &&
+	git pack-objects --window=0 .git/objects/pack/pack \
+		<big_oids >big_hash &&
+	hash=$(cat big_hash) &&
+	test -n "$hash" &&
+	test_path_is_file .git/objects/pack/pack-${hash}.pack &&
+	git prune-packed &&
+	echo "pack-$hash"
+}
+
 count_packs () {
 	ls .git/objects/pack/pack-*.pack 2>/dev/null | wc -l
 }
@@ -187,6 +207,78 @@ test_expect_success 'sidecar-marked packs are skipped' '
 		# 1 kept + 1 aggregate = 2 packs total.
 		test 2 -eq "$(count_packs)" &&
 		git fsck
+	)
+'
+
+test_expect_success '--max-objects skips packs above the object-count limit' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		big=$(build_big_pack 20) &&
+		build_n_packs 5 >/dev/null &&
+		test 6 -eq "$(count_packs)" &&
+		# The big pack (20 objects) is above the cap; the five
+		# single-object packs are below it and get rolled up.
+		git pack-aggregate --once \
+			--min-loose=1000 --min-packs=1 --max-objects=10 &&
+		test_path_is_file .git/objects/pack/${big}.pack &&
+		# 1 preserved big pack + 1 aggregate = 2 packs total.
+		test 2 -eq "$(count_packs)" &&
+		test 1 -eq "$(count_baddeltas)" &&
+		git fsck
+	)
+'
+
+test_expect_success '--max-objects=0 disables the object-count limit' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		big=$(build_big_pack 20) &&
+		build_n_packs 5 >/dev/null &&
+		test 6 -eq "$(count_packs)" &&
+		# With no cap, the big pack is aggregated along with the
+		# small ones into a single pack.
+		git pack-aggregate --once \
+			--min-loose=1000 --min-packs=1 --max-objects=0 &&
+		test_path_is_missing .git/objects/pack/${big}.pack &&
+		test 1 -eq "$(count_packs)" &&
+		git fsck
+	)
+'
+
+test_expect_success 'pack.aggregateMaxObjects supplies the default limit' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		big=$(build_big_pack 20) &&
+		build_n_packs 5 >/dev/null &&
+		test 6 -eq "$(count_packs)" &&
+		git -c pack.aggregateMaxObjects=10 pack-aggregate --once \
+			--min-loose=1000 --min-packs=1 &&
+		test_path_is_file .git/objects/pack/${big}.pack &&
+		test 2 -eq "$(count_packs)" &&
+		# An explicit --max-objects still overrides the config.
+		big2=$(build_big_pack 20) &&
+		git -c pack.aggregateMaxObjects=10 pack-aggregate --once \
+			--min-loose=1000 --min-packs=1 --max-objects=0 &&
+		test_path_is_missing .git/objects/pack/${big2}.pack &&
+		test 1 -eq "$(count_packs)" &&
+		git fsck
+	)
+'
+
+test_expect_success 'pack.aggregateMaxObjects rejects negative values' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 5 >/dev/null &&
+		test_must_fail git -c pack.aggregateMaxObjects=-1 \
+			pack-aggregate --once --min-packs=5 2>err &&
+		test_grep "cannot be negative" err
 	)
 '
 

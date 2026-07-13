@@ -39,6 +39,10 @@ is set to "multi", reuse parts of just the bitmapped packfile. This
 can reduce memory and CPU usage to serve fetches, but might result in
 sending a slightly larger pack. Defaults to true.
 
+pack.aggregateMaxObjects::
+	Default for linkgit:git-pack-aggregate[1]'s `--max-objects`
+	option. Defaults to `100000`; see that option for details.
+
 pack.island::
 	An extended regular expression configuring a set of delta
 	islands. See "DELTA ISLANDS" in linkgit:git-pack-objects[1]
