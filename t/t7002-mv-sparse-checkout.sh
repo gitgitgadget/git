@@ -238,7 +238,7 @@ test_expect_success 'refuse to move out-of-cone directory without --sparse' '
 
 	test_must_fail git mv folder1 sub 2>stderr &&
 	cat sparse_error_header >expect &&
-	echo folder1/file1 >>expect &&
+	echo folder1 >>expect &&
 	cat sparse_hint >>expect &&
 	test_cmp expect stderr
 '

@@ -16,6 +16,7 @@
 #include "read-cache.h"
 #include "setup.h"
 #include "sparse-index.h"
+#include "repo-settings.h"
 #include "submodule.h"
 #include "submodule-config.h"
 #include "string-list.h"
@@ -3831,6 +3832,10 @@ int cmd_submodule__helper(int argc,
 		OPT_END()
 	};
 	argc = parse_options(argc, argv, prefix, options, usage, 0);
+
+	/* not yet verified whether this can use the sparse index */
+	prepare_repo_settings(the_repository);
+	the_repository->settings.command_requires_full_index = 1;
 
 	return fn(argc, argv, prefix, repo);
 }

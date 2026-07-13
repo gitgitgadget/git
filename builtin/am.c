@@ -23,6 +23,7 @@
 #include "lockfile.h"
 #include "cache-tree.h"
 #include "refs.h"
+#include "repo-settings.h"
 #include "commit.h"
 #include "diff.h"
 #include "unpack-trees.h"
@@ -2463,6 +2464,9 @@ int cmd_am(int argc,
 
 	/* Ensure a valid committer ident can be constructed */
 	git_committer_info(IDENT_STRICT);
+
+	prepare_repo_settings(the_repository);
+	the_repository->settings.command_requires_full_index = 1;
 
 	if (repo_read_index_preload(the_repository, NULL, 0) < 0)
 		die(_("failed to read the index"));

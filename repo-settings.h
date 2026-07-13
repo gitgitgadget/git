@@ -65,6 +65,7 @@ struct repo_settings {
 	char *hooks_path;
 };
 #define REPO_SETTINGS_INIT { \
+	.command_requires_full_index = -1, \
 	.shared_repository = -1, \
 	.index_version = -1, \
 	.core_untracked_cache = UNTRACKED_CACHE_KEEP, \
@@ -78,6 +79,7 @@ struct repo_settings {
 
 void prepare_repo_settings(struct repository *r);
 void repo_settings_clear(struct repository *r);
+int repo_settings_get_command_requires_full_index(struct repository *r);
 
 /* Read the value for "core.warnAmbiguousRefs". */
 int repo_settings_get_warn_ambiguous_refs(struct repository *repo);
