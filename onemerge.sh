@@ -4,6 +4,14 @@
 
 endpoint=${1-seen}
 
+cnt1=$(git lgf --grep="Merge branch '" master..$endpoint | wc -l)
+cnt2=$(git branch --no-merged master --merged seen '??/*' | wc -l)
+
+if test $cnt1 -eq $cnt2
+then
+	exit 0
+fi
+
 tmp=/var/tmp/e.$$
 rm -f "$tmp.1" "$tmp.2" &&
 prev= &&
