@@ -3490,6 +3490,35 @@ void setup_standard_excludes(struct dir_struct *dir)
 		add_patterns_from_file_1(dir, excludes_file,
 					 dir->untracked ? &dir->internal.ss_excludes_file : NULL);
 
+	/*
+	 * .gitlocalignore: a discoverable, local-only ignore file at the
+	 * worktree root, gated on core.gitLocalIgnore (off by default, to
+	 * avoid surprising repositories that already contain a file with
+	 * this name). Read here, between core.excludesFile and
+	 * info/exclude, so its precedence ranks below info/exclude but
+	 * above core.excludesFile.
+	 */
+	if (startup_info->have_repository) {
+		int git_local_ignore = 0;
+		if (repo_config_get_bool(the_repository, "core.gitLocalIgnore",
+				&git_local_ignore) >= 0 && git_local_ignore) {
+			const char *wt = the_repository->worktree;
+			if (wt) {
+				char *gl_path = mkpathdup("%s/.gitlocalignore", wt);
+				if (!access_or_warn(gl_path, R_OK, 0))
+					add_patterns_from_file_1(dir, gl_path, NULL);
+				{
+					struct pattern_list *self =
+						add_pattern_list(dir, EXC_CMDL,
+								 ".gitlocalignore");
+						add_pattern(".gitlocalignore", "", 0,
+							   self, -1);
+					}
+				dir->internal.unmanaged_exclude_files++;
+			}
+		}
+	}
+
 	/* per repository user preference */
 	if (startup_info->have_repository) {
 		const char *path = git_path_info_exclude();

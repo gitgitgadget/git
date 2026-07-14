@@ -84,6 +84,7 @@ integration_tests = [
   't0008-ignores.sh',
   't0009-git-dir-validation.sh',
   't0010-racy-git.sh',
+  't0011-gitlocalignore.sh',
   't0012-help.sh',
   't0013-sha1dc.sh',
   't0014-alias.sh',
