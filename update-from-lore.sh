@@ -5,7 +5,7 @@ while case "$#" in 0) break;; esac
 do
 	case "$1" in
 	-f | --force)
-		force=force ;;
+		force=--force ;;
 	-*)
 		echo >&2 "$0: unknown option '$1'"
 		exit 1 ;;
@@ -24,7 +24,7 @@ above_master=$(git rev-list --first-parent master.. | wc -l)
 above_next=$(git rev-list --first-parent next.. | wc -l)
 if test "$above_master" != "$above_next"
 then
-	if test "$force" = force
+	if test "$force" = "--force"
 	then
 		echo >&2 warning: some patches are already in next
 	else
@@ -35,7 +35,7 @@ fi
 
 MID=
 OLD=$(git rev-parse HEAD)
-git detach || exit
+git detach ${force+--force} || exit
 git rev-list HEAD..$OLD |
 while read commit
 do
