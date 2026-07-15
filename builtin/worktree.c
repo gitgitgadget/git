@@ -475,8 +475,8 @@ static void push_reflink_source_env(struct strvec *child_env)
 		cp.git_cmd = 1;
 		cp.dir = worktrees[0]->path;
 		strvec_pushl(&cp.args, "update-index", "-q", "--refresh", NULL);
-		if (run_command(&cp))
-			; /* non-fatal: racy donor files just won't reflink */
+		/* non-fatal: racy donor files just won't reflink */
+		run_command(&cp);
 		strvec_pushf(child_env, "%s=%s",
 			     GIT_WORKTREE_REFLINK_SOURCE_ENVIRONMENT,
 			     worktrees[0]->path);
