@@ -194,6 +194,26 @@ static int reflink_donor_active(void)
 }
 
 /*
+ * The checkout-direction (smudge) CRLF conversion is the identity for
+ * these actions: crlf_to_worktree() bails out immediately unless the
+ * action's output_eol() is EOL_CRLF, which is true only for the
+ * "*_CRLF" actions.  For CRLF_BINARY and the input-style actions a
+ * blob therefore checks out byte-for-byte as its own content, so the
+ * worktree bytes of a fresh checkout equal the blob bytes.
+ */
+static int crlf_action_is_identity_smudge(enum convert_crlf_action action)
+{
+	switch (action) {
+	case CRLF_BINARY:
+	case CRLF_TEXT_INPUT:
+	case CRLF_AUTO_INPUT:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+/*
  * Try to create "path" as a reflink of the same file in the donor
  * worktree.  A zero return means the file is in place; any nonzero
  * return means the caller must write it the normal way.
@@ -211,10 +231,16 @@ static int try_reflink_entry(const struct cache_entry *ce,
 	/*
 	 * Only blobs whose worktree representation is identical to
 	 * their content are eligible; anything that smudges is left
-	 * to the regular code path.
+	 * to the regular code path.  Input-style CRLF actions are
+	 * admitted because their smudge is the identity (see
+	 * crlf_action_is_identity_smudge()); the clean direction only
+	 * ever removes CR bytes, so a donor whose on-disk size equals
+	 * the blob size cannot have diverged from it -- the size gate
+	 * below is the backstop that makes byte-divergent donors
+	 * impossible.
 	 */
 	if (ca->drv || ca->ident || ca->working_tree_encoding ||
-	    ca->crlf_action != CRLF_BINARY)
+	    !crlf_action_is_identity_smudge(ca->crlf_action))
 		return -1;
 
 	if (!reflink_donor_active())

@@ -131,4 +131,56 @@ test_expect_success '--no-checkout skips donor refresh and reflink env' '
 	! grep "\"category\":\"reflink\"" trace-nc.json
 '
 
+# "eol=lf" resolves to an input-style CRLF action (CRLF_TEXT_INPUT) whose
+# checkout-direction (smudge) conversion is the identity, so an LF blob
+# checks out byte-for-byte as its own contents.  Such files are eligible
+# for reflink.  Here both .gitattributes (no attribute matches its own
+# name -> CRLF_BINARY) and file.txt (eol=lf -> CRLF_TEXT_INPUT) are
+# reflinked, so the donor yields two hits.
+test_expect_success REFLINK 'input-style CRLF (eol=lf) files are reflinked' '
+	git init eol-lf-repo &&
+	(
+		cd eol-lf-repo &&
+		echo "*.txt text eol=lf" >.gitattributes &&
+		printf "one\ntwo\n" >file.txt &&
+		git add . &&
+		git commit -m one &&
+		test-tool chmtime =-60 .gitattributes file.txt &&
+		git update-index -q --refresh &&
+		git worktree add --no-checkout wt &&
+		GIT_TRACE2_EVENT="$PWD/trace.json" \
+		GIT_WORKTREE_REFLINK_SOURCE="$PWD" \
+			git -C wt reset --hard &&
+		test_cmp file.txt wt/file.txt &&
+		grep "\"category\":\"reflink\".*\"name\":\"hits\".*\"count\":2" trace.json
+	)
+'
+
+# Guard the belt-and-braces size gate: the working file holds CRLF bytes,
+# but "eol=lf" cleans them to an LF blob, so git considers the file
+# content-clean.  The index records the on-disk size (10 bytes, CRLF)
+# while the blob is 8 bytes (LF), so the donor entry is stat-clean yet its
+# on-disk bytes diverge from the blob.  The size==blob backstop must
+# reject it, and the new worktree must receive the LF blob, never the
+# donor's CRLF bytes.  Only .gitattributes is reflinked -> exactly one hit.
+test_expect_success REFLINK 'eol=lf donor with divergent worktree bytes is not reflinked' '
+	git init eol-lf-crlf-repo &&
+	(
+		cd eol-lf-crlf-repo &&
+		echo "*.txt text eol=lf" >.gitattributes &&
+		printf "one\r\ntwo\r\n" >file.txt &&
+		git add . &&
+		git commit -m one &&
+		test-tool chmtime =-60 .gitattributes file.txt &&
+		git update-index -q --refresh &&
+		git worktree add --no-checkout wt &&
+		GIT_TRACE2_EVENT="$PWD/trace.json" \
+		GIT_WORKTREE_REFLINK_SOURCE="$PWD" \
+			git -C wt reset --hard &&
+		printf "one\ntwo\n" >expect &&
+		test_cmp expect wt/file.txt &&
+		grep "\"category\":\"reflink\".*\"name\":\"hits\".*\"count\":1" trace.json
+	)
+'
+
 test_done
