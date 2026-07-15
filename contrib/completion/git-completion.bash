@@ -3465,7 +3465,7 @@ _git_sparse_checkout ()
 
 _git_stash ()
 {
-	local subcommands='push list show apply clear drop pop create branch import export'
+	local subcommands='push list show apply clear drop pop create branch import export rename'
 	local subcommand="$(__git_find_on_cmdline "$subcommands save")"
 
 	if [ -z "$subcommand" ]; then
@@ -3508,7 +3508,7 @@ _git_stash ()
 	import,*)
 		__git_complete_refs
 		;;
-	show,*|apply,*|drop,*|pop,*|export,*)
+	show,*|apply,*|drop,*|pop,*|export,*|rename,*)
 		__gitcomp_nl "$(__git stash list \
 				| sed -n -e 's/:.*//p')"
 		;;

@@ -1831,4 +1831,83 @@ test_expect_success 'stash show --include-untracked includes untracked files' '
 	test_grep "untracked" actual
 '
 
+test_expect_success 'rename a stash entry' '
+	git stash clear &&
+	>file-to-rename &&
+	git add file-to-rename &&
+	git stash push -m "original message" &&
+	git stash rename "new message" stash@{0} >out &&
+	test_grep "Renamed stash@{0}" out &&
+	git stash list >list &&
+	test_grep "stash@{0}: new message" list &&
+	test_grep ! "original message" list
+'
+
+test_expect_success 'rename defaults to the latest stash entry' '
+	git stash rename "default target" >out &&
+	test_grep "Renamed refs/stash@{0}" out &&
+	git stash list >list &&
+	test_grep "stash@{0}: default target" list
+'
+
+test_expect_success 'rename a deeper stash entry keeps positions and states' '
+	git stash clear &&
+	for i in 1 2 3
+	do
+		>file$i &&
+		git add file$i &&
+		git stash push -m "message $i" || return 1
+	done &&
+	git rev-parse stash@{0} stash@{1} stash@{2} >expect &&
+	git stash rename "renamed middle" stash@{1} &&
+	git rev-parse stash@{0} stash@{1} stash@{2} >actual &&
+	test_cmp expect actual &&
+	git stash list >list &&
+	test_grep "stash@{0}: On.*message 3" list &&
+	test_grep "stash@{1}: renamed middle" list &&
+	test_grep "stash@{2}: On.*message 1" list
+'
+
+test_expect_success 'rename the deepest stash entry' '
+	git rev-parse stash@{0} stash@{1} stash@{2} >expect &&
+	git stash rename "renamed deepest" stash@{2} &&
+	git rev-parse stash@{0} stash@{1} stash@{2} >actual &&
+	test_cmp expect actual &&
+	git stash list >list &&
+	test_grep "stash@{2}: renamed deepest" list
+'
+
+test_expect_success 'rename accepts a bare index and honors --quiet' '
+	git stash rename -q "quietly renamed" 1 >out &&
+	test_must_be_empty out &&
+	git stash list >list &&
+	test_grep "stash@{1}: quietly renamed" list
+'
+
+test_expect_success 'rename rejects bad arguments' '
+	test_must_fail git stash rename "no such entry" stash@{99} &&
+	test_must_fail git stash rename "" &&
+	test_must_fail git stash rename "   " &&
+	test_must_fail git stash rename "not a stash" HEAD &&
+	test_must_fail git stash rename "not an index" "stash@{now}" &&
+	test_expect_code 129 git stash rename &&
+	git stash list >list &&
+	test_grep "stash@{1}: quietly renamed" list
+'
+
+test_expect_success 'rename refuses to rewrite a non-stash reflog entry' '
+	git stash clear &&
+	>real-a &&
+	git add real-a &&
+	git stash push -m "real A" &&
+	git update-ref -m junk --create-reflog refs/stash HEAD &&
+	>real-b &&
+	git add real-b &&
+	git stash push -m "real B" &&
+	git stash list >expect &&
+	test_must_fail git stash rename "renamed A" stash@{2} &&
+	git stash list >actual &&
+	test_cmp expect actual
+'
+
 test_done

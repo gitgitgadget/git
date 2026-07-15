@@ -63,6 +63,8 @@
 	N_("git stash export (--print | --to-ref <ref>) [<stash>...]")
 #define BUILTIN_STASH_IMPORT_USAGE \
 	N_("git stash import <commit>")
+#define BUILTIN_STASH_RENAME_USAGE \
+	N_("git stash rename [-q | --quiet] <message> [<stash>]")
 #define BUILTIN_STASH_CLEAR_USAGE \
 	"git stash clear"
 
@@ -80,6 +82,7 @@ static const char * const git_stash_usage[] = {
 	BUILTIN_STASH_STORE_USAGE,
 	BUILTIN_STASH_EXPORT_USAGE,
 	BUILTIN_STASH_IMPORT_USAGE,
+	BUILTIN_STASH_RENAME_USAGE,
 	NULL
 };
 
@@ -140,6 +143,11 @@ static const char * const git_stash_export_usage[] = {
 
 static const char * const git_stash_import_usage[] = {
 	BUILTIN_STASH_IMPORT_USAGE,
+	NULL
+};
+
+static const char * const git_stash_rename_usage[] = {
+	BUILTIN_STASH_RENAME_USAGE,
 	NULL
 };
 
@@ -820,21 +828,27 @@ static int reflog_is_empty(const char *refname)
 					 refname, reject_reflog_ent, NULL);
 }
 
-static int do_drop_stash(struct stash_info *info, int quiet)
+static int drop_reflog_entry(const char *revision)
 {
-	if (!reflog_delete(info->revision.buf,
-			   EXPIRE_REFLOGS_REWRITE | EXPIRE_REFLOGS_UPDATE_REF,
-			   0)) {
-		if (!quiet)
-			printf_ln(_("Dropped %s (%s)"), info->revision.buf,
-				  oid_to_hex(&info->w_commit));
-	} else {
-		return error(_("%s: Could not drop stash entry"),
-			     info->revision.buf);
-	}
+	if (reflog_delete(revision,
+			  EXPIRE_REFLOGS_REWRITE | EXPIRE_REFLOGS_UPDATE_REF,
+			  0))
+		return error(_("%s: Could not drop stash entry"), revision);
 
 	if (reflog_is_empty(ref_stash))
 		do_clear_stash();
+
+	return 0;
+}
+
+static int do_drop_stash(struct stash_info *info, int quiet)
+{
+	if (drop_reflog_entry(info->revision.buf))
+		return -1;
+
+	if (!quiet)
+		printf_ln(_("Dropped %s (%s)"), info->revision.buf,
+			  oid_to_hex(&info->w_commit));
 
 	return 0;
 }
@@ -1187,6 +1201,166 @@ static int store_stash(int argc, const char **argv, const char *prefix,
 	ret = do_store_stash(&obj, stash_msg, quiet);
 
 out:
+	return ret;
+}
+
+struct rename_entry {
+	struct object_id oid;
+	char *msg;
+};
+
+struct rename_data {
+	struct rename_entry *entries;
+	size_t nr, alloc;
+	size_t want;
+};
+
+static int collect_rename_entries(const char *refname UNUSED,
+				  struct object_id *old_oid UNUSED,
+				  struct object_id *new_oid,
+				  const char *committer UNUSED,
+				  timestamp_t timestamp UNUSED,
+				  int tz UNUSED, const char *msg,
+				  void *cb_data)
+{
+	struct rename_data *data = cb_data;
+	const char *eol = strchrnul(msg, '\n');
+
+	ALLOC_GROW(data->entries, data->nr + 1, data->alloc);
+	oidcpy(&data->entries[data->nr].oid, new_oid);
+	data->entries[data->nr].msg = xstrndup(msg, eol - msg);
+	data->nr++;
+
+	return data->nr >= data->want;
+}
+
+static int parse_stash_index(const char *revision, size_t *idx)
+{
+	const char *num = strstr(revision, "@{");
+	char *end;
+
+	if (!num || !isdigit(num[2]))
+		return -1;
+	*idx = strtoumax(num + 2, &end, 10);
+	if (*end != '}' || end[1])
+		return -1;
+
+	return 0;
+}
+
+static int store_rename_entry(struct rename_entry *entry, const char *msg)
+{
+	if (!do_store_stash(&entry->oid, msg, 1))
+		return 0;
+	warning(_("could not restore stash entry %s; "
+		  "recover it with 'git stash store %s'"),
+		oid_to_hex(&entry->oid), oid_to_hex(&entry->oid));
+	return -1;
+}
+
+static int do_rename_stash(struct stash_info *info, size_t idx,
+			   const char *msg, int quiet)
+{
+	struct rename_data data = { .want = idx + 1 };
+	size_t i, missing = 0;
+	int ret = -1;
+
+	refs_for_each_reflog_ent_reverse(get_main_ref_store(the_repository),
+					 ref_stash, collect_rename_entries,
+					 &data);
+	if (data.nr <= idx) {
+		error(_("%s does not exist"), info->revision.buf);
+		goto cleanup;
+	}
+
+	if (!oideq(&info->w_commit, &data.entries[idx].oid)) {
+		error(_("%s changed concurrently; try again"),
+		      info->revision.buf);
+		goto cleanup;
+	}
+
+	/* refuse up front; do_store_stash() would die halfway through */
+	for (i = 0; i < data.nr; i++) {
+		struct commit *stash = lookup_commit_reference(the_repository,
+							       &data.entries[i].oid);
+
+		if (!stash || check_stash_topology(the_repository, stash)) {
+			error(_("%s does not look like a stash commit"),
+			      oid_to_hex(&data.entries[i].oid));
+			goto cleanup;
+		}
+	}
+
+	while (missing <= idx) {
+		if (drop_reflog_entry("stash@{0}"))
+			goto restore;
+		missing++;
+	}
+
+	ret = 0;
+	while (missing) {
+		i = missing - 1;
+		if (store_rename_entry(&data.entries[i],
+				       i == idx ? msg : data.entries[i].msg))
+			ret = -1;
+		missing--;
+	}
+
+	if (!ret && !quiet)
+		printf_ln(_("Renamed %s (%s)"), info->revision.buf,
+			  oid_to_hex(&data.entries[idx].oid));
+	goto cleanup;
+
+restore:
+	/* dropping failed midway; put the dropped entries back */
+	while (missing) {
+		store_rename_entry(&data.entries[missing - 1],
+				   data.entries[missing - 1].msg);
+		missing--;
+	}
+cleanup:
+	for (i = 0; i < data.nr; i++)
+		free(data.entries[i].msg);
+	free(data.entries);
+	return ret;
+}
+
+static int rename_stash(int argc, const char **argv, const char *prefix,
+			struct repository *repo UNUSED)
+{
+	int ret = -1;
+	int quiet = 0;
+	size_t idx;
+	struct stash_info info = STASH_INFO_INIT;
+	struct option options[] = {
+		OPT__QUIET(&quiet, N_("be quiet, only report errors")),
+		OPT_END()
+	};
+
+	argc = parse_options(argc, argv, prefix, options,
+			     git_stash_rename_usage, 0);
+
+	if (!argc)
+		usage_with_options(git_stash_rename_usage, options);
+
+	if (!argv[0][strspn(argv[0], " \t\r\n")]) {
+		ret = error(_("stash message cannot be empty"));
+		goto cleanup;
+	}
+
+	if (get_stash_info_assert(&info, argc - 1, argv + 1))
+		goto cleanup;
+
+	/* positions must stay stable across the drop-and-store sequence */
+	if (parse_stash_index(info.revision.buf, &idx)) {
+		error(_("cannot rename '%s': name the entry by index, "
+			"like 'stash@{1}'"), info.revision.buf);
+		goto cleanup;
+	}
+
+	ret = do_rename_stash(&info, idx, argv[0], quiet);
+cleanup:
+	free_stash_info(&info);
 	return ret;
 }
 
@@ -2472,6 +2646,7 @@ int cmd_stash(int argc,
 		OPT_SUBCOMMAND("push", &fn, push_stash_unassumed),
 		OPT_SUBCOMMAND("export", &fn, export_stash),
 		OPT_SUBCOMMAND("import", &fn, import_stash),
+		OPT_SUBCOMMAND("rename", &fn, rename_stash),
 		OPT_SUBCOMMAND_F("save", &fn, save_stash, PARSE_OPT_NOCOMPLETE),
 		OPT_END()
 	};
