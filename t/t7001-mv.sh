@@ -114,6 +114,89 @@ test_expect_success 'clean up' '
 	git reset --hard
 '
 
+test_expect_success 'moving to a non-existent directory' '
+	git reset --hard &&
+	rm -rf from && mkdir from &&
+	echo content >from/file &&
+	git add from/file &&
+	test_must_fail git mv from/file no-such-dir/file 2>actual &&
+	test_grep "destination directory does not exist" actual
+'
+
+test_expect_success 'moving to a destination with a file as a leading path component' '
+	git reset --hard &&
+	rm -rf from && mkdir from &&
+	echo contents >from/file &&
+	echo blocker >not-dir &&
+	git add from/file &&
+	test_must_fail git mv from/file not-dir/file 2>actual &&
+	test_grep "destination is not a directory" actual
+'
+
+test_expect_success SYMLINKS 'moving to a destination beyond a symlink' '
+	git reset --hard &&
+	rm -rf from regular-dir link-to-dir &&
+	mkdir from regular-dir &&
+	echo contents >from/file &&
+	ln -s regular-dir link-to-dir &&
+	git add from/file &&
+	test_must_fail git mv from/file link-to-dir/file 2>actual &&
+	test_grep "destination is beyond a symbolic link" actual
+'
+
+test_expect_success SYMLINKS 'moving to a destination with a symlink as an intermediate component' '
+	git reset --hard &&
+	rm -rf from && mkdir -p from/real/inner &&
+	echo contents >from/file &&
+	ln -s real from/link &&
+	git add from/file from/link &&
+	test_must_fail git mv from/file from/link/inner/dst 2>actual &&
+	test_grep "destination is beyond a symbolic link" actual
+'
+
+test_expect_success SYMLINKS 'refuses to overwrite a symlink at the destination' '
+	git reset --hard &&
+	rm -rf from && mkdir from &&
+	echo contents >from/file &&
+	ln -s target from/link &&
+	git add from/file from/link &&
+	test_must_fail git mv from/file from/link 2>actual &&
+	test_grep "destination exists" actual
+'
+
+test_expect_success SYMLINKS 'mv through a symlinked leading path does not touch the index' '
+	git reset --hard &&
+	rm -rf from && mkdir from &&
+	echo contents >from/src &&
+	ln -s . from/link &&
+	git add from/src from/link &&
+	git commit -m "setup symlink case" &&
+	git ls-files --stage >expect.index &&
+	test_must_fail git mv from/src from/link/real/dst 2>actual &&
+	test_grep "destination is beyond a symbolic link" actual &&
+	git ls-files --stage >actual.index &&
+	test_cmp expect.index actual.index
+'
+
+test_expect_success SYMLINKS 'mv -f does not follow a symlinked leading path' '
+	git reset --hard &&
+	rm -rf from && mkdir from &&
+	echo contents >from/src &&
+	ln -s file from/link &&
+	git add from/src from/link &&
+	test_must_fail git mv -f from/src from/link/dst 2>actual &&
+	test_grep "destination is beyond a symbolic link" actual
+'
+
+test_expect_success 'mv --dry-run detects non-existent destination parent directory' '
+	git reset --hard &&
+	rm -rf from && mkdir from &&
+	echo contents >from/file &&
+	git add from/file &&
+	test_must_fail git mv -n from/file no-such-dir/file 2>actual &&
+	test_grep "destination directory does not exist" actual
+'
+
 test_expect_success 'moving to existing untracked target with trailing slash' '
 	mkdir path1 &&
 	git mv path0/ path1/ &&
