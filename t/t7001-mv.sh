@@ -114,6 +114,55 @@ test_expect_success 'clean up' '
 	git reset --hard
 '
 
+test_expect_success 'moving to a non-existent path component in the destination' '
+	git reset --hard &&
+	mkdir -p from &&
+	echo content >from/file &&
+	git add from/file &&
+	test_must_fail git mv from/file no-such-dir/file 2>actual &&
+	test_grep "destination directory does not exist" actual
+'
+
+test_expect_success 'moving to a destination with a file as a path component' '
+	git reset --hard &&
+	mkdir -p from &&
+	echo contents >from/file &&
+	echo blocker >not-dir &&
+	git add from/file &&
+	test_must_fail git mv from/file not-dir/file 2>actual &&
+	test_grep "destination is not a directory" actual
+'
+
+test_expect_success SYMLINKS 'moving to a destination with a symlink to a file as a path component' '
+	git reset --hard &&
+	mkdir -p from &&
+	echo contents >from/file &&
+	echo target >regular &&
+	ln -s regular link-to-file &&
+	git add from/file &&
+	test_must_fail git mv from/file link-to-file/file 2>actual &&
+	test_grep "not a directory" actual
+'
+
+test_expect_success SYMLINKS 'moving to a destination with a symlink to a directory' '
+	git reset --hard &&
+	mkdir -p from realdir &&
+	echo contents >from/file &&
+	ln -s realdir link-to-dir &&
+	git add from/file &&
+	git mv from/file link-to-dir/file &&
+	test_path_is_file realdir/file
+'
+
+test_expect_success 'mv --dry-run detects non-existent destination parent directory' '
+	git reset --hard &&
+	mkdir -p from &&
+	echo content >from/file &&
+	git add from/file &&
+	test_must_fail git mv -n from/file no-such-dir/file 2>actual &&
+	test_grep "destination directory does not exist" actual
+'
+
 test_expect_success 'moving to existing untracked target with trailing slash' '
 	mkdir path1 &&
 	git mv path0/ path1/ &&

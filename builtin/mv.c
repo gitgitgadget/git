@@ -444,6 +444,30 @@ dir_check:
 			goto act_on_entry;
 		}
 
+		/*
+		 * If we are going to move SRC to DST on disk, DST's leading
+		 * directories must already exist.
+		 */
+		if (!(modes[i] & (INDEX | SPARSE | SKIP_WORKTREE_DIR)) &&
+				!(dst_mode & (SKIP_WORKTREE_DIR | SPARSE))) {
+			char *dst_dir = xstrdup(dst);
+			char *slash = strrchr(dst_dir, '/');
+
+			if (slash) {
+				struct stat dir_st;
+				*slash = '\0';
+				if (stat(dst_dir, &dir_st) < 0) {
+					/* other errors fall through to rename(), which reports them */
+					if (errno == ENOENT || errno == ENOTDIR)
+						bad = _("destination directory does not exist");
+				} else if (!S_ISDIR(dir_st.st_mode))
+					bad = _("destination is not a directory");
+			}
+			free(dst_dir);
+			if (bad)
+				goto act_on_entry;
+		}
+
 		if (ignore_sparse &&
 		    (dst_mode & (SKIP_WORKTREE_DIR | SPARSE)) &&
 		    index_entry_exists(the_repository->index, dst, strlen(dst))) {
