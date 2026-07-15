@@ -93,4 +93,42 @@ test_expect_success 'bogus reflink source is harmless' '
 	test_cmp bogus-base.t wt5/bogus-base.t
 '
 
+test_expect_success REFLINK 'git worktree add reflinks from the primary checkout' '
+	test-tool chmtime =-60 file1.t &&
+	GIT_TRACE2_EVENT="$PWD/trace-e2e.json" git worktree add wt-auto &&
+	git -C wt-auto status --porcelain >out &&
+	test_must_be_empty out &&
+	test_cmp file1.t wt-auto/file1.t &&
+	grep "\"category\":\"reflink\".*\"name\":\"hits\"" trace-e2e.json
+'
+
+test_expect_success REFLINK 'worktree.useReflink=false disables reflinking' '
+	GIT_TRACE2_EVENT="$PWD/trace-off.json" \
+		git -c worktree.usereflink=false worktree add wt-off &&
+	git -C wt-off status --porcelain >out &&
+	test_must_be_empty out &&
+	! grep "\"category\":\"reflink\"" trace-off.json
+'
+
+test_expect_success REFLINK 'worktree add from a linked worktree uses the primary donor' '
+	test-tool chmtime =-60 file1.t &&
+	GIT_TRACE2_EVENT="$PWD/trace-linked.json" \
+		git -C wt-auto worktree add "$PWD/wt-from-linked" &&
+	test_cmp file1.t wt-from-linked/file1.t &&
+	grep "\"category\":\"reflink\".*\"name\":\"hits\"" trace-linked.json
+'
+
+test_expect_success 'worktree add succeeds regardless of filesystem support' '
+	git worktree add wt-plain &&
+	git -C wt-plain status --porcelain >out &&
+	test_must_be_empty out
+'
+
+test_expect_success '--no-checkout skips donor refresh and reflink env' '
+	GIT_TRACE2_EVENT="$PWD/trace-nc.json" \
+		git worktree add --no-checkout wt-nc &&
+	! grep "update-index" trace-nc.json &&
+	! grep "\"category\":\"reflink\"" trace-nc.json
+'
+
 test_done
