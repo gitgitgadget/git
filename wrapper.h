@@ -170,4 +170,13 @@ static inline unsigned log2u(uintmax_t sz)
 	return l - 1;
 }
 
+/*
+ * Create "dst" as a lightweight copy-on-write clone (reflink) of
+ * "src", creating it with the given mode.  Returns 0 on success and
+ * -1 with errno set on failure, in which case no "dst" is left
+ * behind.  Only supported on Linux (FICLONE); elsewhere it always
+ * fails with ENOSYS.
+ */
+int reflink_file(const char *src, const char *dst, int mode);
+
 #endif /* WRAPPER_H */
