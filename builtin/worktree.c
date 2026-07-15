@@ -474,6 +474,13 @@ static void push_reflink_source_env(struct strvec *child_env)
 
 		cp.git_cmd = 1;
 		cp.dir = worktrees[0]->path;
+		/*
+		 * Clear any repo-local vars (e.g. GIT_DIR, GIT_WORK_TREE)
+		 * inherited from the calling process so the child rediscovers
+		 * the repository from cp.dir instead of reusing whichever
+		 * worktree we happen to have been invoked from.
+		 */
+		strvec_pushv(&cp.env, (const char **)local_repo_env);
 		strvec_pushl(&cp.args, "update-index", "-q", "--refresh", NULL);
 		/* non-fatal: racy donor files just won't reflink */
 		run_command(&cp);
