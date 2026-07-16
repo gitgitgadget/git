@@ -4,9 +4,11 @@
 #include "abspath.h"
 #include "config.h"
 #include "environment.h"
+#include "date.h"
 #include "gettext.h"
 #include "hash.h"
 #include "hex.h"
+#include "ident.h"
 #include "object-name.h"
 #include "parse-options.h"
 #include "refs.h"
@@ -63,6 +65,8 @@
 	N_("git stash export (--print | --to-ref <ref>) [<stash>...]")
 #define BUILTIN_STASH_IMPORT_USAGE \
 	N_("git stash import <commit>")
+#define BUILTIN_STASH_REWORD_USAGE \
+	N_("git stash reword [-q | --quiet] <message> [<stash>]")
 #define BUILTIN_STASH_CLEAR_USAGE \
 	"git stash clear"
 
@@ -80,6 +84,7 @@ static const char * const git_stash_usage[] = {
 	BUILTIN_STASH_STORE_USAGE,
 	BUILTIN_STASH_EXPORT_USAGE,
 	BUILTIN_STASH_IMPORT_USAGE,
+	BUILTIN_STASH_REWORD_USAGE,
 	NULL
 };
 
@@ -140,6 +145,11 @@ static const char * const git_stash_export_usage[] = {
 
 static const char * const git_stash_import_usage[] = {
 	BUILTIN_STASH_IMPORT_USAGE,
+	NULL
+};
+
+static const char * const git_stash_reword_usage[] = {
+	BUILTIN_STASH_REWORD_USAGE,
 	NULL
 };
 
@@ -1187,6 +1197,196 @@ static int store_stash(int argc, const char **argv, const char *prefix,
 	ret = do_store_stash(&obj, stash_msg, quiet);
 
 out:
+	return ret;
+}
+
+struct reword_entry {
+	struct object_id old_oid;
+	struct object_id new_oid;
+	char *committer;
+	char *msg;
+};
+
+struct reword_data {
+	struct reword_entry *entries;
+	size_t nr, alloc;
+};
+
+static int collect_reword_entries(const char *refname UNUSED,
+				  struct object_id *old_oid,
+				  struct object_id *new_oid,
+				  const char *committer,
+				  timestamp_t timestamp,
+				  int tz, const char *msg,
+				  void *cb_data)
+{
+	struct reword_data *data = cb_data;
+	const char *eol = strchrnul(msg, '\n');
+	struct reword_entry *entry;
+	struct ident_split ident;
+
+	ALLOC_GROW(data->entries, data->nr + 1, data->alloc);
+	entry = &data->entries[data->nr];
+	oidcpy(&entry->old_oid, old_oid);
+	oidcpy(&entry->new_oid, new_oid);
+	entry->msg = xstrndup(msg, eol - msg);
+
+	if (split_ident_line(&ident, committer, strlen(committer)) < 0) {
+		entry->committer = xstrdup(committer);
+	} else {
+		struct strbuf name = STRBUF_INIT, mail = STRBUF_INIT;
+		const char *date = show_date(timestamp, tz, DATE_MODE(NORMAL));
+
+		strbuf_add(&name, ident.name_begin,
+			   ident.name_end - ident.name_begin);
+		strbuf_add(&mail, ident.mail_begin,
+			   ident.mail_end - ident.mail_begin);
+		entry->committer = xstrdup(fmt_ident(name.buf, mail.buf,
+						     WANT_BLANK_IDENT, date, 0));
+		strbuf_release(&name);
+		strbuf_release(&mail);
+	}
+
+	data->nr++;
+	return 0;
+}
+
+static int parse_stash_index(const char *revision, size_t *idx)
+{
+	const char *num = strstr(revision, "@{");
+	char *end;
+
+	if (!num || !isdigit(num[2]))
+		return -1;
+	*idx = strtoumax(num + 2, &end, 10);
+	if (*end != '}' || end[1])
+		return -1;
+
+	return 0;
+}
+
+static int do_reword_stash(struct stash_info *info, size_t idx,
+			   const char *reworded_msg, int quiet)
+{
+	struct ref_store *refs = get_main_ref_store(the_repository);
+	struct ref_transaction *transaction = NULL;
+	struct reword_data data = { 0 };
+	struct strbuf err = STRBUF_INIT;
+	uint64_t index = 0;
+	size_t i;
+	int ret = -1;
+
+	refs_for_each_reflog_ent_reverse(refs, ref_stash,
+					 collect_reword_entries, &data);
+	if (data.nr <= idx) {
+		error(_("%s does not exist"), info->revision.buf);
+		goto cleanup;
+	}
+
+	if (!oideq(&info->w_commit, &data.entries[idx].new_oid)) {
+		error(_("%s changed concurrently; try again"),
+		      info->revision.buf);
+		goto cleanup;
+	}
+
+	for (i = 0; i <= idx; i++) {
+		struct commit *stash = lookup_commit_reference(the_repository,
+							       &data.entries[i].new_oid);
+
+		if (!stash || check_stash_topology(the_repository, stash)) {
+			error(_("%s does not look like a stash commit"),
+			      oid_to_hex(&data.entries[i].new_oid));
+			goto cleanup;
+		}
+	}
+
+	if (refs_delete_reflog(refs, ref_stash)) {
+		error(_("could not rewrite %s"), ref_stash);
+		goto cleanup;
+	}
+
+	transaction = ref_store_transaction_begin(refs, 0, &err);
+	if (!transaction)
+		goto restore;
+
+	for (i = data.nr; i-- > 0; ) {
+		if (ref_transaction_update_reflog(transaction, ref_stash,
+						  &data.entries[i].new_oid,
+						  &data.entries[i].old_oid,
+						  data.entries[i].committer,
+						  i == idx ? reworded_msg :
+							     data.entries[i].msg,
+						  index++, &err))
+			goto restore;
+	}
+
+	if (ref_transaction_commit(transaction, &err))
+		goto restore;
+
+	ret = 0;
+	if (!quiet)
+		printf_ln(_("Reworded %s (%s)"), info->revision.buf,
+			  oid_to_hex(&data.entries[idx].new_oid));
+	goto cleanup;
+
+restore:
+	if (err.len)
+		error("%s", err.buf);
+	ref_transaction_free(transaction);
+	transaction = NULL;
+	for (i = data.nr; i-- > 0; )
+		if (do_store_stash(&data.entries[i].new_oid,
+				   data.entries[i].msg, 1))
+			warning(_("could not restore stash entry %s; "
+				  "recover it with 'git stash store %s'"),
+				oid_to_hex(&data.entries[i].new_oid),
+				oid_to_hex(&data.entries[i].new_oid));
+cleanup:
+	ref_transaction_free(transaction);
+	strbuf_release(&err);
+	for (i = 0; i < data.nr; i++) {
+		free(data.entries[i].committer);
+		free(data.entries[i].msg);
+	}
+	free(data.entries);
+	return ret;
+}
+
+static int reword_stash(int argc, const char **argv, const char *prefix,
+			struct repository *repo UNUSED)
+{
+	int ret = -1;
+	int quiet = 0;
+	size_t idx;
+	struct stash_info info = STASH_INFO_INIT;
+	struct option options[] = {
+		OPT__QUIET(&quiet, N_("be quiet, only report errors")),
+		OPT_END()
+	};
+
+	argc = parse_options(argc, argv, prefix, options,
+			     git_stash_reword_usage, 0);
+
+	if (!argc)
+		usage_with_options(git_stash_reword_usage, options);
+
+	if (!argv[0][strspn(argv[0], " \t\r\n")]) {
+		ret = error(_("stash message cannot be empty"));
+		goto cleanup;
+	}
+
+	if (get_stash_info_assert(&info, argc - 1, argv + 1))
+		goto cleanup;
+
+	if (parse_stash_index(info.revision.buf, &idx)) {
+		error(_("cannot reword '%s': name the entry by index, "
+			"like 'stash@{1}'"), info.revision.buf);
+		goto cleanup;
+	}
+
+	ret = do_reword_stash(&info, idx, argv[0], quiet);
+cleanup:
+	free_stash_info(&info);
 	return ret;
 }
 
@@ -2472,6 +2672,7 @@ int cmd_stash(int argc,
 		OPT_SUBCOMMAND("push", &fn, push_stash_unassumed),
 		OPT_SUBCOMMAND("export", &fn, export_stash),
 		OPT_SUBCOMMAND("import", &fn, import_stash),
+		OPT_SUBCOMMAND("reword", &fn, reword_stash),
 		OPT_SUBCOMMAND_F("save", &fn, save_stash, PARSE_OPT_NOCOMPLETE),
 		OPT_END()
 	};

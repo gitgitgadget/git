@@ -1831,4 +1831,83 @@ test_expect_success 'stash show --include-untracked includes untracked files' '
 	test_grep "untracked" actual
 '
 
+test_expect_success 'reword a stash entry' '
+	git stash clear &&
+	>file-to-reword &&
+	git add file-to-reword &&
+	git stash push -m "original message" &&
+	git stash reword "new message" stash@{0} >out &&
+	test_grep "Reworded stash@{0}" out &&
+	git stash list >list &&
+	test_grep "stash@{0}: new message" list &&
+	test_grep ! "original message" list
+'
+
+test_expect_success 'reword defaults to the latest stash entry' '
+	git stash reword "default target" >out &&
+	test_grep "Reworded refs/stash@{0}" out &&
+	git stash list >list &&
+	test_grep "stash@{0}: default target" list
+'
+
+test_expect_success 'reword a deeper stash entry keeps positions and states' '
+	git stash clear &&
+	for i in 1 2 3
+	do
+		>file$i &&
+		git add file$i &&
+		git stash push -m "message $i" || return 1
+	done &&
+	git rev-parse stash@{0} stash@{1} stash@{2} >expect &&
+	git stash reword "reworded middle" stash@{1} &&
+	git rev-parse stash@{0} stash@{1} stash@{2} >actual &&
+	test_cmp expect actual &&
+	git stash list >list &&
+	test_grep "stash@{0}: On.*message 3" list &&
+	test_grep "stash@{1}: reworded middle" list &&
+	test_grep "stash@{2}: On.*message 1" list
+'
+
+test_expect_success 'reword the deepest stash entry' '
+	git rev-parse stash@{0} stash@{1} stash@{2} >expect &&
+	git stash reword "reworded deepest" stash@{2} &&
+	git rev-parse stash@{0} stash@{1} stash@{2} >actual &&
+	test_cmp expect actual &&
+	git stash list >list &&
+	test_grep "stash@{2}: reworded deepest" list
+'
+
+test_expect_success 'reword accepts a bare index and honors --quiet' '
+	git stash reword -q "quietly reworded" 1 >out &&
+	test_must_be_empty out &&
+	git stash list >list &&
+	test_grep "stash@{1}: quietly reworded" list
+'
+
+test_expect_success 'reword rejects bad arguments' '
+	test_must_fail git stash reword "no such entry" stash@{99} &&
+	test_must_fail git stash reword "" &&
+	test_must_fail git stash reword "   " &&
+	test_must_fail git stash reword "not a stash" HEAD &&
+	test_must_fail git stash reword "not an index" "stash@{now}" &&
+	test_expect_code 129 git stash reword &&
+	git stash list >list &&
+	test_grep "stash@{1}: quietly reworded" list
+'
+
+test_expect_success 'reword refuses to rewrite a non-stash reflog entry' '
+	git stash clear &&
+	>real-a &&
+	git add real-a &&
+	git stash push -m "real A" &&
+	git update-ref -m junk --create-reflog refs/stash HEAD &&
+	>real-b &&
+	git add real-b &&
+	git stash push -m "real B" &&
+	git stash list >expect &&
+	test_must_fail git stash reword "reworded A" stash@{2} &&
+	git stash list >actual &&
+	test_cmp expect actual
+'
+
 test_done
