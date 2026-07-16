@@ -25,6 +25,7 @@
 #include "utf8.h"
 #include "odb.h"
 #include "userdiff.h"
+#include "diff-process.h"
 #include "submodule.h"
 #include "hashmap.h"
 #include "mem-pool.h"
@@ -4164,6 +4165,25 @@ static void builtin_diff(const char *name_a,
 		xpp.ignore_regex_nr = o->ignore_regex_nr;
 		xpp.anchors = o->anchors;
 		xpp.anchors_nr = o->anchors_nr;
+
+		/*
+		 * Send the blob oids only for a side whose content is the
+		 * raw blob: textconv rewrites the bytes, and a working-tree
+		 * side has no stored oid, so pass NULL there rather than an
+		 * oid that would not name what the tool receives.
+		 */
+		if (diff_process_fill_hunks(o, name_a, &mf1, &mf2,
+					    (textconv_one || !one->oid_valid) ? NULL : &one->oid,
+					    (textconv_two || !two->oid_valid) ? NULL : &two->oid,
+					    &xpp)
+		    == DIFF_PROCESS_EQUIVALENT) {
+			if (textconv_one)
+				free(mf1.ptr);
+			if (textconv_two)
+				free(mf2.ptr);
+			goto free_ab_and_return;
+		}
+
 		xecfg.ctxlen = o->context;
 		xecfg.interhunkctxlen = o->interhunkcontext;
 		xecfg.flags = XDL_EMIT_FUNCNAMES;
@@ -4208,6 +4228,7 @@ static void builtin_diff(const char *name_a,
 		} else if (xdi_diff_outf(&mf1, &mf2, NULL, fn_out_consume,
 					 &ecbdata, &xpp, &xecfg))
 			die("unable to generate diff for %s", one->path);
+		free(xpp.external_hunks);
 		if (o->word_diff)
 			free_diff_words_data(&ecbdata);
 		if (textconv_one)
@@ -4321,20 +4342,43 @@ static void builtin_diffstat(const char *name_a, const char *name_b,
 		xecfg.ctxlen = o->context;
 		xecfg.interhunkctxlen = o->interhunkcontext;
 		xecfg.flags = XDL_EMIT_NO_HUNK_HDR;
+		/*
+		 * Consult the diff process so --stat reflects the
+		 * tool's view of which lines changed rather than the
+		 * builtin line diff.  --stat never applies textconv, so
+		 * the tool is fed the same raw mmfiles the stat itself
+		 * diffs (unlike builtin_diff, which consults the process
+		 * on textconv'd content).
+		 * When the tool reports the files as equivalent we skip
+		 * xdiff entirely, leaving added and deleted at zero so
+		 * the file is pruned below, just as builtin_diff() emits
+		 * no patch for an equivalent file.
+		 *
+		 * Under -L, feed the tool's hunks through the same
+		 * line-range filter the builtin stat uses, so a
+		 * process-provided diff is scoped to the tracked range.
+		 */
+		if (diff_process_fill_hunks(o, name_a, &mf1, &mf2,
+					    one->oid_valid ? &one->oid : NULL,
+					    two->oid_valid ? &two->oid : NULL,
+					    &xpp)
+		    != DIFF_PROCESS_EQUIVALENT) {
+			if (p->line_ranges) {
+				struct line_range_filter lr_filter;
 
-		if (p->line_ranges) {
-			struct line_range_filter lr_filter;
+				line_range_filter_init(&lr_filter, p->line_ranges,
+						       diffstat_consume, diffstat);
 
-			line_range_filter_init(&lr_filter, p->line_ranges,
-					       diffstat_consume, diffstat);
-
-			if (line_range_filter_diff(&lr_filter, &mf1, &mf2,
-						   &xpp, &xecfg))
+				if (line_range_filter_diff(&lr_filter, &mf1, &mf2,
+							   &xpp, &xecfg))
+					die("unable to generate diffstat for %s",
+					    one->path);
+			} else if (xdi_diff_outf(&mf1, &mf2, NULL, diffstat_consume,
+						 diffstat, &xpp, &xecfg))
 				die("unable to generate diffstat for %s",
 				    one->path);
-		} else if (xdi_diff_outf(&mf1, &mf2, NULL,
-				  diffstat_consume, diffstat, &xpp, &xecfg))
-			die("unable to generate diffstat for %s", one->path);
+		}
+		free(xpp.external_hunks);
 
 		if (DIFF_FILE_VALID(one) && DIFF_FILE_VALID(two)) {
 			struct diffstat_file *file =
@@ -6050,6 +6094,17 @@ static int diff_opt_submodule(const struct option *opt,
 	return 0;
 }
 
+static int diff_opt_ext_diff(const struct option *opt,
+			     const char *arg, int unset)
+{
+	struct diff_options *options = opt->value;
+
+	BUG_ON_OPT_ARG(arg);
+	options->flags.allow_external = !unset;
+	options->flags.no_diff_process = unset;
+	return 0;
+}
+
 static int diff_opt_textconv(const struct option *opt,
 			     const char *arg, int unset)
 {
@@ -6380,8 +6435,9 @@ struct option *add_diff_options(const struct option *opts,
 			 N_("exit with 1 if there were differences, 0 otherwise")),
 		OPT_BOOL(0, "quiet", &options->flags.quick,
 			 N_("disable all output of the program")),
-		OPT_BOOL(0, "ext-diff", &options->flags.allow_external,
-			 N_("allow an external diff helper to be executed")),
+		OPT_CALLBACK_F(0, "ext-diff", options, NULL,
+			       N_("allow an external diff helper to be executed"),
+			       PARSE_OPT_NOARG, diff_opt_ext_diff),
 		OPT_CALLBACK_F(0, "textconv", options, NULL,
 			       N_("run external text conversion filters when comparing binary files"),
 			       PARSE_OPT_NOARG, diff_opt_textconv),
