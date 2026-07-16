@@ -183,4 +183,131 @@ test_expect_success REFLINK 'eol=lf donor with divergent worktree bytes is not r
 	)
 '
 
+# On a filesystem where FICLONE is not supported at all (e.g. ext4), the
+# first reflink attempt fails with EOPNOTSUPP/ENOTTY/ENOSYS/EXDEV and
+# reflink_donor.state latches to "disabled" for the rest of the process,
+# so no further attempts are made even though more eligible donor files
+# remain.  This only makes sense on a filesystem where FICLONE truly
+# fails, hence the !REFLINK gate: the REFLINK prereq itself proves
+# FICLONE works here, which would defeat the point of this test.
+test_expect_success !REFLINK 'first FICLONE failure disables further attempts' '
+	git init reflink-disable-repo &&
+	(
+		cd reflink-disable-repo &&
+		test_commit fileA &&
+		test_commit fileB &&
+		test_commit fileC &&
+		test-tool chmtime =-60 fileA.t fileB.t fileC.t &&
+		git update-index -q --refresh &&
+		git worktree add --no-checkout wt &&
+		GIT_TRACE2_EVENT="$PWD/trace.json" \
+		GIT_WORKTREE_REFLINK_SOURCE="$PWD" \
+			git -C wt reset --hard &&
+		test_cmp fileA.t wt/fileA.t &&
+		test_cmp fileB.t wt/fileB.t &&
+		test_cmp fileC.t wt/fileC.t &&
+		grep "\"category\":\"reflink\".*\"name\":\"attempts\".*\"count\":1" trace.json &&
+		! grep "\"category\":\"reflink\".*\"name\":\"hits\"" trace.json
+	)
+'
+
+test_expect_success REFLINK 'skip-worktree donor entries are not reflinked' '
+	git init skip-worktree-repo &&
+	(
+		cd skip-worktree-repo &&
+		test_commit fileA &&
+		test_commit fileB &&
+		test-tool chmtime =-60 fileA.t fileB.t &&
+		git update-index -q --refresh &&
+		git update-index --skip-worktree fileB.t &&
+		git worktree add --no-checkout wt &&
+		GIT_TRACE2_EVENT="$PWD/trace.json" \
+		GIT_WORKTREE_REFLINK_SOURCE="$PWD" \
+			git -C wt reset --hard &&
+		test_cmp fileA.t wt/fileA.t &&
+		test_cmp fileB.t wt/fileB.t &&
+		grep "\"category\":\"reflink\".*\"name\":\"hits\".*\"count\":1" trace.json
+	)
+'
+
+# The donor's entry carries CE_VALID (assume-unchanged), but its on-disk
+# content was changed without telling the index.  The replacement text is
+# deliberately the same size as the original blob: that neutralizes the
+# independent size==blob backstop (which would reject a differently-sized
+# replacement on its own and mask whatever ie_match_stat() decided), so
+# the only thing standing between this stale donor and a bad reflink is
+# passing CE_MATCH_IGNORE_VALID to force a real stat compare instead of
+# trusting the assume-unchanged bit.
+test_expect_success REFLINK 'assume-unchanged donor with stale content is not reflinked' '
+	git init assume-unchanged-repo &&
+	(
+		cd assume-unchanged-repo &&
+		printf "hello world\n" >file.t &&
+		git add file.t &&
+		git commit -m file &&
+		test-tool chmtime =-60 file.t &&
+		git update-index -q --refresh &&
+		git update-index --assume-unchanged file.t &&
+		printf "HELLO WORLD\n" >file.t &&
+		git worktree add --no-checkout wt &&
+		GIT_TRACE2_EVENT="$PWD/trace.json" \
+		GIT_WORKTREE_REFLINK_SOURCE="$PWD" \
+			git -C wt reset --hard &&
+		printf "hello world\n" >expect &&
+		test_cmp expect wt/file.t &&
+		! grep "\"category\":\"reflink\"" trace.json
+	)
+'
+
+# "update-index --chmod=+x" only flips the mode bit recorded in the
+# index; it does not touch the file on disk.  That leaves the donor's
+# index entry at 100755 while the committed tree (and the new worktree's
+# own index, built fresh from that tree) still has 100644, so the
+# ce_mode comparison in try_reflink_entry() must reject the donor before
+# ever looking at its on-disk stat data.
+test_expect_success REFLINK,POSIXPERM 'donor index mode differing from target tree is not reflinked' '
+	git init mode-mismatch-repo &&
+	(
+		cd mode-mismatch-repo &&
+		test_write_lines "#!/bin/sh" "true" >file.sh &&
+		git add file.sh &&
+		git commit -m file &&
+		test-tool chmtime =-60 file.sh &&
+		git update-index -q --refresh &&
+		git update-index --chmod=+x file.sh &&
+		git worktree add --no-checkout wt &&
+		GIT_TRACE2_EVENT="$PWD/trace.json" \
+		GIT_WORKTREE_REFLINK_SOURCE="$PWD" \
+			git -C wt reset --hard &&
+		test_cmp file.sh wt/file.sh &&
+		! test -x wt/file.sh &&
+		! grep "\"category\":\"reflink\"" trace.json
+	)
+'
+
+# Gitlink entries never reach try_reflink_entry() (it is only consulted
+# for S_IFREG blobs), so they are unaffected by a reflink donor; this
+# guards against a regression that made checkout mishandle gitlinks
+# whenever a donor is active, by comparing against a control worktree
+# with reflinking turned off via worktree.usereflink=false.
+test_expect_success REFLINK 'gitlink entries are checked out correctly with reflink donor' '
+	git init gitlink-repo &&
+	(
+		cd gitlink-repo &&
+		git init inner &&
+		test_commit -C inner inner-file &&
+		inner_head=$(git -C inner rev-parse HEAD) &&
+		git update-index --add --cacheinfo 160000,$inner_head,inner &&
+		test_commit regular &&
+		test-tool chmtime =-60 regular.t &&
+		git update-index -q --refresh &&
+		GIT_TRACE2_EVENT="$PWD/trace.json" git worktree add wt &&
+		git -c worktree.usereflink=false worktree add wt-control &&
+		test_cmp regular.t wt/regular.t &&
+		test_path_is_dir wt/inner &&
+		test_path_is_dir wt-control/inner &&
+		grep "\"category\":\"reflink\".*\"name\":\"hits\".*\"count\":1" trace.json
+	)
+'
+
 test_done
