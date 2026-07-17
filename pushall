@@ -2,7 +2,7 @@
 
 : ${sites:="github2 ko repo"}
 : ${nexts:="$sites"}
-: ${mirrors="github gob-private"}
+: ${mirrors:="github gob-private"}
 
 push_retry () {
 	sites=$1
