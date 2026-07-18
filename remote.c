@@ -1887,13 +1887,38 @@ const char *branch_get_upstream(struct branch *branch, struct strbuf *err)
 	return branch->merge[0]->dst;
 }
 
-static char *tracking_for_push_dest(struct repository *repo UNUSED,
+struct remote *repo_remote_for_push_tracking(struct repository *repo,
+					     struct remote *remote)
+{
+	struct remote *first_match = NULL;
+	struct remote_state *remote_state = repo->remote_state;
+
+	if (remote->origin != REMOTE_UNCONFIGURED || remote->url.nr != 1)
+		return remote;
+
+	for (int i = 0; i < remote_state->remotes_nr; i++) {
+		struct remote *candidate = remote_state->remotes[i];
+
+		if (!candidate || candidate == remote ||
+		    !remote_is_configured(candidate, 0) ||
+		    !remote_has_url(candidate, remote->url.v[0]))
+			continue;
+		if (first_match)
+			return remote;
+		first_match = candidate;
+	}
+
+	return first_match ? first_match : remote;
+}
+
+static char *tracking_for_push_dest(struct repository *repo,
 				    struct remote *remote,
 				    const char *refname,
 				    struct strbuf *err)
 {
 	char *ret;
 
+	remote = repo_remote_for_push_tracking(repo, remote);
 	ret = apply_refspecs(&remote->fetch, refname);
 	if (!ret)
 		return error_buf(err,
