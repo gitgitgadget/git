@@ -23,4 +23,14 @@ test_expect_success GETTEXT_LOCALE 'git show a ISO-8859-1 commit under a UTF-8 l
 	grep -q "iso-utf8-commit" out
 '
 
+test_expect_success GETTEXT_LOCALE 'the %c date format works even without a localedir (LC_TIME)' '
+	LANGUAGE=is LC_ALL="$is_IS_locale" GIT_TEXTDOMAINDIR="$PWD/nonexisting" \
+		git log --pretty=format:%ad --date=format:%c HEAD^1..HEAD >actual &&
+
+	# Avoid testing the raw format (it might differ?). But
+	# Thursday is Fimmtudagur in Icelandic, so grepping "fim" is
+	# pretty certain to test that the locale was used.
+	grep -iF fim actual
+'
+
 test_done
