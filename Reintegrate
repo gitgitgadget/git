@@ -173,7 +173,7 @@ no)
 			into="--into $original_branch"
 		else
 			original_branch=
-			into=
+			into=${INTO:+"--into $INTO"}
 		fi
 	}
 
