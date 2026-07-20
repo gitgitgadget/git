@@ -83,4 +83,5 @@ then
 	fi
 fi
 
-exec sh "$(dirname $0)/onemerge.sh"
+sh "$(dirname $0)/onemerge.sh"
+sh "$(dirname $0)/basecheck.sh"
