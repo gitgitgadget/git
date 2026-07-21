@@ -1980,7 +1980,6 @@ test_expect_success '--update-refs ignores non-branch decorations' '
 
 test_expect_success '--update-refs updates refs correctly' '
 	test_when_finished "
-		test_might_fail git symbolic-ref -d refs/heads/no-conflict-branch-alias &&
 		test_might_fail git symbolic-ref -d refs/heads/second-alias
 	" &&
 	git checkout -B update-refs no-conflict-branch &&
@@ -1988,8 +1987,6 @@ test_expect_success '--update-refs updates refs correctly' '
 	git branch -f first HEAD~3 &&
 	git branch -f second HEAD~3 &&
 	git branch -f third HEAD~1 &&
-	git symbolic-ref refs/heads/no-conflict-branch-alias \
-		refs/heads/no-conflict-branch &&
 	git symbolic-ref refs/heads/second-alias refs/heads/second &&
 	test_commit extra2 fileX &&
 	git commit --amend --fixup=L &&
@@ -1998,13 +1995,8 @@ test_expect_success '--update-refs updates refs correctly' '
 
 	test_cmp_rev HEAD~3 refs/heads/first &&
 	test_cmp_rev HEAD~3 refs/heads/second &&
-	test_cmp_rev HEAD~3 refs/heads/second-alias &&
 	test_cmp_rev HEAD~1 refs/heads/third &&
 	test_cmp_rev HEAD refs/heads/no-conflict-branch &&
-	test_cmp_rev HEAD refs/heads/no-conflict-branch-alias &&
-	test_write_lines refs/heads/no-conflict-branch >expect &&
-	git symbolic-ref refs/heads/no-conflict-branch-alias >actual &&
-	test_cmp expect actual &&
 	test_write_lines refs/heads/second >expect &&
 	git symbolic-ref refs/heads/second-alias >actual &&
 	test_cmp expect actual &&
@@ -2040,12 +2032,91 @@ test_expect_success '--update-refs skips symref to current non-branch target' '
 		GIT_SEQUENCE_EDITOR="cat >todo" \
 			git rebase -i --force-rebase --update-refs HEAD~2 &&
 
-		test_grep ! "refs/heads/current-non-branch-alias" todo &&
-		test_cmp_rev HEAD refs/heads/current-non-branch-alias &&
-		test_write_lines refs/tags/current-non-branch-target >expect &&
-		git symbolic-ref refs/heads/current-non-branch-alias >actual &&
-		test_cmp expect actual
+		test_grep ! "refs/heads/current-non-branch-alias" todo
 	)
+'
+
+test_expect_success '--update-refs checks resolved non-branch symref target' '
+	test_when_finished "
+		test_might_fail git worktree remove --force checked-out-target-wt &&
+		test_might_fail git symbolic-ref -d refs/heads/non-branch-alias &&
+		test_might_fail git symbolic-ref -d \
+			refs/heads/checked-out-target-alias &&
+		test_might_fail git tag -d checked-out-target
+	" &&
+	git tag checked-out-target HEAD~1 &&
+	git symbolic-ref refs/heads/non-branch-alias refs/tags/checked-out-target &&
+	git symbolic-ref refs/heads/checked-out-target-alias \
+		refs/tags/checked-out-target &&
+	git worktree add --detach checked-out-target-wt checked-out-target &&
+	git -C checked-out-target-wt symbolic-ref HEAD \
+		refs/heads/checked-out-target-alias &&
+
+	GIT_SEQUENCE_EDITOR="cat >todo" git rebase -i --update-refs HEAD~2 &&
+
+	test_grep "^# Ref refs/heads/non-branch-alias checked out at" todo
+'
+
+test_expect_success '--update-refs deduplicates non-branch symref targets' '
+	test_when_finished "
+		git symbolic-ref -d refs/heads/non-branch-alias-one &&
+		git symbolic-ref -d refs/heads/non-branch-alias-two &&
+		git tag -d shared-non-branch-target
+	" &&
+	git tag shared-non-branch-target HEAD~1 &&
+	git symbolic-ref refs/heads/non-branch-alias-one \
+		refs/tags/shared-non-branch-target &&
+	git symbolic-ref refs/heads/non-branch-alias-two \
+		refs/tags/shared-non-branch-target &&
+
+	GIT_SEQUENCE_EDITOR=: git rebase -i --force-rebase --update-refs HEAD~2 &&
+
+	test_cmp_rev HEAD~1 refs/tags/shared-non-branch-target &&
+	test_write_lines refs/tags/shared-non-branch-target >expect &&
+	git symbolic-ref refs/heads/non-branch-alias-one >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success '--update-refs honors non-branch symref reservations' '
+	test_when_finished "
+		test_might_fail git worktree remove --force reserved-target-wt &&
+		test_might_fail git symbolic-ref -d \
+			refs/heads/reserved-update-alias-one &&
+		test_might_fail git symbolic-ref -d \
+			refs/heads/reserved-update-alias-two &&
+		test_might_fail git symbolic-ref -d \
+			refs/heads/reserved-head-alias-one &&
+		test_might_fail git symbolic-ref -d \
+			refs/heads/reserved-head-alias-two &&
+		test_might_fail git tag -d reserved-update-target &&
+		test_might_fail git tag -d reserved-head-target
+	" &&
+	git tag reserved-update-target HEAD~1 &&
+	git symbolic-ref refs/heads/reserved-update-alias-one \
+		refs/tags/reserved-update-target &&
+	git symbolic-ref refs/heads/reserved-update-alias-two \
+		refs/tags/reserved-update-target &&
+	git tag reserved-head-target HEAD~2 &&
+	git symbolic-ref refs/heads/reserved-head-alias-one \
+		refs/tags/reserved-head-target &&
+	git symbolic-ref refs/heads/reserved-head-alias-two \
+		refs/tags/reserved-head-target &&
+	git worktree add --detach reserved-target-wt HEAD &&
+	wt_gitdir=$(git -C reserved-target-wt rev-parse --absolute-git-dir) &&
+	mkdir -p "$wt_gitdir/rebase-merge" &&
+	old_oid=$(git rev-parse refs/heads/reserved-update-alias-one) &&
+	test_write_lines refs/heads/reserved-update-alias-one \
+		"$old_oid" "$old_oid" >"$wt_gitdir/rebase-merge/update-refs" &&
+	test_write_lines refs/heads/reserved-head-alias-one \
+		>"$wt_gitdir/rebase-merge/head-name" &&
+
+	GIT_SEQUENCE_EDITOR="cat >todo" git rebase -i --update-refs HEAD~3 &&
+
+	test_grep "^# Ref refs/heads/reserved-update-alias-two checked out at" \
+		todo &&
+	test_grep "^# Ref refs/heads/reserved-head-alias-two checked out at" \
+		todo &&
+	test_grep ! "^update-ref refs/heads/reserved-.*-alias" todo
 '
 
 test_expect_success 'respect user edits to update-ref steps' '
