@@ -15,7 +15,7 @@ fi
 tmp=/var/tmp/e.$$
 rm -f "$tmp.1" "$tmp.2" &&
 prev= &&
-trap 'rm -f "$tmp.*"' 0 || exit
+trap 'rm -f "$tmp."*' 0 || exit
 
 git rev-list --merges --first-parent master..$endpoint |
 while read commit
@@ -33,8 +33,7 @@ do
 			echo Merges multiple topics
 			git show -s --format="* %s" "$prev"
 			comm -23 "$tmp.1" "$tmp.2"
-			exit
-
+			exit 1
 		fi
 	fi
 	mv -f "$tmp.1" "$tmp.2"
