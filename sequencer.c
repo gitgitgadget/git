@@ -6546,28 +6546,50 @@ static int add_decorations_to_list(const struct commit *commit,
 				   struct todo_add_branch_context *ctx)
 {
 	const struct name_decoration *decoration = get_name_decoration(&commit->object);
-	const char *head_ref = refs_resolve_ref_unsafe(get_main_ref_store(the_repository),
-						       "HEAD",
-						       RESOLVE_REF_READING,
-						       NULL,
-						       NULL);
+	struct ref_store *refs = get_main_ref_store(the_repository);
+	char *head_ref = refs_resolve_refdup(refs, "HEAD",
+					     RESOLVE_REF_READING,
+					     NULL, NULL);
 
 	while (decoration) {
 		struct todo_item *item;
 		const char *path;
+		char *resolved_ref;
+		int flags = 0;
 		size_t base_offset = ctx->buf->len;
 
 		/*
-		 * If the branch is the current HEAD, then it will be
-		 * updated by the default rebase behavior.
-		 * Exclude it from the list of refs to update,
-		 * as well as any non-branch decorations.
 		 * Non-branch decorations may be present if the pretty format
 		 * includes "%d", which would have loaded all refs
 		 * into the global decoration table.
 		 */
-		if ((head_ref && !strcmp(head_ref, decoration->name)) ||
-		    (decoration->type != DECORATION_REF_LOCAL)) {
+		if (decoration->type != DECORATION_REF_LOCAL) {
+			decoration = decoration->next;
+			continue;
+		}
+
+		/*
+		 * A symref to another local branch is only an alias. The
+		 * target branch has its own decoration, so only queue the
+		 * concrete branch.
+		 */
+		resolved_ref = refs_resolve_refdup(refs, decoration->name,
+						      RESOLVE_REF_READING,
+						      NULL, &flags);
+		if (resolved_ref && (flags & REF_ISSYMREF) &&
+		    starts_with(resolved_ref, "refs/heads/")) {
+			free(resolved_ref);
+			decoration = decoration->next;
+			continue;
+		}
+
+		/*
+		 * If the branch or its referent is the current HEAD, then it
+		 * will be updated by the default rebase behavior.
+		 */
+		if (head_ref && resolved_ref &&
+		    !strcmp(head_ref, resolved_ref)) {
+			free(resolved_ref);
 			decoration = decoration->next;
 			continue;
 		}
@@ -6599,9 +6621,11 @@ static int add_decorations_to_list(const struct commit *commit,
 		item->arg_len = ctx->buf->len - base_offset;
 		ctx->items_nr++;
 
+		free(resolved_ref);
 		decoration = decoration->next;
 	}
 
+	free(head_ref);
 	return 0;
 }
 
