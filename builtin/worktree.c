@@ -458,6 +458,39 @@ static void setup_alternate_ref_dir(struct worktree *wt, const char *wt_git_path
 	strbuf_release(&sb);
 }
 
+static void push_reflink_source_env(struct strvec *child_env)
+{
+	struct worktree **worktrees;
+	int use_reflink = 1;
+
+	repo_config_get_bool(the_repository, "worktree.usereflink",
+			     &use_reflink);
+	if (!use_reflink)
+		return;
+
+	worktrees = get_worktrees();
+	if (worktrees[0] && !worktrees[0]->is_bare) {
+		struct child_process cp = CHILD_PROCESS_INIT;
+
+		cp.git_cmd = 1;
+		cp.dir = worktrees[0]->path;
+		/*
+		 * Clear any repo-local vars (e.g. GIT_DIR, GIT_WORK_TREE)
+		 * inherited from the calling process so the child rediscovers
+		 * the repository from cp.dir instead of reusing whichever
+		 * worktree we happen to have been invoked from.
+		 */
+		strvec_pushv(&cp.env, (const char **)local_repo_env);
+		strvec_pushl(&cp.args, "update-index", "-q", "--refresh", NULL);
+		/* non-fatal: racy donor files just won't reflink */
+		run_command(&cp);
+		strvec_pushf(child_env, "%s=%s",
+			     GIT_WORKTREE_REFLINK_SOURCE_ENVIRONMENT,
+			     worktrees[0]->path);
+	}
+	free_worktrees(worktrees);
+}
+
 static int add_worktree(const char *path, const char *refname,
 			const struct add_opts *opts)
 {
@@ -584,6 +617,8 @@ static int add_worktree(const char *path, const char *refname,
 
 	strvec_pushf(&child_env, "%s=%s", GIT_DIR_ENVIRONMENT, sb_git.buf);
 	strvec_pushf(&child_env, "%s=%s", GIT_WORK_TREE_ENVIRONMENT, path);
+	if (opts->checkout && !opts->orphan)
+		push_reflink_source_env(&child_env);
 
 	if (opts->orphan &&
 	    (ret = make_worktree_orphan(refname, opts, &child_env)))
