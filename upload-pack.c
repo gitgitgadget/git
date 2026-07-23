@@ -296,6 +296,22 @@ static int relay_pack_data(int pack_objects_out, struct output_state *os,
 	return readsz;
 }
 
+static void send_pack_keepalive(const struct upload_pack_data *pack_data,
+				uint64_t *last_sent_ms)
+{
+	uint64_t now_ms;
+
+	if (!pack_data->use_sideband || pack_data->keepalive <= 0)
+		return;
+
+	now_ms = getnanotime() / 1000000;
+	if (now_ms - *last_sent_ms >= (uint64_t)pack_data->keepalive * 1000) {
+		static const char buf[] = "0005\1";
+		write_or_die(1, buf, 5);
+		*last_sent_ms = now_ms;
+	}
+}
+
 static void create_pack_file(struct upload_pack_data *pack_data,
 			     const struct string_list *uri_protocols)
 {
@@ -361,16 +377,24 @@ static void create_pack_file(struct upload_pack_data *pack_data,
 	if (pack_data->shallow_nr)
 		for_each_commit_graft(write_one_shallow, pipe_fd);
 
-	for (i = 0; i < pack_data->want_obj.nr; i++)
+	last_sent_ms = getnanotime() / 1000000;
+
+	for (i = 0; i < pack_data->want_obj.nr; i++) {
 		fprintf(pipe_fd, "%s\n",
 			oid_to_hex(&pack_data->want_obj.objects[i].item->oid));
+		send_pack_keepalive(pack_data, &last_sent_ms);
+	}
 	fprintf(pipe_fd, "--not\n");
-	for (i = 0; i < pack_data->have_obj.nr; i++)
+	for (i = 0; i < pack_data->have_obj.nr; i++) {
 		fprintf(pipe_fd, "%s\n",
 			oid_to_hex(&pack_data->have_obj.objects[i].item->oid));
-	for (i = 0; i < pack_data->extra_edge_obj.nr; i++)
+		send_pack_keepalive(pack_data, &last_sent_ms);
+	}
+	for (i = 0; i < pack_data->extra_edge_obj.nr; i++) {
 		fprintf(pipe_fd, "%s\n",
 			oid_to_hex(&pack_data->extra_edge_obj.objects[i].item->oid));
+		send_pack_keepalive(pack_data, &last_sent_ms);
+	}
 	fprintf(pipe_fd, "\n");
 	fflush(pipe_fd);
 	fclose(pipe_fd);
