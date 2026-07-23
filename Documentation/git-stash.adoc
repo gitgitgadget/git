@@ -25,6 +25,7 @@ git stash create [<message>]
 git stash store [(-m | --message) <message>] [-q | --quiet] <commit>
 git stash export (--print | --to-ref <ref>) [<stash>...]
 git stash import <commit>
+git stash rename [-q | --quiet] <message> [<stash>]
 
 DESCRIPTION
 -----------
@@ -163,6 +164,12 @@ with no conflicts.
 	created by `export`, and add them to the list of stashes.  To replace the
 	existing stashes, use `clear` first.
 
+`rename [-q | --quiet] <message> [<stash>]`::
+	Change the message of a single stash entry.  The entry keeps its
+	position and its contents.  _<stash>_ must name an entry by
+	index (e.g. `stash@{1}`); renaming refreshes the reflog
+	timestamps of the entry and of the entries above it.
+
 OPTIONS
 -------
 `-a`::
@@ -258,7 +265,7 @@ literally (including newlines and quotes).
 `-q`::
 `--quiet`::
 	This option is only valid for `apply`, `drop`, `pop`, `push`,
-	`save`, `store` commands.
+	`rename`, `save`, `store` commands.
 +
 Quiet, suppress feedback messages.
 
@@ -292,7 +299,7 @@ For more details, see the 'pathspec' entry in linkgit:gitglossary[7].
 
 _<stash>_::
 	This option is only valid for `apply`, `branch`, `drop`, `pop`,
-	`show`, and `export` commands.
+	`show`, `export`, and `rename` commands.
 +
 A reference of the form `stash@{<revision>}`. When no _<stash>_ is
 given, the latest stash is assumed (that is, `stash@{0}`).
