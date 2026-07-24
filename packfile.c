@@ -1036,12 +1036,12 @@ off_t get_delta_base(struct packed_git *p,
  * the final object lookup), but more expensive for OFS deltas (we
  * have to load the revidx to convert the offset back into a sha1).
  */
-static int get_delta_base_oid(struct packed_git *p,
-			      struct pack_window **w_curs,
-			      off_t curpos,
-			      struct object_id *oid,
-			      enum object_type type,
-			      off_t delta_obj_offset)
+int get_delta_base_oid(struct packed_git *p,
+		       struct pack_window **w_curs,
+		       off_t curpos,
+		       struct object_id *oid,
+		       enum object_type type,
+		       off_t delta_obj_offset)
 {
 	if (type == OBJ_REF_DELTA) {
 		unsigned char *base = use_pack(p, w_curs, curpos, NULL);

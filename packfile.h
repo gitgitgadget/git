@@ -307,6 +307,9 @@ int unpack_object_header(struct packed_git *, struct pack_window **, off_t *, si
 off_t get_delta_base(struct packed_git *p, struct pack_window **w_curs,
 		     off_t *curpos, enum object_type type,
 		     off_t delta_obj_offset);
+int get_delta_base_oid(struct packed_git *p, struct pack_window **w_curs,
+		       off_t curpos, struct object_id *oid,
+		       enum object_type type, off_t delta_obj_offset);
 
 int packfile_read_object_stream(struct odb_stream **out,
 				const struct object_id *oid,

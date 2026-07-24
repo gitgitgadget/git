@@ -3840,6 +3840,29 @@ static int pack_entry_is_delta(struct packed_git *p, off_t offset)
 }
 
 /*
+ * Resolve the delta base into base_out and return 1, or return 0 for a
+ * non-delta or error. The cost is just an object-header parse, plus an
+ * offset lookup using the reverse index for OFS deltas.
+ */
+static int pack_entry_delta_base(struct packed_git *p, off_t offset,
+				 struct object_id *base_out)
+{
+	struct pack_window *w_curs = NULL;
+	off_t curpos = offset;
+	size_t size;
+	enum object_type type;
+	int ret = 0;
+
+	type = unpack_object_header(p, &w_curs, &curpos, &size);
+	if ((type == OBJ_OFS_DELTA || type == OBJ_REF_DELTA) &&
+	    !get_delta_base_oid(p, &w_curs, curpos, base_out, type, offset))
+		ret = 1;
+
+	unuse_pack(&w_curs);
+	return ret;
+}
+
+/*
  * Packs are visited newest-first. Prefer a later delta copy over the
  * first full copy. check_object() may still reject delta reuse if the
  * base is unavailable.
@@ -3847,7 +3870,8 @@ static int pack_entry_is_delta(struct packed_git *p, off_t offset)
 static void maybe_prefer_delta_copy(const struct object_id *oid,
 				    struct packed_git *p, uint32_t pos)
 {
-	struct object_entry *entry;
+	struct object_entry *entry, *base_entry;
+	struct object_id cand_base, base_of_base;
 	off_t ofs;
 
 	if (!reuse_delta)
@@ -3861,7 +3885,19 @@ static void maybe_prefer_delta_copy(const struct object_id *oid,
 		return;
 
 	ofs = nth_packed_object_offset(p, pos);
-	if (!pack_entry_is_delta(p, ofs))
+	if (!pack_entry_delta_base(p, ofs, &cand_base))
+		return;
+
+	/*
+	 * Reject a delta against cand_base if its selected copy already
+	 * depends on oid. Either choice keeps only one delta; avoid
+	 * creating a cycle just to break it.
+	 */
+	base_entry = packlist_find(&to_pack, &cand_base);
+	if (base_entry && !base_entry->preferred_base && IN_PACK(base_entry) &&
+	    pack_entry_delta_base(IN_PACK(base_entry),
+				  base_entry->in_pack_offset, &base_of_base) &&
+	    oideq(&base_of_base, oid))
 		return;
 
 	oe_set_in_pack(&to_pack, entry, p);
