@@ -254,6 +254,13 @@ depth is 4095.
 	wholesale enforcement of a different compression level on the
 	packed data is desired.
 
+--prefer-reused-deltas::
+	Only meaningful with `--stdin-packs`. When the same object is
+	present as a base in one included pack and a delta in another,
+	record the delta copy rather than the base. This costs a
+	cheap object-header read per duplicate, and has no effect
+	under `--no-reuse-delta`.
+
 --compression=<n>::
 	Specifies compression level for newly-compressed data in the
 	generated pack.  If not specified,  pack compression level is

@@ -209,6 +209,7 @@ static uint32_t write_layer;
 
 static int non_empty;
 static int reuse_delta = 1, reuse_object = 1;
+static int prefer_reused_deltas;
 static int keep_unreachable, unpack_unreachable, include_tag;
 static timestamp_t unpack_unreachable_expiration;
 static int pack_loose_unreachable;
@@ -3822,6 +3823,51 @@ static int stdin_packs_hints_nr;
 
 static int stdin_packs_need_walk;
 
+/* Read only the object header to identify delta copies. */
+static int pack_entry_is_delta(struct packed_git *p, off_t offset)
+{
+	struct pack_window *w_curs = NULL;
+	size_t avail, size;
+	enum object_type type;
+	unsigned char *buf;
+	int is_delta = 0;
+
+	buf = use_pack(p, &w_curs, offset, &avail);
+	if (unpack_object_header_buffer(buf, avail, &type, &size))
+		is_delta = (type == OBJ_OFS_DELTA || type == OBJ_REF_DELTA);
+	unuse_pack(&w_curs);
+	return is_delta;
+}
+
+/*
+ * Packs are visited newest-first. Prefer a later delta copy over the
+ * first full copy. check_object() may still reject delta reuse if the
+ * base is unavailable.
+ */
+static void maybe_prefer_delta_copy(const struct object_id *oid,
+				    struct packed_git *p, uint32_t pos)
+{
+	struct object_entry *entry;
+	off_t ofs;
+
+	if (!reuse_delta)
+		return;
+	entry = packlist_find(&to_pack, oid);
+	if (!entry || entry->preferred_base || !IN_PACK(entry))
+		return;
+
+	/* Only switch a plain base copy over to a delta copy. */
+	if (pack_entry_is_delta(IN_PACK(entry), entry->in_pack_offset))
+		return;
+
+	ofs = nth_packed_object_offset(p, pos);
+	if (!pack_entry_is_delta(p, ofs))
+		return;
+
+	oe_set_in_pack(&to_pack, entry, p);
+	entry->in_pack_offset = ofs;
+}
+
 static int add_object_entry_from_pack(const struct object_id *oid,
 				      struct packed_git *p,
 				      uint32_t pos,
@@ -3833,8 +3879,11 @@ static int add_object_entry_from_pack(const struct object_id *oid,
 
 	display_progress(progress_state, ++nr_seen);
 
-	if (have_duplicate_entry(oid, 0))
+	if (have_duplicate_entry(oid, 0)) {
+		if (prefer_reused_deltas)
+			maybe_prefer_delta_copy(oid, p, pos);
 		return 0;
+	}
 
 	stdin_packs_found_nr++;
 
@@ -5190,6 +5239,9 @@ int cmd_pack_objects(int argc,
 			    N_("maximum length of delta chain allowed in the resulting pack")),
 		OPT_BOOL(0, "reuse-delta", &reuse_delta,
 			 N_("reuse existing deltas")),
+		OPT_BOOL(0, "prefer-reused-deltas", &prefer_reused_deltas,
+			 N_("when an object is in several included packs, "
+			    "prefer a copy stored as a delta")),
 		OPT_BOOL(0, "reuse-object", &reuse_object,
 			 N_("reuse existing objects")),
 		OPT_BOOL(0, "delta-base-offset", &allow_ofs_delta,
