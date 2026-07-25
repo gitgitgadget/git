@@ -496,6 +496,8 @@ static int add_worktree(const char *path, const char *refname,
 		die(_("invalid reference: %s"), refname);
 
 	name = worktree_basename(path, &len);
+	if (!len)
+		die(_("the empty string is not a valid worktree"));
 	strbuf_add(&sb, name, path + len - name);
 	sanitize_refname_component(sb.buf, &sb_name);
 	if (!sb_name.len)
