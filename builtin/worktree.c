@@ -297,17 +297,21 @@ static void remove_junk_on_signal(int signo)
 static const char *worktree_basename(const char *path, int *olen)
 {
 	const char *name;
-	int len;
+	int len, len2;
 
-	len = strlen(path);
+	len2 = len = strlen(path);
 	while (len && is_dir_sep(path[len - 1]))
 		len--;
 
-	for (name = path + len - 1; name > path; name--)
-		if (is_dir_sep(*name)) {
-			name++;
-			break;
-		}
+	if(len) {
+		for (name = path + len - 1; name > path; name--)
+			if (is_dir_sep(*name)) {
+				name++;
+				break;
+			}
+	}
+	else
+		name = path + len2;
 
 	*olen = len;
 	return name;
