@@ -4815,7 +4815,8 @@ static int apply_save_autostash_oid(const char *stash_oid, int attempt_apply,
 		if (label_base)
 			strvec_pushf(&child.args, "--label-base=%s", label_base);
 		strvec_push(&child.args, stash_oid);
-		ret = run_command(&child);
+		if (run_command(&child))
+			ret = 1;
 	}
 
 	if (attempt_apply && !ret)
