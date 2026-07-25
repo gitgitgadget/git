@@ -1797,7 +1797,7 @@ test_expect_success 'apply with custom conflict labels' '
 	echo stashed >conflict-file &&
 	git stash push -m "stashed" &&
 	test_commit label-upstream conflict-file upstream-content &&
-	test_must_fail git -c merge.conflictStyle=diff3 stash apply --label-ours=UP --label-theirs=STASH &&
+	test_expect_code 2 git -c merge.conflictStyle=diff3 stash apply --label-ours=UP --label-theirs=STASH &&
 	test_grep "^<<<<<<< UP" conflict-file &&
 	test_grep "^||||||| Stash base" conflict-file &&
 	test_grep "^>>>>>>> STASH" conflict-file
@@ -1809,9 +1809,31 @@ test_expect_success 'apply with empty conflict labels' '
 	echo stashed >conflict-file &&
 	git stash push -m "stashed" &&
 	test_commit empty-label-upstream conflict-file upstream-content &&
-	test_must_fail git stash apply --label-ours= --label-theirs= &&
+	test_expect_code 2 git stash apply --label-ours= --label-theirs= &&
 	test_grep "^<<<<<<<$" conflict-file &&
 	test_grep "^>>>>>>>$" conflict-file
+'
+
+test_expect_success 'apply exits 2 on conflicts and keeps the stash entry' '
+	git reset --hard initial &&
+	test_commit exit-code-base conflict-file base-content &&
+	echo stashed >conflict-file &&
+	git stash push -m stashed &&
+	test_commit exit-code-upstream conflict-file upstream-content &&
+	test_expect_code 2 git stash apply &&
+	git stash list >list &&
+	test_grep stashed list
+'
+
+test_expect_success 'pop exits 2 on conflicts and keeps the stash entry' '
+	git reset --hard initial &&
+	test_commit pop-exit-code-base pop-file base-content &&
+	echo stashed >pop-file &&
+	git stash push -m pop-stashed &&
+	test_commit pop-exit-code-upstream pop-file upstream-content &&
+	test_expect_code 2 git stash pop &&
+	git stash list >list &&
+	test_grep pop-stashed list
 '
 
 test_expect_success 'stash show --include-untracked includes untracked files' '

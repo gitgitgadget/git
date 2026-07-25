@@ -10,6 +10,7 @@
 #include "object-name.h"
 #include "parse-options.h"
 #include "refs.h"
+#include "stash.h"
 #include "lockfile.h"
 #include "cache-tree.h"
 #include "unpack-trees.h"
@@ -640,8 +641,9 @@ static void unstage_changes_unless_new(struct object_id *orig_tree)
 		die(_("could not write index"));
 }
 
-static int do_apply_stash(const char *prefix, struct stash_info *info,
-			  int index, int quiet,
+static enum stash_apply_result do_apply_stash(const char *prefix,
+					      struct stash_info *info,
+					      int index, int quiet,
 			  const char *label_ours, const char *label_theirs,
 			  const char *label_base)
 {
@@ -716,11 +718,12 @@ static int do_apply_stash(const char *prefix, struct stash_info *info,
 	clean = merge_ort_nonrecursive(&o, head, merge, merge_base);
 
 	/*
-	 * If 'clean' >= 0, reverse the value for 'ret' so 'ret' is 0 when the
-	 * merge was clean, and nonzero if the merge was unclean or encountered
-	 * an error.
+	 * Translate the value of 'clean' so 'ret' is STASH_APPLY_CLEAN
+	 * when the merge was clean, STASH_APPLY_CONFLICT when it was
+	 * unclean, and a negative value if it encountered an error.
 	 */
-	ret = clean >= 0 ? !clean : clean;
+	ret = clean >= 0 ? (clean ? STASH_APPLY_CLEAN : STASH_APPLY_CONFLICT)
+			 : clean;
 
 	if (ret < 0)
 		rollback_lock_file(&lock);
@@ -739,7 +742,7 @@ static int do_apply_stash(const char *prefix, struct stash_info *info,
 
 	if (has_index) {
 		if (reset_tree(&index_tree, 0, 0))
-			ret = -1;
+			ret = STASH_APPLY_ERROR;
 	} else {
 		unstage_changes_unless_new(&c_tree);
 	}
@@ -2492,9 +2495,13 @@ int cmd_stash(int argc,
 	strbuf_addf(&stash_index_path, "%s.stash.%" PRIuMAX, index_file,
 		    (uintmax_t)pid);
 
-	if (fn)
-		return !!fn(argc, argv, prefix, repo);
-	else if (!argc)
+	if (fn) {
+		ret = fn(argc, argv, prefix, repo);
+
+		if (ret < 0)
+			return 1;
+		return ret;
+	} else if (!argc)
 		return !!push_stash_unassumed(0, NULL, prefix, repo);
 
 	/* Assume 'stash push' */
