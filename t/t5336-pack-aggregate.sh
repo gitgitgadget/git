@@ -494,6 +494,89 @@ test_expect_success 'pack.aggregateMaxLooseObjects rejects negative values' '
 	)
 '
 
+test_expect_success '--max-packs splits candidates into several output packs' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 10 >/dev/null &&
+		test 10 -eq "$(count_packs)" &&
+		git cat-file --batch-all-objects --batch-check >before &&
+		# 10 candidates, at most 4 per output pack: ceil(10/4)=3
+		# batches of sizes 4, 4, 2 => 3 output packs, with no
+		# objects lost across the batch boundaries.
+		git pack-aggregate --once \
+			--min-loose=1000 --min-packs=1 --max-packs=4 &&
+		test 3 -eq "$(count_packs)" &&
+		test 3 -eq "$(count_baddeltas)" &&
+		git cat-file --batch-all-objects --batch-check >after &&
+		test_cmp before after &&
+		git fsck
+	)
+'
+
+test_expect_success '--max-packs above the candidate count yields one pack' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 5 >/dev/null &&
+		test 5 -eq "$(count_packs)" &&
+		git pack-aggregate --once \
+			--min-loose=1000 --min-packs=1 --max-packs=100 &&
+		test 1 -eq "$(count_packs)" &&
+		test 1 -eq "$(count_baddeltas)" &&
+		git fsck
+	)
+'
+
+test_expect_success '--max-packs=0 folds everything into one pack' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 10 >/dev/null &&
+		test 10 -eq "$(count_packs)" &&
+		git pack-aggregate --once \
+			--min-loose=1000 --min-packs=1 --max-packs=0 &&
+		test 1 -eq "$(count_packs)" &&
+		git fsck
+	)
+'
+
+test_expect_success 'pack.aggregateMaxPacks supplies the default limit' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 10 >/dev/null &&
+		test 10 -eq "$(count_packs)" &&
+		git -c pack.aggregateMaxPacks=4 pack-aggregate --once \
+			--min-loose=1000 --min-packs=1 &&
+		test 3 -eq "$(count_packs)" &&
+		# An explicit --max-packs=0 still overrides the config,
+		# folding the current packs back into a single one.
+		build_n_packs 6 >/dev/null &&
+		test 9 -eq "$(count_packs)" &&
+		git -c pack.aggregateMaxPacks=4 pack-aggregate --once \
+			--min-loose=1000 --min-packs=1 --max-packs=0 &&
+		test 1 -eq "$(count_packs)" &&
+		git fsck
+	)
+'
+
+test_expect_success 'pack.aggregateMaxPacks rejects negative values' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 5 >/dev/null &&
+		test_must_fail git -c pack.aggregateMaxPacks=-1 \
+			pack-aggregate --once --min-packs=5 2>err &&
+		test_grep "cannot be negative" err
+	)
+'
+
 test_expect_success 'aggregate re-rolls up .baddeltas packs' '
 	test_when_finished "rm -fr work" &&
 	cp -R repo work &&

@@ -11,7 +11,7 @@ SYNOPSIS
 [verse]
 'git pack-aggregate' --once [--min-loose=<n>] [--min-packs=<n>]
                    [--max-loose-objects=<n>]
-                   [--max-objects=<n>]
+                   [--max-objects=<n>] [--max-packs=<n>]
                    [--max-input-pack-size=<bytes>]
 
 DESCRIPTION
@@ -106,6 +106,19 @@ a lower limit is allowed.  If `pack.packSizeLimit` is unset or zero,
 automatic selection imposes no byte-size gate, and any explicit
 positive input limit is allowed.  An explicit `0` overrides the
 configuration and restores automatic selection.
+
+--max-packs=<n>::
+	Process at most `<n>` input packs per `pack-objects` invocation.
+	When more than `<n>` aggregatable packs are present, split them
+	into approximately balanced batches by pack count.  The final batch
+	may be smaller, and each batch can produce multiple output packs.
+	Limiting input packs helps control memory use for pack data and
+	indexes on repositories with very many packs.  Batching happens on
+	whole-pack boundaries, keeping each delta and its base in the same
+	input batch.
+	Defaults to the `pack.aggregateMaxPacks` configuration value, or
+	`10000` if unset.  A value of `0` disables the input-pack limit and
+	processes all input packs in one batch.
 
 SEE ALSO
 --------
