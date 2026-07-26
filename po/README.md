@@ -4,10 +4,15 @@ This directory holds the translations for the core of Git. This document
 describes how you can contribute to the effort of enhancing the language
 coverage and maintaining the translation.
 
-The localization (l10n) coordinator, Jiang Xin <worldhello.net@gmail.com>,
+The loca
+
+
+
+
+
 coordinates our localization effort in the l10n coordinator repository:
 
-    https://github.com/git-l10n/git-po/
+    https://github.com/pathum25 
 
 We will use XX as an alias to refer to the language translation code in
 the following paragraphs, for example we use "po/XX.po" to refer to the
