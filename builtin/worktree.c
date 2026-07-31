@@ -897,7 +897,7 @@ static int add(int ac, const char **av, const char *prefix,
 
 		/* DWIM: Infer --orphan when repo has no refs. */
 		opts.orphan = (!s) && dwim_orphan(&opts, !!opt_track, 1);
-	} else if (ac == 2) {
+	} else if (ac == 2 && !new_branch) {
 		struct object_id oid;
 		struct commit *commit;
 		char *remote;
