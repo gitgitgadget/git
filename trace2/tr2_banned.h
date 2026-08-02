@@ -15,4 +15,7 @@
 #undef xgethostname
 #define xgethostname(buf, len) BANNED(xgethostname)
 
+#undef ALLOC_ARRAY
+#define ALLOC_ARRAY(x, alloc) BANNED(ALLOC_ARRAY)
+
 #endif /* TR2_BANNED_H */
