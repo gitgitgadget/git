@@ -20,6 +20,7 @@ struct tr2tls_thread_ctx {
 	uint64_t *array_us_start;
 	size_t alloc;
 	size_t nr_open_regions; /* plays role of "nr" in ALLOC_GROW */
+	size_t nr_skipped_regions;
 	int thread_id;
 	struct tr2_timer_block timer_block;
 	struct tr2_counter_block counter_block;
@@ -64,7 +65,13 @@ int tr2tls_is_main_thread(void);
 void tr2tls_unset_self(void);
 
 /*
- * Begin a new nested region and remember the start time.
+ * Ensure that the nested-region stack has room for another entry.
+ */
+int tr2tls_prepare_push_self(void);
+
+/*
+ * Begin a new nested region and remember the start time. The caller must
+ * first call tr2tls_prepare_push_self().
  */
 void tr2tls_push_self(uint64_t us_now);
 

@@ -105,17 +105,57 @@ void tr2tls_unset_self(void)
 	free(ctx);
 }
 
+int tr2tls_prepare_push_self(void)
+{
+	struct tr2tls_thread_ctx *ctx = tr2tls_get_self();
+	uint64_t *new_array;
+	size_t new_alloc;
+
+	if (ctx->nr_skipped_regions) {
+		ctx->nr_skipped_regions++;
+		return -1;
+	}
+
+	if (ctx->nr_open_regions < ctx->alloc)
+		return 0;
+
+	if (ctx->alloc > SIZE_MAX / 2) {
+		ctx->nr_skipped_regions++;
+		return -1;
+	}
+	new_alloc = ctx->alloc * 2;
+	if (new_alloc > SIZE_MAX / sizeof(*ctx->array_us_start)) {
+		ctx->nr_skipped_regions++;
+		return -1;
+	}
+
+	new_array = realloc(ctx->array_us_start,
+			    new_alloc * sizeof(*ctx->array_us_start));
+	if (!new_array) {
+		ctx->nr_skipped_regions++;
+		return -1;
+	}
+
+	ctx->array_us_start = new_array;
+	ctx->alloc = new_alloc;
+	return 0;
+}
+
 void tr2tls_push_self(uint64_t us_now)
 {
 	struct tr2tls_thread_ctx *ctx = tr2tls_get_self();
 
-	ALLOC_GROW(ctx->array_us_start, ctx->nr_open_regions + 1, ctx->alloc);
 	ctx->array_us_start[ctx->nr_open_regions++] = us_now;
 }
 
 void tr2tls_pop_self(void)
 {
 	struct tr2tls_thread_ctx *ctx = tr2tls_get_self();
+
+	if (ctx->nr_skipped_regions) {
+		ctx->nr_skipped_regions--;
+		return;
+	}
 
 	if (!ctx->nr_open_regions)
 		BUG("no open regions in thread '%s'", ctx->thread_name);
@@ -137,6 +177,8 @@ uint64_t tr2tls_region_elasped_self(uint64_t us)
 	uint64_t us_start;
 
 	ctx = tr2tls_get_self();
+	if (ctx->nr_skipped_regions)
+		return 0;
 	if (!ctx->nr_open_regions)
 		return 0;
 

@@ -849,6 +849,9 @@ void trace2_region_enter_printf_va_fl(const char *file, int line,
 	us_now = getnanotime() / 1000;
 	us_elapsed_absolute = tr2tls_absolute_elapsed(us_now);
 
+	if (tr2tls_prepare_push_self())
+		return;
+
 	/*
 	 * Print the region-enter message at the current nesting
 	 * (indentation) level and then push a new level.
