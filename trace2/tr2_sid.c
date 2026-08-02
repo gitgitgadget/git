@@ -43,9 +43,10 @@ static void tr2_sid_append_my_sid_component(void)
 	strbuf_addstr(&tr2sid_buf, tb_now.buf);
 
 	strbuf_addch(&tr2sid_buf, '-');
-	if (xgethostname(hostname, sizeof(hostname)))
+	if (gethostname(hostname, sizeof(hostname)))
 		strbuf_add(&tr2sid_buf, "Localhost", 9);
 	else {
+		hostname[sizeof(hostname) - 1] = '\0';
 		algo->init_fn(&ctx);
 		git_hash_update(&ctx, hostname, strlen(hostname));
 		git_hash_final(hash, &ctx);
