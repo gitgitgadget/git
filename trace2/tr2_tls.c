@@ -3,6 +3,7 @@
 #include "thread-utils.h"
 #include "trace.h"
 #include "trace2/tr2_tls.h"
+#include "trace2/tr2_banned.h"
 
 /*
  * Initialize size of the thread stack for nested regions.

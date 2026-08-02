@@ -2,6 +2,7 @@
 #include "trace2/tr2_tgt.h"
 #include "trace2/tr2_tls.h"
 #include "trace2/tr2_ctr.h"
+#include "trace2/tr2_banned.h"
 
 /*
  * A global counter block to aggregate values from the partial sums

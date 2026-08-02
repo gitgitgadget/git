@@ -3,6 +3,7 @@
 #include "strbuf.h"
 #include "trace2/tr2_tbuf.h"
 #include "trace2/tr2_sid.h"
+#include "trace2/tr2_banned.h"
 
 #define TR2_ENVVAR_PARENT_SID "GIT_TRACE2_PARENT_SID"
 

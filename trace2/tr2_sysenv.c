@@ -4,6 +4,7 @@
 #include "config.h"
 #include "dir.h"
 #include "tr2_sysenv.h"
+#include "trace2/tr2_banned.h"
 
 /*
  * Each entry represents a trace2 setting.

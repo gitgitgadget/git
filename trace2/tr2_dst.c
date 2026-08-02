@@ -5,6 +5,7 @@
 #include "trace2/tr2_dst.h"
 #include "trace2/tr2_sid.h"
 #include "trace2/tr2_sysenv.h"
+#include "trace2/tr2_banned.h"
 
 /*
  * How many attempts we will make at creating an automatically-named trace file.
