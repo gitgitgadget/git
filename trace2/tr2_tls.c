@@ -13,6 +13,9 @@
 #define TR2_REGION_NESTING_INITIAL_SIZE (100)
 
 static struct tr2tls_thread_ctx *tr2tls_thread_main;
+static struct tr2tls_thread_ctx tr2tls_thread_fallback = {
+	.thread_name = "unknown",
+};
 static uint64_t tr2tls_us_start_process;
 
 static pthread_mutex_t tr2tls_mutex;
@@ -37,8 +40,11 @@ void tr2tls_start_process_clock(void)
 struct tr2tls_thread_ctx *tr2tls_create_self(const char *thread_base_name,
 					     uint64_t us_thread_start)
 {
-	struct tr2tls_thread_ctx *ctx = xcalloc(1, sizeof(*ctx));
+	struct tr2tls_thread_ctx *ctx = calloc(1, sizeof(*ctx));
 	struct strbuf buf = STRBUF_INIT;
+
+	if (!ctx)
+		goto fallback;
 
 	/*
 	 * Implicitly "tr2tls_push_self()" to capture the thread's start
@@ -46,7 +52,11 @@ struct tr2tls_thread_ctx *tr2tls_create_self(const char *thread_base_name,
 	 * application run time.
 	 */
 	ctx->alloc = TR2_REGION_NESTING_INITIAL_SIZE;
-	ctx->array_us_start = (uint64_t *)xcalloc(ctx->alloc, sizeof(uint64_t));
+	ctx->array_us_start = calloc(ctx->alloc, sizeof(uint64_t));
+	if (!ctx->array_us_start) {
+		free(ctx);
+		goto fallback;
+	}
 	ctx->array_us_start[ctx->nr_open_regions++] = us_thread_start;
 
 	ctx->thread_id = tr2tls_locked_increment(&tr2_next_thread_id);
@@ -62,6 +72,10 @@ struct tr2tls_thread_ctx *tr2tls_create_self(const char *thread_base_name,
 	pthread_setspecific(tr2tls_key, ctx);
 
 	return ctx;
+
+fallback:
+	pthread_setspecific(tr2tls_key, &tr2tls_thread_fallback);
+	return &tr2tls_thread_fallback;
 }
 
 struct tr2tls_thread_ctx *tr2tls_get_self(void)
@@ -84,6 +98,11 @@ struct tr2tls_thread_ctx *tr2tls_get_self(void)
 	return ctx;
 }
 
+int tr2tls_is_fallback(const struct tr2tls_thread_ctx *ctx)
+{
+	return ctx == &tr2tls_thread_fallback;
+}
+
 int tr2tls_is_main_thread(void)
 {
 	if (!HAVE_THREADS)
@@ -100,6 +119,9 @@ void tr2tls_unset_self(void)
 
 	pthread_setspecific(tr2tls_key, NULL);
 
+	if (tr2tls_is_fallback(ctx))
+		return;
+
 	free((char *)ctx->thread_name);
 	free(ctx->array_us_start);
 	free(ctx);
@@ -110,6 +132,9 @@ int tr2tls_prepare_push_self(void)
 	struct tr2tls_thread_ctx *ctx = tr2tls_get_self();
 	uint64_t *new_array;
 	size_t new_alloc;
+
+	if (tr2tls_is_fallback(ctx))
+		return -1;
 
 	if (ctx->nr_skipped_regions) {
 		ctx->nr_skipped_regions++;
@@ -145,12 +170,18 @@ void tr2tls_push_self(uint64_t us_now)
 {
 	struct tr2tls_thread_ctx *ctx = tr2tls_get_self();
 
+	if (tr2tls_is_fallback(ctx))
+		return;
+
 	ctx->array_us_start[ctx->nr_open_regions++] = us_now;
 }
 
 void tr2tls_pop_self(void)
 {
 	struct tr2tls_thread_ctx *ctx = tr2tls_get_self();
+
+	if (tr2tls_is_fallback(ctx))
+		return;
 
 	if (ctx->nr_skipped_regions) {
 		ctx->nr_skipped_regions--;
@@ -167,6 +198,9 @@ void tr2tls_pop_unwind_self(void)
 {
 	struct tr2tls_thread_ctx *ctx = tr2tls_get_self();
 
+	if (tr2tls_is_fallback(ctx))
+		return;
+
 	while (ctx->nr_open_regions > 1)
 		tr2tls_pop_self();
 }
@@ -177,6 +211,8 @@ uint64_t tr2tls_region_elasped_self(uint64_t us)
 	uint64_t us_start;
 
 	ctx = tr2tls_get_self();
+	if (tr2tls_is_fallback(ctx))
+		return 0;
 	if (ctx->nr_skipped_regions)
 		return 0;
 	if (!ctx->nr_open_regions)
@@ -198,6 +234,10 @@ uint64_t tr2tls_absolute_elapsed(uint64_t us)
 static void tr2tls_key_destructor(void *payload)
 {
 	struct tr2tls_thread_ctx *ctx = payload;
+
+	if (tr2tls_is_fallback(ctx))
+		return;
+
 	free((char *)ctx->thread_name);
 	free(ctx->array_us_start);
 	free(ctx);

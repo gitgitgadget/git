@@ -38,8 +38,11 @@ static struct tr2_timer_metadata tr2_timer_metadata[TRACE2_NUMBER_OF_TIMERS] = {
 void tr2_start_timer(enum trace2_timer_id tid)
 {
 	struct tr2tls_thread_ctx *ctx = tr2tls_get_self();
-	struct tr2_timer *t = &ctx->timer_block.timer[tid];
+	struct tr2_timer *t;
 
+	if (tr2tls_is_fallback(ctx))
+		return;
+	t = &ctx->timer_block.timer[tid];
 	t->recursion_count++;
 	if (t->recursion_count > 1)
 		return; /* ignore recursive starts */
@@ -50,10 +53,13 @@ void tr2_start_timer(enum trace2_timer_id tid)
 void tr2_stop_timer(enum trace2_timer_id tid)
 {
 	struct tr2tls_thread_ctx *ctx = tr2tls_get_self();
-	struct tr2_timer *t = &ctx->timer_block.timer[tid];
+	struct tr2_timer *t;
 	uint64_t ns_now;
 	uint64_t ns_interval;
 
+	if (tr2tls_is_fallback(ctx))
+		return;
+	t = &ctx->timer_block.timer[tid];
 	assert(t->recursion_count > 0);
 
 	t->recursion_count--;
@@ -91,6 +97,8 @@ void tr2_update_final_timers(void)
 	struct tr2tls_thread_ctx *ctx = tr2tls_get_self();
 	enum trace2_timer_id tid;
 
+	if (tr2tls_is_fallback(ctx))
+		return;
 	if (!ctx->used_any_timer)
 		return;
 
@@ -137,6 +145,8 @@ void tr2_emit_per_thread_timers(tr2_tgt_evt_timer_t *fn_apply)
 	struct tr2tls_thread_ctx *ctx = tr2tls_get_self();
 	enum trace2_timer_id tid;
 
+	if (tr2tls_is_fallback(ctx))
+		return;
 	if (!ctx->used_any_per_thread_timer)
 		return;
 
