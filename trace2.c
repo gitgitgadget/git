@@ -260,7 +260,9 @@ int trace2_is_enabled(void)
 static const char *redact_arg(const char *arg)
 {
 	const char *p, *colon;
+	char *redacted;
 	size_t at;
+	size_t prefix_len, suffix_len, redacted_len;
 
 	if (!trace2_redact ||
 	    (!skip_prefix(arg, "https://", &p) &&
@@ -275,7 +277,24 @@ static const char *redact_arg(const char *arg)
 	if (!colon)
 		return arg;
 
-	return xstrfmt("%.*s:<REDACTED>%s", (int)(colon - arg), arg, p + at);
+	prefix_len = colon - arg;
+	suffix_len = strlen(p + at);
+	if (unsigned_add_overflows(prefix_len, suffix_len) ||
+	    unsigned_add_overflows(prefix_len + suffix_len,
+				   sizeof(":<REDACTED>")))
+		return NULL;
+	redacted_len = prefix_len + suffix_len + sizeof(":<REDACTED>");
+
+	redacted = malloc(redacted_len);
+	if (!redacted)
+		return NULL;
+
+	memcpy(redacted, arg, prefix_len);
+	memcpy(redacted + prefix_len, ":<REDACTED>",
+	       sizeof(":<REDACTED>") - 1);
+	memcpy(redacted + prefix_len + sizeof(":<REDACTED>") - 1, p + at,
+	       suffix_len + 1);
+	return redacted;
 }
 
 /*
@@ -300,6 +319,8 @@ static const char **redact_argv(const char **argv)
 
 	if (!argv[i])
 		return argv;
+	if (!redacted)
+		return NULL;
 
 	for (j = 0; argv[j]; j++)
 		; /* keep counting */
@@ -316,7 +337,14 @@ static const char **redact_argv(const char **argv)
 	ret[i] = redacted;
 	for (++i; argv[i]; i++) {
 		redacted = redact_arg(argv[i]);
-		ret[i] = redacted ? redacted : argv[i];
+		if (!redacted) {
+			for (j = 0; j < i; j++)
+				if (ret[j] != argv[j])
+					free((void *)ret[j]);
+			free(ret);
+			return NULL;
+		}
+		ret[i] = redacted;
 	}
 
 	return ret;

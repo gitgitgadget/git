@@ -12,6 +12,9 @@
 #undef xstrdup
 #define xstrdup(str) BANNED(xstrdup)
 
+#undef xstrfmt
+#define xstrfmt(...) BANNED(xstrfmt)
+
 #undef xgethostname
 #define xgethostname(buf, len) BANNED(xgethostname)
 
