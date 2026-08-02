@@ -9,4 +9,7 @@
 #undef xsnprintf
 #define xsnprintf(...) BANNED(xsnprintf)
 
+#undef xstrdup
+#define xstrdup(str) BANNED(xstrdup)
+
 #endif /* TR2_BANNED_H */
