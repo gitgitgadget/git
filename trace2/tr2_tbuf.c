@@ -1,5 +1,6 @@
 #include "git-compat-util.h"
 #include "tr2_tbuf.h"
+#include "banned-die.h"
 
 void tr2_tbuf_local_time(struct tr2_tbuf *tb)
 {

@@ -3,6 +3,7 @@
 #include "trace2/tr2_tls.h"
 #include "trace2/tr2_tmr.h"
 #include "trace.h"
+#include "banned-die.h"
 
 #define MY_MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MY_MIN(a, b) ((a) < (b) ? (a) : (b))
