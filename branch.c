@@ -385,6 +385,35 @@ int validate_branchname(const char *name, struct strbuf *ref)
 static int initialized_checked_out_branches;
 static struct strmap current_checked_out_branches = STRMAP_INIT;
 
+static void add_checked_out_branch(const char *branch, const char *path)
+{
+	struct strbuf ref = STRBUF_INIT;
+	const char *refname = branch;
+	char *old, *resolved_ref;
+	int flags = 0;
+
+	if (!starts_with(refname, "refs/")) {
+		strbuf_addf(&ref, "refs/heads/%s", refname);
+		refname = ref.buf;
+	}
+
+	old = strmap_put(&current_checked_out_branches,
+			 refname, xstrdup(path));
+	free(old);
+
+	resolved_ref = refs_resolve_refdup(
+		get_main_ref_store(the_repository),
+		refname, RESOLVE_REF_READING, NULL, &flags);
+	if (resolved_ref && (flags & REF_ISSYMREF)) {
+		old = strmap_put(&current_checked_out_branches,
+				 resolved_ref, xstrdup(path));
+		free(old);
+	}
+
+	free(resolved_ref);
+	strbuf_release(&ref);
+}
+
 static void prepare_checked_out_branches(void)
 {
 	int i = 0;
@@ -397,7 +426,7 @@ static void prepare_checked_out_branches(void)
 	worktrees = get_worktrees(the_repository);
 
 	while (worktrees[i]) {
-		char *old, *wt_gitdir;
+		char *wt_gitdir;
 		struct wt_status_state state = { 0 };
 		struct worktree *wt = worktrees[i++];
 		struct string_list update_refs = STRING_LIST_INIT_DUP;
@@ -405,48 +434,26 @@ static void prepare_checked_out_branches(void)
 		if (wt->is_bare)
 			continue;
 
-		if (wt->head_ref) {
-			old = strmap_put(&current_checked_out_branches,
-					 wt->head_ref,
-					 xstrdup(wt->path));
-			free(old);
-		}
+		if (wt->head_ref)
+			add_checked_out_branch(wt->head_ref, wt->path);
 
 		if (wt_status_check_rebase(wt, &state) &&
 		    (state.rebase_in_progress || state.rebase_interactive_in_progress) &&
-		    state.branch) {
-			struct strbuf ref = STRBUF_INIT;
-			strbuf_addf(&ref, "refs/heads/%s", state.branch);
-			old = strmap_put(&current_checked_out_branches,
-					 ref.buf,
-					 xstrdup(wt->path));
-			free(old);
-			strbuf_release(&ref);
-		}
+		    state.branch)
+			add_checked_out_branch(state.branch, wt->path);
 		wt_status_state_free_buffers(&state);
 
 		if (wt_status_check_bisect(wt, &state) &&
-		    state.bisecting_from) {
-			struct strbuf ref = STRBUF_INIT;
-			strbuf_addf(&ref, "refs/heads/%s", state.bisecting_from);
-			old = strmap_put(&current_checked_out_branches,
-					 ref.buf,
-					 xstrdup(wt->path));
-			free(old);
-			strbuf_release(&ref);
-		}
+		    state.bisecting_from)
+			add_checked_out_branch(state.bisecting_from, wt->path);
 		wt_status_state_free_buffers(&state);
 
 		wt_gitdir = get_worktree_git_dir(wt);
 		if (!sequencer_get_update_refs_state(wt_gitdir,
 						     &update_refs)) {
 			struct string_list_item *item;
-			for_each_string_list_item(item, &update_refs) {
-				old = strmap_put(&current_checked_out_branches,
-						 item->string,
-						 xstrdup(wt->path));
-				free(old);
-			}
+			for_each_string_list_item(item, &update_refs)
+				add_checked_out_branch(item->string, wt->path);
 			string_list_clear(&update_refs, 1);
 		}
 
