@@ -25,6 +25,7 @@ struct repo_settings {
 	int gc_write_commit_graph;
 	int fetch_write_commit_graph;
 	int command_requires_full_index;
+	int command_requires_fsmonitor;
 	int sparse_index;
 	int pack_read_reverse_index;
 	int pack_use_bitmap_boundary_traversal;
