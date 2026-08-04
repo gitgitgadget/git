@@ -82,13 +82,13 @@ test_expect_success 'setup an empty repo' '
 	git init repo
 '
 
-test_expect_success '--once is required' '
+test_expect_success 'an aggregation mode is required' '
 	test_when_finished "rm -fr work" &&
 	cp -R repo work &&
 	(
 		cd work &&
 		test_must_fail git pack-aggregate 2>err &&
-		test_grep -- "--once is required" err
+		test_grep "exactly one of --once or --loop" err
 	)
 '
 
@@ -236,6 +236,28 @@ do
 		)
 	'
 done
+
+test_expect_success '--exclude-pack-file protects listed packs' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 6 >packs.txt &&
+		head -n 2 packs.txt >exclude.txt &&
+		git pack-aggregate --once \
+			--min-loose=1000 --min-packs=4 \
+			--exclude-pack-file=exclude.txt &&
+		while read name
+		do
+			test_path_is_file \
+				.git/objects/pack/${name}.pack || return 1
+		done <exclude.txt &&
+		# 2 excluded + 1 aggregate = 3 packs total.
+		test 3 -eq "$(count_packs)" &&
+		test 1 -eq "$(count_baddeltas)" &&
+		git fsck
+	)
+'
 
 test_expect_success 'sidecar-marked packs are skipped' '
 	test_when_finished "rm -fr work" &&
@@ -642,6 +664,28 @@ test_expect_success 'aggregates loose objects above --min-loose' '
 		test 0 -eq "$(count_loose)" &&
 		test 1 -eq "$(count_packs)" &&
 		test 1 -eq "$(count_baddeltas)" &&
+		git fsck
+	)
+'
+
+test_expect_success '--exclude-loose-file protects listed loose objects' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_loose 5 >loose.txt &&
+		head -n 2 loose.txt >exclude.txt &&
+		git pack-aggregate --once \
+			--min-loose=1 --min-packs=1000 \
+			--exclude-loose-file=exclude.txt &&
+		while read oid
+		do
+			test_path_is_file \
+				".git/objects/$(test_oid_to_path "$oid")" ||
+				return 1
+		done <exclude.txt &&
+		test 2 -eq "$(count_loose)" &&
+		test 1 -eq "$(count_packs)" &&
 		git fsck
 	)
 '
