@@ -30,9 +30,13 @@ build_n_packs () {
 build_n_loose () {
 	n=$1 &&
 	i=0 &&
+	# Ensure these predate the later cutoff marker even without nanoseconds.
 	while test $i -lt "$n"
 	do
-		echo "loose-$i-$$" | git hash-object -w --stdin &&
+		oid=$(echo "loose-$i-$$" | git hash-object -w --stdin) &&
+		test-tool chmtime -1 \
+			".git/objects/$(test_oid_to_path "$oid")" &&
+		echo "$oid" &&
 		i=$((i + 1)) || return 1
 	done
 }
@@ -382,6 +386,113 @@ do
 		test_grep "aggregatemaxinputpacksize" err
 	'
 done
+
+test_expect_success '--max-loose-objects splits the cycle-start backlog' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_loose 10 >/dev/null &&
+		git pack-aggregate --once --min-loose=1 --min-packs=1000 \
+			--max-loose-objects=4 &&
+		test 0 -eq "$(count_loose)" &&
+		test 3 -eq "$(count_packs)" &&
+		test 3 -eq "$(count_baddeltas)" &&
+		git fsck
+	)
+'
+
+test_expect_success '--min-loose can exceed --max-loose-objects' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_loose 6 >/dev/null &&
+		git pack-aggregate --once --min-loose=5 --min-packs=1000 \
+			--max-loose-objects=2 &&
+		test 0 -eq "$(count_loose)" &&
+		test 3 -eq "$(count_packs)" &&
+		git fsck
+	)
+'
+
+test_expect_success 'multiple loose batches avoid same-cycle reaggregation' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_loose 10 >/dev/null &&
+		build_n_packs 5 >/dev/null &&
+		git pack-aggregate --once --min-loose=1 --min-packs=1 \
+			--max-loose-objects=4 &&
+		# The five original packs are aggregated, while the three
+		# loose-rollup packs remain separate until a later cycle.
+		test 0 -eq "$(count_loose)" &&
+		test 4 -eq "$(count_packs)" &&
+		test 4 -eq "$(count_baddeltas)" &&
+		git fsck
+	)
+'
+
+test_expect_success 'loose objects newer than the cycle cutoff are deferred' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_loose 5 >oids &&
+		deferred=$(tail -n 1 oids) &&
+		deferred_path=.git/objects/$(test_oid_to_path "$deferred") &&
+		test-tool chmtime +60 "$deferred_path" &&
+		git pack-aggregate --once --min-loose=1 --min-packs=1000 \
+			--max-loose-objects=2 &&
+		test 1 -eq "$(count_loose)" &&
+		test_path_is_file "$deferred_path" &&
+		test-tool chmtime -60 "$deferred_path" &&
+		git pack-aggregate --once --min-loose=1 --min-packs=1000 \
+			--max-loose-objects=2 &&
+		test 0 -eq "$(count_loose)" &&
+		git fsck
+	)
+'
+
+test_expect_success '--max-loose-objects=0 disables batch splitting' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_loose 10 >/dev/null &&
+		git pack-aggregate --once --min-loose=1 --min-packs=1000 \
+			--max-loose-objects=0 &&
+		test 0 -eq "$(count_loose)" &&
+		test 1 -eq "$(count_packs)" &&
+		git fsck
+	)
+'
+
+test_expect_success 'pack.aggregateMaxLooseObjects supplies the default limit' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_loose 10 >/dev/null &&
+		git -c pack.aggregateMaxLooseObjects=4 pack-aggregate --once \
+			--min-loose=1 --min-packs=1000 &&
+		test 0 -eq "$(count_loose)" &&
+		test 3 -eq "$(count_packs)" &&
+		git fsck
+	)
+'
+
+test_expect_success 'pack.aggregateMaxLooseObjects rejects negative values' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		test_must_fail git -c pack.aggregateMaxLooseObjects=-1 \
+			pack-aggregate --once 2>err &&
+		test_grep "cannot be negative" err
+	)
+'
 
 test_expect_success 'aggregate re-rolls up .baddeltas packs' '
 	test_when_finished "rm -fr work" &&

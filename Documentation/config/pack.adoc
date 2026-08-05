@@ -47,6 +47,10 @@ pack.aggregateMaxInputPackSize::
 	Default for linkgit:git-pack-aggregate[1]'s `--max-input-pack-size`
 	option. Defaults to `0` (automatic); see that option for details.
 
+pack.aggregateMaxLooseObjects::
+	Default for linkgit:git-pack-aggregate[1]'s `--max-loose-objects`
+	option. Defaults to `100000`; see that option for details.
+
 pack.island::
 	An extended regular expression configuring a set of delta
 	islands. See "DELTA ISLANDS" in linkgit:git-pack-objects[1]

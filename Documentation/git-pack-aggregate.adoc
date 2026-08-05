@@ -10,6 +10,7 @@ SYNOPSIS
 --------
 [verse]
 'git pack-aggregate' --once [--min-loose=<n>] [--min-packs=<n>]
+                   [--max-loose-objects=<n>]
                    [--max-objects=<n>]
                    [--max-input-pack-size=<bytes>]
 
@@ -66,6 +67,17 @@ OPTIONS
 	Skip aggregation of small packfiles if fewer than `<n>` aggregatable
 	packs are present.
 	Defaults to 5.
+
+--max-loose-objects=<n>::
+	Process at most `<n>` loose objects per batch.  All output packs
+	are installed and the loose copies are removed before the next
+	batch begins, so repository performance can improve incrementally
+	during recovery from an extreme backlog.  Loose objects created
+	after the cycle starts are left for the next cycle.
+	If multiple packs are produced, they are left for a later aggregation
+	cycle instead of being copied again immediately.
+	Defaults to the `pack.aggregateMaxLooseObjects` configuration value,
+	or 100000 if that is unset.  A value of `0` disables the limit.
 
 --max-objects=<n>::
 	Skip any pack that contains more than `<n>` objects, leaving it

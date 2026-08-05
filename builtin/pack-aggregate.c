@@ -23,10 +23,13 @@
 
 static const char *const pack_aggregate_usage[] = {
 	N_("git pack-aggregate --once [--min-loose=<n>] [--min-packs=<n>]\n"
+	   "                         [--max-loose-objects=<n>]\n"
 	   "                         [--max-objects=<n>]\n"
 	   "                         [--max-input-pack-size=<bytes>]"),
 	NULL
 };
+
+#define DEFAULT_MAX_LOOSE_OBJECTS 100000
 
 #define DEFAULT_MAX_OBJECTS 100000
 
@@ -130,15 +133,58 @@ static void refresh_midx_exclusions(struct repository *repo,
 struct loose_scan {
 	struct oid_array *oids;
 	struct string_list *paths;
+	size_t limit;
+	size_t minimum;
+	size_t eligible;
+	time_t cutoff_sec;
+	unsigned int cutoff_nsec;
 };
+
+static void set_loose_scan_cutoff(struct repository *repo,
+				  struct loose_scan *data)
+{
+	struct strbuf template = STRBUF_INIT;
+	struct tempfile *marker;
+	struct stat st;
+
+	strbuf_addf(&template, "%s/.tmp-pack-aggregate-cutoff-XXXXXX",
+		    repo_get_object_directory(repo));
+	marker = xmks_tempfile(template.buf);
+	strbuf_release(&template);
+
+	if (fstat(get_tempfile_fd(marker), &st))
+		die_errno(_("could not stat loose-object cutoff marker"));
+	data->cutoff_sec = st.st_mtime;
+	data->cutoff_nsec = ST_MTIME_NSEC(st);
+	delete_tempfile(&marker);
+}
 
 static int loose_scan_cb(const struct object_id *oid, const char *path,
 			 void *cb_data)
 {
 	struct loose_scan *data = cb_data;
+	struct stat st;
 
-	oid_array_append(data->oids, oid);
-	string_list_append(data->paths, path);
+	if (lstat(path, &st)) {
+		if (errno != ENOENT)
+			warning_errno(_("could not stat loose object '%s'"),
+				      path);
+		return 0;
+	}
+	if (st.st_mtime > data->cutoff_sec ||
+	    (st.st_mtime == data->cutoff_sec &&
+	     ST_MTIME_NSEC(st) >= data->cutoff_nsec))
+		return 0;
+
+	data->eligible++;
+	if (!data->limit || data->oids->nr < data->limit) {
+		oid_array_append(data->oids, oid);
+		string_list_append(data->paths, path);
+	}
+
+	if (data->limit && data->oids->nr >= data->limit &&
+	    data->eligible >= data->minimum)
+		return 1;
 	return 0;
 }
 
@@ -195,16 +241,14 @@ static int run_pack_objects_loose(const char *packtmp, struct oid_array *oids,
 	return ret;
 }
 
-static void unlink_loose_paths(const struct string_list *paths)
+static int unlink_loose_paths(const struct string_list *paths)
 {
 	size_t i;
 
-	for (i = 0; i < paths->nr; i++) {
-		const char *p = paths->items[i].string;
-		if (unlink(p) < 0 && errno != ENOENT)
-			warning_errno(_("could not unlink loose object '%s'"),
-				      p);
-	}
+	for (i = 0; i < paths->nr; i++)
+		if (unlink_or_warn(paths->items[i].string))
+			return -1;
+	return 0;
 }
 
 /* ---------- pack aggregation ---------- */
@@ -396,7 +440,8 @@ static void unlink_consumed_packs(const char *packdir,
 
 static int run_aggregation(struct repository *repo, const char *packdir,
 			   struct strset *midx_exclude,
-			   int min_loose, int min_packs, int max_objects,
+			   int min_loose, int min_packs,
+			   int max_loose_objects, int max_objects,
 			   unsigned long max_input_pack_size)
 {
 	struct oid_array loose_oids = OID_ARRAY_INIT;
@@ -404,6 +449,8 @@ static int run_aggregation(struct repository *repo, const char *packdir,
 	struct loose_scan loose_data = {
 		.oids = &loose_oids,
 		.paths = &loose_paths,
+		.limit = max_loose_objects,
+		.minimum = min_loose,
 	};
 	struct strset loose_rollup_exclude = STRSET_INIT;
 	struct strset output_bases = STRSET_INIT;
@@ -414,27 +461,43 @@ static int run_aggregation(struct repository *repo, const char *packdir,
 	int ret = 0;
 
 	/*
-	 * Step 1: bundle local loose objects into new packs and remove
-	 * the on-disk loose copies only after all outputs are installed.
+	 * Step 1: pack loose objects in bounded batches, installing every
+	 * output before removing inputs. The cycle-start cutoff prevents
+	 * new arrivals from prolonging this cycle.
 	 */
+	set_loose_scan_cutoff(repo, &loose_data);
 	for_each_loose_file_in_source(repo->objects->sources,
 				      loose_scan_cb, NULL, NULL, &loose_data);
-	if ((int)loose_oids.nr >= min_loose) {
+	if (loose_data.eligible >= (size_t)min_loose) {
 		packtmp_loose = mkpathdup("%s/.tmp-%d-loose-pack",
 					  packdir, (int)getpid());
-		if (run_pack_objects_loose(packtmp_loose, &loose_oids,
-					   &output_hashes)) {
-			ret = error(_("pack-objects failed during "
-				      "loose-object rollup"));
-			goto out;
-		}
-		if (output_hashes.nr) {
+		while (loose_oids.nr) {
+			string_list_clear(&output_hashes, 0);
+			if (run_pack_objects_loose(packtmp_loose, &loose_oids,
+						   &output_hashes)) {
+				ret = error(_("pack-objects failed during "
+					      "loose-object rollup"));
+				goto out;
+			}
+			if (!output_hashes.nr)
+				break;
+
 			if (install_packs(repo, packtmp_loose, packdir,
-					  &output_hashes, &loose_rollup_exclude)) {
+					  &output_hashes, &loose_rollup_exclude) ||
+			    unlink_loose_paths(&loose_paths)) {
 				ret = -1;
 				goto out;
 			}
-			unlink_loose_paths(&loose_paths);
+
+			oid_array_clear(&loose_oids);
+			string_list_clear(&loose_paths, 0);
+
+			/* Once rollup starts, also consume a final partial batch. */
+			loose_data.minimum = 1;
+			loose_data.eligible = 0;
+			for_each_loose_file_in_source(repo->objects->sources,
+						      loose_scan_cb, NULL, NULL,
+						      &loose_data);
 		}
 	}
 
@@ -492,6 +555,7 @@ int cmd_pack_aggregate(int argc, const char **argv,
 {
 	int min_packs = 5;
 	int min_loose = 5;
+	int max_loose_objects = -1;
 	int max_objects = -1;
 	unsigned long max_input_pack_size = 0;
 	unsigned long pack_size_limit = 0;
@@ -505,6 +569,9 @@ int cmd_pack_aggregate(int argc, const char **argv,
 		OPT_INTEGER(0, "min-packs", &min_packs,
 			    N_("skip pack aggregation if fewer "
 			       "candidates (default 5)")),
+		OPT_INTEGER(0, "max-loose-objects", &max_loose_objects,
+			    N_("pack at most this many loose objects per "
+			       "batch (0 for no limit)")),
 		OPT_INTEGER(0, "max-objects", &max_objects,
 			    N_("skip packs with more than this many "
 			       "objects (0 for no limit)")),
@@ -532,6 +599,13 @@ int cmd_pack_aggregate(int argc, const char **argv,
 	if (min_packs < 1)
 		die(_("--min-packs must be at least 1"));
 
+	if (max_loose_objects < 0 &&
+	    repo_config_get_int(repo, "pack.aggregatemaxlooseobjects",
+				&max_loose_objects))
+		max_loose_objects = DEFAULT_MAX_LOOSE_OBJECTS;
+	if (max_loose_objects < 0)
+		die(_("pack.aggregateMaxLooseObjects cannot be negative"));
+
 	if (max_objects < 0 &&
 	    repo_config_get_int(repo, "pack.aggregatemaxobjects", &max_objects))
 		max_objects = DEFAULT_MAX_OBJECTS;
@@ -555,7 +629,8 @@ int cmd_pack_aggregate(int argc, const char **argv,
 	packdir = mkpathdup("%s/pack", repo_get_object_directory(repo));
 
 	ret = run_aggregation(repo, packdir, &midx_exclude,
-			      min_loose, min_packs, max_objects,
+			      min_loose, min_packs,
+			      max_loose_objects, max_objects,
 			      max_input_pack_size);
 
 	strset_clear(&midx_exclude);
