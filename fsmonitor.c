@@ -792,7 +792,8 @@ void remove_fsmonitor(struct index_state *istate)
 void tweak_fsmonitor(struct index_state *istate)
 {
 	unsigned int i;
-	int fsmonitor_enabled = (fsm_settings__get_mode(istate->repo)
+	int fsmonitor_enabled = (istate->repo->settings.command_requires_fsmonitor &&
+				 fsm_settings__get_mode(istate->repo)
 				 > FSMONITOR_MODE_DISABLED);
 
 	if (istate->fsmonitor_dirty) {
