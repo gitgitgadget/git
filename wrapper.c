@@ -11,6 +11,11 @@
 #include "strbuf.h"
 #include "trace2.h"
 
+#ifdef __linux__
+#include <sys/ioctl.h>
+#include <linux/fs.h>
+#endif
+
 #ifdef HAVE_RTLGENRANDOM
 /* This is required to get access to RtlGenRandom. */
 #define SystemFunction036 NTAPI SystemFunction036
@@ -909,3 +914,41 @@ void *xmmap(void *start, size_t length,
 		die_errno(_("mmap failed%s"), mmap_os_err());
 	return ret;
 }
+
+#if defined(__linux__) && defined(FICLONE)
+int reflink_file(const char *src, const char *dst, int mode)
+{
+	int src_fd, dst_fd, ret, saved_errno;
+
+	src_fd = open(src, O_RDONLY);
+	if (src_fd < 0)
+		return -1;
+
+	dst_fd = open(dst, O_WRONLY | O_CREAT | O_EXCL, mode);
+	if (dst_fd < 0) {
+		saved_errno = errno;
+		close(src_fd);
+		errno = saved_errno;
+		return -1;
+	}
+
+	ret = ioctl(dst_fd, FICLONE, src_fd);
+	saved_errno = errno;
+	close(src_fd);
+	if (close(dst_fd) < 0 && !ret) {
+		ret = -1;
+		saved_errno = errno;
+	}
+	if (ret)
+		unlink(dst);
+	errno = saved_errno;
+	return ret ? -1 : 0;
+}
+#else
+int reflink_file(const char *src UNUSED, const char *dst UNUSED,
+		 int mode UNUSED)
+{
+	errno = ENOSYS;
+	return -1;
+}
+#endif

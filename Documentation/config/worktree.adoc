@@ -8,6 +8,17 @@
 	for the new branch.  If no such match can be found, it falls
 	back to creating a new branch from the current `HEAD`.
 
+`worktree.useReflink`::
+	When populating a new worktree, try to create working tree
+	files as lightweight copy-on-write clones (reflinks) of the
+	corresponding files in the main worktree whenever they are
+	known to have identical content. This shares disk blocks
+	between worktrees and avoids reading file contents from the
+	object database. It requires support from the filesystem
+	(e.g. Btrfs or XFS on Linux); where unsupported, `git worktree
+	add` silently falls back to a regular checkout. This currently
+	only has an effect on Linux. Defaults to "`true`".
+
 `worktree.useRelativePaths`::
 	Link worktrees using relative paths (when "`true`") or absolute
 	paths (when "`false`"). This is particularly useful for setups
