@@ -1555,7 +1555,11 @@ test_expect_success 'sparse-index is not expanded' '
 			ensure_not_expanded merge -m merge update-folder1 &&
 			ensure_not_expanded merge -m merge update-folder2 || return 1
 		done
-	)
+	) &&
+
+	ensure_not_expanded reset --hard &&
+	ensure_not_expanded mv deep/a deep/renamed-a &&
+	ensure_not_expanded mv deep/deeper2 deep/moved-deeper2
 '
 
 test_expect_success 'sparse-index is not expanded: merge conflict in cone' '
