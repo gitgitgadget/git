@@ -15,15 +15,15 @@ test_pseudo_merge_commits () {
 }
 
 test_pseudo_merges_satisfied () {
-	test_trace2_data bitmap pseudo_merges_satisfied "$1"
+	test_trace2_data_singular bitmap pseudo_merges_satisfied "$1"
 }
 
 test_pseudo_merges_cascades () {
-	test_trace2_data bitmap pseudo_merges_cascades "$1"
+	test_trace2_data_singular bitmap pseudo_merges_cascades "$1"
 }
 
 test_pseudo_merges_reused () {
-	test_trace2_data pack-bitmap-write building_bitmaps_pseudo_merge_reused "$1"
+	test_trace2_data_singular pack-bitmap-write building_bitmaps_pseudo_merge_reused "$1"
 }
 
 tag_everything () {

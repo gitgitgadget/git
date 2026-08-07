@@ -1964,8 +1964,8 @@ test_expect_success 'grep of revision in partial clone batches prefetch and hono
 
 	# Exactly the two a/*.txt blobs should have been requested, and
 	# the server packed those two objects in the response.
-	test_trace2_data promisor fetch_count 2 <grep-trace-pathspec &&
-	test_trace2_data pack-objects written 2 <grep-trace-pathspec &&
+	test_trace2_data_singular promisor fetch_count 2 <grep-trace-pathspec &&
+	test_trace2_data_singular pack-objects written 2 <grep-trace-pathspec &&
 
 	# b/matches.md should still be missing locally.
 	git -C grep-partial rev-list --quiet --objects \
@@ -1979,8 +1979,8 @@ test_expect_success 'grep of revision in partial clone batches prefetch and hono
 		git -C grep-partial grep -c "needle" HEAD >result &&
 
 	test_line_count = 2 result &&
-	test_trace2_data promisor fetch_count 1 <grep-trace-all &&
-	test_trace2_data pack-objects written 1 <grep-trace-all &&
+	test_trace2_data_singular promisor fetch_count 1 <grep-trace-all &&
+	test_trace2_data_singular pack-objects written 1 <grep-trace-all &&
 
 	# Everything is local now.
 	git -C grep-partial rev-list --quiet --objects \

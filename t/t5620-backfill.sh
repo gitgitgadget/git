@@ -116,7 +116,7 @@ test_expect_success 'do partial clone 1, backfill gets all objects' '
 		-C backfill1 backfill &&
 
 	# We should have engaged the partial clone machinery
-	test_trace2_data promisor fetch_count 48 <backfill-file-trace &&
+	test_trace2_data_singular promisor fetch_count 48 <backfill-file-trace &&
 
 	# No more missing objects!
 	git -C backfill1 rev-list --quiet --objects --missing=print HEAD >revs2 &&
@@ -160,8 +160,8 @@ test_expect_success 'backfill --sparse' '
 	# older versions of the four files at tip.
 	GIT_TRACE2_EVENT="$(pwd)/sparse-trace1" git \
 		-C backfill3 backfill --sparse &&
-	test_trace2_data promisor fetch_count 4 <sparse-trace1 &&
-	test_trace2_data path-walk paths 5 <sparse-trace1 &&
+	test_trace2_data_singular promisor fetch_count 4 <sparse-trace1 &&
+	test_trace2_data_singular path-walk paths 5 <sparse-trace1 &&
 	git -C backfill3 rev-list --quiet --objects --missing=print HEAD >missing &&
 	test_line_count = 40 missing &&
 
@@ -172,8 +172,8 @@ test_expect_success 'backfill --sparse' '
 	git -C backfill3 sparse-checkout set d &&
 	GIT_TRACE2_EVENT="$(pwd)/sparse-trace2" git \
 		-C backfill3 backfill --sparse &&
-	test_trace2_data promisor fetch_count 8 <sparse-trace2 &&
-	test_trace2_data path-walk paths 15 <sparse-trace2 &&
+	test_trace2_data_singular promisor fetch_count 8 <sparse-trace2 &&
+	test_trace2_data_singular path-walk paths 15 <sparse-trace2 &&
 	git -C backfill3 rev-list --quiet --objects --missing=print HEAD >missing &&
 	test_line_count = 24 missing &&
 
@@ -194,8 +194,8 @@ test_expect_success 'backfill auto-detects sparse-checkout from config' '
 	GIT_TRACE2_EVENT="$(pwd)/auto-sparse-trace" git \
 		-C backfill-auto-sparse backfill &&
 
-	test_trace2_data promisor fetch_count 4 <auto-sparse-trace &&
-	test_trace2_data path-walk paths 5 <auto-sparse-trace
+	test_trace2_data_singular promisor fetch_count 4 <auto-sparse-trace &&
+	test_trace2_data_singular path-walk paths 5 <auto-sparse-trace
 '
 
 test_expect_success 'backfill --sparse without cone mode (positive)' '
@@ -218,10 +218,10 @@ test_expect_success 'backfill --sparse without cone mode (positive)' '
 
 	GIT_TRACE2_EVENT="$(pwd)/no-cone-trace1" git \
 		-C backfill4 backfill --sparse &&
-	test_trace2_data promisor fetch_count 6 <no-cone-trace1 &&
+	test_trace2_data_singular promisor fetch_count 6 <no-cone-trace1 &&
 
 	# This walk needed to visit all directories to search for these paths.
-	test_trace2_data path-walk paths 12 <no-cone-trace1 &&
+	test_trace2_data_singular path-walk paths 12 <no-cone-trace1 &&
 	git -C backfill4 rev-list --quiet --objects --missing=print HEAD >missing &&
 	test_line_count = 36 missing
 '
@@ -246,11 +246,11 @@ test_expect_success 'backfill --sparse without cone mode (negative)' '
 
 	GIT_TRACE2_EVENT="$(pwd)/no-cone-trace2" git \
 		-C backfill5 backfill --sparse &&
-	test_trace2_data promisor fetch_count 18 <no-cone-trace2 &&
+	test_trace2_data_singular promisor fetch_count 18 <no-cone-trace2 &&
 
 	# This walk needed to visit all directories to search for these paths, plus
 	# 12 extra "file.?.txt" paths than the previous test.
-	test_trace2_data path-walk paths 24 <no-cone-trace2 &&
+	test_trace2_data_singular path-walk paths 24 <no-cone-trace2 &&
 	git -C backfill5 rev-list --quiet --objects --missing=print HEAD >missing &&
 	test_line_count = 12 missing
 '
@@ -268,7 +268,7 @@ test_expect_success 'backfill with revision range' '
 	GIT_TRACE2_EVENT="$(pwd)/backfill-trace" git -C backfill-revs backfill HEAD~2..HEAD &&
 
 	# 36 objects downloaded, 12 still missing
-	test_trace2_data promisor fetch_count 36 <backfill-trace &&
+	test_trace2_data_singular promisor fetch_count 36 <backfill-trace &&
 	git -C backfill-revs rev-list --quiet --objects --missing=print HEAD >missing &&
 	test_line_count = 12 missing
 '
@@ -288,10 +288,10 @@ test_expect_success 'backfill with revisions over stdin' '
 	^HEAD~2
 	EOF
 
-	GIT_TRACE2_EVENT="$(pwd)/backfill-trace" git -C backfill-revs backfill --stdin <in &&
+	GIT_TRACE2_EVENT="$(pwd)/backfill-stdin-trace" git -C backfill-revs backfill --stdin <in &&
 
 	# 36 objects downloaded, 12 still missing
-	test_trace2_data promisor fetch_count 36 <backfill-trace &&
+	test_trace2_data_singular promisor fetch_count 36 <backfill-stdin-trace &&
 	git -C backfill-revs rev-list --quiet --objects --missing=print HEAD >missing &&
 	test_line_count = 12 missing
 '
@@ -523,7 +523,7 @@ test_expect_success 'backfilling over HTTP succeeds' '
 		-C backfill-http backfill &&
 
 	# We should have engaged the partial clone machinery
-	test_trace2_data promisor fetch_count 48 <backfill-http-trace &&
+	test_trace2_data_singular promisor fetch_count 48 <backfill-http-trace &&
 
 	# Confirm all objects are present, none missing.
 	git -C backfill-http rev-list --objects --all >rev-list-out &&
