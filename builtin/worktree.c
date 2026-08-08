@@ -116,6 +116,16 @@ static const char * const git_worktree_unlock_usage[] = {
 	NULL
 };
 
+static const char message_advice_ambiguous_remote_tracking_branch[] =
+	N_("If you meant to create a worktree from a remote tracking branch on,\n"
+	   "e.g. 'origin', you can do so by fully qualifying the name:\n"
+	   "\n"
+	   "    git worktree add <path> origin/<name>\n"
+	   "\n"
+	   "If you'd like to always have checkouts of an ambiguous <name> prefer\n"
+	   "one remote, e.g. the 'origin' remote, consider setting\n"
+	   "checkout.defaultRemote=origin in your config.");
+
 struct add_opts {
 	int force;
 	int detach;
@@ -764,7 +774,7 @@ static int dwim_orphan(const struct add_opts *opts, int opt_track, int remote)
 	return 1;
 }
 
-static char *dwim_branch(const char *path, char **new_branch)
+static char *dwim_branch(const struct add_opts *opts, const char *path, char **new_branch)
 {
 	int n;
 	int branch_exists;
@@ -781,8 +791,14 @@ static char *dwim_branch(const char *path, char **new_branch)
 
 	*new_branch = branchname;
 	if (guess_remote) {
+		int num_matches = 0;
 		struct object_id oid;
-		char *remote = unique_tracking_name(*new_branch, &oid, NULL);
+		char *remote = unique_tracking_name(*new_branch, &oid, &num_matches);
+		if (!opts->quiet && !remote && num_matches > 1) {
+			if (advice_enabled(ADVICE_CHECKOUT_AMBIGUOUS_REMOTE_BRANCH_NAME))
+				advise(_(message_advice_ambiguous_remote_tracking_branch));
+			warning(_("'%s' matched multiple (%d) remote tracking branches\n"), branchname, num_matches);
+		}
 		return remote;
 	}
 	return NULL;
@@ -890,7 +906,7 @@ static int add(int ac, const char **av, const char *prefix,
 		opts.orphan = dwim_orphan(&opts, !!opt_track, 0);
 	} else if (ac < 2) {
 		/* DWIM: Guess branch name from path. */
-		char *s = dwim_branch(path, &new_branch_to_free);
+		char *s = dwim_branch(&opts, path, &new_branch_to_free);
 		if (s)
 			branch = branch_to_free = s;
 		new_branch = new_branch_to_free;
@@ -904,10 +920,16 @@ static int add(int ac, const char **av, const char *prefix,
 
 		commit = lookup_commit_reference_by_name(branch);
 		if (!commit) {
-			remote = unique_tracking_name(branch, &oid, NULL);
+			int num_matches = 0;
+			remote = unique_tracking_name(branch, &oid, &num_matches);
 			if (remote) {
 				new_branch = branch;
 				branch = new_branch_to_free = remote;
+			} else if (num_matches > 1) {
+				if (!opts.quiet && advice_enabled(ADVICE_CHECKOUT_AMBIGUOUS_REMOTE_BRANCH_NAME)) {
+					advise(_(message_advice_ambiguous_remote_tracking_branch));
+				}
+				die(_("'%s' matched multiple (%d) remote tracking branches"), branch, num_matches);
 			}
 		}
 
