@@ -64,6 +64,19 @@
 	"\n" \
 	"    git worktree add --orphan %s\n")
 
+#define WORKTREE_ADD_AMBIGUOUS_REMOTE_BRANCH_NAME_HINT_TEXT \
+	_("Matched multiple remote tracking branches, you can list them by:\n" \
+	"\n" \
+	"    git branch -r --list \"*/%s\"\n" \
+	"\n" \
+	"If you meant to create a worktree from a remote tracking branch on,\n" \
+	"e.g. 'origin', you can do so by:\n" \
+	"\n" \
+	"    git worktree add -b %s %s origin/%s\n" \
+	"\n" \
+	"If you'd like to always prefer some remote, e.g. 'origin',\n" \
+	"consider setting checkout.defaultRemote=origin in your config.")
+
 static const char * const git_worktree_usage[] = {
 	BUILTIN_WORKTREE_ADD_USAGE,
 	BUILTIN_WORKTREE_LIST_USAGE,
@@ -904,10 +917,18 @@ static int add(int ac, const char **av, const char *prefix,
 
 		commit = lookup_commit_reference_by_name(branch);
 		if (!commit) {
-			remote = unique_tracking_name(branch, &oid, NULL);
+			int num_matches = 0;
+			remote = unique_tracking_name(branch, &oid, &num_matches);
 			if (remote) {
 				new_branch = branch;
 				branch = new_branch_to_free = remote;
+			} else if (num_matches > 1) {
+				if (!opts.quiet)
+					advise_if_enabled(ADVICE_CHECKOUT_AMBIGUOUS_REMOTE_BRANCH_NAME,
+							  WORKTREE_ADD_AMBIGUOUS_REMOTE_BRANCH_NAME_HINT_TEXT,
+							  branch, branch, path, branch);
+				die(_("'%s' matched multiple (%d) remote tracking branches"),
+				    branch, num_matches);
 			}
 		}
 
