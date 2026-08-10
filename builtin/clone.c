@@ -309,6 +309,9 @@ static void copy_or_link_directory(struct strbuf *src, struct strbuf *dest,
 
 		if (unlink(dest->buf) && errno != ENOENT)
 			die_errno(_("failed to unlink '%s'"), dest->buf);
+		if (!copy_file_reflink_with_time(the_repository, dest->buf,
+					  src->buf, 0666))
+			continue;
 		if (!option_no_hardlinks) {
 			if (!link(src->buf, dest->buf)) {
 				struct stat st;
