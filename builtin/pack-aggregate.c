@@ -21,6 +21,7 @@
 #include "strmap.h"
 #include "strvec.h"
 #include "tempfile.h"
+#include "trace2.h"
 #include "wrapper.h"
 
 static const char *const pack_aggregate_usage[] = {
@@ -699,6 +700,7 @@ int cmd_pack_aggregate(int argc, const char **argv,
 	struct string_list keep_pack_list = STRING_LIST_INIT_NODUP;
 	int once = 0;
 	int loop = 0;
+	uintmax_t cycle_count = 0;
 	struct option options[] = {
 		OPT_BOOL(0, "once", &once,
 			 N_("run a single cycle and exit")),
@@ -814,11 +816,15 @@ int cmd_pack_aggregate(int argc, const char **argv,
 	do {
 		if (stop_signaled)
 			break;
+		trace2_region_enter("pack-aggregate", "cycle", repo);
 		ret = do_one_cycle(repo, packdir, &keep_pack_list,
 				   &pack_exclude, &loose_exclude, &midx_exclude,
 				   min_loose, min_packs,
 				   max_loose_objects, max_objects,
 				   max_packs, max_input_pack_size);
+		trace2_data_intmax("pack-aggregate", repo, "cycle-num",
+				   ++cycle_count);
+		trace2_region_leave("pack-aggregate", "cycle", repo);
 		if (ret || once || stop_signaled)
 			break;
 		interruptible_sleep((unsigned int)interval);

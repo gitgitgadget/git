@@ -21,6 +21,7 @@
 #include "read-cache-ll.h"
 #include "wrapper.h"
 #include "dir.h"
+#include "trace2.h"
 
 #define ALL_INTO_ONE 1
 #define LOOSEN_UNREACHABLE 2
@@ -1137,6 +1138,7 @@ int cmd_repack(int argc,
 		int opts = 0;
 		bool wrote_incremental_midx = write_midx == REPACK_WRITE_MIDX_INCREMENTAL;
 
+		trace2_region_enter("repack", "pack-cleanup", repo);
 		existing_packs_remove_redundant(&existing, packdir,
 						wrote_incremental_midx);
 
@@ -1144,6 +1146,7 @@ int cmd_repack(int argc,
 			pack_geometry_remove_redundant(&geometry, &names,
 						       &existing, packdir,
 						       wrote_incremental_midx);
+		trace2_region_leave("repack", "pack-cleanup", repo);
 		if (show_progress)
 			opts |= PRUNE_PACKED_VERBOSE;
 		prune_packed_objects(opts);
