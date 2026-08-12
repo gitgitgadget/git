@@ -64,3 +64,11 @@ repack.midxNewLayerThreshold::
 When the tip layer has fewer packs than this threshold, those packs are
 excluded from the geometric repack entirely, and are thus left
 unmodified. Must be at least 1. Defaults to 8.
+
+repack.aggregateOnce::
+	If set to true, linkgit:git-repack[1] will run
+	linkgit:git-pack-aggregate[1] once before inspecting the packs
+	and loose objects to repack. This can quickly reduce a large
+	number of files before the more thorough repack begins.
+	Defaults to false. Can be overridden on the command line with
+	`--aggregate-once` or `--no-aggregate-once`.

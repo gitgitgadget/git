@@ -36,12 +36,14 @@ static int midx_must_contain_cruft = 1;
 static int drop_filtered;
 static int dry_run;
 static int write_bitmaps_given;
+static int aggregate_once_opt = -1;
 
 static const char *const git_repack_usage[] = {
 	N_("git repack [-a] [-A] [-d] [-f] [-F] [-l] [-n] [-q] [-b] [-m]\n"
 	   "[--window=<n>] [--depth=<n>] [--threads=<n>] [--keep-pack=<pack-name>]\n"
 	   "[--write-midx[=<mode>]] [--name-hash-version=<n>] [--path-walk]\n"
-	   "[--filter=<filter-spec>] [--drop-filtered [--dry-run]]"),
+	   "[--filter=<filter-spec>] [--drop-filtered [--dry-run]]\n"
+	   "[--[no-]aggregate-once]"),
 	NULL
 };
 
@@ -117,6 +119,10 @@ static int repack_config(const char *var, const char *value,
 								      ctx->kvi);
 		return 0;
 	}
+	if (!strcmp(var, "repack.aggregateonce")) {
+		aggregate_once_opt = git_config_bool(var, value);
+		return 0;
+	}
 	return git_default_config(var, value, ctx, cb);
 }
 
@@ -152,6 +158,21 @@ static int option_parse_write_midx(const struct option *opt, const char *arg,
 	else
 		return error(_("unknown value for %s: %s"), opt->long_name, arg);
 
+	return 0;
+}
+
+static int run_pack_aggregate_once(const struct string_list *keep_pack_list)
+{
+	struct child_process cmd = CHILD_PROCESS_INIT;
+	struct string_list_item *item;
+
+	strvec_pushl(&cmd.args, "pack-aggregate", "--once", NULL);
+	for_each_string_list_item(item, keep_pack_list)
+		strvec_pushf(&cmd.args, "--keep-pack=%s", item->string);
+	cmd.git_cmd = 1;
+
+	if (run_command(&cmd))
+		return error(_("git pack-aggregate --once failed"));
 	return 0;
 }
 
@@ -261,6 +282,8 @@ int cmd_repack(int argc,
 				N_("delete filtered out objects (requires --filter)")),
 		OPT_BOOL(0, "dry-run", &dry_run,
 				N_("only show which objects would be dropped")),
+		OPT_BOOL(0, "aggregate-once", &aggregate_once_opt,
+			 N_("run pack-aggregate once before repacking")),
 		OPT_END()
 	};
 
@@ -417,6 +440,14 @@ int cmd_repack(int argc,
 	    write_midx == REPACK_WRITE_MIDX_NONE)
 		die(_(incremental_bitmap_conflict_error));
 
+	if (geometry.split_factor && pack_everything)
+		die(_("options '%s' and '%s' cannot be used together"),
+		    "--geometric", "-A/-a");
+
+	if (filter_to && !po_args.filter_options.choice)
+		die(_("option '%s' can only be used along with '%s'"),
+		    "--filter-to", "--filter");
+
 	if (write_bitmaps && po_args.local &&
 	    odb_has_alternates(repo->objects)) {
 		/*
@@ -436,6 +467,12 @@ int cmd_repack(int argc,
 	if (config_ctx.midx_new_layer_threshold < 1)
 		die(_("invalid value for %s: %d"), "--midx-new-layer-threshold",
 		    config_ctx.midx_new_layer_threshold);
+
+	if (aggregate_once_opt > 0 &&
+	    run_pack_aggregate_once(&keep_pack_list)) {
+		ret = 1;
+		goto cleanup;
+	}
 
 	if (write_midx != REPACK_WRITE_MIDX_NONE && write_bitmaps) {
 		struct strbuf path = STRBUF_INIT;
@@ -458,8 +495,6 @@ int cmd_repack(int argc,
 	existing_packs_collect(&existing, &keep_pack_list);
 
 	if (geometry.split_factor) {
-		if (pack_everything)
-			die(_("options '%s' and '%s' cannot be used together"), "--geometric", "-A/-a");
 		if (write_midx == REPACK_WRITE_MIDX_INCREMENTAL) {
 			geometry.midx_layer_threshold = config_ctx.midx_new_layer_threshold;
 			geometry.midx_layer_threshold_set = true;
@@ -546,8 +581,6 @@ int cmd_repack(int argc,
 	if (po_args.filter_options.choice)
 		strvec_pushf(&cmd.args, "--filter=%s",
 			     expand_list_objects_filter_spec(&po_args.filter_options));
-	else if (filter_to)
-		die(_("option '%s' can only be used along with '%s'"), "--filter-to", "--filter");
 
 	if (geometry.split_factor)
 		cmd.in = -1;

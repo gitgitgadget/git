@@ -2,6 +2,7 @@
 
 #include "builtin.h"
 #include "config.h"
+#include "dir.h"
 #include "gettext.h"
 #include "hash.h"
 #include "hex.h"
@@ -25,7 +26,8 @@ static const char *const pack_aggregate_usage[] = {
 	N_("git pack-aggregate --once [--min-loose=<n>] [--min-packs=<n>]\n"
 	   "                         [--max-loose-objects=<n>]\n"
 	   "                         [--max-objects=<n>] [--max-packs=<n>]\n"
-	   "                         [--max-input-pack-size=<bytes>]"),
+	   "                         [--max-input-pack-size=<bytes>]\n"
+	   "                         [--keep-pack=<pack-name>]"),
 	NULL
 };
 
@@ -257,6 +259,7 @@ static int unlink_loose_paths(const struct string_list *paths)
 
 static void collect_pack_candidates(struct repository *repo,
 				    const char *packdir,
+				    const struct string_list *keep_pack_list,
 				    struct strset *cycle_exclude,
 				    struct strset *midx_exclude,
 				    struct string_list *candidates,
@@ -276,6 +279,8 @@ static void collect_pack_candidates(struct repository *repo,
 
 		strbuf_reset(&base);
 		strbuf_addstr(&base, pack_basename(p));
+		if (string_list_has_string(keep_pack_list, base.buf))
+			continue;
 		if (!strbuf_strip_suffix(&base, ".pack"))
 			continue;
 
@@ -443,6 +448,7 @@ static void unlink_consumed_packs(const char *packdir,
 }
 
 static int run_aggregation(struct repository *repo, const char *packdir,
+			   const struct string_list *keep_pack_list,
 			   struct strset *midx_exclude,
 			   int min_loose, int min_packs,
 			   int max_loose_objects, int max_objects,
@@ -515,7 +521,7 @@ static int run_aggregation(struct repository *repo, const char *packdir,
 	 * Refresh MIDX exclusions before collecting candidates.
 	 */
 	refresh_midx_exclusions(repo, midx_exclude);
-	collect_pack_candidates(repo, packdir,
+	collect_pack_candidates(repo, packdir, keep_pack_list,
 				&loose_rollup_exclude, midx_exclude, &candidates,
 				max_objects_to_idx_size(repo->hash_algo,
 							max_objects),
@@ -592,6 +598,7 @@ int cmd_pack_aggregate(int argc, const char **argv,
 	int max_packs = -1;
 	unsigned long max_input_pack_size = 0;
 	unsigned long pack_size_limit = 0;
+	struct string_list keep_pack_list = STRING_LIST_INIT_NODUP;
 	int once = 0;
 	struct option options[] = {
 		OPT_BOOL(0, "once", &once,
@@ -614,6 +621,8 @@ int cmd_pack_aggregate(int argc, const char **argv,
 		OPT_UNSIGNED(0, "max-input-pack-size", &max_input_pack_size,
 			     N_("skip packs larger than this many bytes "
 				"(0 for automatic)")),
+		OPT_STRING_LIST(0, "keep-pack", &keep_pack_list, N_("name"),
+				N_("exclude the given pack from aggregation")),
 		OPT_END(),
 	};
 	struct strset midx_exclude = STRSET_INIT;
@@ -668,13 +677,17 @@ int cmd_pack_aggregate(int argc, const char **argv,
 			max_input_pack_size = ceiling;
 	}
 
+	keep_pack_list.cmp = fspathcmp;
+	string_list_sort(&keep_pack_list);
+
 	packdir = mkpathdup("%s/pack", repo_get_object_directory(repo));
 
-	ret = run_aggregation(repo, packdir, &midx_exclude,
+	ret = run_aggregation(repo, packdir, &keep_pack_list, &midx_exclude,
 			      min_loose, min_packs,
 			      max_loose_objects, max_objects,
 			      max_packs, max_input_pack_size);
 
+	string_list_clear(&keep_pack_list, 0);
 	strset_clear(&midx_exclude);
 	free(packdir);
 	return ret ? 1 : 0;

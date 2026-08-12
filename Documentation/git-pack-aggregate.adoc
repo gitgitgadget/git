@@ -13,6 +13,7 @@ SYNOPSIS
                    [--max-loose-objects=<n>]
                    [--max-objects=<n>] [--max-packs=<n>]
                    [--max-input-pack-size=<bytes>]
+                   [--keep-pack=<pack-name>]
 
 DESCRIPTION
 -----------
@@ -21,9 +22,9 @@ DESCRIPTION
 packfiles into new packs in two steps:
 
 1. Bundle local loose objects into new packs and unlink the loose copies.
-2. Aggregate small local packs (minus those referenced by the
-   multi-pack-index or carrying a `.keep`, `.promisor`, `.mtimes`, or
-   `.bitmap` sidecar) into new packs and unlink the source packs.
+2. Aggregate small local packs (minus those named by `--keep-pack`,
+   referenced by the multi-pack-index, or carrying a `.keep`, `.promisor`,
+   `.mtimes`, or `.bitmap` sidecar) into new packs and unlink the source packs.
    If step 1 writes a single pack, it is naturally a candidate here
    and will normally be folded into the step-2 output.  Multiple
    loose-rollup packs are left for a later aggregation pass.
@@ -49,6 +50,9 @@ This command provides a quick recovery step for a repository that has
 accumulated many loose objects or small packs.  It reduces the number
 of files that unrelated `git` operations must scan, while leaving a
 later thorough linkgit:git-repack[1] to optimize deltas and pack layout.
+The `repack.aggregateOnce` configuration variable (see
+linkgit:git-repack[1]) lets `git repack` request this cleanup before
+beginning that more expensive work.
 
 Like `git repack`, `git pack-aggregate` takes no locks of its own.  Do
 not run it concurrently with other pack-rewriting maintenance.
@@ -67,6 +71,11 @@ OPTIONS
 	Skip aggregation of small packfiles if fewer than `<n>` aggregatable
 	packs are present.
 	Defaults to 5.
+
+--keep-pack=<pack-name>::
+	Exclude the given pack from aggregation.  `<pack-name>` is the pack
+	file name without a leading directory (e.g. `pack-123.pack`).
+	This option can be repeated to keep multiple packs.
 
 --max-loose-objects=<n>::
 	Process at most `<n>` loose objects per batch.  All output packs

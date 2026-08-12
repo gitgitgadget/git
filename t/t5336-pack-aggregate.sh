@@ -152,6 +152,36 @@ test_expect_success '--once prefers an existing delta over a duplicate base copy
 	)
 '
 
+test_expect_success '--keep-pack excludes repeated names before applying --min-packs' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 6 >packs.txt &&
+		sort -r packs.txt >sorted &&
+		first=$(head -n 1 sorted) &&
+		second=$(sed -n 2p sorted) &&
+		git pack-aggregate --once --min-loose=1000 \
+			--min-packs=5 \
+			--keep-pack="$first.pack" \
+			--keep-pack="$second.pack" &&
+		test 6 -eq "$(count_packs)" &&
+		git pack-aggregate --once --min-loose=1000 \
+			--min-packs=4 \
+			--keep-pack="$first.pack" \
+			--keep-pack="$second.pack" &&
+		test 3 -eq "$(count_packs)" &&
+		test 1 -eq "$(count_baddeltas)" &&
+		for name in "$first" "$second"
+		do
+			test_path_is_file ".git/objects/pack/$name.pack" &&
+			test_path_is_file ".git/objects/pack/$name.idx" ||
+			return 1
+		done &&
+		git fsck
+	)
+'
+
 for input_mode in loose packed
 do
 	test_expect_success "pack.packSizeLimit splits $input_mode aggregation outputs" '
@@ -797,6 +827,116 @@ test_expect_success 'geometric repack leaves non-baddeltas packs above the split
 		test 2 -eq "$(count_packs)" &&
 		test 0 -eq "$(count_baddeltas)" &&
 		git fsck
+	)
+'
+
+# ---- repack integration ----
+
+test_expect_success 'repack does not aggregate by default' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 3 >/dev/null &&
+		GIT_TRACE2_EVENT="$(pwd)/trace.txt" \
+			git repack -d --geometric=2 &&
+		test_grep ! "\"pack-aggregate\"" trace.txt
+	)
+'
+
+test_expect_success 'repack --aggregate-once runs pack-aggregate once' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 3 >/dev/null &&
+		GIT_TRACE2_EVENT="$(pwd)/trace.txt" \
+			git repack -d --geometric=2 --aggregate-once &&
+		test_grep "\"argv\":.*\"pack-aggregate\",\"--once\"" trace.txt &&
+		git fsck
+	)
+'
+
+test_expect_success 'repack --aggregate-once honors repeated --keep-pack' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 7 >packs.txt &&
+		first=$(head -n 1 packs.txt) &&
+		second=$(sed -n 2p packs.txt) &&
+		git cat-file --batch-all-objects \
+			--batch-check="create refs/tags/%(objectname) %(objectname)" \
+			>refs &&
+		git update-ref --stdin <refs &&
+		GIT_TRACE2_EVENT="$(pwd)/trace.txt" \
+			git repack -ad --aggregate-once \
+				--keep-pack="$first.pack" \
+				--keep-pack="$second.pack" &&
+		test_grep "\"argv\":.*\"pack-objects\".*\"--mark-bad-deltas\"" \
+			trace.txt &&
+		for name in "$first" "$second"
+		do
+			test_path_is_file ".git/objects/pack/$name.pack" &&
+			test_path_is_file ".git/objects/pack/$name.idx" ||
+			return 1
+		done &&
+		test 3 -eq "$(count_packs)" &&
+		git fsck
+	)
+'
+
+test_expect_success 'repack stops when --aggregate-once fails' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 3 >/dev/null &&
+		test_env GIT_TRACE2_EVENT="$(pwd)/trace.txt" \
+			test_must_fail git -c pack.aggregateMaxObjects=-1 \
+				repack -d --geometric=2 \
+				--aggregate-once 2>err &&
+		test_grep "pack.aggregateMaxObjects cannot be negative" err &&
+		test_grep "git pack-aggregate --once failed" err &&
+		test_grep ! "\"argv\":.*\"pack-objects\"" trace.txt
+	)
+'
+
+test_expect_success 'repack --aggregate-once handles an existing MIDX' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 5 >/dev/null &&
+		git multi-pack-index write &&
+		git repack -d --geometric=2 --aggregate-once --write-midx &&
+		git fsck
+	)
+'
+
+test_expect_success 'repack aggregation config enables once mode' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 3 >/dev/null &&
+		GIT_TRACE2_EVENT="$(pwd)/trace.txt" \
+			git -c repack.aggregateOnce=true \
+			repack -d --geometric=2 &&
+		test_grep "\"argv\":.*\"pack-aggregate\",\"--once\"" trace.txt
+	)
+'
+
+test_expect_success 'CLI can disable configured once aggregation' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 3 >/dev/null &&
+		GIT_TRACE2_EVENT="$(pwd)/trace.txt" \
+			git -c repack.aggregateOnce=true \
+			repack -d --geometric=2 --no-aggregate-once &&
+		test_grep ! "\"pack-aggregate\"" trace.txt
 	)
 '
 
