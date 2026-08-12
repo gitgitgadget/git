@@ -60,15 +60,22 @@ objects or small packs.  With `--loop`, it keeps new material under
 control while a long-running repack is in flight.  Both reduce the
 number of files that unrelated Git operations must scan, while leaving
 a later thorough linkgit:git-repack[1] to optimize deltas and pack
-layout.  The `repack.aggregateOnce` configuration variable (see
-linkgit:git-repack[1]) lets `git repack` request the one-shot cleanup
-before beginning that more expensive work.
+layout.  The `repack.aggregateOnce` and `repack.aggregateLoop`
+configuration variables (see linkgit:git-repack[1]) let `git repack`
+request either behavior independently.
 
 Like linkgit:git-repack[1], `git pack-aggregate` takes no locks of its
 own.  Callers that need serialization must arrange it themselves (for
 example by running under `git gc`).
 Callers can declare "do not touch these inputs" with `--keep-pack`,
 `--exclude-pack-file`, and `--exclude-loose-file`.
+When coordinating with a concurrent repack, protect every pack it may
+read or include in its replacement MIDX.  Exclude existing packs with
+`--exclude-pack-file` and protect new outputs with `.keep` files before
+their indexes become visible.  Keep these protections through the MIDX
+write and until aggregation stops.  `git repack` arranges this itself
+when spawning the aggregator and removes only its own `.keep` files
+afterward.
 
 OPTIONS
 -------
@@ -104,18 +111,28 @@ OPTIONS
 	Read a list of pack basenames (one per line) from `<path>` and
 	never touch any of those packs.  Lines may name a basename with
 	or without a `.pack` or `.idx` suffix; the suffix is stripped.
-	Blank lines and lines beginning with `#` are ignored.
+	Blank lines and lines beginning with `#` are ignored.  When
+	`git pack-aggregate` is spawned by a long-running `git repack`,
+	this file is populated by that `pack-objects` itself via
+	`--emit-input-packs`, and may contain a conservative superset
+	of the packs it will actually consume (such as in `--geometric`
+	mode).
 
 --exclude-loose-file=<path>::
 	Read a list of loose object IDs (one per line) from `<path>`
 	and never pack or unlink any of those loose objects.  Blank
-	lines and lines beginning with `#` are ignored.
+	lines and lines beginning with `#` are ignored.  When `git
+	pack-aggregate` is spawned by a long-running `git repack`, this
+	file is populated by that `pack-objects` itself via
+	`--emit-input-loose`.
 
 --parent-pipe-fd=<n>::
 	An inherited pipe file descriptor whose write end the parent
 	process holds open.  When the parent exits the pipe is closed
 	and `git pack-aggregate` exits at the next cycle boundary,
-	without waiting out the remainder of `--interval`.
+	without waiting out the remainder of `--interval`.  This is an
+	internal plumbing option used by `git repack` to keep its
+	companion aggregator from outliving it.
 
 --max-loose-objects=<n>::
 	Process at most `<n>` loose objects per batch.  All output packs

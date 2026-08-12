@@ -897,6 +897,7 @@ test_expect_success 'repack --aggregate-once runs pack-aggregate once' '
 		GIT_TRACE2_EVENT="$(pwd)/trace.txt" \
 			git repack -d --geometric=2 --aggregate-once &&
 		test_grep "\"argv\":.*\"pack-aggregate\",\"--once\"" trace.txt &&
+		test_grep ! "\"argv\":.*\"pack-aggregate\",\"--loop\"" trace.txt &&
 		git fsck
 	)
 '
@@ -958,20 +959,36 @@ test_expect_success 'repack --aggregate-once handles an existing MIDX' '
 	)
 '
 
-test_expect_success 'repack aggregation config enables once mode' '
+test_expect_success 'repack --aggregate-loop spawns and reaps pack-aggregate' '
 	test_when_finished "rm -fr work" &&
 	cp -R repo work &&
 	(
 		cd work &&
-		build_n_packs 3 >/dev/null &&
+		build_n_packs 5 >/dev/null &&
 		GIT_TRACE2_EVENT="$(pwd)/trace.txt" \
-			git -c repack.aggregateOnce=true \
-			repack -d --geometric=2 &&
-		test_grep "\"argv\":.*\"pack-aggregate\",\"--once\"" trace.txt
+			git repack -d --geometric=2 --aggregate-loop &&
+		test_grep "\"argv\":.*\"pack-aggregate\",\"--loop\"" trace.txt &&
+		# Tempdir should be cleaned up.
+		test -z "$(ls .git/objects | grep pack-aggregate)" &&
+		git fsck
 	)
 '
 
-test_expect_success 'CLI can disable configured once aggregation' '
+test_expect_success 'repack can enable both aggregation modes' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 3 >/dev/null &&
+		GIT_TRACE2_EVENT="$(pwd)/trace.txt" \
+			git repack -d --geometric=2 \
+				--aggregate-once --aggregate-loop &&
+		test_grep "\"argv\":.*\"pack-aggregate\",\"--once\"" trace.txt &&
+		test_grep "\"argv\":.*\"pack-aggregate\",\"--loop\"" trace.txt
+	)
+'
+
+test_expect_success 'repack aggregation config enables both modes' '
 	test_when_finished "rm -fr work" &&
 	cp -R repo work &&
 	(
@@ -979,8 +996,159 @@ test_expect_success 'CLI can disable configured once aggregation' '
 		build_n_packs 3 >/dev/null &&
 		GIT_TRACE2_EVENT="$(pwd)/trace.txt" \
 			git -c repack.aggregateOnce=true \
-			repack -d --geometric=2 --no-aggregate-once &&
+			-c repack.aggregateLoop=true \
+			repack -d --geometric=2 &&
+		test_grep "\"argv\":.*\"pack-aggregate\",\"--once\"" trace.txt &&
+		test_grep "\"argv\":.*\"pack-aggregate\",\"--loop\"" trace.txt
+	)
+'
+
+test_expect_success 'CLI can disable configured aggregation modes' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 3 >/dev/null &&
+		GIT_TRACE2_EVENT="$(pwd)/trace.txt" \
+			git -c repack.aggregateOnce=true \
+			-c repack.aggregateLoop=true \
+			repack -d --geometric=2 \
+				--no-aggregate-once --no-aggregate-loop &&
 		test_grep ! "\"pack-aggregate\"" trace.txt
+	)
+'
+
+# ---- pack-aggregate lifecycle / .keep marker coverage ----
+
+test_expect_success PERL 'pack-aggregate survives through MIDX bitmap write' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		test_commit base &&
+		build_n_packs 5 >/dev/null &&
+		GIT_TRACE2_EVENT="$(pwd)/trace.txt" \
+			git repack -d --geometric=2 --aggregate-loop \
+				--write-midx --write-bitmap-index &&
+		test_path_is_file \
+			.git/objects/pack/multi-pack-index-*.bitmap &&
+		git rev-list --test-bitmap HEAD &&
+		# Match child start and exit events by session ID.
+		# Direct waitpid() teardown omits the child_exit event in the
+		# parent trace, so compare the child exit events.
+		perl -ne '\''
+			my ($sid)  = /"sid":"([^"]+)"/ or next;
+			my ($time) = /"time":"([^"]+)"/;
+			if (/"event":"start"/) {
+				# Match the subcommand, not a path containing
+				# pack-aggregate.
+				my ($argv) = /"argv":\["[^"]*","([^"]+)"/;
+				if (defined($argv) && $argv eq "multi-pack-index") {
+					$kind{$sid} = "midx";
+				} elsif (defined($argv) && $argv eq "pack-aggregate") {
+					$kind{$sid} = "agg";
+				}
+			} elsif (/"event":"exit"/ && $kind{$sid}) {
+				$exit{$kind{$sid}} //= $time;
+			}
+			END {
+				die "missing midx exit\n" unless $exit{midx};
+				die "missing agg exit\n"  unless $exit{agg};
+				die "ordering wrong: agg=$exit{agg} midx=$exit{midx}\n"
+					unless $exit{agg} gt $exit{midx};
+			}
+		'\'' trace.txt
+	)
+'
+
+test_expect_success '--aggregate-loop preserves pre-existing user .keep files' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 5 >packs.txt &&
+		first=$(head -n 1 packs.txt) &&
+		# A user-created .keep with no marker content must
+		# survive a repack --aggregate-loop untouched.
+		echo "I am a user keep file" >expect &&
+		cp expect .git/objects/pack/${first}.keep &&
+		git repack -d --geometric=2 --aggregate-loop &&
+		test_path_is_file .git/objects/pack/${first}.keep &&
+		test_path_is_file .git/objects/pack/${first}.pack &&
+		test_cmp expect .git/objects/pack/${first}.keep
+	)
+'
+
+test_expect_success '--aggregate-loop cleans up its own .keep markers' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 5 >/dev/null &&
+		git repack -d --geometric=2 --aggregate-loop &&
+		# No marker .keep files should remain.  Any .keep that
+		# survives must NOT carry our marker prefix.
+		for f in .git/objects/pack/*.keep
+		do
+			test -e "$f" || continue
+			test_grep ! "^git-repack-aggregate-temporary " "$f" \
+				|| return 1
+		done
+	)
+'
+
+test_expect_success 'startup cleans up stale .keep markers from dead pids' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 3 >packs.txt &&
+		# Spawn a short-lived subshell that writes its own pid
+		# to a file, then exits.  That pid is guaranteed dead
+		# by the time we read it.
+		sh -c "echo \$\$" >dead_pid.txt &&
+		dead_pid=$(cat dead_pid.txt) &&
+		test -n "$dead_pid" &&
+		first=$(head -n 1 packs.txt) &&
+		stale=.git/objects/pack/${first}.keep &&
+		printf "git-repack-aggregate-temporary pid=%d\n" \
+			"$dead_pid" >"$stale" &&
+		test_path_is_file "$stale" &&
+		git repack -d --geometric=2 --aggregate-loop &&
+		# The stale marker should have been cleaned at startup;
+		# even if its pack was preserved by geometric repack,
+		# the .keep should not still carry the dead-pid marker.
+		if test -e "$stale"
+		then
+			test_grep ! "^git-repack-aggregate-temporary " \
+				"$stale"
+		fi
+	)
+'
+
+test_expect_success !MINGW 'startup leaves live-pid .keep markers alone' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	# Use the test-runner shell pid, which is reliably alive
+	# for the duration of this test.  PID 1 (init) would also
+	# work since our code treats EPERM as "alive".
+	#
+	# !MINGW: on Windows, bash $$ is a virtualized MSYS pid that
+	# does not correspond to a process kill(pid, 0) can see, so
+	# our liveness check would treat it as dead and the marker
+	# would be removed.  Skip this test there.
+	live_pid=$$ &&
+	(
+		cd work &&
+		build_n_packs 3 >packs.txt &&
+		first=$(head -n 1 packs.txt) &&
+		live=.git/objects/pack/${first}.keep &&
+		printf "git-repack-aggregate-temporary pid=%d\n" \
+			"$live_pid" >"$live" &&
+		test_path_is_file "$live" &&
+		git repack -d --geometric=2 --aggregate-loop &&
+		test_path_is_file "$live" &&
+		test_grep "pid=${live_pid}" "$live"
 	)
 '
 
