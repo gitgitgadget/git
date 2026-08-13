@@ -88,6 +88,10 @@ void pack_geometry_init(struct pack_geometry *geometry,
 		if (p->is_cruft)
 			continue;
 
+		if (!is_canonical_pack_basename(pack_basename(p),
+						existing->repo->hash_algo->hexsz))
+			continue;
+
 		if (p->pack_promisor) {
 			ALLOC_GROW(geometry->promisor_pack,
 				   geometry->promisor_pack_nr + 1,

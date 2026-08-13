@@ -524,6 +524,19 @@ const char *pack_basename(struct packed_git *p)
 	return ret;
 }
 
+int is_canonical_pack_basename(const char *base, size_t hexsz)
+{
+	const char *hex;
+	size_t i;
+
+	if (!skip_prefix(base, "pack-", &hex))
+		return 0;
+	for (i = 0; i < hexsz; i++)
+		if (!isxdigit(hex[i]))
+			return 0;
+	return !strcmp(hex + hexsz, ".pack");
+}
+
 /*
  * Do not call this directly as this leaks p->pack_fd on error return;
  * call open_packed_git() instead.

@@ -319,8 +319,9 @@ static void collect_pack_candidates(struct repository *repo,
 		strbuf_addstr(&base, pack_basename(p));
 		if (string_list_has_string(keep_pack_list, base.buf))
 			continue;
-		if (!strbuf_strip_suffix(&base, ".pack"))
+		if (!is_canonical_pack_basename(base.buf, repo->hash_algo->hexsz))
 			continue;
+		strbuf_strip_suffix(&base, ".pack");
 
 		if (strset_contains(file_exclude, base.buf))
 			continue;

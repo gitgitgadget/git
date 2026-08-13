@@ -984,4 +984,39 @@ test_expect_success 'CLI can disable configured once aggregation' '
 	)
 '
 
+test_expect_success 'pack-aggregate ignores in-flight .tmp-* packs' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 5 >packs.txt &&
+		# Simulate a concurrent repack or pack-aggregate that has
+		# fully written its output but not yet renamed it into
+		# place: stage one pack under a ".tmp-<pid>-pack-<hash>"
+		# name.  The object-store scan enumerates any "*.idx", so
+		# this in-flight pack becomes visible to get_all_packs();
+		# the aggregator must never treat it as a candidate, and in
+		# particular must not delete it out from under its owner.
+		victim=$(head -n 1 packs.txt) &&
+		for e in pack idx rev
+		do
+			from=.git/objects/pack/${victim}.$e &&
+			if test -f "$from"
+			then
+				mv "$from" \
+				   .git/objects/pack/.tmp-1234-${victim}.$e ||
+				return 1
+			fi
+		done &&
+		git pack-aggregate --once --min-loose=1000 --min-packs=4 &&
+		# The staged temp pack is left untouched ...
+		test_path_is_file .git/objects/pack/.tmp-1234-${victim}.pack &&
+		test_path_is_file .git/objects/pack/.tmp-1234-${victim}.idx &&
+		# ... and only the four canonical packs were rolled into a
+		# single aggregate.
+		test 1 -eq "$(count_packs)" &&
+		git fsck
+	)
+'
+
 test_done
