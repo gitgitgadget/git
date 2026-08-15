@@ -14,6 +14,7 @@
 #include "transport.h"
 #include "version.h"
 #include "oid-array.h"
+#include "oidset.h"
 #include "gpg-interface.h"
 #include "shallow.h"
 #include "parse-options.h"
@@ -55,6 +56,91 @@ static void append_negative_object(struct repository *r,
 	oid_array_append(haves, oid);
 }
 
+static int check_to_send_update(const struct ref *ref, const struct send_pack_args *args);
+
+/*
+ * Add the shallow grafts (nr_parent == -1), which are reachable from the
+ * refs being pushed, to the pack boundary ("haves") as uninteresting
+ * (negative) tips so the generated pack leaves out everything beneath them.
+ *
+ * Walk only from the pushed tips, and only until a graft: using a graft
+ * that does not bound the pushed history could exclude an object we are
+ * genuinely sending (if it is also reachable from that unrelated graft).
+ * Stop early at any commit the peer already has, since it is a negative
+ * the peer can use and the graft beneath it would be redundant.
+ */
+static void append_reachable_shallow_grafts(struct repository *r,
+					    const struct ref *refs,
+					    const struct oid_array *advertised,
+					    const struct oid_array *negotiated,
+					    const struct send_pack_args *args,
+					    struct oid_array *haves)
+{
+	struct commit_list *pending = NULL;
+	struct oidset seen = OIDSET_INIT;
+	struct oidset known = OIDSET_INIT;
+	const struct ref *ref;
+	size_t i;
+
+	for (i = 0; i < advertised->nr; i++)
+		oidset_insert(&known, &advertised->oid[i]);
+	for (i = 0; i < negotiated->nr; i++)
+		oidset_insert(&known, &negotiated->oid[i]);
+
+	/*
+	 * Record every commit the peer is known to have as a boundary for
+	 * the walk, and seed the walk from the tips we are actually sending.
+	 * The walk below does not begin until "known" is fully populated.
+	 */
+	for (ref = refs; ref; ref = ref->next) {
+		struct commit *commit;
+
+		if (!is_null_oid(&ref->old_oid))
+			oidset_insert(&known, &ref->old_oid);
+
+		if (is_null_oid(&ref->new_oid))
+			continue;
+		if (check_to_send_update(ref, args))
+			continue;
+		commit = lookup_commit_reference_gently(r, &ref->new_oid, 1);
+		if (commit)
+			commit_list_insert(commit, &pending);
+	}
+
+	while (pending) {
+		struct commit *commit = pop_commit(&pending);
+		const struct object_id *oid = &commit->object.oid;
+		struct commit_graft *graft;
+		struct commit_list *parent;
+
+		if (oidset_insert(&seen, oid))
+			continue;
+
+		/*
+		 * A commit the peer already has bounds the pushed history
+		 * with a negative it can use, so stop here rather than
+		 * descend to a graft that would only be redundant.
+		 */
+		if (oidset_contains(&known, oid) &&
+		    odb_has_object(r->objects, oid, 0))
+			continue;
+
+		graft = lookup_commit_graft(r, oid);
+		if (graft && graft->nr_parent == -1) {
+			append_negative_object(r, haves, oid);
+			continue;
+		}
+
+		if (repo_parse_commit(r, commit))
+			continue;
+		for (parent = commit->parents; parent; parent = parent->next)
+			commit_list_insert(parent->item, &pending);
+	}
+
+	oidset_clear(&seen);
+	oidset_clear(&known);
+}
+
 /*
  * Make a pack stream and spit it out into file descriptor fd
  */
@@ -87,6 +173,20 @@ static int pack_objects(struct repository *r,
 		append_negative_object(r, &opts.haves, &advertised->oid[i]);
 	for (size_t i = 0; i < negotiated->nr; i++)
 		append_negative_object(r, &opts.haves, &negotiated->oid[i]);
+
+	/*
+	 * When pushing from a shallow repository, avoid re-pushing the
+	 * entire toplevel tree.
+	 */
+	if (is_repository_shallow(r)) {
+		int exclude_boundary = 1;
+		repo_config_get_bool(r, "push.shallowexcludeboundary",
+				     &exclude_boundary);
+		if (exclude_boundary)
+			append_reachable_shallow_grafts(r, refs, advertised,
+							negotiated, args,
+							&opts.haves);
+	}
 
 	while (refs) {
 		if (!is_null_oid(&refs->old_oid))
