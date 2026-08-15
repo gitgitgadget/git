@@ -409,7 +409,7 @@ int validate_worktree(const struct worktree *wt, struct strbuf *errmsg,
 		goto done;
 	}
 
-	path = xstrdup_or_null(read_gitfile_gently(wt_path.buf, &err));
+	path = xstrdup_or_null(read_gitfile_gently(wt_path.buf, NULL, &err));
 	if (!path) {
 		strbuf_addf_gently(errmsg, _("'%s' is not a .git file, error code %d"),
 				   wt_path.buf, err);
@@ -650,6 +650,7 @@ static void repair_gitfile(struct worktree *wt,
 	struct strbuf repo = STRBUF_INIT;
 	struct strbuf backlink = STRBUF_INIT;
 	char *dotgit_contents = NULL;
+	bool absolute;
 	const char *repair = NULL;
 	char *path = NULL;
 	int err;
@@ -667,16 +668,10 @@ static void repair_gitfile(struct worktree *wt,
 	strbuf_realpath(&repo, path, 1);
 	strbuf_addf(&dotgit, "%s/.git", wt->path);
 	strbuf_addf(&gitdir, "%s/gitdir", repo.buf);
-	dotgit_contents = xstrdup_or_null(read_gitfile_gently(dotgit.buf, &err));
+	dotgit_contents = xstrdup_or_null(read_gitfile_gently(dotgit.buf, &absolute, &err));
 
-	if (dotgit_contents) {
-		if (is_absolute_path(dotgit_contents)) {
-			strbuf_addstr(&backlink, dotgit_contents);
-		} else {
-			strbuf_addf(&backlink, "%s/%s", wt->path, dotgit_contents);
-			strbuf_realpath_forgiving(&backlink, backlink.buf, 0);
-		}
-	}
+	if (dotgit_contents)
+		strbuf_addstr(&backlink, dotgit_contents);
 
 	if (err == READ_GITFILE_ERR_NOT_A_FILE ||
 		err == READ_GITFILE_ERR_IS_A_DIR)
@@ -685,7 +680,7 @@ static void repair_gitfile(struct worktree *wt,
 		repair = _(".git file broken");
 	else if (fspathcmp(backlink.buf, repo.buf))
 		repair = _(".git file incorrect");
-	else if (use_relative_paths == is_absolute_path(dotgit_contents))
+	else if (use_relative_paths == absolute)
 		repair = _(".git file absolute/relative path mismatch");
 
 	if (repair) {
@@ -855,16 +850,9 @@ void repair_worktree_at_path(struct repository *repo,
 
 	infer_backlink(repo, dotgit.buf, &inferred_backlink);
 	strbuf_realpath_forgiving(&inferred_backlink, inferred_backlink.buf, 0);
-	dotgit_contents = xstrdup_or_null(read_gitfile_gently(dotgit.buf, &err));
+	dotgit_contents = xstrdup_or_null(read_gitfile_gently(dotgit.buf, NULL, &err));
 	if (dotgit_contents) {
-		if (is_absolute_path(dotgit_contents)) {
-			strbuf_addstr(&backlink, dotgit_contents);
-		} else {
-			strbuf_addbuf(&backlink, &dotgit);
-			strbuf_strip_suffix(&backlink, ".git");
-			strbuf_addstr(&backlink, dotgit_contents);
-			strbuf_realpath_forgiving(&backlink, backlink.buf, 0);
-		}
+		strbuf_addstr(&backlink, dotgit_contents);
 	} else if (err == READ_GITFILE_ERR_NOT_A_FILE ||
 			err == READ_GITFILE_ERR_IS_A_DIR) {
 		fn(1, dotgit.buf, _("unable to locate repository; .git is not a file"), cb_data);

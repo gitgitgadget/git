@@ -458,7 +458,7 @@ int is_nonbare_repository_dir(struct strbuf *path)
 	assert(orig_path_len != 0);
 	strbuf_complete(path, '/');
 	strbuf_addstr(path, ".git");
-	if (read_gitfile_gently(path->buf, &gitfile_error) || is_git_directory(path->buf))
+	if (read_gitfile_gently(path->buf, NULL, &gitfile_error) || is_git_directory(path->buf))
 		ret = 1;
 	if (gitfile_error == READ_GITFILE_ERR_OPEN_FAILED ||
 	    gitfile_error == READ_GITFILE_ERR_READ_FAILED)
@@ -956,12 +956,15 @@ void read_gitfile_error_die(int error_code, const char *path)
  * return path to git directory if found. The return value comes from
  * a shared buffer.
  *
+ * On success, if absolute is not NULL, it will be set to whether the
+ * path in .git file is an absolute path.
+ *
  * On failure, if return_error_code is not NULL, return_error_code
  * will be set to an error code and NULL will be returned. If
  * return_error_code is NULL the function will die instead (for most
  * cases).
  */
-const char *read_gitfile_gently(const char *path, int *return_error_code)
+const char *read_gitfile_gently(const char *path, bool *absolute, int *return_error_code)
 {
 	const int max_file_size = 1 << 20;  /* 1MB */
 	int error_code = 0;
@@ -1016,6 +1019,8 @@ const char *read_gitfile_gently(const char *path, int *return_error_code)
 	}
 	buf[len] = '\0';
 	dir = buf + 8;
+	if (absolute)
+		*absolute = is_absolute_path(dir);
 
 	if (!is_absolute_path(dir) && (slash = strrchr(path, '/'))) {
 		size_t pathlen = slash+1 - path;
@@ -1615,7 +1620,7 @@ static enum discovery_result repo_discovery_find_dir(struct strbuf *dir,
 		if (offset > min_offset)
 			strbuf_addch(dir, '/');
 		strbuf_addstr(dir, DEFAULT_GIT_DIR_ENVIRONMENT);
-		gitdirenv = read_gitfile_gently(dir->buf, &error_code);
+		gitdirenv = read_gitfile_gently(dir->buf, NULL, &error_code);
 		if (!gitdirenv) {
 			switch (error_code) {
 			case READ_GITFILE_ERR_MISSING:
@@ -2185,7 +2190,7 @@ const char *resolve_gitdir_gently(const char *suspect, int *return_error_code)
 {
 	if (is_git_directory(suspect))
 		return suspect;
-	return read_gitfile_gently(suspect, return_error_code);
+	return read_gitfile_gently(suspect, NULL, return_error_code);
 }
 
 /* if any standard file descriptor is missing open it to /dev/null */

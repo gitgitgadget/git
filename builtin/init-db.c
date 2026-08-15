@@ -210,7 +210,7 @@ int cmd_init_db(int argc,
 		const char *p;
 		struct strbuf sb = STRBUF_INIT;
 
-		p = read_gitfile_gently(git_dir, &err);
+		p = read_gitfile_gently(git_dir, NULL, &err);
 		if (p && get_common_dir(&sb, p)) {
 			struct strbuf mainwt = STRBUF_INIT;
 
