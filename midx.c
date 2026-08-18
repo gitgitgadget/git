@@ -595,46 +595,50 @@ uint32_t nth_midxed_pack_int_id(struct multi_pack_index *m, uint32_t pos)
 					       (off_t)pos * MIDX_CHUNK_OFFSET_WIDTH);
 }
 
-int fill_midx_entry(struct multi_pack_index *m,
-		    const struct object_id *oid,
-		    struct pack_entry *e,
-		    struct packed_git **bad_pack)
+enum midx_fill_result fill_midx_entry(struct multi_pack_index *m,
+				      const struct object_id *oid,
+				      struct pack_entry *e,
+				      struct packed_git **bad_pack)
 {
 	uint32_t pos;
 	uint32_t pack_int_id;
 	struct packed_git *p;
 
 	if (!bsearch_midx(oid, m, &pos))
-		return 0;
+		return MIDX_FILL_MISS;
 
 	midx_for_object(&m, pos);
 	pack_int_id = nth_midxed_pack_int_id(m, pos);
 
 	if (prepare_midx_pack(m, pack_int_id))
-		return 0;
+		goto owner_unavailable;
 	p = m->packs[pack_int_id - m->num_packs_in_base];
 
-	/*
-	* We are about to tell the caller where they can locate the
-	* requested object.  We better make sure the packfile is
-	* still here and can be accessed before supplying that
-	* answer, as it may have been deleted since the MIDX was
-	* loaded!
-	*/
+	/* Make sure the pack is still present before pointing at it. */
 	if (!is_pack_valid(p))
-		return 0;
+		goto owner_unavailable;
 
 	if (oidset_size(&p->bad_objects) &&
 	    oidset_contains(&p->bad_objects, oid)) {
 		if (bad_pack && !*bad_pack)
 			*bad_pack = p;
-		return 0;
+		return MIDX_FILL_MISS;
 	}
 
 	e->offset = nth_midxed_offset(m, pos);
 	e->p = p;
 
-	return 1;
+	return MIDX_FILL_HIT;
+
+owner_unavailable:
+	/*
+	 * Re-arm stale_packs_detected on every such lookup, not just the
+	 * first: prepare_midx_pack() caches the failure, so without this a
+	 * later lookup of the same vanished pack would leave the flag clear
+	 * and a QUICK reader would skip its recovering second read.
+	 */
+	m->source->base.odb->stale_packs_detected = 1;
+	return MIDX_FILL_OWNER_UNAVAILABLE;
 }
 
 /* Match "foo.idx" against either "foo.pack" _or_ "foo.idx". */
@@ -1038,7 +1042,7 @@ int verify_midx_file(struct odb_source_packed *source, unsigned flags)
 
 		nth_midxed_object_oid(&oid, m, pairs[i].pos);
 
-		if (!fill_midx_entry(m, &oid, &e, NULL)) {
+		if (fill_midx_entry(m, &oid, &e, NULL) != MIDX_FILL_HIT) {
 			midx_report(_("failed to load pack entry for oid[%d] = %s"),
 				    pairs[i].pos, oid_to_hex(&oid));
 			continue;

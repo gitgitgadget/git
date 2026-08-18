@@ -1393,4 +1393,84 @@ test_expect_success 'pack.preferBitmapTips interprets patterns as hierarchy' '
 	)
 '
 
+test_expect_success 'lookup recovers object whose midx-owning pack was removed' '
+	test_when_finished "rm -fr repo" &&
+	git init repo &&
+	(
+		cd repo &&
+
+		# "keep" ends up only in the big pack; "dup" is deliberately
+		# placed in two packs so the midx has to choose an owner.
+		test_commit keep &&
+		echo duplicated-content >dup &&
+		git add dup &&
+		git commit -m dup &&
+		dup_oid=$(git rev-parse HEAD:dup) &&
+
+		# Roll every object, including dup, into a single big pack.
+		git repack -adq &&
+
+		# Build a second, "moderate" pack that also contains dup, so dup
+		# now lives in two packs that the midx will cover.
+		moderate=$(echo "$dup_oid" |
+			git pack-objects --quiet $objdir/pack/pack) &&
+
+		# Attribute dup to the moderate pack in the midx.
+		git multi-pack-index write \
+			--preferred-pack="pack-$moderate.idx" &&
+
+		# Simulate a concurrent "git repack" retiring the moderate pack:
+		# its files disappear, but the now-stale midx still names it as
+		# the owner of dup.  A valid copy of dup survives in the big pack.
+		rm -f $objdir/pack/pack-$moderate.* &&
+
+		# The midx routes the lookup to the deleted pack, and the regular
+		# pack fallback skips midx-covered packs, so without recovery dup
+		# would appear missing even though it is physically present.
+		echo blob >expect &&
+		git cat-file -t "$dup_oid" >actual &&
+		test_cmp expect actual
+	)
+'
+
+test_expect_success 'repeated QUICK lookups recover after owning pack removed' '
+	test_when_finished "rm -fr repo" &&
+	git init repo &&
+	(
+		cd repo &&
+
+		# Two blobs, each duplicated across packs so the midx must pick
+		# an owning pack, and each attributed to the same moderate pack.
+		echo one >f1 &&
+		echo two >f2 &&
+		git add f1 f2 &&
+		git commit -m dups &&
+		d1=$(git rev-parse HEAD:f1) &&
+		d2=$(git rev-parse HEAD:f2) &&
+
+		# Roll every object, including d1 and d2, into one big pack,
+		# then build a moderate pack that also holds both blobs.
+		git repack -adq &&
+		moderate=$(printf "%s\n%s\n" "$d1" "$d2" |
+			git pack-objects --quiet $objdir/pack/pack) &&
+
+		git multi-pack-index write \
+			--preferred-pack="pack-$moderate.idx" &&
+
+		# Retire the moderate pack; the stale midx still names it as the
+		# owner of both blobs, each of which survives in the big pack.
+		rm -f $objdir/pack/pack-$moderate.* &&
+
+		# One resident QUICK reader ("git mktree --batch") resolves both
+		# blobs.  The first lookup recovers d1 and caches the owning
+		# packs failure; unless that failure keeps re-arming the second
+		# read, the lookup of d2 skips its recovering read and the reader
+		# dies reporting d2 as missing.
+		printf "100644 blob %s\tf1\n\n100644 blob %s\tf2\n\n" \
+			"$d1" "$d2" |
+			git mktree --batch >trees &&
+		test_line_count = 2 trees
+	)
+'
+
 test_done
