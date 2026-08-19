@@ -1016,12 +1016,11 @@ int cmd_pull(int argc,
 		set_reflog_message(argc, argv);
 
 	repo_config(the_repository, git_pull_config, NULL);
-	if (the_repository->gitdir) {
-		prepare_repo_settings(the_repository);
-		the_repository->settings.command_requires_full_index = 0;
-	}
 
 	argc = parse_options(argc, argv, prefix, pull_options, pull_usage, 0);
+
+	prepare_repo_settings(the_repository);
+	the_repository->settings.command_requires_full_index = 0;
 	if (opt_autostash == -1)
 		opt_autostash = config_pull_autostash;
 

@@ -1880,10 +1880,6 @@ static int checkout_main(int argc, const char **argv, const char *prefix,
 	opts->show_progress = -1;
 
 	repo_config(the_repository, git_checkout_config, opts);
-	if (the_repository->gitdir) {
-		prepare_repo_settings(the_repository);
-		the_repository->settings.command_requires_full_index = 0;
-	}
 
 	opts->track = BRANCH_TRACK_UNSPECIFIED;
 
@@ -1894,6 +1890,9 @@ static int checkout_main(int argc, const char **argv, const char *prefix,
 
 	argc = parse_options(argc, argv, prefix, options,
 			     usagestr, parseopt_flags);
+
+	prepare_repo_settings(the_repository);
+	the_repository->settings.command_requires_full_index = 0;
 
 	if (opts->patch_context < -1)
 		die(_("'%s' cannot be negative"), "--unified");

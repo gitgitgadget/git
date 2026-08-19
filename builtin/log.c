@@ -674,11 +674,6 @@ int cmd_show(int argc,
 	init_diff_ui_defaults();
 	repo_config(the_repository, git_log_config, &cfg);
 
-	if (the_repository->gitdir) {
-		prepare_repo_settings(the_repository);
-		the_repository->settings.command_requires_full_index = 0;
-	}
-
 	memset(&match_all, 0, sizeof(match_all));
 	repo_init_revisions(the_repository, &rev, prefix);
 	repo_config(the_repository, grep_config, &rev.grep_filter);
@@ -692,6 +687,9 @@ int cmd_show(int argc,
 	opt.def = "HEAD";
 	opt.tweak = show_setup_revisions_tweak;
 	cmd_log_init(argc, argv, prefix, &rev, &opt, &cfg);
+
+	prepare_repo_settings(the_repository);
+	the_repository->settings.command_requires_full_index = 0;
 
 	if (!rev.no_walk) {
 		ret = cmd_log_walk(&rev);
