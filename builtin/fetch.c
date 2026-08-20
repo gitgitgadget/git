@@ -2649,6 +2649,7 @@ int cmd_fetch(int argc,
 	if (the_repository->gitdir) {
 		prepare_repo_settings(the_repository);
 		the_repository->settings.command_requires_full_index = 0;
+		the_repository->settings.command_requires_fsmonitor = 0;
 	}
 
 	argc = parse_options(argc, argv, prefix,

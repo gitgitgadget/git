@@ -477,4 +477,25 @@ test_expect_success 'status succeeds with sparse index' '
 	)
 '
 
+test_expect_success "fetch does not activate fsmonitor" '
+	test_when_finished "rm -rf fsm-repo fsm-upstream" &&
+
+	git init fsm-upstream &&
+	test_commit -C fsm-upstream initial &&
+
+	git clone fsm-upstream fsm-repo &&
+	test_hook -C fsm-repo fsmonitor-test <<-\EOF &&
+	printf "last_update_token\0"
+	EOF
+	git -C fsm-repo config core.fsmonitor .git/hooks/fsmonitor-test &&
+
+	GIT_TRACE2_EVENT="$(pwd)/trace2-status.txt" \
+		git -C fsm-repo status &&
+	test_region fsm_hook query trace2-status.txt &&
+
+	GIT_TRACE2_EVENT="$(pwd)/trace2-fetch.txt" \
+		git -C fsm-repo fetch origin &&
+	test_region ! fsm_hook query trace2-fetch.txt
+'
+
 test_done

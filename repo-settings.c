@@ -138,6 +138,7 @@ void prepare_repo_settings(struct repository *r)
 	 * removed.
 	 */
 	r->settings.command_requires_full_index = 1;
+	r->settings.command_requires_fsmonitor = 1;
 
 	if (!repo_config_get_ulong(r, "core.deltabasecachelimit", &ulongval))
 		r->settings.delta_base_cache_limit = ulongval;
