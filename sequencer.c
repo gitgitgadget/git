@@ -6966,6 +6966,71 @@ int sequencer_determine_whence(struct repository *r, enum commit_whence *whence)
 	return 0;
 }
 
+enum ongoing_operation sequencer_ongoing_operation(struct repository *r,
+						   enum commit_whence whence)
+{
+	char *path;
+	int found;
+
+	/*
+	 * The merge, cherry-pick, and (empty) rebase-pick stops are already
+	 * distinguished by 'whence'.
+	 */
+	switch (whence) {
+	case FROM_MERGE:
+		return ONGOING_MERGE;
+	case FROM_CHERRY_PICK_SINGLE:
+	case FROM_CHERRY_PICK_MULTI:
+		return ONGOING_CHERRY_PICK;
+	case FROM_REBASE_PICK:
+		return ONGOING_REBASE_EMPTY;
+	case FROM_COMMIT:
+		break;
+	}
+
+	/*
+	 * 'whence' is FROM_COMMIT, but we may still be in the middle of an
+	 * operation that records its result on top of HEAD; detect those
+	 * from their on-disk state.
+	 */
+
+	/* In the middle of a revert? */
+	if (refs_ref_exists(get_main_ref_store(r), "REVERT_HEAD"))
+		return ONGOING_REVERT;
+
+	/* In the middle of an `am`? */
+	path = repo_git_path(r, "rebase-apply/applying");
+	found = file_exists(path);
+	free(path);
+	if (found)
+		return ONGOING_AM;
+
+	/*
+	 * In the middle of a rebase that stopped for conflict resolution?
+	 * The apply backend only ever stops for conflicts, so the presence
+	 * of its state directory is enough.  The merge backend writes
+	 * stopped-sha whenever it hands control back to the user, but omits
+	 * `amend` unless it stopped with HEAD already pointing at the commit
+	 * to be amended (a clean edit/reword stop); its absence therefore
+	 * marks a conflicted stop.
+	 */
+	path = repo_git_path(r, "rebase-apply");
+	found = file_exists(path);
+	free(path);
+	if (!found) {
+		char *stopped_sha = repo_git_path(r, "rebase-merge/stopped-sha");
+		char *amend_marker = repo_git_path(r, "rebase-merge/amend");
+
+		found = file_exists(stopped_sha) && !file_exists(amend_marker);
+		free(stopped_sha);
+		free(amend_marker);
+	}
+	if (found)
+		return ONGOING_REBASE_CONFLICT;
+
+	return ONGOING_NONE;
+}
+
 int sequencer_get_update_refs_state(const char *wt_dir,
 				    struct string_list *refs)
 {
