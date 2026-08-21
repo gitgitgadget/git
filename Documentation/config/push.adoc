@@ -134,6 +134,18 @@ This will result in only b (a and c are cleared).
 	rely solely on the server's ref advertisement to find commits
 	in common.
 
+`push.shallowExcludeBoundary`::
+	When pushing from a shallow repository (see linkgit:git-clone[1]
+	`--depth`), Git normally assumes that the receiving end already
+	has the pushing repository's shallow grafts, and omits those
+	objects from the generated pack rather than resending the full
+	toplevel tree of those grafts. This is safe because the
+	receiving end rejects a push that references objects it does not
+	have. Set this to `false` to send those objects anyway; this is
+	only needed for the highly unusual case of using a push to seed
+	a receiver that adopts new shallow roots (i.e. a receiver that
+	has explicitly set `receive.shallowUpdate`). Default is `true`.
+
 `push.useBitmaps`::
 	If set to `false`, disable use of bitmaps for `git push` even if
 	`pack.useBitmaps` is `true`, without preventing other git operations
