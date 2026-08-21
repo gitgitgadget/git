@@ -30,6 +30,7 @@
 #include "path.h"
 #include "preload-index.h"
 #include "read-cache.h"
+#include "refs.h"
 #include "repository.h"
 #include "string-list.h"
 #include "rerere.h"
@@ -1335,6 +1336,46 @@ static int parse_and_validate_options(int argc, const char *argv[],
 			die(_("You are in the middle of a cherry-pick -- cannot amend."));
 		else if (whence == FROM_REBASE_PICK)
 			die(_("You are in the middle of a rebase -- cannot amend."));
+	}
+	if (amend && whence == FROM_COMMIT) {
+		char *applying, *apply_dir, *stopped_sha, *amend_marker;
+		int in_am, conflicted_stop;
+
+		/* Check middle of revert */
+		if (refs_ref_exists(get_main_ref_store(the_repository),
+				    "REVERT_HEAD"))
+			die(_("You are in the middle of a revert -- cannot amend."));
+
+		/* Check middle of `am` */
+		applying = repo_git_path(the_repository,
+					 "rebase-apply/applying");
+		in_am = file_exists(applying);
+
+		free(applying);
+		if (in_am)
+			die(_("You are in the middle of an am session -- cannot amend."));
+
+		/* Check middle of rebase specifically stopped for conflicts */
+		apply_dir = repo_git_path(the_repository,
+					  "rebase-apply");
+		stopped_sha = repo_git_path(the_repository,
+					    "rebase-merge/stopped-sha");
+		amend_marker = repo_git_path(the_repository,
+					     "rebase-merge/amend");
+		/*
+		 * The apply backend only ever stops for conflicts; the
+		 * merge backend writes stopped-sha but omits `amend`,
+		 * which it writes only at a clean edit/reword stop.
+		 */
+		conflicted_stop =
+			file_exists(apply_dir) ||
+			(file_exists(stopped_sha) && !file_exists(amend_marker));
+
+		free(apply_dir);
+		free(stopped_sha);
+		free(amend_marker);
+		if (conflicted_stop)
+			die(_("You are resolving conflicts during a rebase -- cannot amend."));
 	}
 	if (fixup_message && squash_message)
 		die(_("options '%s' and '%s' cannot be used together"), "--squash", "--fixup");
