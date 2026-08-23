@@ -583,8 +583,14 @@ static enum odb_read_status do_oid_object_info_extended(struct object_database *
 		 * When the object hasn't been found we try a second read and
 		 * tell the sources so. This may cause them to invalidate
 		 * caches or reload on-disk state.
+		 *
+		 * A QUICK lookup normally skips this second read to stay fast
+		 * on a genuine miss, but retry anyway when a pack vanished
+		 * mid-lookup (stale_packs_detected): the object likely just
+		 * moved into its replacement pack.
 		 */
-		if (!(flags & OBJECT_INFO_QUICK)) {
+		if (!(flags & OBJECT_INFO_QUICK) ||
+		    odb->stale_packs_detected) {
 			for (source = odb->sources; source; source = source->next) {
 				ret = odb_source_read_object_info(source, real, oi,
 								  flags | OBJECT_INFO_SECOND_READ,

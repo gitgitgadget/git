@@ -522,6 +522,21 @@ const char *pack_basename(struct packed_git *p)
 	return ret;
 }
 
+/* Did the pack's ".idx" vanish from disk (ENOENT), e.g. via a repack? */
+static int pack_index_is_missing(struct packed_git *p)
+{
+	char *idx_name;
+	size_t len;
+	int missing;
+
+	if (!strip_suffix(p->pack_name, ".pack", &len))
+		return 0;
+	idx_name = xstrfmt("%.*s.idx", (int)len, p->pack_name);
+	missing = access(idx_name, F_OK) < 0 && errno == ENOENT;
+	free(idx_name);
+	return missing;
+}
+
 /*
  * Do not call this directly as this leaks p->pack_fd on error return;
  * call open_packed_git() instead.
@@ -535,8 +550,20 @@ static int open_packed_git_1(struct packed_git *p)
 	ssize_t read_result;
 	const unsigned hashsz = p->repo->hash_algo->rawsz;
 
-	if (open_pack_index(p))
+	if (open_pack_index(p)) {
+		/*
+		 * A concurrent repack may have removed this pack, deleting its
+		 * ".idx" before its ".pack" (see unlink_pack_path()).  If the
+		 * index simply vanished, note the stale pack set and stay
+		 * quiet; the pack is still reported unusable.  Only a
+		 * still-present but unreadable index is worth an error.
+		 */
+		if (pack_index_is_missing(p)) {
+			p->repo->objects->stale_packs_detected = 1;
+			return -1;
+		}
 		return error("packfile %s index unavailable", p->pack_name);
+	}
 
 	if (!pack_max_fds) {
 		unsigned int max_fds = get_max_fd_limit();
@@ -552,8 +579,16 @@ static int open_packed_git_1(struct packed_git *p)
 		; /* nothing */
 
 	p->pack_fd = git_open(p->pack_name);
-	if (p->pack_fd < 0 || fstat(p->pack_fd, &st))
+	if (p->pack_fd < 0 || fstat(p->pack_fd, &st)) {
+		/*
+		 * A concurrent repack removed this pack, but its ".idx" was
+		 * already mapped (so open_pack_index() above succeeded); the
+		 * removal surfaces only now, when the ".pack" cannot be opened.
+		 */
+		if (p->pack_fd < 0 && errno == ENOENT)
+			p->repo->objects->stale_packs_detected = 1;
 		return -1;
+	}
 	pack_open_fds++;
 
 	/* If we created the struct before we had the pack we lack size. */

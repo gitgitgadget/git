@@ -475,6 +475,12 @@ int prepare_midx_pack(struct multi_pack_index *m,
 
 	if (!p) {
 		m->packs[pack_int_id] = MIDX_PACK_ERROR;
+		/*
+		 * The midx names a pack we can no longer open (its files
+		 * vanished, e.g. a concurrent repack replaced it).  Record the
+		 * stale pack set (see stale_packs_detected).
+		 */
+		packed->base.odb->stale_packs_detected = 1;
 		return 1;
 	}
 

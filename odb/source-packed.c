@@ -798,8 +798,15 @@ static void odb_source_packed_prepare(struct odb_source *source,
 {
 	struct odb_source_packed *packed = odb_source_packed_downcast(source);
 
-	if (flags & ODB_PREPARE_FLUSH_CACHES)
+	if (flags & ODB_PREPARE_FLUSH_CACHES) {
 		packed->initialized = false;
+		/*
+		 * A reprepare re-scans the on-disk pack set, so any pack we
+		 * previously noticed had vanished is accounted for now; clear
+		 * the flag that forced this rescan (see stale_packs_detected).
+		 */
+		packed->base.odb->stale_packs_detected = 0;
+	}
 	if (packed->initialized)
 		return;
 

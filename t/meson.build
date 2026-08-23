@@ -639,6 +639,7 @@ integration_tests = [
   't5333-pseudo-merge-bitmaps.sh',
   't5334-incremental-multi-pack-index.sh',
   't5335-compact-multi-pack-index.sh',
+  't5336-repack-reader-race.sh',
   't5351-unpack-large-objects.sh',
   't5400-send-pack.sh',
   't5401-update-hooks.sh',

@@ -94,6 +94,17 @@ struct object_database {
 	unsigned object_count_valid : 1;
 
 	/*
+	 * Set when a lookup finds that a pack we already know about has
+	 * vanished -- its ".idx" or ".pack" removed out from under us, the
+	 * signature of a concurrent "git repack".  It tells
+	 * odb_read_object_info_extended() to reprepare and retry even for an
+	 * OBJECT_INFO_QUICK lookup, which normally skips that rescan to stay
+	 * fast on a genuine miss.  Reset when the packfiles are reprepared
+	 * (see odb_source_packed_prepare()).
+	 */
+	unsigned stale_packs_detected : 1;
+
+	/*
 	 * Submodule source paths that will be added as additional sources to
 	 * allow lookup of submodule objects via the main object database.
 	 */
@@ -423,8 +434,9 @@ enum object_info_flags {
 	 * whether any on-disk state may have changed that may have caused the
 	 * object to appear.
 	 *
-	 * This flag is for internal use, only. The second read only occurs
-	 * when `OBJECT_INFO_QUICK` was not passed.
+	 * This flag is for internal use, only. The second read occurs when
+	 * OBJECT_INFO_QUICK was not passed, or when a vanished pack was
+	 * detected (see stale_packs_detected).
 	 */
 	OBJECT_INFO_SECOND_READ = (1 << 4),
 
