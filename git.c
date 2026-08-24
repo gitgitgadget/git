@@ -593,6 +593,7 @@ static struct cmd_struct commands[] = {
 	{ "help", cmd_help },
 	{ "history", cmd_history, RUN_SETUP },
 	{ "hook", cmd_hook, RUN_SETUP_GENTLY },
+	{ "ident", cmd_ident, RUN_SETUP_GENTLY },
 	{ "index-pack", cmd_index_pack, RUN_SETUP_GENTLY | NO_PARSEOPT },
 	{ "init", cmd_init_db },
 	{ "init-db", cmd_init_db },

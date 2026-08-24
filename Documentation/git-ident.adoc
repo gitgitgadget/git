@@ -1,0 +1,116 @@
+git-ident(1)
+============
+
+NAME
+----
+git-ident - Show current user identity and commit signing information
+
+
+SYNOPSIS
+--------
+[synopsis]
+git ident [<options>]
+
+DESCRIPTION
+-----------
+Displays the author and committer identity (name and email address) and
+optionally commit signing configuration that will be used when recording
+Git commits.
+
+The identity selectors (`-a` / `--author`, `-c` / `--committer`) and component
+selectors (`-n` / `--name`, `-e` / `--email`) are additive and composable:
+
+* If neither `--author` nor `--committer` is specified, both identities are shown.
+* If neither `--name` nor `--email` is specified (or if both are specified),
+  the full identity format (`Name <email>`) is shown.
+* If `-v` / `--verbose` is specified, entries are labeled with their role
+  (`Author: ` / `Committer: `).
+
+OPTIONS
+-------
+`-a`::
+`--author`::
+	Show author identity.
+
+`-c`::
+`--committer`::
+	Show committer identity.
+
+`-n`::
+`--name`::
+	Show name only.
+
+`-e`::
+`--email`::
+	Show email address only (formatted as `<email>`).
+
+`-s`::
+`--signing-key`::
+	Show the signing key that Git would resolve for signing commits.
+	Resolution proceeds in the following order:
+	* The explicitly configured `user.signingKey`, if set.
+	* If `gpg.format` is set to `ssh` and `gpg.ssh.defaultKeyCommand`
+	  is configured, executes the command to obtain the public key.
+	* If `gpg.format` is `openpgp` or `x509` and `commit.gpgsign` is
+	  enabled, falls back to the committer identity.
+	* If signing is disabled (`commit.gpgsign=false`) and no explicit key
+	  is configured, exits with status 1.
+
+`--porcelain`::
+	Give the output in an easy-to-parse format for scripts.
+	Outputs key-value pairs (`user.author.name`, `user.author.email`,
+	`user.committer.name`, `user.committer.email`, `user.signingkey`,
+	`gpg.format`, `commit.gpgsign`).
+
+`-z`::
+`--null`::
+	Terminate output lines or entries with NUL instead of a newline.
+
+`-v`::
+`--verbose`::
+	Prepend role labels (`Author: `, `Committer: `) to identity entries.
+
+EXAMPLES
+--------
+
+* Show full author and committer identities:
++
+------------
+$ git ident
+Author Name <author@example.com>
+Committer Name <committer@example.com>
+------------
+
+* Show author identity only:
++
+------------
+$ git ident -a -e -n
+Author Name <author@example.com>
+------------
+
+* Show labeled author name:
++
+------------
+$ git ident -a -n -v
+Author: Author Name
+------------
+
+* Show author and committer email addresses:
++
+------------
+$ git ident -a -c -e
+<author@example.com>
+<committer@example.com>
+------------
+
+* Show labeled author and committer email addresses:
++
+------------
+$ git ident -a -c -e -v
+Author: <author@example.com>
+Committer: <committer@example.com>
+------------
+
+GIT
+---
+Part of the linkgit:git[1] suite

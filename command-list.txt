@@ -118,6 +118,7 @@ git-hash-object                         plumbingmanipulators
 git-help                                ancillaryinterrogators          complete
 git-history                             mainporcelain           history
 git-hook                                purehelpers
+git-ident                               ancillaryinterrogators
 git-http-backend                        synchingrepositories
 git-http-fetch                          synchelpers
 git-http-push                           synchelpers

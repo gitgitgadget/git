@@ -654,6 +654,7 @@ builtin_sources = [
   'builtin/help.c',
   'builtin/history.c',
   'builtin/hook.c',
+  'builtin/ident.c',
   'builtin/index-pack.c',
   'builtin/init-db.c',
   'builtin/interpret-trailers.c',

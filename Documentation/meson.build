@@ -67,6 +67,7 @@ manpages = {
   'git-help.adoc' : 1,
   'git-history.adoc' : 1,
   'git-hook.adoc' : 1,
+  'git-ident.adoc' : 1,
   'git-http-backend.adoc' : 1,
   'git-http-fetch.adoc' : 1,
   'git-http-push.adoc' : 1,

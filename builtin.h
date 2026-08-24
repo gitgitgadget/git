@@ -199,6 +199,7 @@ int cmd_hash_object(int argc, const char **argv, const char *prefix, struct repo
 int cmd_help(int argc, const char **argv, const char *prefix, struct repository *repo);
 int cmd_history(int argc, const char **argv, const char *prefix, struct repository *repo);
 int cmd_hook(int argc, const char **argv, const char *prefix, struct repository *repo);
+int cmd_ident(int argc, const char **argv, const char *prefix, struct repository *repo);
 int cmd_index_pack(int argc, const char **argv, const char *prefix, struct repository *repo);
 int cmd_init_db(int argc, const char **argv, const char *prefix, struct repository *repo);
 int cmd_interpret_trailers(int argc, const char **argv, const char *prefix, struct repository *repo);
@@ -284,5 +285,4 @@ int cmd_verify_pack(int argc, const char **argv, const char *prefix, struct repo
 int cmd_show_ref(int argc, const char **argv, const char *prefix, struct repository *repo);
 int cmd_pack_refs(int argc, const char **argv, const char *prefix, struct repository *repo);
 int cmd_replace(int argc, const char **argv, const char *prefix, struct repository *repo);
-
 #endif
