@@ -12,23 +12,128 @@
 #include "config.h"
 #include "editor.h"
 #include "environment.h"
+#include "gpg-interface.h"
 #include "ident.h"
 #include "pager.h"
-#include "refs.h"
+#include "parse-options.h"
 #include "path.h"
-#include "strbuf.h"
+#include "refs.h"
 #include "run-command.h"
+#include "strbuf.h"
+#include "string-list.h"
 
-static const char var_usage[] = "git var (-l | <variable>)";
+static const char * const var_usage[] = {
+	N_("git var [-z] -l"),
+	N_("git var [-z] <variable>..."),
+	NULL
+};
+
+enum ident_part {
+	IDENT_NAME,
+	IDENT_MAIL,
+	IDENT_DATE,
+};
 
 static char *committer(int ident_flag)
 {
 	return xstrdup_or_null(git_committer_info(ident_flag));
 }
 
+static char *ident_part(const char *ident, enum ident_part part)
+{
+	struct ident_split split;
+
+	if (!ident)
+		return NULL;
+	if (split_ident_line(&split, ident, strlen(ident)))
+		return NULL;
+
+	switch (part) {
+	case IDENT_NAME:
+		if (!split.name_begin || !split.name_end)
+			return NULL;
+		return xmemdupz(split.name_begin,
+				split.name_end - split.name_begin);
+	case IDENT_MAIL:
+		if (!split.mail_begin || !split.mail_end)
+			return NULL;
+		return xmemdupz(split.mail_begin,
+				split.mail_end - split.mail_begin);
+	case IDENT_DATE:
+		if (!split.date_begin)
+			return NULL;
+		if (split.tz_end)
+			return xmemdupz(split.date_begin,
+					split.tz_end -
+					split.date_begin);
+		if (split.date_end)
+			return xmemdupz(split.date_begin,
+					split.date_end -
+					split.date_begin);
+		return NULL;
+	default:
+		return NULL;
+	}
+}
+
+static char *committer_name(int ident_flag)
+{
+	return ident_part(git_committer_info(ident_flag), IDENT_NAME);
+}
+
+static char *committer_email(int ident_flag)
+{
+	return ident_part(git_committer_info(ident_flag), IDENT_MAIL);
+}
+
+static char *committer_date(int ident_flag)
+{
+	return ident_part(git_committer_info(ident_flag), IDENT_DATE);
+}
+
 static char *author(int ident_flag)
 {
 	return xstrdup_or_null(git_author_info(ident_flag));
+}
+
+static char *author_name(int ident_flag)
+{
+	return ident_part(git_author_info(ident_flag), IDENT_NAME);
+}
+
+static char *author_email(int ident_flag)
+{
+	return ident_part(git_author_info(ident_flag), IDENT_MAIL);
+}
+
+static char *author_date(int ident_flag)
+{
+	return ident_part(git_author_info(ident_flag), IDENT_DATE);
+}
+
+static char *git_signing_key(int ident_flag UNUSED)
+{
+	char *signing_key = NULL;
+
+	/*
+	 * An empty string in user.signingkey allows overriding and
+	 * clearing a key defined in an outer (e.g. global) config.
+	 */
+	if (!repo_config_get_string(the_repository,
+				    "user.signingkey", &signing_key)) {
+		if (!signing_key || !*signing_key) {
+			free(signing_key);
+			return NULL;
+		}
+		return signing_key;
+	}
+
+	signing_key = get_signing_key_id();
+	if (signing_key && !*signing_key) {
+		free(signing_key);
+		return NULL;
+	}
+	return signing_key;
 }
 
 static char *editor(int ident_flag UNUSED)
@@ -108,7 +213,7 @@ static char *git_config_val_global(int ident_flag UNUSED)
 	free(xdg);
 	free(user);
 	strbuf_trim_trailing_newline(&buf);
-	if (buf.len == 0) {
+	if (!buf.len) {
 		strbuf_release(&buf);
 		return NULL;
 	}
@@ -126,8 +231,32 @@ static struct git_var git_vars[] = {
 		.read = committer,
 	},
 	{
+		.name = "GIT_COMMITTER_NAME",
+		.read = committer_name,
+	},
+	{
+		.name = "GIT_COMMITTER_EMAIL",
+		.read = committer_email,
+	},
+	{
+		.name = "GIT_COMMITTER_DATE",
+		.read = committer_date,
+	},
+	{
 		.name = "GIT_AUTHOR_IDENT",
 		.read = author,
+	},
+	{
+		.name = "GIT_AUTHOR_NAME",
+		.read = author_name,
+	},
+	{
+		.name = "GIT_AUTHOR_EMAIL",
+		.read = author_email,
+	},
+	{
+		.name = "GIT_AUTHOR_DATE",
+		.read = author_date,
 	},
 	{
 		.name = "GIT_EDITOR",
@@ -144,6 +273,10 @@ static struct git_var git_vars[] = {
 	{
 		.name = "GIT_DEFAULT_BRANCH",
 		.read = default_branch,
+	},
+	{
+		.name = "GIT_SIGNING_KEY",
+		.read = git_signing_key,
 	},
 	{
 		.name = "GIT_SHELL_PATH",
@@ -172,34 +305,40 @@ static struct git_var git_vars[] = {
 	},
 };
 
-static void list_vars(void)
+static void list_vars(int null_term)
 {
 	struct git_var *ptr;
-	char *val;
+	char delim = null_term ? '\n' : '=';
+	char eol = null_term ? '\0' : '\n';
 
-	for (ptr = git_vars; ptr->read; ptr++)
-		if ((val = ptr->read(0))) {
-			if (ptr->multivalued && *val) {
-				struct string_list list = STRING_LIST_INIT_DUP;
+	for (ptr = git_vars; ptr->read; ptr++) {
+		char *val = ptr->read(0);
 
-				string_list_split(&list, val, "\n", -1);
-				for (size_t i = 0; i < list.nr; i++)
-					printf("%s=%s\n", ptr->name, list.items[i].string);
-				string_list_clear(&list, 0);
-			} else {
-				printf("%s=%s\n", ptr->name, val);
-			}
-			free(val);
+		if (!val)
+			continue;
+
+		if (ptr->multivalued && *val) {
+			struct string_list list = STRING_LIST_INIT_DUP;
+
+			string_list_split(&list, val, "\n", -1);
+			for (size_t i = 0; i < list.nr; i++)
+				printf("%s%c%s%c", ptr->name, delim,
+				       list.items[i].string, eol);
+			string_list_clear(&list, 0);
+		} else {
+			printf("%s%c%s%c", ptr->name, delim, val, eol);
 		}
+		free(val);
+	}
 }
 
 static const struct git_var *get_git_var(const char *var)
 {
 	struct git_var *ptr;
+
 	for (ptr = git_vars; ptr->read; ptr++) {
-		if (strcmp(var, ptr->name) == 0) {
+		if (!strcmp(var, ptr->name))
 			return ptr;
-		}
 	}
 	return NULL;
 }
@@ -207,42 +346,76 @@ static const struct git_var *get_git_var(const char *var)
 static int show_config(const char *var, const char *value,
 		       const struct config_context *ctx, void *cb)
 {
+	int null_term = cb ? *(int *)cb : 0;
+
 	if (value)
-		printf("%s=%s\n", var, value);
+		printf("%s%c%s%c", var, null_term ? '\n' : '=',
+		       value, null_term ? '\0' : '\n');
 	else
-		printf("%s\n", var);
+		printf("%s%c", var, null_term ? '\0' : '\n');
 	return git_default_config(var, value, ctx, cb);
 }
 
 int cmd_var(int argc,
 	    const char **argv,
-	    const char *prefix UNUSED,
+	    const char *prefix,
 	    struct repository *repo UNUSED)
 {
-	const struct git_var *git_var;
-	char *val;
+	int list = 0;
+	int null_term = 0;
+	int i;
+	struct option options[] = {
+		OPT_BOOL('l', NULL, &list,
+			 N_("list all variables")),
+		OPT_BOOL('z', NULL, &null_term,
+			 N_("terminate entries with NUL")),
+		OPT_END(),
+	};
 
-	show_usage_if_asked(argc, argv, var_usage);
-	if (argc != 2)
-		usage(var_usage);
+	argc = parse_options(argc, argv, prefix, options,
+			     var_usage, PARSE_OPT_STOP_AT_NON_OPTION);
 
-	if (strcmp(argv[1], "-l") == 0) {
-		repo_config(the_repository, show_config, NULL);
-		list_vars();
+	if (list) {
+		if (argc)
+			usage_with_options(var_usage, options);
+		repo_config(the_repository, show_config, &null_term);
+		list_vars(null_term);
 		return 0;
 	}
+
+	if (!argc)
+		usage_with_options(var_usage, options);
+
+	for (i = 0; i < argc; i++) {
+		if (!get_git_var(argv[i]))
+			usage_with_options(var_usage, options);
+	}
+
 	repo_config(the_repository, git_default_config, NULL);
 
-	git_var = get_git_var(argv[1]);
-	if (!git_var)
-		usage(var_usage);
+	for (i = 0; i < argc; i++) {
+		const struct git_var *git_var = get_git_var(argv[i]);
+		char *val;
 
-	val = git_var->read(IDENT_STRICT);
-	if (!val)
-		return 1;
+		val = git_var->read(IDENT_STRICT);
+		if (!val)
+			return 1;
 
-	printf("%s\n", val);
-	free(val);
+		if (git_var->multivalued && null_term && *val) {
+			struct string_list values = STRING_LIST_INIT_DUP;
+
+			string_list_split(&values, val, "\n", -1);
+			for (size_t j = 0; j < values.nr; j++) {
+				const char *s = values.items[j].string;
+
+				printf("%s%c", s, '\0');
+			}
+			string_list_clear(&values, 0);
+		} else {
+			printf("%s%c", val, null_term ? '\0' : '\n');
+		}
+		free(val);
+	}
 
 	return 0;
 }
