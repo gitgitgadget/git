@@ -163,6 +163,7 @@ manpages = {
   'git-verify-tag.adoc' : 1,
   'git-version.adoc' : 1,
   'git-web--browse.adoc' : 1,
+  'git-whoami.adoc' : 1,
   'git-worktree.adoc' : 1,
   'git-write-tree.adoc' : 1,
   'git.adoc' : 1,

@@ -87,6 +87,7 @@ integration_tests = [
   't0012-help.sh',
   't0013-sha1dc.sh',
   't0014-alias.sh',
+  't0015-whoami.sh',
   't0017-env-helper.sh',
   't0018-advice.sh',
   't0019-json-writer.sh',

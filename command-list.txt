@@ -210,6 +210,7 @@ git-verify-pack                         plumbinginterrogators
 git-verify-tag                          ancillaryinterrogators
 git-version                             ancillaryinterrogators
 git-whatchanged                         ancillaryinterrogators          complete
+git-whoami                              ancillaryinterrogators
 git-worktree                            mainporcelain
 git-write-tree                          plumbingmanipulators
 gitattributes                           userinterfaces

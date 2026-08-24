@@ -726,6 +726,7 @@ builtin_sources = [
   'builtin/verify-commit.c',
   'builtin/verify-pack.c',
   'builtin/verify-tag.c',
+  'builtin/whoami.c',
   'builtin/worktree.c',
   'builtin/write-tree.c',
 ]

@@ -1,0 +1,48 @@
+git-whoami(1)
+=============
+
+NAME
+----
+git-whoami - Show current user identity and commit signing information
+
+
+SYNOPSIS
+--------
+[synopsis]
+git whoami [options]
+
+DESCRIPTION
+-----------
+Displays the author and committer identity (name and email address) and
+commit signing configuration that will be used when signing and recording
+Git commits.
+
+OPTIONS
+-------
+`-a`::
+`--author`::
+	Show author identity.
+
+`-c`::
+`--committer`::
+	Show committer identity.
+
+`-n`::
+`--name`::
+	Show name only.
+
+`-e`::
+`--email`::
+	Show email only.
+
+`-s`::
+`--signing-key`::
+	Show commit signing key only.
+
+`-v`::
+`--verbose`::
+	Show detailed identity and signing status.
+
+GIT
+---
+Part of the linkgit:git[1] suite

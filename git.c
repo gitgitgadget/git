@@ -680,6 +680,7 @@ static struct cmd_struct commands[] = {
 #ifndef WITH_BREAKING_CHANGES
 	{ "whatchanged", cmd_whatchanged, RUN_SETUP | DEPRECATED },
 #endif
+	{ "whoami", cmd_whoami, RUN_SETUP_GENTLY },
 	{ "worktree", cmd_worktree, RUN_SETUP },
 	{ "write-tree", cmd_write_tree, RUN_SETUP },
 };
