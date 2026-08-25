@@ -764,30 +764,6 @@ static int dwim_orphan(const struct add_opts *opts, int opt_track, int remote)
 	return 1;
 }
 
-static char *dwim_branch(const char *path, char **new_branch)
-{
-	int n;
-	int branch_exists;
-	const char *s = worktree_basename(path, &n);
-	char *branchname = xstrndup(s, n);
-	struct strbuf ref = STRBUF_INIT;
-
-	branch_exists = !check_branch_ref(the_repository, &ref, branchname) &&
-			refs_ref_exists(get_main_ref_store(the_repository),
-					ref.buf);
-	strbuf_release(&ref);
-	if (branch_exists)
-		return branchname;
-
-	*new_branch = branchname;
-	if (guess_remote) {
-		struct object_id oid;
-		char *remote = unique_tracking_name(*new_branch, &oid, NULL, NULL);
-		return remote;
-	}
-	return NULL;
-}
-
 static void advise_disambiguating_remotes(const char *path, const char *branch,
 					  const struct string_list *matched_remote_names)
 {
@@ -805,6 +781,44 @@ static void advise_disambiguating_remotes(const char *path, const char *branch,
 		 "If you'd like to always prefer some remote, e.g. 'origin',\n"
 		 "consider setting checkout.defaultRemote=origin in your config."),
 	       branch, path, branch);
+}
+
+static char *dwim_branch(const struct add_opts *opts, const char *path, char **new_branch)
+{
+	int n;
+	int branch_exists;
+	const char *s = worktree_basename(path, &n);
+	char *branchname = xstrndup(s, n);
+	struct strbuf ref = STRBUF_INIT;
+
+	branch_exists = !check_branch_ref(the_repository, &ref, branchname) &&
+			refs_ref_exists(get_main_ref_store(the_repository),
+					ref.buf);
+	strbuf_release(&ref);
+	if (branch_exists)
+		return branchname;
+
+	*new_branch = branchname;
+	if (guess_remote) {
+		struct object_id oid;
+		char *remote;
+		int num_matches = 0;
+		struct string_list matched_remote_names = STRING_LIST_INIT_DUP;
+
+		remote = unique_tracking_name(*new_branch, &oid, &num_matches,
+					      &matched_remote_names);
+		if (!remote && num_matches > 1) {
+			if (!opts->quiet &&
+			    advice_enabled(ADVICE_CHECKOUT_AMBIGUOUS_REMOTE_BRANCH_NAME))
+				advise_disambiguating_remotes(path, *new_branch,
+							      &matched_remote_names);
+			die(_("'%s' matched multiple (%d) remote tracking branches"),
+			    *new_branch, num_matches);
+		}
+		string_list_clear(&matched_remote_names, 0);
+		return remote;
+	}
+	return NULL;
 }
 
 static int add(int ac, const char **av, const char *prefix,
@@ -909,7 +923,7 @@ static int add(int ac, const char **av, const char *prefix,
 		opts.orphan = dwim_orphan(&opts, !!opt_track, 0);
 	} else if (ac < 2) {
 		/* DWIM: Guess branch name from path. */
-		char *s = dwim_branch(path, &new_branch_to_free);
+		char *s = dwim_branch(&opts, path, &new_branch_to_free);
 		if (s)
 			branch = branch_to_free = s;
 		new_branch = new_branch_to_free;
