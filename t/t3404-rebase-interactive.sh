@@ -1868,7 +1868,7 @@ test_expect_success 'correct error message for partial commit after empty pick' 
 	) &&
 	echo x >file1 &&
 	test_must_fail git commit file1 2>err &&
-	test_grep "cannot do a partial commit during a rebase." err
+	test_grep "cannot do a partial commit while resolving a commit that became empty." err
 '
 
 test_expect_success 'correct error message for commit --amend after empty pick' '
@@ -1881,7 +1881,7 @@ test_expect_success 'correct error message for commit --amend after empty pick' 
 	) &&
 	echo x>file1 &&
 	test_must_fail git commit -a --amend 2>err &&
-	test_grep "middle of a rebase -- cannot amend." err
+	test_grep "resolving a commit that became empty -- cannot amend." err
 '
 
 test_expect_success 'todo has correct onto hash' '

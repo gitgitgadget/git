@@ -521,7 +521,7 @@ static const char *prepare_index(const char **argv, const char *prefix,
 		else if (is_from_cherry_pick(whence))
 			die(_("cannot do a partial commit during a cherry-pick."));
 		else if (is_from_rebase(whence))
-			die(_("cannot do a partial commit during a rebase."));
+			die(_("cannot do a partial commit while resolving a commit that became empty."));
 	}
 
 	if (list_paths(&partial, !current_head ? NULL : "HEAD", &pathspec))
@@ -1334,7 +1334,7 @@ static int parse_and_validate_options(int argc, const char *argv[],
 		else if (is_from_cherry_pick(whence))
 			die(_("You are in the middle of a cherry-pick -- cannot amend."));
 		else if (whence == FROM_REBASE_PICK)
-			die(_("You are in the middle of a rebase -- cannot amend."));
+			die(_("You are resolving a commit that became empty -- cannot amend."));
 	}
 	if (fixup_message && squash_message)
 		die(_("options '%s' and '%s' cannot be used together"), "--squash", "--fixup");
