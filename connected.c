@@ -7,6 +7,7 @@
 #include "run-command.h"
 #include "sigchain.h"
 #include "connected.h"
+#include "strbuf.h"
 #include "transport.h"
 #include "packfile.h"
 #include "promisor-remote.h"
@@ -68,6 +69,35 @@ static int check_connected_promisor(oid_iterate_fn fn,
 }
 
 /*
+ * If index-pack already verified that the new pack is self-contained
+ * (no dangling pointers), return the pack so tips found in it can
+ * skip connectivity checking.
+ */
+static struct packed_git *get_self_contained_pack(struct transport *transport)
+{
+	size_t base_len;
+
+	if (transport && transport->smart_options &&
+	    transport->smart_options->self_contained_and_connected &&
+	    transport->pack_lockfiles.nr == 1 &&
+	    strip_suffix(transport->pack_lockfiles.items[0].string,
+			 ".keep", &base_len)) {
+		struct strbuf idx_file = STRBUF_INIT;
+		struct packed_git *pack;
+
+		strbuf_add(&idx_file,
+			   transport->pack_lockfiles.items[0].string,
+			   base_len);
+		strbuf_addstr(&idx_file, ".idx");
+		pack = add_packed_git(the_repository, idx_file.buf,
+				      idx_file.len, 1);
+		strbuf_release(&idx_file);
+		return pack;
+	}
+	return NULL;
+}
+
+/*
  * If we feed all the commits we want to verify to this command
  *
  *  $ git rev-list --objects --stdin --not --all
@@ -88,7 +118,6 @@ int check_connected(oid_iterate_fn fn, void *cb_data,
 	int err = 0;
 	struct packed_git *new_pack = NULL;
 	struct transport *transport;
-	size_t base_len;
 
 	if (!opt)
 		opt = &defaults;
@@ -151,19 +180,7 @@ int check_connected(oid_iterate_fn fn, void *cb_data,
 
 	rev_list_in = xfdopen(rev_list.in, "w");
 
-	if (transport && transport->smart_options &&
-	    transport->smart_options->self_contained_and_connected &&
-	    transport->pack_lockfiles.nr == 1 &&
-	    strip_suffix(transport->pack_lockfiles.items[0].string,
-			 ".keep", &base_len)) {
-		struct strbuf idx_file = STRBUF_INIT;
-		strbuf_add(&idx_file, transport->pack_lockfiles.items[0].string,
-			   base_len);
-		strbuf_addstr(&idx_file, ".idx");
-		new_pack = add_packed_git(the_repository, idx_file.buf,
-					  idx_file.len, 1);
-		strbuf_release(&idx_file);
-	}
+	new_pack = get_self_contained_pack(transport);
 
 	do {
 		/*
