@@ -16,8 +16,8 @@ transfer.connectivityCheck::
 	trees, recursively descending only into entries that differ.
 	The largest benefits occur when incoming commits change a
 	small fraction of a large tree closure.
-	Falls back to `rev-list` for shallow fetches, partial
-	clones, replacement objects, or deepening fetches.
+	Falls back to `rev-list` for partial clones, replacement
+	objects, or deepening fetches.
 --
 
 transfer.credentialsInUrl::

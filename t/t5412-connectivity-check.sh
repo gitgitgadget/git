@@ -422,6 +422,51 @@ test_expect_success_in replace-test "$mode: rejects without replacement objects"
 	test_grep "missing blob object" err
 '
 
+# Shallow edge cases.
+
+test_expect_success "$mode: rejects missing blob behind shallow boundary" '
+	test_when_finished "rm -rf shallow-boundary" &&
+
+	git init shallow-boundary &&
+	(
+		cd shallow-boundary &&
+		set_connectivity_check $mode &&
+
+		test_commit --no-tag "parent P" file.txt content &&
+		parent=$(git rev-parse HEAD) &&
+		blob_oid=$(git rev-parse HEAD:file.txt) &&
+
+		tree_oid=$(git rev-parse HEAD^{tree}) &&
+		child=$(git commit-tree -p "$parent" -m "child S" "$tree_oid") &&
+
+		rm .git/objects/$(test_oid_to_path "$blob_oid") &&
+
+		echo "$child" >shallow_file &&
+
+		test_must_fail test-tool check-connected \
+			--shallow-file shallow_file "$child" 2>err &&
+		test_grep "missing blob object" err
+	)
+'
+
+test_expect_success "$mode: rejects malformed shallow file" '
+	test_when_finished "rm -rf malformed-shallow" &&
+
+	git init malformed-shallow &&
+	(
+		cd malformed-shallow &&
+		set_connectivity_check $mode &&
+		test_commit --no-tag base file.txt content &&
+		oid=$(git rev-parse HEAD) &&
+
+		echo "not-a-valid-oid" >bad_shallow &&
+
+		test_expect_code 1 test-tool check-connected \
+			--shallow-file bad_shallow "$oid" 2>err &&
+		test_grep "bad shallow line" err
+	)
+'
+
 # Deepening fetch: verify the operation succeeds with both modes.
 
 test_expect_success "$mode: deepening fetch succeeds" '

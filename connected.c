@@ -462,13 +462,16 @@ static int collect_and_peel_tips(const struct object_id *oid,
 }
 
 static int verify_commit_tree(struct commit *commit,
+			      const struct oidset *shallow_commits,
 			      struct verify_state *vs)
 {
 	struct oid_array base_trees = OID_ARRAY_INIT;
 	struct commit_list *p;
 	int ret;
 
-	for (p = commit->parents; p; p = p->next) {
+	p = oidset_contains(shallow_commits, &commit->object.oid)
+		? NULL : commit->parents;
+	for (; p; p = p->next) {
 		const struct object_id *tree_oid;
 		if (repo_parse_commit_gently(the_repository, p->item, 1))
 			continue;
@@ -486,8 +489,11 @@ static int verify_commit_tree(struct commit *commit,
 /*
  * Walk new commits in topological order (parents before children)
  * and verify each commit's tree, skipping previously verified entries.
+ *
+ * Shallow commits have no parents.
  */
 static int verify_new_commits(struct commit_list **new_commits,
+			      const struct oidset *shallow_commits,
 			      struct verify_state *vs)
 {
 	struct commit_list *iter;
@@ -509,8 +515,40 @@ static int verify_new_commits(struct commit_list **new_commits,
 	*new_commits = commit_list_reverse(*new_commits);
 
 	for (iter = *new_commits; !err && iter; iter = iter->next)
-		err = verify_commit_tree(iter->item, vs);
+		err = verify_commit_tree(iter->item, shallow_commits, vs);
 
+	return err;
+}
+
+/*
+ * oidset_parse_file() cannot be reused because it calls die() on errors.
+ */
+static int parse_shallow_file_gently(const char *path,
+				     struct oidset *shallow_commits,
+				     struct verify_state *vs)
+{
+	FILE *fp;
+	struct strbuf line = STRBUF_INIT;
+	struct object_id oid;
+	int err = 0;
+
+	fp = fopen(path, "r");
+	if (!fp) {
+		verify_error(vs, _("unable to open shallow file '%s': %s"),
+			     path, strerror(errno));
+		return -1;
+	}
+	while (strbuf_getline(&line, fp) != EOF) {
+		const char *end;
+		if (parse_oid_hex(line.buf, &oid, &end) || *end) {
+			verify_error(vs, _("bad shallow line: %s"), line.buf);
+			err = -1;
+			break;
+		}
+		oidset_insert(shallow_commits, &oid);
+	}
+	fclose(fp);
+	strbuf_release(&line);
 	return err;
 }
 
@@ -531,6 +569,10 @@ static int find_connectivity_boundary(struct check_connected_options *opt,
 	int err = 0;
 	size_t i;
 
+	if (opt->shallow_file) {
+		strvec_push(&rev_list.args, "--shallow-file");
+		strvec_push(&rev_list.args, opt->shallow_file);
+	}
 	strvec_push(&rev_list.args, "rev-list");
 	strvec_push(&rev_list.args, "--stdin");
 	if (!opt->is_deepening_fetch) {
@@ -636,6 +678,7 @@ static int check_connected_incremental(oid_iterate_fn fn, void *cb_data,
 {
 	struct verify_state vs = { 0 };
 	struct commit_list *new_commits = NULL;
+	struct oidset shallow_commits = OIDSET_INIT;
 	struct oid_array commit_tips = OID_ARRAY_INIT;
 	int err = 0;
 
@@ -643,6 +686,13 @@ static int check_connected_incremental(oid_iterate_fn fn, void *cb_data,
 	vs.err_fd = opt->err_fd;
 
 	trace2_region_enter("connectivity", "incremental", the_repository);
+
+	if (opt->shallow_file && *opt->shallow_file) {
+		err = parse_shallow_file_gently(opt->shallow_file,
+						&shallow_commits, &vs);
+		if (err)
+			goto done;
+	}
 
 	trace2_region_enter("connectivity", "collect-tips", the_repository);
 	err = collect_and_peel_tips(oid, fn, cb_data, opt->transport,
@@ -657,12 +707,14 @@ static int check_connected_incremental(oid_iterate_fn fn, void *cb_data,
 
 	trace2_region_enter("connectivity", "verify-new-commits", the_repository);
 	if (!err)
-		err = verify_new_commits(&new_commits, &vs);
+		err = verify_new_commits(&new_commits, &shallow_commits, &vs);
 	trace2_region_leave("connectivity", "verify-new-commits", the_repository);
 
+done:
 	if (vs.err_fd)
 		close(vs.err_fd);
 	commit_list_free(new_commits);
+	oidset_clear(&shallow_commits);
 	oid_array_clear(&commit_tips);
 	oidset_clear(&vs.verified_trees);
 	oidset_clear(&vs.verified_blobs);
@@ -690,8 +742,6 @@ static int incremental_check_applicable(struct check_connected_options *opt)
 		    algorithm);
 
 	if (opt->is_deepening_fetch)
-		return 0;
-	if (opt->shallow_file)
 		return 0;
 	if (repo_has_promisor_remote(the_repository))
 		return 0;
