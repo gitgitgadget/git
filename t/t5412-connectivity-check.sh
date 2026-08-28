@@ -467,6 +467,101 @@ test_expect_success "$mode: rejects malformed shallow file" '
 	)
 '
 
+# Partial clone: promisor objects should be accepted.
+
+test_expect_success "$mode: accepts missing promised blob" '
+	test_when_finished "rm -rf prom-src prom-server.git prom-client" &&
+
+	git init prom-src &&
+	test_commit -C prom-src --no-tag base file.txt original &&
+	test_commit -C prom-src --no-tag "add file2" file2.txt extra &&
+	git clone --bare prom-src prom-server.git &&
+	git -C prom-server.git config uploadpack.allowfilter true &&
+	git -C prom-server.git config uploadpack.allowanysha1inwant true &&
+
+	git clone --no-checkout --filter=blob:none \
+		"file://$(pwd)/prom-server.git" prom-client &&
+	set_connectivity_check prom-client $mode &&
+
+	(
+		cd prom-client &&
+		promised_blob=$(git rev-parse HEAD:file2.txt) &&
+
+		test_must_fail env GIT_NO_LAZY_FETCH=1 \
+			git cat-file -e "$promised_blob" &&
+
+		new_tree=$(printf "100644 blob %s\tnewname.txt\n" \
+			"$promised_blob" |
+			git mktree --missing) &&
+		new_commit=$(git commit-tree "$new_tree" \
+			-p HEAD -m "reuse promised blob") &&
+
+		test-tool check-connected "$new_commit" &&
+
+		# Verify connectivity checking did not lazy-fetch it.
+		test_must_fail env GIT_NO_LAZY_FETCH=1 \
+			git cat-file -e "$promised_blob"
+	)
+'
+
+test_expect_success "$mode: accepts missing promised tree" '
+	test_when_finished "rm -rf prom-tree-src prom-tree-server.git prom-tree-client" &&
+
+	git init prom-tree-src &&
+	mkdir -p prom-tree-src/a/b &&
+	test_commit -C prom-tree-src --no-tag "nested dirs" a/b/file.txt deep &&
+	git clone --bare prom-tree-src prom-tree-server.git &&
+	git -C prom-tree-server.git config uploadpack.allowfilter true &&
+	git -C prom-tree-server.git config uploadpack.allowanysha1inwant true &&
+
+	git clone --no-checkout --filter=tree:1 \
+		"file://$(pwd)/prom-tree-server.git" prom-tree-client &&
+	set_connectivity_check prom-tree-client $mode &&
+
+	(
+		cd prom-tree-client &&
+		# Subtree "a/" is promised but not present locally.
+		promised_tree=$(git ls-tree HEAD | grep "	a$" | cut -f1 | awk "{print \$3}") &&
+		test_must_fail env GIT_NO_LAZY_FETCH=1 \
+			git cat-file -e "$promised_tree" &&
+
+		# Build a new tree that reuses the promised subtree
+		# at a different path.
+		new_tree=$(printf "40000 tree %s\trenamed\n" \
+			"$promised_tree" |
+			git mktree --missing) &&
+		new_commit=$(git commit-tree "$new_tree" \
+			-p HEAD -m "reuse promised tree") &&
+
+		test-tool check-connected "$new_commit" &&
+
+		# Verify connectivity checking did not lazy-fetch it.
+		test_must_fail env GIT_NO_LAZY_FETCH=1 \
+			git cat-file -e "$promised_tree"
+	)
+'
+
+test_expect_success "$mode: verifies local commit in partial clone" '
+	test_when_finished "rm -rf pc-src pc-server.git pc-client" &&
+
+	git init pc-src &&
+	test_commit -C pc-src --no-tag base file.txt &&
+	git clone --bare pc-src pc-server.git &&
+	git -C pc-server.git config uploadpack.allowfilter true &&
+	git -C pc-server.git config uploadpack.allowanysha1inwant true &&
+	git clone --filter=blob:none \
+		"file://$(pwd)/pc-server.git" pc-client &&
+	set_connectivity_check pc-client $mode &&
+
+	(
+		cd pc-client &&
+		test_commit --no-tag "local change" file.txt local-content &&
+		local_commit=$(git rev-parse HEAD) &&
+
+		test-tool check-connected "$local_commit"
+	)
+'
+
 # Deepening fetch: verify the operation succeeds with both modes.
 
 test_expect_success "$mode: deepening fetch succeeds" '

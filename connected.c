@@ -128,6 +128,7 @@ struct loaded_tree {
 	void *buf;
 };
 
+/* Read a tree without triggering lazy promisor fetches. */
 static int read_tree_nofetch(struct loaded_tree *pt,
 			     const struct object_id *oid,
 			     enum object_type *actual_type)
@@ -264,6 +265,10 @@ static int verify_tree(const struct object_id *new_tree_oid,
 		return 0;
 
 	if (read_tree_nofetch(&new_tree, new_tree_oid, &type)) {
+		if (is_promisor_object(the_repository, new_tree_oid)) {
+			oidset_insert(&vs->verified_trees, new_tree_oid);
+			return 0;
+		}
 		if (type != OBJ_NONE)
 			verify_error(vs, _("object %s is a %s, not a tree"),
 				     oid_to_hex(new_tree_oid),
@@ -315,6 +320,10 @@ static int verify_tree(const struct object_id *new_tree_oid,
 		if (odb_read_object_info_extended(
 				the_repository->objects, &entry.oid, &oi,
 				OBJECT_INFO_SKIP_FETCH_OBJECT | OBJECT_INFO_LOOKUP_REPLACE) < 0) {
+			if (is_promisor_object(the_repository, &entry.oid)) {
+				oidset_insert(&vs->verified_blobs, &entry.oid);
+				continue;
+			}
 			verify_error(vs, _("missing blob object '%s'"),
 				     oid_to_hex(&entry.oid));
 			ret = -1;
@@ -339,6 +348,7 @@ static int verify_tree(const struct object_id *new_tree_oid,
 	return ret;
 }
 
+/* Read a tag's target OID without triggering lazy promisor fetches. */
 static int read_tag_target_nofetch(const struct object_id *tag_oid,
 				   struct object_id *target)
 {
@@ -373,8 +383,10 @@ static int read_tag_target_nofetch(const struct object_id *tag_oid,
 	return 0;
 }
 
+/* Peel tags without triggering lazy promisor fetches. */
 enum peel_nofetch_result {
 	PEEL_NOFETCH_OK = 0,
+	PEEL_NOFETCH_PROMISOR = 1,
 	PEEL_NOFETCH_ERROR = -1,
 };
 
@@ -390,6 +402,8 @@ static enum peel_nofetch_result peel_to_non_tag_nofetch(struct object_id *oid,
 		if (odb_read_object_info_extended(
 				the_repository->objects, oid, &oi,
 				OBJECT_INFO_SKIP_FETCH_OBJECT | OBJECT_INFO_LOOKUP_REPLACE) < 0) {
+			if (is_promisor_object(the_repository, oid))
+				return PEEL_NOFETCH_PROMISOR;
 			verify_error(vs, _("unable to read object %s"),
 				     oid_to_hex(oid));
 			return PEEL_NOFETCH_ERROR;
@@ -423,13 +437,16 @@ static int collect_and_peel_tips(const struct object_id *oid,
 	do {
 		struct object_id peeled;
 		enum object_type type;
+		enum peel_nofetch_result peel_ret;
 
 		if (new_pack && find_pack_entry_one(oid, new_pack))
 			continue;
 
 		oidcpy(&peeled, oid);
-		if (peel_to_non_tag_nofetch(&peeled, &type, vs) ==
-		    PEEL_NOFETCH_ERROR) {
+		peel_ret = peel_to_non_tag_nofetch(&peeled, &type, vs);
+		if (peel_ret == PEEL_NOFETCH_PROMISOR)
+			continue;
+		if (peel_ret == PEEL_NOFETCH_ERROR) {
 			err = -1;
 			break;
 		}
@@ -575,6 +592,8 @@ static int find_connectivity_boundary(struct check_connected_options *opt,
 	}
 	strvec_push(&rev_list.args, "rev-list");
 	strvec_push(&rev_list.args, "--stdin");
+	if (repo_has_promisor_remote(the_repository))
+		strvec_push(&rev_list.args, "--exclude-promisor-objects");
 	if (!opt->is_deepening_fetch) {
 		strvec_push(&rev_list.args, "--not");
 		if (opt->exclude_hidden_refs_section)
@@ -742,8 +761,6 @@ static int incremental_check_applicable(struct check_connected_options *opt)
 		    algorithm);
 
 	if (opt->is_deepening_fetch)
-		return 0;
-	if (repo_has_promisor_remote(the_repository))
 		return 0;
 	if (replace_refs_enabled(the_repository)) {
 		prepare_replace_object(the_repository);
