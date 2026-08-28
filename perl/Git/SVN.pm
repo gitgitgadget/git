@@ -377,6 +377,11 @@ sub find_by_url { # repos_root and, path are optional
 		remove_username($u);
 		next if defined $repos_root && $repos_root ne $u;
 
+		my $rwr = rewrite_root({repo_id => $repo_id});
+		if ($rwr) {
+			$u = canonicalize_url($rwr);
+			remove_username($u);
+		}
 		my $fetch = $remotes->{$repo_id}->{fetch} || {};
 		foreach my $t (qw/branches tags/) {
 			foreach my $globspec (@{$remotes->{$repo_id}->{$t}}) {
@@ -384,7 +389,6 @@ sub find_by_url { # repos_root and, path are optional
 			}
 		}
 		my $p = $path;
-		my $rwr = rewrite_root({repo_id => $repo_id});
 		my $svm = $remotes->{$repo_id}->{svm}
 			if defined $remotes->{$repo_id}->{svm};
 		unless (defined $p) {
