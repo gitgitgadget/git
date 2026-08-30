@@ -560,6 +560,10 @@ enum trace2_counter_id {
 	TRACE2_COUNTER_ID_FSYNC_WRITEOUT_ONLY,
 	TRACE2_COUNTER_ID_FSYNC_HARDWARE_FLUSH,
 
+	/* counts reflink attempts/successes when populating a worktree */
+	TRACE2_COUNTER_ID_REFLINK_ATTEMPTS,
+	TRACE2_COUNTER_ID_REFLINK_HITS,
+
 	/* Add additional counter definitions before here. */
 	TRACE2_NUMBER_OF_COUNTERS
 };
