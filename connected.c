@@ -2,6 +2,7 @@
 
 #include "git-compat-util.h"
 #include "commit.h"
+#include "commit-reach.h"
 #include "config.h"
 #include "gettext.h"
 #include "hex.h"
@@ -19,6 +20,7 @@
 #include "promisor-remote.h"
 #include "tree-walk.h"
 #include "tree.h"
+#include "refs.h"
 
 static int promised_object_cb(const struct object_id *oid UNUSED,
 			      struct object_info *oi UNUSED,
@@ -569,6 +571,70 @@ static int parse_shallow_file_gently(const char *path,
 	return err;
 }
 
+/* TODO: make seed refs configurable (e.g. transfer.connectivitySeedRefs) */
+static const char *boundary_seed_refs[] = {
+	"HEAD",
+	"refs/remotes/origin/HEAD",
+	"refs/remotes/origin/master",
+};
+
+static int find_boundary_from_commit_graph(struct oid_array *commit_tips,
+					   struct oid_array *old_tips,
+					   struct commit_list **new_commits)
+{
+	struct commit **bases = NULL;
+	size_t nr_bases = 0;
+	size_t alloc_bases;
+	struct commit **tips;
+	int ret;
+	size_t i;
+
+	alloc_bases = ARRAY_SIZE(boundary_seed_refs) + old_tips->nr;
+	ALLOC_ARRAY(bases, alloc_bases);
+
+	for (i = 0; i < old_tips->nr; i++) {
+		struct commit *c;
+		c = lookup_commit(the_repository, &old_tips->oid[i]);
+		if (!c || repo_parse_commit(the_repository, c))
+			continue;
+		bases[nr_bases++] = c;
+	}
+
+	for (i = 0; i < ARRAY_SIZE(boundary_seed_refs); i++) {
+		struct object_id oid;
+		struct commit *c;
+		if (!refs_resolve_ref_unsafe(get_main_ref_store(the_repository),
+					     boundary_seed_refs[i],
+					     RESOLVE_REF_READING, &oid, NULL))
+			continue;
+		c = lookup_commit(the_repository, &oid);
+		if (!c || repo_parse_commit(the_repository, c))
+			continue;
+		bases[nr_bases++] = c;
+	}
+	if (!nr_bases) {
+		free(bases);
+		return -1;
+	}
+
+	ALLOC_ARRAY(tips, commit_tips->nr);
+	for (i = 0; i < commit_tips->nr; i++) {
+		tips[i] = lookup_commit(the_repository, &commit_tips->oid[i]);
+		if (!tips[i] || repo_parse_commit(the_repository, tips[i])) {
+			free(tips);
+			free(bases);
+			return -1;
+		}
+	}
+
+	ret = repo_find_boundary_commits(the_repository,
+					 bases, nr_bases,
+					 commit_tips->nr, tips, new_commits);
+	free(tips);
+	free(bases);
+	return ret;
+}
+
 /*
  * Find the connectivity boundary: the set of new commits not yet
  * reachable from local refs.  Feeds commit_tips to rev-list via
@@ -719,7 +785,8 @@ static int check_connected_incremental(oid_iterate_fn fn, void *cb_data,
 	trace2_region_leave("connectivity", "collect-tips", the_repository);
 
 	trace2_region_enter("connectivity", "find-boundary", the_repository);
-	if (!err)
+	if (!err && find_boundary_from_commit_graph(&commit_tips, &opt->old_tips,
+						    &new_commits))
 		err = find_connectivity_boundary(opt, &commit_tips,
 						 &new_commits, &vs);
 	trace2_region_leave("connectivity", "find-boundary", the_repository);

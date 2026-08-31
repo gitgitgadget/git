@@ -4,6 +4,8 @@
 struct object_id;
 struct transport;
 
+#include "oid-array.h"
+
 /*
  * Take callback data, and return next object name in the buffer.
  * When called after returning the name for the last object, return -1
@@ -53,6 +55,13 @@ struct check_connected_options {
 	 * already-reachable refs.
 	 */
 	const char *exclude_hidden_refs_section;
+
+	/*
+	 * Old values of refs being updated.  Used as PARENT2 seeds
+	 * for the in-process boundary walk, since they are almost
+	 * always direct ancestors of the incoming tips.
+	 */
+	struct oid_array old_tips;
 };
 
 #define CHECK_CONNECTED_INIT { 0 }

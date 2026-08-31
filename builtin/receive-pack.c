@@ -2059,6 +2059,14 @@ static void execute_commands(struct command *commands,
 			/* ...else, continue without relaying sideband */
 		}
 
+		for (cmd = commands; cmd; cmd = cmd->next) {
+			if (!is_null_oid(&cmd->old_oid) &&
+			    !is_null_oid(&cmd->new_oid) &&
+			    !cmd->skip_update)
+				oid_array_append(&opt.old_tips,
+						 &cmd->old_oid);
+		}
+
 		data.cmds = commands;
 		data.si = si;
 		opt.err_fd = err_fd;
@@ -2074,6 +2082,7 @@ static void execute_commands(struct command *commands,
 			finish_async(&muxer);
 
 		strvec_clear(&env);
+		oid_array_clear(&opt.old_tips);
 	}
 
 	reject_updates_to_hidden(commands);

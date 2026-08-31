@@ -724,4 +724,39 @@ test_expect_success 'incremental: boundary search errors routed to err-file' '
 	)
 '
 
+# Commit-graph boundary: verify the in-process boundary search
+# using the commit-graph.
+
+test_expect_success 'incremental uses commit-graph boundary search' '
+	test_when_finished "rm -rf graph-src graph-dst" &&
+
+	git init graph-src &&
+	test_commit -C graph-src --no-tag base file.txt &&
+	git clone graph-src graph-dst &&
+	git -C graph-dst commit-graph write --reachable &&
+	test_commit -C graph-src --no-tag update file.txt updated &&
+
+	set_connectivity_check graph-dst incremental &&
+	GIT_TRACE2_EVENT="$(pwd)/trace-graph.txt" \
+		git -C graph-dst fetch origin main &&
+	test_region connectivity find-boundary trace-graph.txt &&
+	test_grep ! rev-list trace-graph.txt
+'
+
+test_expect_success 'incremental falls back to rev-list without commit-graph' '
+	test_when_finished "rm -rf no-graph-src no-graph-dst" &&
+
+	git init no-graph-src &&
+	test_commit -C no-graph-src --no-tag base file.txt &&
+	git clone no-graph-src no-graph-dst &&
+	test_commit -C no-graph-src --no-tag update file.txt updated &&
+
+	rm -rf no-graph-dst/.git/objects/info/commit-graph* &&
+	set_connectivity_check no-graph-dst incremental &&
+	GIT_TRACE2_EVENT="$(pwd)/trace-no-graph.txt" \
+		git -C no-graph-dst fetch origin main &&
+	test_region connectivity find-boundary trace-no-graph.txt &&
+	test_grep rev-list trace-no-graph.txt
+'
+
 test_done

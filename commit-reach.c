@@ -276,6 +276,110 @@ static int paint_down_to_common(struct repository *r,
 	return 0;
 }
 
+static void commit_list_drop_flags(struct commit_list **listp, unsigned flags)
+{
+	while (*listp) {
+		if ((*listp)->item->object.flags & flags) {
+			struct commit_list *entry = *listp;
+			*listp = entry->next;
+			free(entry);
+		} else {
+			listp = &(*listp)->next;
+		}
+	}
+}
+
+/*
+ * Paint commits reachable from 'tips' with PARENT1 and commits
+ * reachable from 'bases' with PARENT2, then collect the commits
+ * painted only with PARENT1 into new_commits.
+ *
+ * Uses corrected commit dates for generation ordering.  Bails out
+ * once the walk drops below the generation where incoming commits
+ * enter the commit-graph, since the narrow seed set may not
+ * converge efficiently below that point.
+ *
+ * Returns -1 if the walk gets aborted.
+ */
+int repo_find_boundary_commits(struct repository *r,
+			       struct commit **bases, size_t nr_bases,
+			       size_t nr_tips, struct commit **tips,
+			       struct commit_list **new_commits)
+{
+	struct paint_state state = {
+		.queue = { compare_commits_by_gen_then_commit_date }
+	};
+	struct commit *commit;
+	timestamp_t gen_floor = GENERATION_NUMBER_INFINITY;
+	int ret = -1;
+	size_t i;
+
+	if (!corrected_commit_dates_enabled(r))
+		return -1;
+
+	state.last_gen = GENERATION_NUMBER_INFINITY;
+	state.topo_ceiling = GENERATION_NUMBER_INFINITY;
+
+	for (i = 0; i < nr_tips; i++)
+		paint_queue_put(&state, tips[i], PARENT1);
+	for (i = 0; i < nr_bases; i++)
+		paint_queue_put(&state, bases[i], PARENT2);
+
+	while ((commit = paint_queue_get(&state))) {
+		struct commit_list *parents;
+		unsigned flags;
+		timestamp_t gen = commit_graph_generation(commit);
+
+		flags = commit->object.flags & (PARENT1 | PARENT2);
+
+		if (flags == PARENT1)
+			commit_list_insert(commit, new_commits);
+
+		for (parents = commit->parents; parents; parents = parents->next) {
+			struct commit *p = parents->item;
+			if ((p->object.flags & flags) == flags)
+				continue;
+			if (repo_parse_commit(r, p))
+				goto done;
+			if (flags == PARENT1 &&
+			    gen == GENERATION_NUMBER_INFINITY) {
+				timestamp_t pgen = commit_graph_generation(p);
+				if (pgen < gen_floor)
+					gen_floor = pgen;
+			}
+			paint_queue_put(&state, p, flags);
+		}
+
+		/*
+		 * gen_floor is the lowest generation where an incoming
+		 * commit (PARENT1, gen=INFINITY) first enters the
+		 * commit-graph.  Below this point the narrow seed set
+		 * may not converge efficiently.
+		 */
+		if (!state.parent1_count || gen < gen_floor)
+			break;
+	}
+
+	if (state.parent1_count)
+		goto done;
+
+	commit_list_drop_flags(new_commits, PARENT2);
+
+	ret = 0;
+
+done:
+	clear_prio_queue(&state.queue);
+	for (i = 0; i < nr_tips; i++)
+		clear_commit_marks(tips[i], all_flags);
+	for (i = 0; i < nr_bases; i++)
+		clear_commit_marks(bases[i], all_flags);
+	if (ret) {
+		commit_list_free(*new_commits);
+		*new_commits = NULL;
+	}
+	return ret;
+}
+
 static int merge_bases_many(struct repository *r,
 			    struct commit *one, int n,
 			    struct commit **twos,
