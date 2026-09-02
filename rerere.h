@@ -10,6 +10,7 @@ struct repository;
 #define RERERE_AUTOUPDATE   01
 #define RERERE_NOAUTOUPDATE 02
 #define RERERE_READONLY     04
+#define RERERE_SKIP_LOCKED  010
 
 /*
  * Marks paths that have been hand-resolved and added to the
