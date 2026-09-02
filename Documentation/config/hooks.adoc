@@ -1,0 +1,24 @@
+`hooks.allowNoVerify`::
+	Specifies whether the `--no-verify` (or `-n`) command-line option
+	is permitted in commands that run client-side hooks, such as `git commit`,
+	`git push`, `git merge`, `git rebase`, and `git am`.
++
+Allowed values are:
++
+--
+* `true`: `--no-verify` is permitted normally. This is the default.
+* `warn`: `--no-verify` is permitted, but Git prints a warning on stderr.
+* `false`: `--no-verify` is disallowed and Git aborts
+  with a fatal error accompanied by advice explaining how to override it.
+--
++
+In an emergency (for example, when a local hook crashes or during a critical
+production hotfix), this guardrail can be overridden without modifying
+configuration files by setting the `GIT_ALLOW_NO_VERIFY=1` environment variable
+or by passing `-c hooks.allowNoVerify=true` on the command line.
++
+NOTE: Client-side hooks execute in the developer's environment and belong to
+the user. This configuration serves strictly as an ergonomic workflow guardrail
+against accidental bypasses (such as muscle-memory `-n` or automated scripts),
+and must not be relied upon as a security boundary. Authoritative enforcement
+must always be implemented server-side (for example, via `pre-receive` hooks).
