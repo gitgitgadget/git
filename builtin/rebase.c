@@ -1299,6 +1299,9 @@ int cmd_rebase(int argc,
 			     builtin_rebase_options,
 			     builtin_rebase_usage, 0);
 
+	if (ok_to_skip_pre_rebase)
+		validate_no_verify(the_repository, "--no-verify");
+
 	if (options.trailer_args.nr) {
 		if (validate_trailer_args(&options.trailer_args))
 			die(NULL);

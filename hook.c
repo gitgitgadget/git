@@ -858,3 +858,33 @@ int run_hooks_l(struct repository *r, const char *hook_name, ...)
 
 	return run_hooks_opt(r, hook_name, &opt);
 }
+
+void validate_no_verify(struct repository *r, const char *opt)
+{
+	const char *val = NULL;
+	int maybe_bool;
+
+	if (git_env_bool("GIT_ALLOW_NO_VERIFY", 0))
+		return;
+
+	if (!r || repo_config_get_value(r, "hooks.allownoverify", &val))
+		return;
+
+	maybe_bool = git_parse_maybe_bool(val);
+	if (maybe_bool == 1 || !strcasecmp(val, "always")) {
+		return;
+	} else if (!strcasecmp(val, "warn")) {
+		warning(_("bypassing hooks with '%s' is discouraged by 'hooks.allowNoVerify'"), opt);
+		return;
+	} else if (maybe_bool == 0 || !strcasecmp(val, "never") || !strcasecmp(val, "error")) {
+		advise(_("this repository disallows '%s' as a workflow guardrail against accidental bypass.\n"
+			 "In an emergency (e.g. broken hook or urgent hotfix), you can override it with:\n"
+			 "  git -c hooks.allowNoVerify=true <command>\n"
+			 "or:\n"
+			 "  GIT_ALLOW_NO_VERIFY=1 git <command>"), opt);
+		die(_("the use of '%s' is disabled by 'hooks.allowNoVerify'"), opt);
+	} else {
+		warning(_("unknown value for 'hooks.allowNoVerify': '%s'"), val);
+	}
+}
+
