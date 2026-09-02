@@ -5,6 +5,7 @@ test_tool_sources = [
   'test-bloom.c',
   'test-bundle-uri.c',
   'test-cache-tree.c',
+  'test-check-connected.c',
   'test-chmtime.c',
   'test-config.c',
   'test-crontab.c',

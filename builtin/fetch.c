@@ -1247,14 +1247,23 @@ static int store_updated_refs(struct display_state *display_state,
 
 	if (!connectivity_checked) {
 		struct check_connected_options opt = CHECK_CONNECTED_INIT;
+		struct ref *r;
+
+		for (r = ref_map; r; r = r->next) {
+			if (r->peer_ref && !is_null_oid(&r->peer_ref->old_oid))
+				oid_array_append(&opt.old_tips,
+						 &r->peer_ref->old_oid);
+		}
 
 		opt.exclude_hidden_refs_section = "fetch";
 		rm = ref_map;
 		if (check_connected(iterate_ref_map, &rm, &opt)) {
 			rc = error(_("%s did not send all necessary objects"),
 				   display_state->url);
+			oid_array_clear(&opt.old_tips);
 			goto abort;
 		}
+		oid_array_clear(&opt.old_tips);
 	}
 
 	/*
@@ -1391,6 +1400,7 @@ static int check_exist_and_connected(struct ref *ref_map)
 	struct ref *rm = ref_map;
 	struct check_connected_options opt = CHECK_CONNECTED_INIT;
 	struct ref *r;
+	int ret;
 
 	/*
 	 * If we are deepening a shallow clone we already have these
@@ -1420,9 +1430,17 @@ static int check_exist_and_connected(struct ref *ref_map)
 			return -1;
 	}
 
+	for (r = rm; r; r = r->next) {
+		if (r->peer_ref && !is_null_oid(&r->peer_ref->old_oid))
+			oid_array_append(&opt.old_tips,
+					 &r->peer_ref->old_oid);
+	}
+
 	opt.quiet = 1;
 	opt.exclude_hidden_refs_section = "fetch";
-	return check_connected(iterate_ref_map, &rm, &opt);
+	ret = check_connected(iterate_ref_map, &rm, &opt);
+	oid_array_clear(&opt.old_tips);
+	return ret;
 }
 
 static int fetch_and_consume_refs(struct display_state *display_state,

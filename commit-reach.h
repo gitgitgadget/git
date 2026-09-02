@@ -167,4 +167,17 @@ int get_branch_base_for_tip(struct repository *r,
 			    struct commit **bases,
 			    size_t bases_nr);
 
+/*
+ * Find commits reachable from 'tips' but not from 'bases' using a
+ * two-paint walk.  Requires a commit-graph with corrected commit
+ * dates (generation data v2).  Returns 0 on success, -1 if the
+ * walk gets aborted.
+ *
+ * All tips and bases must already be parsed.
+ */
+int repo_find_boundary_commits(struct repository *r,
+			       struct commit **bases, size_t nr_bases,
+			       size_t nr_tips, struct commit **tips,
+			       struct commit_list **new_commits);
+
 #endif
