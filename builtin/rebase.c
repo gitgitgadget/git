@@ -367,7 +367,7 @@ static int run_sequencer_rebase(struct rebase_options *opts)
 	case ACTION_SKIP: {
 		struct string_list merge_rr = STRING_LIST_INIT_DUP;
 
-		rerere_clear(the_repository, &merge_rr);
+		rerere_clear(the_repository, &merge_rr, 0);
 	}
 		/* fallthrough */
 	case ACTION_CONTINUE: {
@@ -1382,7 +1382,7 @@ int cmd_rebase(int argc,
 	case ACTION_SKIP: {
 		struct string_list merge_rr = STRING_LIST_INIT_DUP;
 
-		rerere_clear(the_repository, &merge_rr);
+		rerere_clear(the_repository, &merge_rr, 0);
 		string_list_clear(&merge_rr, 1);
 		ropts.flags = RESET_HEAD_HARD;
 		if (reset_head(the_repository, &ropts) < 0)
@@ -1396,7 +1396,7 @@ int cmd_rebase(int argc,
 		struct string_list merge_rr = STRING_LIST_INIT_DUP;
 		struct strbuf head_msg = STRBUF_INIT;
 
-		rerere_clear(the_repository, &merge_rr);
+		rerere_clear(the_repository, &merge_rr, 0);
 		string_list_clear(&merge_rr, 1);
 
 		if (read_basic_state(&options))

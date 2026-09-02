@@ -10,3 +10,13 @@ rerere.enabled::
 	enabled if there is an `rr-cache` directory under the
 	`$GIT_DIR`, e.g. if "rerere" was previously used in the
 	repository.
+
+rerere.lockTimeout::
+	The length of time, in milliseconds, to retry when trying to
+	take the rerere lock while another process holds it, typically
+	a background `git rerere gc`.  When the time is up, the command
+	warns and goes on without rerere.  Value 0 means not to retry
+	at all; -1 means to try indefinitely.  Default is 1000 (i.e.,
+	retry for 1 second).  `git rerere gc` does not retry, and
+	`git rerere`, `git rerere forget` and `git rerere clear` fail
+	instead of going on.
