@@ -1539,9 +1539,9 @@ void git_global_config_paths(char **user_out, char **xdg_out)
 	*xdg_out = xdg_config;
 }
 
-int git_config_system(void)
+int git_config_system(const struct config_options *opts)
 {
-	return !git_env_bool("GIT_CONFIG_NOSYSTEM", 0);
+	return !opts->ignore_system && !git_env_bool("GIT_CONFIG_NOSYSTEM", 0);
 }
 
 static int try_config(config_fn_t fn, const char *filename,
@@ -1584,7 +1584,7 @@ static int do_git_config_sequence(const struct config_options *opts,
 		worktree_config = NULL;
 	}
 
-	if (git_config_system() && system_config &&
+	if (git_config_system(opts) && system_config &&
 	    !access_or_die(system_config, R_OK,
 			   opts->system_gently ? ACCESS_EACCES_OK : 0))
 		ret += try_config(fn, system_config, data, CONFIG_SCOPE_SYSTEM,
