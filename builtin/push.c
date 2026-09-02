@@ -63,6 +63,7 @@ static int verbosity;
 static int progress = -1;
 static int recurse_submodules = RECURSE_SUBMODULES_DEFAULT;
 static enum transport_family family;
+static int allow_no_verify = 1;
 
 static struct push_cas_option cas;
 
@@ -543,6 +544,9 @@ static int git_push_config(const char *k, const char *v,
 		else
 			*flags &= ~TRANSPORT_PUSH_FORCE_IF_INCLUDES;
 		return 0;
+	} else if (!strcmp(k, "hooks.allownoverify")) {
+		allow_no_verify = git_config_bool(k, v);
+		return 0;
 	}
 
 	return git_default_config(k, v, ctx, NULL);
@@ -746,6 +750,8 @@ int cmd_push(int argc,
 	packet_trace_identity("push");
 	repo_config(the_repository, git_push_config, &flags);
 	argc = parse_options(argc, argv, prefix, options, push_usage, 0);
+	if ((flags & TRANSPORT_PUSH_NO_HOOK) && !allow_no_verify)
+		die(_("the use of '--no-verify' is disabled by 'hooks.allowNoVerify'"));
 	push_options = (push_options_cmdline.nr
 		? &push_options_cmdline
 		: &push_options_config);

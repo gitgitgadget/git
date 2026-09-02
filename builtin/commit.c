@@ -127,6 +127,7 @@ static struct interactive_options interactive_opts = INTERACTIVE_OPTIONS_INIT;
 static int edit_flag = -1; /* unspecified */
 static int quiet, verbose, no_verify, allow_empty, dry_run, renew_authorship;
 static int config_commit_verbose = -1; /* unspecified */
+static int allow_no_verify = 1;
 static int no_post_rewrite, allow_empty_message, pathspec_file_nul;
 static const char *untracked_files_arg, *force_date, *ignore_submodule_arg, *ignored_arg;
 static const char *sign_commit, *pathspec_from_file;
@@ -1316,6 +1317,9 @@ static int parse_and_validate_options(int argc, const char *argv[],
 	argc = parse_options(argc, argv, prefix, options, usage, 0);
 	finalize_deferred_config(s);
 
+	if (no_verify && !allow_no_verify)
+		die(_("the use of '--no-verify' is disabled by 'hooks.allowNoVerify'"));
+
 	if (force_author && !strchr(force_author, '>'))
 		force_author = find_author_by_nickname(force_author);
 
@@ -1689,6 +1693,10 @@ static int git_commit_config(const char *k, const char *v,
 		int is_bool;
 		config_commit_verbose = git_config_bool_or_int(k, v, ctx->kvi,
 							       &is_bool);
+		return 0;
+	}
+	if (!strcmp(k, "hooks.allownoverify")) {
+		allow_no_verify = git_config_bool(k, v);
 		return 0;
 	}
 

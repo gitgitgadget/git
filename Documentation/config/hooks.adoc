@@ -1,0 +1,10 @@
+`hooks.allowNoVerify`::
+	A boolean to specify whether `--no-verify` (or `-n`) command-line
+	option is permitted in commands such as `git commit` and `git push`.
+	When set to `false`, attempting to bypass hooks with `--no-verify`
+	will cause Git to abort immediately with a fatal error. Defaults to
+	`true`.
++
+Note that this setting serves as an opt-in workflow guardrail against
+accidental bypasses (for example in managed environments or CI runners),
+and does not replace authoritative server-side hook enforcement.

@@ -790,6 +790,8 @@ static void parse_rebase_merges_value(struct rebase_options *options, const char
 		die(_("Unknown rebase-merges mode: %s"), value);
 }
 
+static int allow_no_verify = 1;
+
 static int rebase_config(const char *var, const char *value,
 			 const struct config_context *ctx, void *data)
 {
@@ -817,6 +819,11 @@ static int rebase_config(const char *var, const char *value,
 
 	if (!strcmp(var, "rebase.autostash")) {
 		opts->autostash = git_config_bool(var, value);
+		return 0;
+	}
+
+	if (!strcmp(var, "hooks.allownoverify")) {
+		allow_no_verify = git_config_bool(var, value);
 		return 0;
 	}
 
@@ -1298,6 +1305,9 @@ int cmd_rebase(int argc,
 	argc = parse_options(argc, argv, prefix,
 			     builtin_rebase_options,
 			     builtin_rebase_usage, 0);
+
+	if (ok_to_skip_pre_rebase && !allow_no_verify)
+		die(_("the use of '--no-verify' is disabled by 'hooks.allowNoVerify'"));
 
 	if (options.trailer_args.nr) {
 		if (validate_trailer_args(&options.trailer_args))

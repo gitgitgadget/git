@@ -96,6 +96,7 @@ static int signoff;
 static const char *sign_commit;
 static int autostash;
 static int no_verify;
+static int allow_no_verify = 1;
 static char *into_name;
 
 static struct strategy all_strategy[] = {
@@ -726,6 +727,9 @@ static int git_merge_config(const char *k, const char *v,
 		return 0;
 	} else if (!strcmp(k, "commit.gpgsign")) {
 		sign_commit = git_config_bool(k, v) ? "" : NULL;
+		return 0;
+	} else if (!strcmp(k, "hooks.allownoverify")) {
+		allow_no_verify = git_config_bool(k, v);
 		return 0;
 	} else if (!strcmp(k, "gpg.mintrustlevel")) {
 		check_trust_level = 0;
@@ -1408,6 +1412,8 @@ int cmd_merge(int argc,
 		parse_branch_merge_options(branch_mergeoptions);
 	argc = parse_options(argc, argv, prefix, builtin_merge_options,
 			builtin_merge_usage, 0);
+	if (no_verify && !allow_no_verify)
+		die(_("the use of '--no-verify' is disabled by 'hooks.allowNoVerify'"));
 	if (shortlog_len < 0)
 		shortlog_len = (merge_log_config > 0) ? merge_log_config : 0;
 

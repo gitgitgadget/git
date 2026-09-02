@@ -2320,6 +2320,7 @@ int cmd_am(int argc,
 	int patch_format = PATCH_FORMAT_UNKNOWN;
 	enum resume_type resume_mode = RESUME_FALSE;
 	int in_progress;
+	int allow_no_verify = 1;
 	int ret = 0;
 
 	const char * const usage[] = {
@@ -2448,6 +2449,7 @@ int cmd_am(int argc,
 	show_usage_with_options_if_asked(argc, argv, usage, options);
 
 	repo_config(the_repository, git_default_config, NULL);
+	repo_config_get_bool(the_repository, "hooks.allownoverify", &allow_no_verify);
 
 	am_state_init(&state);
 
@@ -2456,6 +2458,9 @@ int cmd_am(int argc,
 		am_load(&state);
 
 	argc = parse_options(argc, argv, prefix, options, usage, 0);
+
+	if (state.no_verify && !allow_no_verify)
+		die(_("the use of '--no-verify' is disabled by 'hooks.allowNoVerify'"));
 
 	if (binary >= 0)
 		fprintf_ln(stderr, _("The -b/--binary option has been a no-op for long time, and\n"
