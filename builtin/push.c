@@ -12,6 +12,7 @@
 #include "environment.h"
 #include "gettext.h"
 #include "hex.h"
+#include "hook.h"
 #include "refspec.h"
 #include "run-command.h"
 #include "remote.h"
@@ -746,6 +747,8 @@ int cmd_push(int argc,
 	packet_trace_identity("push");
 	repo_config(the_repository, git_push_config, &flags);
 	argc = parse_options(argc, argv, prefix, options, push_usage, 0);
+	if (flags & TRANSPORT_PUSH_NO_HOOK)
+		validate_no_verify(the_repository, "--no-verify");
 	push_options = (push_options_cmdline.nr
 		? &push_options_cmdline
 		: &push_options_config);
