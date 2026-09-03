@@ -386,6 +386,10 @@ proc commit_committree {fd_wt curHEAD msg_p} {
 		set fd_ot [git_read [list cat-file commit $PARENT]]
 		fconfigure $fd_ot -encoding iso8859-1
 		set old_tree [gets $fd_ot]
+		# Drain the pipe before closing it: on Windows, closing it
+		# while git cat-file still has output to write makes the
+		# child process exit with a failure status.
+		read $fd_ot
 		close $fd_ot
 
 		if {[string equal -length 5 {tree } $old_tree]
