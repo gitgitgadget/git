@@ -23,7 +23,8 @@
 #include "odb.h"
 #include "odb/streaming.h"
 #include "oid-array.h"
-#include "oidset.h"
+#include "hash-lookup.h"
+#include "oidmap.h"
 #include "path.h"
 #include "replace-object.h"
 #include "tree-walk.h"
@@ -105,6 +106,12 @@ static size_t base_cache_limit;
 struct thread_local_data {
 	pthread_t thread;
 	int pack_fd;
+	struct oidmap outgoing_links;
+};
+
+struct outgoing_link {
+	struct oidmap_entry entry;
+	enum object_type type;
 };
 
 /* Remember to update object flag allocation in object.h */
@@ -155,11 +162,8 @@ static uint32_t input_crc32;
 static int input_fd, output_fd;
 static const char *curr_pack;
 
-/*
- * outgoing_links is guarded by read_mutex, and record_outgoing_links is
- * read-only in a thread.
- */
-static struct oidset outgoing_links = OIDSET_INIT;
+/* Worker-local maps are merged after all workers have exited. */
+static struct oidmap outgoing_links = OIDMAP_INIT;
 static int record_outgoing_links;
 
 static struct thread_local_data *thread_data;
@@ -196,6 +200,55 @@ static inline void unlock_mutex(pthread_mutex_t *mutex)
 		pthread_mutex_unlock(mutex);
 }
 
+static void record_outgoing_link_to(struct oidmap *map,
+				    const struct object_id *oid,
+				    enum object_type type)
+{
+	struct outgoing_link *link = oidmap_get(map, oid);
+
+	if (link) {
+		if (type != OBJ_ANY && link->type != OBJ_ANY &&
+		    type != link->type)
+			die(_("object %s is referred to as both a %s and a %s"),
+			    oid_to_hex(oid), type_name(link->type),
+			    type_name(type));
+		if (link->type == OBJ_ANY)
+			link->type = type;
+		return;
+	}
+
+	CALLOC_ARRAY(link, 1);
+	oidcpy(&link->entry.oid, oid);
+	link->type = type;
+	if (oidmap_put(map, link))
+		BUG("duplicate outgoing link");
+}
+
+static void merge_outgoing_links(struct oidmap *dest, struct oidmap *src)
+{
+	struct oidmap_iter iter;
+	struct outgoing_link *link;
+
+	while ((link = oidmap_iter_first(src, &iter))) {
+		struct outgoing_link *old = oidmap_get(dest, &link->entry.oid);
+
+		oidmap_remove(src, &link->entry.oid);
+		if (old) {
+			if (link->type != OBJ_ANY && old->type != OBJ_ANY &&
+			    link->type != old->type)
+				die(_("object %s is referred to as both a %s and a %s"),
+				    oid_to_hex(&link->entry.oid),
+				    type_name(old->type), type_name(link->type));
+			if (old->type == OBJ_ANY)
+				old->type = link->type;
+			free(link);
+		} else if (oidmap_put(dest, link)) {
+			BUG("duplicate outgoing link");
+		}
+	}
+	oidmap_clear(src, 0);
+}
+
 /*
  * Mutex and conditional variable can't be statically-initialized on Windows.
  */
@@ -211,6 +264,7 @@ static void init_thread(void)
 	CALLOC_ARRAY(thread_data, nr_threads);
 	for (i = 0; i < nr_threads; i++) {
 		thread_data[i].pack_fd = xopen(curr_pack, O_RDONLY);
+		oidmap_init(&thread_data[i].outgoing_links, 0);
 	}
 
 	threads_active = 1;
@@ -221,14 +275,17 @@ static void cleanup_thread(void)
 	int i;
 	if (!threads_active)
 		return;
-	threads_active = 0;
 	pthread_mutex_destroy(&read_mutex);
 	pthread_mutex_destroy(&counter_mutex);
 	pthread_mutex_destroy(&work_mutex);
 	if (show_stat)
 		pthread_mutex_destroy(&deepest_delta_mutex);
-	for (i = 0; i < nr_threads; i++)
+	for (i = 0; i < nr_threads; i++) {
+		merge_outgoing_links(&outgoing_links,
+				     &thread_data[i].outgoing_links);
 		close(thread_data[i].pack_fd);
+	}
+	threads_active = 0;
 	pthread_key_delete(key);
 	free(thread_data);
 }
@@ -818,9 +875,14 @@ static int check_collison(struct object_entry *entry)
 	return 0;
 }
 
-static void record_outgoing_link(const struct object_id *oid)
+static void record_outgoing_link(const struct object_id *oid,
+				 enum object_type type)
 {
-	oidset_insert(&outgoing_links, oid);
+	struct oidmap *map = &outgoing_links;
+
+	if (threads_active && !strict && !do_fsck_object)
+		map = &get_thread_data()->outgoing_links;
+	record_outgoing_link_to(map, oid, type);
 }
 
 static void maybe_record_name_entry(const struct name_entry *entry)
@@ -849,7 +911,97 @@ static void maybe_record_name_entry(const struct name_entry *entry)
 	 * pack, so it won't be GC-ed, the tradeoff seems worth it.
 	*/
 	if (S_ISDIR(entry->mode))
-		record_outgoing_link(&entry->oid);
+		record_outgoing_link(&entry->oid, OBJ_ANY);
+}
+
+static int parse_outgoing_link_oid(const char **buf, const char *tail,
+				   const char *header, struct object_id *oid)
+{
+	const char *end;
+	size_t header_len = strlen(header);
+
+	if (tail - *buf <= header_len + the_hash_algo->hexsz ||
+	    memcmp(*buf, header, header_len) ||
+	    parse_oid_hex_algop(*buf + header_len, oid, &end,
+				the_hash_algo) ||
+	    end >= tail || *end != '\n')
+		return -1;
+	*buf = end + 1;
+	return 0;
+}
+
+static void record_outgoing_links_from_data(const void *data,
+					    unsigned long size,
+					    enum object_type type,
+					    const struct object_id *oid)
+{
+	const char *buf = data;
+	const char *tail = buf + size;
+
+	if (type == OBJ_TREE) {
+		struct tree_desc desc;
+		struct name_entry entry;
+
+		if (init_tree_desc_gently(&desc, oid, data, size, 0))
+			return;
+		while (tree_entry_gently(&desc, &entry))
+			maybe_record_name_entry(&entry);
+	} else if (type == OBJ_COMMIT) {
+		struct object_id link;
+		struct commit_graft *graft;
+		int i;
+
+		if (threads_active &&
+		    !the_repository->parsed_objects->commit_graft_prepared)
+			BUG("commit grafts were not prepared before resolving deltas");
+		graft = lookup_commit_graft(the_repository, oid);
+
+		if (parse_outgoing_link_oid(&buf, tail, "tree ", &link))
+			die(_("invalid tree line in commit %s"),
+			    oid_to_hex(oid));
+		if (buf >= tail)
+			die(_("truncated commit %s after tree line"),
+			    oid_to_hex(oid));
+		record_outgoing_link(&link, OBJ_TREE);
+
+		while (tail - buf > 7 + the_hash_algo->hexsz &&
+		       starts_with(buf, "parent ")) {
+			if (parse_outgoing_link_oid(&buf, tail, "parent ",
+						    &link))
+				die(_("invalid parent line in commit %s"),
+				    oid_to_hex(oid));
+			if (buf >= tail)
+				die(_("truncated commit %s after parent line"),
+				    oid_to_hex(oid));
+			if (!graft ||
+			    (graft->nr_parent >= 0 && grafts_keep_true_parents))
+				record_outgoing_link(&link, OBJ_COMMIT);
+		}
+		if (graft)
+			for (i = 0; i < graft->nr_parent; i++)
+				record_outgoing_link(&graft->parent[i],
+						     OBJ_COMMIT);
+	} else if (type == OBJ_TAG) {
+		struct object_id link;
+		const char *line_end;
+		enum object_type target_type;
+
+		if (size < the_hash_algo->hexsz + 24 ||
+		    parse_outgoing_link_oid(&buf, tail, "object ", &link))
+			die(_("invalid object line in tag %s"), oid_to_hex(oid));
+		if (!skip_prefix(buf, "type ", &buf) ||
+		    !(line_end = memchr(buf, '\n', tail - buf)))
+			die(_("invalid type line in tag %s"), oid_to_hex(oid));
+		target_type = type_from_string_gently(buf, line_end - buf, 1);
+		if (target_type < 0)
+			die(_("invalid type line in tag %s"), oid_to_hex(oid));
+		buf = line_end + 1;
+		if (buf + 4 >= tail || !skip_prefix(buf, "tag ", &buf) ||
+		    !memchr(buf, '\n', tail - buf))
+			die(_("invalid tag name line in tag %s"),
+			    oid_to_hex(oid));
+		record_outgoing_link(&link, target_type);
+	}
 }
 
 static void do_record_outgoing_links(struct object *obj)
@@ -871,12 +1023,13 @@ static void do_record_outgoing_links(struct object *obj)
 		struct commit *commit = (struct commit *) obj;
 		struct commit_list *parents = commit->parents;
 
-		record_outgoing_link(get_commit_tree_oid(commit));
+		record_outgoing_link(get_commit_tree_oid(commit), OBJ_TREE);
 		for (; parents; parents = parents->next)
-			record_outgoing_link(&parents->item->object.oid);
+			record_outgoing_link(&parents->item->object.oid,
+					     OBJ_COMMIT);
 	} else if (obj->type == OBJ_TAG) {
 		struct tag *tag = (struct tag *) obj;
-		record_outgoing_link(get_tagged_oid(tag));
+		record_outgoing_link(get_tagged_oid(tag), tag->tagged->type);
 	}
 }
 
@@ -923,6 +1076,12 @@ static void sha1_object(const void *data, struct object_entry *obj_entry,
 		    memcmp(data, has_data, size) != 0)
 			die(_("SHA1 COLLISION FOUND WITH %s !"), oid_to_hex(oid));
 		free(has_data);
+	}
+
+	if (record_outgoing_links && !strict && !do_fsck_object) {
+		if (type != OBJ_BLOB)
+			record_outgoing_links_from_data(data, size, type, oid);
+		goto out;
 	}
 
 	if (strict || do_fsck_object || record_outgoing_links) {
@@ -975,6 +1134,7 @@ static void sha1_object(const void *data, struct object_entry *obj_entry,
 		read_unlock();
 	}
 
+out:
 	free(new_data);
 }
 
@@ -1811,20 +1971,53 @@ static void show_pack_info(int stat_only)
 	free(chain_histogram);
 }
 
+static const struct object_id *idx_object_oid(size_t pos, const void *table)
+{
+	struct pack_idx_entry * const *entries = table;
+
+	return &entries[pos]->oid;
+}
+
+static void validate_outgoing_link_types(struct pack_idx_entry **sorted,
+					 int nr)
+{
+	struct oidmap_iter iter;
+	struct outgoing_link *link;
+
+	oidmap_iter_init(&outgoing_links, &iter);
+	while ((link = oidmap_iter_next(&iter))) {
+		int pos;
+		struct object_entry *actual;
+
+		if (link->type == OBJ_ANY)
+			continue;
+		pos = oid_pos(&link->entry.oid, sorted, nr, idx_object_oid);
+		if (pos < 0)
+			continue;
+		actual = container_of(sorted[pos], struct object_entry, idx);
+		if (actual->real_type != link->type)
+			die(_("object %s is a %s, but was referred to as a %s"),
+			    oid_to_hex(&link->entry.oid),
+			    type_name(actual->real_type),
+			    type_name(link->type));
+	}
+}
+
 static void repack_local_links(void)
 {
 	struct child_process cmd = CHILD_PROCESS_INIT;
 	FILE *out;
 	struct strbuf line = STRBUF_INIT;
-	struct oidset_iter iter;
-	struct object_id *oid;
+	struct oidmap_iter iter;
+	struct outgoing_link *link;
 	char *base_name = NULL;
 
-	if (!oidset_size(&outgoing_links))
+	if (!oidmap_get_size(&outgoing_links))
 		return;
 
-	oidset_iter_init(&outgoing_links, &iter);
-	while ((oid = oidset_iter_next(&iter))) {
+	oidmap_iter_init(&outgoing_links, &iter);
+	while ((link = oidmap_iter_next(&iter))) {
+		const struct object_id *oid = &link->entry.oid;
 		struct odb_source_info source_info;
 		struct object_info info = {
 			.source_infop = &source_info,
@@ -1919,6 +2112,7 @@ int cmd_index_pack(int argc,
 	fsck_options.walk = mark_link;
 
 	reset_pack_idx_option(&opts);
+	oidmap_init(&outgoing_links, 0);
 	opts.flags |= WRITE_REV;
 	repo_config(the_repository, git_index_pack_config, &opts);
 	if (prefix && chdir(prefix))
@@ -2102,6 +2296,7 @@ int cmd_index_pack(int argc,
 		idx_objects[i] = &objects[i].idx;
 	curr_index = write_idx_file(the_repository, index_name, idx_objects,
 				    nr_objects, &opts, pack_hash);
+	validate_outgoing_link_types(idx_objects, nr_objects);
 	if (rev_index)
 		curr_rev_index = write_rev_file(the_repository, rev_index_name,
 						idx_objects, nr_objects,
@@ -2146,6 +2341,7 @@ int cmd_index_pack(int argc,
 	free(curr_rev_index);
 
 	repack_local_links();
+	oidmap_clear(&outgoing_links, 1);
 
 	/*
 	 * Let the caller know this pack is not self contained
