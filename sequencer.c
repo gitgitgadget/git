@@ -5297,6 +5297,11 @@ cleanup_head_ref:
 			run_hooks_opt(r, "post-rewrite", &hook_opt);
 		}
 		apply_autostash(rebase_path_autostash());
+		/*
+		 * We ignore errors in 'git maintenance run --auto', since the
+		 * user should see them.
+		 */
+		run_auto_maintenance(r, opts->quiet);
 
 		if (!opts->quiet) {
 			if (!opts->verbose)
