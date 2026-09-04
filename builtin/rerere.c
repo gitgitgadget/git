@@ -74,7 +74,7 @@ int cmd_rerere(int argc,
 		flags = RERERE_NOAUTOUPDATE;
 
 	if (argc < 1)
-		return repo_rerere(the_repository, flags);
+		return repo_rerere(the_repository, flags | RERERE_LOCK_OR_DIE);
 
 	if (!strcmp(argv[0], "forget")) {
 		struct pathspec pathspec;
@@ -85,14 +85,15 @@ int cmd_rerere(int argc,
 		parse_pathspec(&pathspec, 0, PATHSPEC_PREFER_CWD,
 			       prefix, argv + 1);
 
-		ret = rerere_forget(the_repository, &pathspec);
+		ret = rerere_forget(the_repository, &pathspec,
+				    RERERE_LOCK_OR_DIE);
 
 		clear_pathspec(&pathspec);
 		return ret;
 	}
 
 	if (!strcmp(argv[0], "clear")) {
-		rerere_clear(the_repository, &merge_rr);
+		rerere_clear(the_repository, &merge_rr, RERERE_LOCK_OR_DIE);
 	} else if (!strcmp(argv[0], "gc"))
 		rerere_gc(the_repository, &merge_rr);
 	else if (!strcmp(argv[0], "status")) {

@@ -10,6 +10,10 @@ struct repository;
 #define RERERE_AUTOUPDATE   01
 #define RERERE_NOAUTOUPDATE 02
 #define RERERE_READONLY     04
+/* Do not wait for the lock when another process holds it */
+#define RERERE_NOWAIT       010
+/* Die on a lock that cannot be taken instead of going on without rerere */
+#define RERERE_LOCK_OR_DIE  020
 
 /*
  * Marks paths that have been hand-resolved and added to the
@@ -34,9 +38,9 @@ int repo_rerere(struct repository *, int);
  */
 const char *rerere_path(struct strbuf *buf, const struct rerere_id *,
 			const char *file);
-int rerere_forget(struct repository *, struct pathspec *);
+int rerere_forget(struct repository *, struct pathspec *, int);
 int rerere_remaining(struct repository *, struct string_list *);
-void rerere_clear(struct repository *, struct string_list *);
+void rerere_clear(struct repository *, struct string_list *, int);
 void rerere_gc(struct repository *, struct string_list *);
 
 #define OPT_RERERE_AUTOUPDATE(v) OPT_UYN(0, "rerere-autoupdate", (v), \
