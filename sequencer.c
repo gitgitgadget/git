@@ -1108,6 +1108,29 @@ static int run_command_silent_on_success(struct child_process *cmd)
 }
 
 /*
+ * A rebase runs auto maintenance once it is done, not from every command
+ * it spawns along the way: their background "rerere gc" or repack would
+ * race the rebase for locks and files it still holds.
+ */
+static void disable_auto_maintenance(struct child_process *cmd)
+{
+	struct strbuf value = STRBUF_INIT;
+	const char *old = getenv(CONFIG_DATA_ENVIRONMENT);
+
+	if (old && *old)
+		strbuf_addf(&value, "%s ", old);
+	sq_quote_buf(&value, "maintenance.auto");
+	strbuf_addch(&value, '=');
+	sq_quote_buf(&value, "false");
+	strbuf_addch(&value, ' ');
+	sq_quote_buf(&value, "gc.auto");
+	strbuf_addch(&value, '=');
+	sq_quote_buf(&value, "0");
+	strvec_pushf(&cmd->env, "%s=%s", CONFIG_DATA_ENVIRONMENT, value.buf);
+	strbuf_release(&value);
+}
+
+/*
  * If we are cherry-pick, and if the merge did not result in
  * hand-editing, we will hit this commit and inherit the original
  * author date and name.
@@ -1148,6 +1171,8 @@ static int run_git_commit(const char *defmsg,
 			     author_date_from_env(&cmd.env));
 	if (opts->ignore_date)
 		strvec_push(&cmd.env, "GIT_AUTHOR_DATE=");
+	if (is_rebase_i(opts))
+		disable_auto_maintenance(&cmd);
 
 	strvec_push(&cmd.args, "commit");
 
@@ -3934,6 +3959,7 @@ static int do_exec(struct repository *r, const char *command_line, int quiet)
 	cmd.use_shell = 1;
 	strvec_push(&cmd.args, command_line);
 	strvec_push(&cmd.env, "GIT_CHERRY_PICK_HELP");
+	disable_auto_maintenance(&cmd);
 	status = run_command(&cmd);
 
 	/* force re-reading of the cache */
@@ -4342,6 +4368,7 @@ static int do_merge(struct repository *r,
 				     author_date_from_env(&cmd.env));
 		if (opts->ignore_date)
 			strvec_push(&cmd.env, "GIT_AUTHOR_DATE=");
+		disable_auto_maintenance(&cmd);
 
 		cmd.git_cmd = 1;
 		strvec_push(&cmd.args, "merge");
