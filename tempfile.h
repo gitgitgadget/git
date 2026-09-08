@@ -276,6 +276,15 @@ int reopen_tempfile(struct tempfile *tempfile);
 int delete_tempfile(struct tempfile **tempfile_p);
 
 /*
+ * Stop tracking `tempfile` without removing the file: close the file
+ * descriptor and/or file pointer if they are still open, and leave the
+ * file where it is, no longer to be removed at exit or on a signal. It
+ * is a NOOP to call `unregister_tempfile()` for a `tempfile` object
+ * that is not currently active.
+ */
+void unregister_tempfile(struct tempfile **tempfile_p);
+
+/*
  * Close the file descriptor and/or file pointer if they are still
  * open, and atomically rename the temporary file to `path`. `path`
  * must be on the same filesystem as the lock file. Return 0 on

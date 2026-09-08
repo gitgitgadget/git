@@ -29,6 +29,7 @@
 #include "read-cache-ll.h"
 #include "run-command.h"
 #include "setup.h"
+#include "string-list.h"
 #include "strvec.h"
 #include "tempfile.h"
 #include "tmp-objdir.h"
@@ -492,9 +493,13 @@ struct odb_transaction_files {
 	struct transaction_packfile packfile;
 	const char *prefix;
 
-	struct tempfile **pack_lockfiles;
-	size_t pack_lockfiles_nr;
-	size_t pack_lockfiles_alloc;
+	/*
+	 * The message index-pack writes into its ".keep" files, and where
+	 * those files end up once the quarantine is migrated. Each "util"
+	 * holds a tempfile for as long as we consider that file ours.
+	 */
+	char *keep_msg;
+	struct string_list pack_lockfiles;
 };
 
 int odb_transaction_files_prepare(struct odb_transaction *base)
@@ -1256,6 +1261,45 @@ out:
 	return ret;
 }
 
+/*
+ * Track the ".keep" files before the migration moves them into place, so
+ * that a signal in the middle of it removes ours.
+ */
+static void register_pack_lockfiles(struct odb_transaction_files *transaction)
+{
+	struct string_list_item *item;
+
+	for_each_string_list_item(item, &transaction->pack_lockfiles)
+		item->util = register_tempfile(item->string);
+}
+
+/*
+ * The migration stops at the first file that differs from what is already
+ * at its destination, and a ".keep" left by somebody else's push is one
+ * such file. Rather than work out what got installed, read the files
+ * back: one that does not carry our message is not ours to remove.
+ */
+static void disown_foreign_pack_lockfiles(struct odb_transaction_files *transaction)
+{
+	struct strbuf buf = STRBUF_INIT;
+	struct string_list_item *item;
+
+	for_each_string_list_item(item, &transaction->pack_lockfiles) {
+		struct tempfile *lockfile = item->util;
+
+		strbuf_reset(&buf);
+		if (strbuf_read_file(&buf, item->string, 0) >= 0) {
+			strbuf_trim_trailing_newline(&buf);
+			if (!strcmp(buf.buf, transaction->keep_msg))
+				continue;
+		}
+		unregister_tempfile(&lockfile);
+		item->util = NULL;
+	}
+
+	strbuf_release(&buf);
+}
+
 static int odb_transaction_files_commit(struct odb_transaction *base)
 {
 	struct odb_transaction_files *transaction =
@@ -1264,6 +1308,7 @@ static int odb_transaction_files_commit(struct odb_transaction *base)
 	if (transaction->objdir) {
 		struct strbuf temp_path = STRBUF_INIT;
 		struct tempfile *temp;
+		int ret;
 
 		/*
 		 * Issue a full hardware flush against a temporary file to ensure
@@ -1285,7 +1330,10 @@ static int odb_transaction_files_commit(struct odb_transaction *base)
 		 * Make the object files visible in the primary ODB after their data is
 		 * fully durable.
 		 */
-		if (tmp_objdir_migrate(transaction->objdir))
+		register_pack_lockfiles(transaction);
+		ret = tmp_objdir_migrate(transaction->objdir);
+		disown_foreign_pack_lockfiles(transaction);
+		if (ret)
 			return error(_("unable to migrate temporary objects"));
 
 		transaction->objdir = NULL;
@@ -1393,10 +1441,10 @@ static int odb_transaction_files_write_pack(struct odb_transaction *base,
 
 		if (xgethostname(hostname, sizeof(hostname)))
 			xsnprintf(hostname, sizeof(hostname), "localhost");
-		strvec_pushf(&child.args,
-			     "--keep=receive-pack %"PRIuMAX" on %s",
-			     (uintmax_t)getpid(),
-			     hostname);
+		free(transaction->keep_msg);
+		transaction->keep_msg = xstrfmt("receive-pack %"PRIuMAX" on %s",
+						(uintmax_t)getpid(), hostname);
+		strvec_pushf(&child.args, "--keep=%s", transaction->keep_msg);
 
 		if (!opts->quiet && err_fd)
 			strvec_push(&child.args, "--show-resolving-progress");
@@ -1423,18 +1471,13 @@ static int odb_transaction_files_write_pack(struct odb_transaction *base,
 		/*
 		 * The lockfile filepath is expected to be the final location of
 		 * the ".keep" file after being migrated to the main ODB source.
-		 * This ensures the lockfile can be found and removed later
-		 * after the ODB transaction has been committed.
+		 * We start tracking it right before that migration; see
+		 * odb_transaction_files_commit().
 		 */
 		lockfile = index_pack_lockfile(base->source, child.out, NULL);
-		if (lockfile) {
-			ALLOC_GROW(transaction->pack_lockfiles,
-				   transaction->pack_lockfiles_nr + 1,
-				   transaction->pack_lockfiles_alloc);
-			transaction->pack_lockfiles[transaction->pack_lockfiles_nr++] =
-				register_tempfile(lockfile);
-			free(lockfile);
-		}
+		if (lockfile)
+			string_list_append_nodup(&transaction->pack_lockfiles,
+						 lockfile);
 		close(child.out);
 
 		status = finish_command(&child);
@@ -1454,12 +1497,21 @@ static int odb_transaction_files_finalize(struct odb_transaction *base)
 {
 	struct odb_transaction_files *transaction =
 		container_of(base, struct odb_transaction_files, base);
+	struct string_list_item *item;
 	int ret = 0;
 
-	for (size_t i = 0; i < transaction->pack_lockfiles_nr; i++)
-		ret |= delete_tempfile(&transaction->pack_lockfiles[i]);
+	/*
+	 * Only the ".keep" files that turned out to be ours still have a
+	 * tempfile attached; delete_tempfile() does nothing for the rest.
+	 */
+	for_each_string_list_item(item, &transaction->pack_lockfiles) {
+		struct tempfile *lockfile = item->util;
 
-	free(transaction->pack_lockfiles);
+		ret |= delete_tempfile(&lockfile);
+	}
+
+	string_list_clear(&transaction->pack_lockfiles, 0);
+	FREE_AND_NULL(transaction->keep_msg);
 
 	return ret;
 }
@@ -1492,6 +1544,7 @@ int odb_transaction_files_begin(struct odb_source *source,
 	transaction->base.write_pack = odb_transaction_files_write_pack;
 	transaction->base.env = odb_transaction_files_env;
 	transaction->flags = flags;
+	string_list_init_dup(&transaction->pack_lockfiles);
 
 	transaction->prefix = "bulk-fsync";
 	if (flags & ODB_TRANSACTION_RECEIVE) {
