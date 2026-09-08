@@ -1018,6 +1018,11 @@ on some performance improvements or features). This variable currently
 only affects clones and fetches; it is not yet used for pushes (but may
 be in the future).
 
+`GIT_ALLOW_NO_VERIFY`::
+	If this Boolean environment variable is set to true (e.g. `1`), permits the use
+	of `--no-verify` (or `-n`) even when `hooks.allowNoVerify` is set to `false`.
+	This serves as an emergency override mechanism for workflows when hooks fail unexpectedly.
+
 `GIT_OPTIONAL_LOCKS`::
 	If this Boolean environment variable is set to false, Git will complete any requested operation without
 	performing any optional sub-operations that require taking a lock.
