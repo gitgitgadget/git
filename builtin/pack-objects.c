@@ -4274,6 +4274,7 @@ static void enumerate_cruft_objects(void)
 static void enumerate_and_traverse_cruft_objects(struct string_list *fresh_packs)
 {
 	struct packed_git *p;
+	struct odb_source *source;
 	struct rev_info revs;
 	int ret;
 
@@ -4301,10 +4302,17 @@ static void enumerate_and_traverse_cruft_objects(struct string_list *fresh_packs
 	/*
 	 * Re-mark only the fresh packs as kept so that objects in
 	 * unknown packs do not halt the reachability traversal early.
+	 * The kept-pack cache was built while those packs were still
+	 * marked, so drop it too.
 	 */
 	repo_for_each_pack(the_repository, p)
 		p->pack_keep_in_core = 0;
 	mark_pack_kept_in_core(fresh_packs, 1);
+	for (source = the_repository->objects->sources; source;
+	     source = source->next) {
+		struct odb_source_files *files = odb_source_files_downcast(source);
+		packfile_store_invalidate_kept_pack_cache(files->packed);
+	}
 
 	if (prepare_revision_walk(&revs))
 		die(_("revision walk setup failed"));
