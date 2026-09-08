@@ -1804,6 +1804,12 @@ test_lazy_prereq SYMLINKS '
 	ln -s x y && test -h y
 '
 
+test_lazy_prereq REFLINK '
+	# test whether the filesystem supports reflinks (FICLONE)
+	echo reflink >reflink-src &&
+	test-tool reflink reflink-src reflink-dst
+'
+
 test_lazy_prereq SYMLINKS_WINDOWS '
 	# test whether symbolic links are enabled on Windows
 	test_have_prereq MINGW &&
