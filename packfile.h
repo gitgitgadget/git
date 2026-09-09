@@ -234,6 +234,9 @@ void close_pack_index(struct packed_git *);
 
 int close_pack_fd(struct packed_git *p);
 
+/* Return the platform's maximum number of open file descriptors. */
+unsigned int get_max_fd_limit(void);
+
 uint32_t get_pack_fanout(struct packed_git *p, uint32_t value);
 
 struct object_database;

@@ -937,7 +937,13 @@ static int check_pack_rev_indexes(struct repository *r, int show_progress)
 		int load_error = load_pack_revindex_from_disk(p);
 
 		if (load_error < 0) {
-			error(_("unable to load rev-index for pack '%s'"), p->pack_name);
+			if (access(p->pack_name, F_OK) < 0 && errno == ENOENT)
+				error(_("pack '%s' disappeared while fsck was "
+					"running; retry after concurrent "
+					"maintenance completes"), p->pack_name);
+			else
+				error(_("unable to load rev-index for pack '%s'"),
+				      p->pack_name);
 			res = ERROR_PACK_REV_INDEX;
 		} else if (!load_error &&
 			   !load_pack_revindex(r, p) &&
