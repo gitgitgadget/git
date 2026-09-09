@@ -543,6 +543,15 @@ static void batch_object_write(const char *obj_name,
 		if (opt->objects_filter.choice == LOFC_BLOB_LIMIT)
 			data->info.sizep = &data->size;
 
+		/*
+		 * With "--batch-all-objects --unordered" we read straight
+		 * from the pack the walk handed us.  If a concurrent repack
+		 * removed it, fall back to a normal lookup; is_pack_valid()
+		 * pins the pack's fd, so a passing check stays valid even if
+		 * the pack is unlinked right after.
+		 */
+		if (pack && !is_pack_valid(pack))
+			pack = NULL;
 		if (pack)
 			ret = packed_object_info(NULL, pack, offset, &data->info);
 		else
@@ -1008,10 +1017,25 @@ static int batch_one_object_oi(const struct object_id *oid,
 	return payload->callback(oid, NULL, 0, payload->payload);
 }
 
-static void batch_each_object(struct batch_options *opt,
-			      for_each_object_fn callback,
-			      unsigned flags,
-			      void *_payload)
+/*
+ * Open every pack index up front so the enumeration's object set is
+ * fixed: an index mmap survives unlink() of the .idx and pack fd
+ * pressure (close_one_pack() closes only the pack fd).  This narrows
+ * the race with concurrent repacks, like f6b262581a88 (fsck: snapshot
+ * default refs before object walk, 2026-01-09).
+ */
+static void snapshot_pack_indexes(void)
+{
+	struct packed_git *p;
+
+	repo_for_each_pack(the_repository, p)
+		open_pack_index(p);
+}
+
+static int batch_each_object(struct batch_options *opt,
+			     for_each_object_fn callback,
+			     unsigned flags,
+			     void *_payload)
 {
 	struct for_each_object_payload payload = {
 		.callback = callback,
@@ -1026,8 +1050,8 @@ static void batch_each_object(struct batch_options *opt,
 		.filter = &opt->objects_filter,
 	};
 
-	odb_for_each_object_ext(the_repository->objects, &oi,
-				batch_one_object_oi, &payload, &opts);
+	return odb_for_each_object_ext(the_repository->objects, &oi,
+				       batch_one_object_oi, &payload, &opts);
 }
 
 static int batch_objects(struct batch_options *opt)
@@ -1075,6 +1099,8 @@ static int batch_objects(struct batch_options *opt)
 
 		disable_replace_refs();
 
+		snapshot_pack_indexes();
+
 		cb.opt = opt;
 		cb.expand = &data;
 		cb.scratch = &output;
@@ -1084,20 +1110,24 @@ static int batch_objects(struct batch_options *opt)
 
 			cb.seen = &seen;
 
-			batch_each_object(opt, batch_unordered_object,
-					  ODB_FOR_EACH_OBJECT_PACK_ORDER, &cb);
+			retval = batch_each_object(opt, batch_unordered_object,
+						   ODB_FOR_EACH_OBJECT_PACK_ORDER, &cb);
 
 			oidset_clear(&seen);
 		} else {
 			struct oid_array sa = OID_ARRAY_INIT;
 
-			batch_each_object(opt, collect_object, 0, &sa);
+			retval = batch_each_object(opt, collect_object, 0, &sa);
 			oid_array_for_each_unique(&sa, batch_object_cb, &cb);
 
 			oid_array_clear(&sa);
 		}
 
 		strbuf_release(&output);
+		if (retval)
+			return error(_("object enumeration ended early; "
+				       "a pack may have been removed by "
+				       "concurrent repacking"));
 		return 0;
 	}
 

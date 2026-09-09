@@ -1,0 +1,173 @@
+git-pack-aggregate(1)
+=====================
+
+NAME
+----
+git-pack-aggregate - Quickly roll up loose objects and small packs
+without doing any delta compression or search
+
+SYNOPSIS
+--------
+[verse]
+'git pack-aggregate' (--once | --loop) [--interval=<seconds>]
+                   [--min-loose=<n>] [--min-packs=<n>]
+                   [--max-loose-objects=<n>]
+                   [--max-objects=<n>] [--max-packs=<n>]
+                   [--exclude-pack-file=<path>]
+                   [--exclude-loose-file=<path>]
+                   [--parent-pipe-fd=<n>]
+
+DESCRIPTION
+-----------
+
+`git pack-aggregate` rolls accumulated loose objects and small
+packfiles into new packs.  It can run one cycle as a quick recovery
+step, or run cycles periodically to keep new material under control
+while longer-running maintenance proceeds.  Each cycle has two steps:
+
+1. Bundle local loose objects (minus any listed in
+   `--exclude-loose-file`) into a new pack and unlink the loose copies.
+2. Aggregate small local packs (minus any listed in
+   `--exclude-pack-file`, or those referenced by the multi-pack-index,
+   or those carrying a `.keep`, `.promisor`, `.mtimes`, or `.bitmap`
+   sidecar) into another new pack and unlink the source packs.  The
+   pack written in step 1 is naturally a candidate here and will
+   normally be folded into the step-2 output.
+
+No delta search is performed, no bitmaps or commit-graphs are updated,
+and no objects are recompressed; the existing on-disk representation
+of each object is copied through unchanged.  Both new packs are
+written with `pack-objects --window=0 --mark-bad-deltas`, so each one
+ships with a `.baddeltas` sidecar (see linkgit:gitformat-pack[5]).  A
+subsequent thorough repack (linkgit:git-repack[1]) honors that marker
+and reconsiders intra-pack deltas at that time.
+
+This command serves two related purposes.  With `--once`, it provides a
+quick recovery step for a repository that has accumulated many loose
+objects or small packs.  With `--loop`, it keeps new material under
+control while a long-running repack is in flight.  Both reduce the
+number of files that unrelated Git operations must scan, while leaving
+a later thorough linkgit:git-repack[1] to optimize deltas and pack
+layout.  The `repack.aggregateOnce` and `repack.aggregateLoop`
+configuration variables (see linkgit:git-repack[1]) let `git repack`
+request either behavior independently.
+
+Like linkgit:git-repack[1], `git pack-aggregate` takes no locks of its
+own.  Callers that need serialization must arrange it themselves (for
+example by running under `git gc`).
+The exclusion files supplied via `--exclude-pack-file` and
+`--exclude-loose-file` are the only mechanism by which a concurrent
+`pack-objects` or `git repack` declares "do not touch these inputs".
+When spawned by `git repack`, protection across the parent's MIDX update
+is layered: each aggregation cycle skips packs already named by the
+current MIDX and packs with protective sidecars; `--emit-input-packs`
+protects every local pack visible when the parent's `pack-objects`
+prepares its inputs; and temporary `.keep` files protect the parent's new
+packs before their indexes become visible and remain until after its MIDX
+write.  The parent's explicit MIDX include list is drawn from those
+protected existing and newly-written packs, so the aggregator cannot
+retire a pack that the parent is about to reference.
+
+OPTIONS
+-------
+
+--once::
+	Run a single cycle and exit.  Exactly one of `--once` or
+	`--loop` is required.
+
+--loop::
+	Run cycles forever, sleeping `--interval` seconds between
+	cycles.  Stops on `SIGTERM`, `SIGHUP`, or `SIGINT`.
+
+--interval=<seconds>::
+	Number of seconds to sleep between the end of one cycle and the
+	start of the next.  Defaults to 60.  Only meaningful with
+	`--loop`.
+
+--min-loose=<n>::
+	Skip aggregation of loose objects if fewer than `<n>` remain
+	after applying `--exclude-loose-file`.  Defaults to 5.
+
+--min-packs=<n>::
+	Skip aggregation of small packfiles if fewer than `<n>`
+	aggregatable packs remain after applying all exclusions.  Defaults
+	to 5.
+
+--exclude-pack-file=<path>::
+	Read a list of pack basenames (one per line) from `<path>` and
+	never touch any of those packs.  Lines may name a basename with
+	or without a `.pack` or `.idx` suffix; the suffix is stripped.
+	Blank lines and lines beginning with `#` are ignored.  When
+	`git pack-aggregate` is spawned by a long-running `git repack`,
+	this file is populated by that `pack-objects` itself via
+	`--emit-input-packs`, and may contain a conservative superset
+	of the packs it will actually consume (such as in `--geometric`
+	mode).
+
+--exclude-loose-file=<path>::
+	Read a list of loose object IDs (one per line) from `<path>`
+	and never pack or unlink any of those loose objects.  Blank
+	lines and lines beginning with `#` are ignored.  When `git
+	pack-aggregate` is spawned by a long-running `git repack`, this
+	file is populated by that `pack-objects` itself via
+	`--emit-input-loose`.
+
+--parent-pipe-fd=<n>::
+	An inherited pipe file descriptor whose write end the parent
+	process holds open.  When the parent exits the pipe is closed
+	and `git pack-aggregate` exits at the next cycle boundary,
+	without waiting out the remainder of `--interval`.  This is an
+	internal plumbing option used by `git repack` to keep its
+	companion aggregator from outliving it.
+
+--max-loose-objects=<n>::
+	Pack at most `<n>` loose objects into each output pack.  Each pack
+	is installed and its loose copies are removed before the next
+	tranche begins, so repository performance can improve incrementally
+	during recovery from an extreme backlog.  Loose objects created
+	after the cycle starts are left for the next cycle.
+	If multiple tranches are needed, their output packs are left for a
+	later aggregation cycle instead of being copied again immediately.
+	Defaults to the `pack.aggregateMaxLooseObjects` configuration value,
+	or 100000 if that is unset.  A value of `0` disables the limit.
+
+--max-objects=<n>::
+	Skip any pack that contains more than `<n>` objects, leaving it
+	untouched by step 2.  The object count is estimated cheaply from
+	the size of the pack's `.idx` file rather than by opening it.
+	This keeps `git pack-aggregate` focused on rolling up the small
+	packs it is meant for, instead of repacking a large base pack
+	(which would amount to a near-full repack).  Defaults to the
+	`pack.aggregateMaxObjects` configuration value, or 100000 if that
+	is unset.  A value of `0` disables the limit.  Note that packs
+	already referenced by the multi-pack-index are excluded
+	regardless of this setting, so on a normally-maintained
+	repository the large base pack is skipped anyway.
+
+--max-packs=<n>::
+	Fold at most `<n>` packs into each output pack.  When more than
+	`<n>` aggregatable packs are present, they are split into several
+	evenly-sized batches and each batch is rolled up into its own
+	output pack, rather than combining everything into a single pack.
+	This bounds how many packs any single `pack-objects` run (and any
+	later reader) must keep open at once, which matters on repositories
+	with such an extreme number of packs that per-process limits on
+	memory mappings or open files would otherwise be exceeded.  Note
+	that a pack in use costs roughly three such resources -- its
+	`.idx`, `.pack`, and `.rev` files -- so a batch of `<n>` packs
+	holds on the order of `3 * <n>` at peak; leave headroom below the
+	relevant limit when choosing `<n>`.  Splitting happens on whole-pack
+	boundaries, so each batch reuses the packs' existing deltas as-is
+	(a delta and its base always share a pack).  Defaults to the
+	`pack.aggregateMaxPacks` configuration value, or `10000` if that is
+	unset.  A value of `0` disables the limit and folds everything into
+	one pack.
+
+SEE ALSO
+--------
+linkgit:git-repack[1], linkgit:git-pack-objects[1],
+linkgit:gitformat-pack[5]
+
+GIT
+---
+Part of the linkgit:git[1] suite

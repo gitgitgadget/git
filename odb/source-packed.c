@@ -743,7 +743,8 @@ static void prepare_pack(const char *full_name, size_t full_name_len,
 	    ends_with(file_name, ".bitmap") ||
 	    ends_with(file_name, ".keep") ||
 	    ends_with(file_name, ".promisor") ||
-	    ends_with(file_name, ".mtimes"))
+	    ends_with(file_name, ".mtimes") ||
+	    ends_with(file_name, ".baddeltas"))
 		string_list_append(data->garbage, full_name);
 	else
 		report_garbage(PACKDIR_FILE_GARBAGE, full_name);

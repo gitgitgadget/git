@@ -13,6 +13,7 @@ SYNOPSIS
 	[--window=<n>] [--depth=<n>] [--threads=<n>] [--keep-pack=<pack-name>]
 	[--write-midx[=<mode>]] [--name-hash-version=<n>] [--path-walk]
 	[--filter=<filter-spec>] [--drop-filtered [--dry-run]]
+	[--[no-]aggregate-once] [--[no-]aggregate-loop]
 
 DESCRIPTION
 -----------
@@ -337,6 +338,25 @@ created for any new pack(s) without disturbing the existing chain.
 	Pass the `--path-walk` option to the underlying `git pack-objects`
 	process. See linkgit:git-pack-objects[1] for full details.
 
+--aggregate-once::
+--no-aggregate-once::
+	Run linkgit:git-pack-aggregate[1] once before inspecting the
+	packs and loose objects to repack.  This can quickly reduce a
+	large number of files before the more thorough repack begins.
+	Overrides the `repack.aggregateOnce` configuration variable.
+	Off by default.
+
+--aggregate-loop::
+--no-aggregate-loop::
+	Spawn a background linkgit:git-pack-aggregate[1] for the
+	duration of the main pack-objects run.  The aggregator rolls
+	up small packs and loose objects that arrive after
+	pack-objects has enumerated its inputs, preventing them from
+	accumulating in `objects/pack/` and slowing other Git
+	operations on busy servers.  Overrides the
+	`repack.aggregateLoop` configuration variable.  Off by
+	default.
+
 CONFIGURATION
 -------------
 
@@ -361,6 +381,7 @@ SEE ALSO
 --------
 linkgit:git-pack-objects[1]
 linkgit:git-prune-packed[1]
+linkgit:git-pack-aggregate[1]
 
 GIT
 ---
