@@ -888,4 +888,30 @@ test_expect_success 'git pull --rebase against local branch' '
 	test_cmp expect file2
 '
 
+test_expect_success 'pull does not crash when a merge head does not resolve' '
+	test_when_finished "rm -rf up dn" &&
+	git init up &&
+	(
+		cd up &&
+		test_commit base &&
+		git switch -c sideA &&
+		test_commit a &&
+		git switch -c sideB base &&
+		test_commit b
+	) &&
+	git clone up dn &&
+	(
+		cd dn &&
+		git -c fetch.unpackLimit=1000 fetch origin \
+			"+refs/heads/*:refs/remotes/origin/*" &&
+		git commit-graph write --reachable &&
+		oid=$(git rev-parse refs/remotes/origin/sideA) &&
+		obj=.git/objects/$(test_oid_to_path "$oid") &&
+		test -f "$obj" &&
+		chmod u+w "$obj" &&
+		>"$obj" &&
+		test_must_fail git pull --no-rebase origin sideA sideB
+	)
+'
+
 test_done
