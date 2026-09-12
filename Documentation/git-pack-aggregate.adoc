@@ -11,6 +11,7 @@ SYNOPSIS
 [verse]
 'git pack-aggregate' --once [--min-loose=<n>] [--min-packs=<n>]
                    [--max-objects=<n>]
+                   [--max-input-pack-size=<bytes>]
 
 DESCRIPTION
 -----------
@@ -39,6 +40,9 @@ The `pack.packSizeLimit` setting can split either step's output into
 multiple packs.  All outputs from a batch are installed before its
 input packs or loose objects are removed.  Size-based splitting may
 require expanding deltas whose bases are in another output pack.
+By default, step 2 skips packs larger than half that limit to avoid
+repeatedly copying nearly full packs without reducing the pack count.
+See `--max-input-pack-size` for a smaller input-size threshold.
 
 This command provides a quick recovery step for a repository that has
 accumulated many loose objects or small packs.  It reduces the number
@@ -75,6 +79,21 @@ OPTIONS
 	already referenced by the multi-pack-index are excluded
 	regardless of this setting, so on a normally-maintained
 	repository the large base pack is skipped anyway.
+
+--max-input-pack-size=<bytes>::
+	Skip input packs whose `.pack` file is larger than `<bytes>`.
+	This byte-size gate applies in addition to `--max-objects`;
+	it does not limit loose-object rollup or individual output packs.
+	The suffixes `k`, `m`, and `g` are supported.
++
+Defaults to `pack.aggregateMaxInputPackSize`, or `0` (automatic).
+Automatic selection uses half of `pack.packSizeLimit`, after applying
+the same 1-MiB minimum for nonzero output limits as `pack-objects`.
+An explicit positive input limit above that ceiling is an error;
+a lower limit is allowed.  If `pack.packSizeLimit` is unset or zero,
+automatic selection imposes no byte-size gate, and any explicit
+positive input limit is allowed.  An explicit `0` overrides the
+configuration and restores automatic selection.
 
 SEE ALSO
 --------

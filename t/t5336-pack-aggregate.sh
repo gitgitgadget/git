@@ -155,30 +155,41 @@ do
 		cp -R repo work &&
 		(
 			cd work &&
-			# Each blob fits in 1 MiB, but no pair does.
+			blob_size=716800 &&
+			output_packs=3 &&
+			if test "$input_mode" = packed
+			then
+				# Each input must fit below the half-limit gate.
+				blob_size=409600 &&
+				output_packs=2
+			fi &&
 			for i in 1 2 3
 			do
-				test-tool genrandom "split-$i" 716800 >blob &&
+				test-tool genrandom "split-$i" "$blob_size" >blob &&
 				oid=$(git hash-object -w blob) &&
 				test-tool chmtime -1 \
 					".git/objects/$(test_oid_to_path "$oid")" &&
+				if test "$input_mode" = packed
+				then
+					echo "$oid" |
+					git pack-objects --window=0 \
+						.git/objects/pack/pack >input.hash
+				fi &&
 				echo "$oid" || return 1
 			done >oids &&
 			if test "$input_mode" = packed
 			then
-				git pack-objects --window=0 .git/objects/pack/pack \
-					<oids >input.hash &&
 				git prune-packed
 			fi &&
 			sort oids >expect &&
 
-			# On the second pass, all three output names match inputs.
+			# A one-blob output can have the same name as an input.
 			for pass in 1 2
 			do
 				git -c pack.packSizeLimit=1m pack-aggregate --once \
 					--min-loose=1 --min-packs=1 &&
-				test 3 -eq "$(count_packs)" &&
-				test 3 -eq "$(count_baddeltas)" &&
+				test "$output_packs" -eq "$(count_packs)" &&
+				test "$output_packs" -eq "$(count_baddeltas)" &&
 				test 0 -eq "$(count_loose)" &&
 				find .git/objects/pack -name ".tmp-*" >temporary &&
 				test_must_be_empty temporary &&
@@ -281,6 +292,96 @@ test_expect_success 'pack.aggregateMaxObjects rejects negative values' '
 		test_grep "cannot be negative" err
 	)
 '
+
+test_expect_success 'the automatic byte gate excludes nearly full packs' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		test-tool genrandom large 716800 >blob &&
+		oid=$(git hash-object -w blob) &&
+		echo "$oid" |
+		git pack-objects --window=0 .git/objects/pack/pack >large.hash &&
+		large=.git/objects/pack/pack-$(cat large.hash) &&
+		git prune-packed &&
+		build_n_packs 5 >/dev/null &&
+
+		# The excluded pack does not count toward --min-packs.
+		git -c pack.packSizeLimit=1m pack-aggregate --once \
+			--min-packs=6 --max-objects=0 &&
+		test 6 -eq "$(count_packs)" &&
+		test 0 -eq "$(count_baddeltas)" &&
+		git -c pack.packSizeLimit=1m -c pack.aggregateMaxInputPackSize=1 \
+			pack-aggregate --once --min-packs=5 \
+			--max-input-pack-size=0 --max-objects=0 &&
+		test_path_is_file "$large.pack" &&
+		test_path_is_missing "$large.baddeltas" &&
+		test 2 -eq "$(count_packs)" &&
+		test 1 -eq "$(count_baddeltas)" &&
+		git fsck
+	)
+'
+
+test_expect_success 'input byte cap uses config, with an inclusive CLI override' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		big=$(build_big_pack 20) &&
+		size=$(wc -c <.git/objects/pack/$big.pack) &&
+		build_n_packs 5 >/dev/null &&
+		git -c pack.aggregateMaxInputPackSize=$((size - 1)) \
+			pack-aggregate --once --min-packs=1 &&
+		test_path_is_file .git/objects/pack/$big.pack &&
+		test_path_is_missing .git/objects/pack/$big.baddeltas &&
+		test 2 -eq "$(count_packs)" &&
+		git -c pack.aggregateMaxInputPackSize=1 pack-aggregate --once \
+			--min-packs=1 --max-input-pack-size="$size" &&
+		test_path_is_missing .git/objects/pack/$big.pack &&
+		test 1 -eq "$(count_packs)" &&
+		git fsck
+	)
+'
+
+test_expect_success 'zero input cap restores unlimited automatic selection' '
+	test_when_finished "rm -fr work" &&
+	cp -R repo work &&
+	(
+		cd work &&
+		build_n_packs 5 >/dev/null &&
+		git -c pack.packSizeLimit=0 -c pack.aggregateMaxInputPackSize=1 \
+			pack-aggregate --once --max-input-pack-size=0 &&
+		test 1 -eq "$(count_packs)" &&
+		git fsck
+	)
+'
+
+for output_limit in 1m 1k
+do
+	test_expect_success "input byte cap respects the effective $output_limit output limit" '
+		git -C repo -c pack.packSizeLimit=$output_limit pack-aggregate \
+			--once --max-input-pack-size=512k &&
+		test_must_fail git -C repo -c pack.packSizeLimit=$output_limit \
+			pack-aggregate --once --max-input-pack-size=524289 2>err &&
+		test_grep -F "half the effective pack.packSizeLimit" err &&
+		test_must_fail git -C repo -c pack.packSizeLimit=$output_limit \
+			-c pack.aggregateMaxInputPackSize=524289 \
+			pack-aggregate --once 2>err &&
+		test_grep -F "half the effective pack.packSizeLimit" err
+	'
+done
+
+for value in -1 bogus 999999999999999999999999999999
+do
+	test_expect_success "input byte cap rejects $value" '
+		test_must_fail git -C repo pack-aggregate --once \
+			--max-input-pack-size=$value 2>err &&
+		test_grep "max-input-pack-size" err &&
+		test_must_fail git -C repo -c pack.aggregateMaxInputPackSize=$value \
+			pack-aggregate --once 2>err &&
+		test_grep "aggregatemaxinputpacksize" err
+	'
+done
 
 test_expect_success 'aggregate re-rolls up .baddeltas packs' '
 	test_when_finished "rm -fr work" &&
