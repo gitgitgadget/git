@@ -373,6 +373,18 @@ int delete_tempfile(struct tempfile **tempfile_p)
 	return err ? -1 : 0;
 }
 
+void unregister_tempfile(struct tempfile **tempfile_p)
+{
+	struct tempfile *tempfile = *tempfile_p;
+
+	if (!is_tempfile_active(tempfile))
+		return;
+
+	close_tempfile_gently(tempfile);
+	deactivate_tempfile(tempfile);
+	*tempfile_p = NULL;
+}
+
 void reassign_tempfile_ownership(pid_t from, pid_t to)
 {
 	volatile struct volatile_list_head *pos;

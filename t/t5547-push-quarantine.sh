@@ -101,4 +101,56 @@ test_expect_success '.keep file is removed after push' '
 	test_path_is_missing "$keep"
 '
 
+test_expect_success 'a rejected push does not remove a foreign ".keep"' '
+	test_when_finished rm -rf foreign.git &&
+	git init --bare foreign.git &&
+	git -C foreign.git config set receive.unpackLimit 0 &&
+
+	# Get a packfile into the main object database without updating any
+	# ref, so that pushing the same objects again reuses its name.
+	test_hook -C foreign.git update <<-\EOF &&
+	exit 1
+	EOF
+	test_commit foreign &&
+	test_must_fail git push foreign.git HEAD:refs/heads/one &&
+
+	pack="$(ls foreign.git/objects/pack/pack-*.pack)" &&
+	keep="${pack%.pack}.keep" &&
+
+	# Pretend somebody else holds the lock on that packfile, and let the
+	# next push be rejected before its objects are ever migrated.
+	>"$keep" &&
+	test_hook -C foreign.git pre-receive <<-\EOF &&
+	exit 1
+	EOF
+	test_must_fail git push foreign.git HEAD:refs/heads/two &&
+	test_path_is_file "$keep"
+'
+
+test_expect_success 'a ".keep" installed by a failed migration is removed' '
+	test_when_finished rm -rf partial.git &&
+	git init --bare partial.git &&
+	git -C partial.git config set receive.unpackLimit 0 &&
+	git -C partial.git config set pack.indexVersion 1 &&
+
+	# Leave the objects in the main object database without a ref, so
+	# that pushing them again produces a pack with the same name.
+	test_hook -C partial.git update <<-\EOF &&
+	exit 1
+	EOF
+	test_commit partial &&
+	test_must_fail git push partial.git HEAD:refs/heads/one &&
+
+	# The same pack now arrives with a differently formatted index. The
+	# ".keep" is migrated first and goes in fine; the index then collides
+	# with the one already there, and the migration fails with our
+	# ".keep" already installed.
+	git -C partial.git config set pack.indexVersion 2 &&
+	test_must_fail git push partial.git HEAD:refs/heads/two 2>err &&
+	test_grep "unable to migrate" err &&
+
+	pack="$(ls partial.git/objects/pack/pack-*.pack)" &&
+	test_path_is_missing "${pack%.pack}.keep"
+'
+
 test_done
