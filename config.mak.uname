@@ -780,6 +780,7 @@ ifeq ($(uname_S),MINGW)
                 else
 			CARGO_BUILD_TARGET = $(HOST_CPU)-pc-windows-gnu
                 endif
+		export CARGO_BUILD_TARGET
 
 		BASIC_LDFLAGS += -Wl,--pic-executable
 		COMPAT_CFLAGS += -DDETECT_MSYS_TTY \
