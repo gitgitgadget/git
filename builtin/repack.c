@@ -19,6 +19,9 @@
 #include "hex.h"
 #include "wt-status.h"
 #include "read-cache-ll.h"
+#include "wrapper.h"
+#include "dir.h"
+#include "trace2.h"
 
 #define ALL_INTO_ONE 1
 #define LOOSEN_UNREACHABLE 2
@@ -36,12 +39,15 @@ static int midx_must_contain_cruft = 1;
 static int drop_filtered;
 static int dry_run;
 static int write_bitmaps_given;
+static int aggregate_once_opt = -1;
+static int aggregate_loop_opt = -1;
 
 static const char *const git_repack_usage[] = {
 	N_("git repack [-a] [-A] [-d] [-f] [-F] [-l] [-n] [-q] [-b] [-m]\n"
 	   "[--window=<n>] [--depth=<n>] [--threads=<n>] [--keep-pack=<pack-name>]\n"
 	   "[--write-midx[=<mode>]] [--name-hash-version=<n>] [--path-walk]\n"
-	   "[--filter=<filter-spec>] [--drop-filtered [--dry-run]]"),
+	   "[--filter=<filter-spec>] [--drop-filtered [--dry-run]]\n"
+	   "[--[no-]aggregate-once] [--[no-]aggregate-loop]"),
 	NULL
 };
 
@@ -117,6 +123,14 @@ static int repack_config(const char *var, const char *value,
 								      ctx->kvi);
 		return 0;
 	}
+	if (!strcmp(var, "repack.aggregateonce")) {
+		aggregate_once_opt = git_config_bool(var, value);
+		return 0;
+	}
+	if (!strcmp(var, "repack.aggregateloop")) {
+		aggregate_loop_opt = git_config_bool(var, value);
+		return 0;
+	}
 	return git_default_config(var, value, ctx, cb);
 }
 
@@ -155,12 +169,395 @@ static int option_parse_write_midx(const struct option *opt, const char *arg,
 	return 0;
 }
 
+struct pack_aggregate_process {
+	struct child_process cmd;
+	char *tmpdir;
+	char *exclude_packs_path;
+	char *exclude_loose_path;
+	/* Full paths of the ".keep" markers created by this repack. */
+	struct string_list installed_keeps;
+	/*
+	 * Write end of a pipe whose read end the aggregator inherits
+	 * (passed via --parent-pipe-fd).  Closing this fd is the
+	 * orphan-detection signal: when repack exits without an
+	 * explicit stop_pack_aggregate(), the aggregator sees EOF
+	 * and bails out instead of running unsupervised.
+	 */
+	int parent_pipe_write_fd;
+	int started;
+};
+#define AGGREGATE_KEEP_MARKER_PREFIX "git-repack-aggregate-temporary"
+
+/*
+ * Scan packdir for stale ".keep" markers left behind by previous
+ * crashed repacks: files whose contents begin with our marker
+ * prefix and whose owning pid is no longer running.  Skip anything
+ * we cannot parse (foreign ".keep" files) or whose owner is alive.
+ */
+static void clean_stale_aggregate_keeps(const char *packdir)
+{
+	DIR *dir = opendir(packdir);
+	struct dirent *ent;
+	struct strbuf path = STRBUF_INIT;
+
+	if (!dir)
+		return;
+
+	while ((ent = readdir(dir))) {
+		const char *p;
+		char *end;
+		long pid;
+		int fd;
+		ssize_t n;
+		char buf[256];
+
+		if (!ends_with(ent->d_name, ".keep"))
+			continue;
+
+		strbuf_reset(&path);
+		strbuf_addf(&path, "%s/%s", packdir, ent->d_name);
+
+		fd = open(path.buf, O_RDONLY);
+		if (fd < 0)
+			continue;
+		n = read_in_full(fd, buf, sizeof(buf) - 1);
+		close(fd);
+		if (n <= 0)
+			continue;
+		buf[n] = '\0';
+
+		if (!skip_prefix(buf, AGGREGATE_KEEP_MARKER_PREFIX " pid=", &p))
+			continue;
+		errno = 0;
+		pid = strtol(p, &end, 10);
+		if (errno || end == p || pid <= 0)
+			continue;
+		if (*end != '\n' && *end != '\0')
+			continue;
+
+		/* Send no signal; just check existence of process */
+		if (!kill((pid_t)pid, 0))
+			continue;
+		if (errno != ESRCH)
+			continue;
+
+		if (unlink(path.buf) && errno != ENOENT)
+			warning_errno(_("could not unlink stale "
+					"aggregate .keep marker '%s'"),
+				      path.buf);
+	}
+
+	closedir(dir);
+	strbuf_release(&path);
+}
+
+/*
+ * Drop a ".keep" marker on every newly written pack so that the
+ * aggregator (which respects ".keep") cannot pick up one of the
+ * outputs from the primary repacking work.  We do this BEFORE the
+ * install loop so the marker is in place the moment
+ * generated_pack_install() renames ".idx" into view.
+ *
+ * We use O_CREAT|O_EXCL: if a ".keep" already exists for that
+ * basename (e.g. user-created, or a stale marker we failed to
+ * clean), we leave it alone and do NOT record it for cleanup --
+ * cleanup must only ever unlink markers we ourselves created.
+ */
+static void install_aggregate_keep_markers(struct pack_aggregate_process *agg,
+					   const char *packdir,
+					   const struct string_list *names)
+{
+	struct strbuf path = STRBUF_INIT;
+	struct strbuf content = STRBUF_INIT;
+	size_t i;
+
+	strbuf_addf(&content, "%s pid=%ld\n",
+		    AGGREGATE_KEEP_MARKER_PREFIX, (long)getpid());
+
+	for (i = 0; i < names->nr; i++) {
+		int fd;
+
+		strbuf_reset(&path);
+		strbuf_addf(&path, "%s/pack-%s.keep", packdir,
+			    names->items[i].string);
+
+		fd = open(path.buf, O_WRONLY | O_CREAT | O_EXCL, 0666);
+		if (fd < 0) {
+			if (errno == EEXIST)
+				continue;
+			die_errno(_("could not create aggregate "
+				    ".keep marker '%s'"), path.buf);
+		}
+		if (write_in_full(fd, content.buf, content.len) < 0)
+			die_errno(_("could not write aggregate "
+				    ".keep marker '%s'"), path.buf);
+		close(fd);
+		string_list_append(&agg->installed_keeps, path.buf);
+	}
+
+	strbuf_release(&path);
+	strbuf_release(&content);
+}
+
+/*
+ * Unlink every ".keep" marker we created earlier.  Only call this after
+ * pack-aggregate has been reaped, or it could see a pack lose its marker
+ * while it is still running.
+ */
+static void remove_aggregate_keep_markers(struct pack_aggregate_process *agg)
+{
+	size_t i;
+
+	for (i = 0; i < agg->installed_keeps.nr; i++) {
+		const char *p = agg->installed_keeps.items[i].string;
+		if (unlink(p) && errno != ENOENT)
+			warning_errno(_("could not unlink aggregate "
+					".keep marker '%s'"), p);
+	}
+	string_list_clear(&agg->installed_keeps, 0);
+}
+
+static int wait_for_emit_files(const char *packs_path,
+			       const char *loose_path,
+			       int pack_objects_out_fd)
+{
+	struct stat st;
+	int waited_ms = 0;
+	int sleep_ms = 20;
+	const int max_wait_ms = 60000;
+	struct pollfd pfd;
+
+	/*
+	 * POLLHUP is reported in revents regardless of whether it
+	 * appears in events, so we leave events==0; a hang-up on
+	 * pack-objects' stdout pipe means it has exited.  pack-objects
+	 * writes its emit files immediately after enumerating its
+	 * inputs and well before producing any output, so during this
+	 * wait there is nothing readable on the pipe to confuse us.
+	 *
+	 * We never waitpid() here: finish_pack_objects_cmd() reaps the
+	 * child later; reaping twice would be incorrect.
+	 */
+	pfd.fd = pack_objects_out_fd;
+	pfd.events = 0;
+
+	while (waited_ms < max_wait_ms) {
+		int ok_packs = (stat(packs_path, &st) == 0);
+		int ok_loose = (stat(loose_path, &st) == 0);
+		int ret;
+		if (ok_packs && ok_loose)
+			return 0;
+		pfd.revents = 0;
+		ret = poll(&pfd, 1, sleep_ms);
+		if (ret < 0 && errno != EINTR)
+			return error_errno(_("poll on pack-objects "
+					     "pipe failed"));
+		if (ret > 0 &&
+		    (pfd.revents & (POLLHUP | POLLERR | POLLNVAL)))
+			return error(_("pack-objects exited before "
+				       "emitting exclude files"));
+		waited_ms += sleep_ms;
+		if (sleep_ms < 200)
+			sleep_ms *= 2;
+	}
+	return error(_("timed out waiting for pack-objects to write "
+		       "exclude files"));
+}
+
+static int set_cloexec_or_error(int fd, const char *description)
+{
+	int flags = fcntl(fd, F_GETFD);
+
+	if (flags < 0)
+		return error_errno(_("could not read descriptor flags for %s"),
+				   description);
+	if (fcntl(fd, F_SETFD, flags | FD_CLOEXEC) < 0)
+		return error_errno(_("could not mark %s close-on-exec"),
+				   description);
+	return 0;
+}
+
+static void add_pack_aggregate_test_options(struct child_process *cmd)
+{
+	if (getenv("GIT_TEST_PACK_AGGREGATE_INTERVAL"))
+		strvec_pushf(&cmd->args, "--interval=%s",
+			     getenv("GIT_TEST_PACK_AGGREGATE_INTERVAL"));
+	if (getenv("GIT_TEST_PACK_AGGREGATE_MIN_PACKS"))
+		strvec_pushf(&cmd->args, "--min-packs=%s",
+			     getenv("GIT_TEST_PACK_AGGREGATE_MIN_PACKS"));
+	if (getenv("GIT_TEST_PACK_AGGREGATE_MIN_LOOSE"))
+		strvec_pushf(&cmd->args, "--min-loose=%s",
+			     getenv("GIT_TEST_PACK_AGGREGATE_MIN_LOOSE"));
+}
+
+static int run_pack_aggregate_once(void)
+{
+	struct child_process cmd = CHILD_PROCESS_INIT;
+
+	strvec_pushl(&cmd.args, "pack-aggregate", "--once", NULL);
+	add_pack_aggregate_test_options(&cmd);
+	cmd.git_cmd = 1;
+
+	if (run_command(&cmd))
+		return error(_("git pack-aggregate --once failed"));
+	return 0;
+}
+
+static int start_pack_aggregate(struct pack_aggregate_process *agg,
+				int pack_objects_out_fd)
+{
+	int pp[2];
+
+	if (wait_for_emit_files(agg->exclude_packs_path,
+				agg->exclude_loose_path,
+				pack_objects_out_fd))
+		return -1;
+
+	/*
+	 * Build the orphan-detection pipe: child inherits the read
+	 * end as --parent-pipe-fd; we keep the write end.  Mark our
+	 * end close-on-exec so the exec'd aggregator does not inherit
+	 * a second writer that would prevent it from seeing EOF when
+	 * we exit.
+	 */
+	if (pipe(pp))
+		return error_errno(_("could not create aggregate "
+				     "parent pipe"));
+	if (set_cloexec_or_error(pp[1],
+				 _("aggregate parent-pipe write end"))) {
+		close(pp[0]);
+		close(pp[1]);
+		return -1;
+	}
+
+	strvec_pushl(&agg->cmd.args, "pack-aggregate", "--loop", NULL);
+	strvec_pushf(&agg->cmd.args, "--exclude-pack-file=%s",
+		     agg->exclude_packs_path);
+	strvec_pushf(&agg->cmd.args, "--exclude-loose-file=%s",
+		     agg->exclude_loose_path);
+	strvec_pushf(&agg->cmd.args, "--parent-pipe-fd=%d", pp[0]);
+	/*
+	 * Allow tests (which cannot sit through the default 60s
+	 * aggregator interval) to override --interval, --min-packs, and
+	 * --min-loose without us having to add separate pass-through
+	 * options.
+	 */
+	add_pack_aggregate_test_options(&agg->cmd);
+	agg->cmd.git_cmd = 1;
+	if (start_command(&agg->cmd)) {
+		close(pp[0]);
+		close(pp[1]);
+		return error(_("could not start git pack-aggregate"));
+	}
+	close(pp[0]);
+	agg->parent_pipe_write_fd = pp[1];
+	agg->started = 1;
+	return 0;
+}
+
+static void stop_pack_aggregate(struct pack_aggregate_process *agg)
+{
+	/*
+	 * Close the parent pipe up front: if the aggregator is between
+	 * cycles it will wake from poll() and exit on its own, which
+	 * lets the SIGTERM/wait dance below complete quickly.
+	 */
+	if (agg->parent_pipe_write_fd >= 0) {
+		close(agg->parent_pipe_write_fd);
+		agg->parent_pipe_write_fd = -1;
+	}
+	if (agg->started) {
+		agg->started = 0;
+		if (agg->cmd.pid > 0) {
+			pid_t pid = agg->cmd.pid;
+			int waited_ms = 0;
+			int status;
+			pid_t r;
+
+			kill(pid, SIGTERM);
+			/*
+			 * Wait briefly for graceful exit before reaping;
+			 * pack-aggregate is expected to finish quite quickly,
+			 * so a few seconds should be plenty.
+			 */
+			while (waited_ms < 5000) {
+				r = waitpid(pid, &status, WNOHANG);
+				if (r == pid || (r < 0 && errno != EINTR))
+					break;
+				sleep_millisec(50);
+				waited_ms += 50;
+			}
+			if (r != pid) {
+				kill(pid, SIGKILL);
+				while (waitpid(pid, &status, 0) < 0 &&
+				       errno == EINTR)
+					; /* nothing */
+			}
+			/*
+			 * We never call finish_command() here, so the
+			 * normal cleanup-on-exit list still has us
+			 * registered; explicitly remove ourselves so
+			 * the cleanup handler does not try to reap us
+			 * again.
+			 */
+			agg->cmd.pid = -1;
+			child_process_clear(&agg->cmd);
+		}
+	}
+	if (agg->tmpdir) {
+		struct strbuf path = STRBUF_INIT;
+		strbuf_addstr(&path, agg->tmpdir);
+		remove_dir_recursively(&path, 0);
+		strbuf_release(&path);
+		FREE_AND_NULL(agg->tmpdir);
+	}
+	FREE_AND_NULL(agg->exclude_packs_path);
+	FREE_AND_NULL(agg->exclude_loose_path);
+
+	remove_aggregate_keep_markers(agg);
+}
+
+/*
+ * Initialize the aggregator's tempdir and per-file paths.  This is
+ * called before pack-objects starts so the files' paths can be
+ * passed to it via --emit-input-{packs,loose}.  We also opportunistically
+ * sweep any stale ".keep" markers left behind by a previous repack
+ * that crashed; doing this once at init avoids repeated scans.
+ */
+static int init_pack_aggregate(struct repository *repo,
+			       struct pack_aggregate_process *agg)
+{
+	struct strbuf tmpl = STRBUF_INIT;
+	char *pdir;
+
+	pdir = mkpathdup("%s/pack", repo_get_object_directory(repo));
+	clean_stale_aggregate_keeps(pdir);
+	free(pdir);
+
+	strbuf_addf(&tmpl, "%s/pack-aggregate.XXXXXX",
+		    repo_get_object_directory(repo));
+	if (!mkdtemp(tmpl.buf)) {
+		error_errno(_("could not create pack-aggregate tempdir"));
+		strbuf_release(&tmpl);
+		return -1;
+	}
+	agg->tmpdir = strbuf_detach(&tmpl, NULL);
+	agg->exclude_packs_path = xstrfmt("%s/packs", agg->tmpdir);
+	agg->exclude_loose_path = xstrfmt("%s/loose", agg->tmpdir);
+	return 0;
+}
+
 int cmd_repack(int argc,
 	       const char **argv,
 	       const char *prefix,
 	       struct repository *repo)
 {
 	struct child_process cmd = CHILD_PROCESS_INIT;
+	struct pack_aggregate_process aggregate = {
+		.cmd = CHILD_PROCESS_INIT,
+		.installed_keeps = STRING_LIST_INIT_DUP,
+		.parent_pipe_write_fd = -1,
+	};
 	struct string_list_item *item;
 	struct string_list names = STRING_LIST_INIT_DUP;
 	struct existing_packs existing = EXISTING_PACKS_INIT;
@@ -261,6 +658,10 @@ int cmd_repack(int argc,
 				N_("delete filtered out objects (requires --filter)")),
 		OPT_BOOL(0, "dry-run", &dry_run,
 				N_("only show which objects would be dropped")),
+		OPT_BOOL(0, "aggregate-once", &aggregate_once_opt,
+			 N_("run pack-aggregate once before repacking")),
+		OPT_BOOL(0, "aggregate-loop", &aggregate_loop_opt,
+			 N_("run pack-aggregate in the background while repacking")),
 		OPT_END()
 	};
 
@@ -417,6 +818,14 @@ int cmd_repack(int argc,
 	    write_midx == REPACK_WRITE_MIDX_NONE)
 		die(_(incremental_bitmap_conflict_error));
 
+	if (geometry.split_factor && pack_everything)
+		die(_("options '%s' and '%s' cannot be used together"),
+		    "--geometric", "-A/-a");
+
+	if (filter_to && !po_args.filter_options.choice)
+		die(_("option '%s' can only be used along with '%s'"),
+		    "--filter-to", "--filter");
+
 	if (write_bitmaps && po_args.local &&
 	    odb_has_alternates(repo->objects)) {
 		/*
@@ -436,6 +845,11 @@ int cmd_repack(int argc,
 	if (config_ctx.midx_new_layer_threshold < 1)
 		die(_("invalid value for %s: %d"), "--midx-new-layer-threshold",
 		    config_ctx.midx_new_layer_threshold);
+
+	if (aggregate_once_opt > 0 && run_pack_aggregate_once()) {
+		ret = 1;
+		goto cleanup;
+	}
 
 	if (write_midx != REPACK_WRITE_MIDX_NONE && write_bitmaps) {
 		struct strbuf path = STRBUF_INIT;
@@ -458,8 +872,6 @@ int cmd_repack(int argc,
 	existing_packs_collect(&existing, &keep_pack_list);
 
 	if (geometry.split_factor) {
-		if (pack_everything)
-			die(_("options '%s' and '%s' cannot be used together"), "--geometric", "-A/-a");
 		if (write_midx == REPACK_WRITE_MIDX_INCREMENTAL) {
 			geometry.midx_layer_threshold = config_ctx.midx_new_layer_threshold;
 			geometry.midx_layer_threshold_set = true;
@@ -471,6 +883,18 @@ int cmd_repack(int argc,
 	prepare_pack_objects(&cmd, &po_args, packtmp);
 
 	show_progress = !po_args.quiet && isatty(2);
+
+	if (aggregate_loop_opt > 0) {
+		if (init_pack_aggregate(repo, &aggregate)) {
+			/* fall through: error already reported */
+			aggregate_loop_opt = 0;
+		} else {
+			strvec_pushf(&cmd.args, "--emit-input-packs=%s",
+				     aggregate.exclude_packs_path);
+			strvec_pushf(&cmd.args, "--emit-input-loose=%s",
+				     aggregate.exclude_loose_path);
+		}
+	}
 
 	strvec_push(&cmd.args, "--keep-true-parents");
 	for (i = 0; i < keep_pack_list.nr; i++)
@@ -546,8 +970,6 @@ int cmd_repack(int argc,
 	if (po_args.filter_options.choice)
 		strvec_pushf(&cmd.args, "--filter=%s",
 			     expand_list_objects_filter_spec(&po_args.filter_options));
-	else if (filter_to)
-		die(_("option '%s' can only be used along with '%s'"), "--filter-to", "--filter");
 
 	if (geometry.split_factor)
 		cmd.in = -1;
@@ -557,6 +979,42 @@ int cmd_repack(int argc,
 	ret = start_command(&cmd);
 	if (ret)
 		goto cleanup;
+
+	/*
+	 * The main pack-objects is now running.  Once it has
+	 * emitted both exclude files (which it does immediately
+	 * after enumerating its inputs and well before it finishes
+	 * writing its output), we can safely launch the aggregator
+	 * to roll up anything else that lands in objects/ in the
+	 * meantime.
+	 *
+	 * Mark our ends of the pack-objects pipes close-on-exec
+	 * first: start_command() uses plain pipe() (not
+	 * pipe2(O_CLOEXEC)), so without this the aggregator would
+	 * inherit them and pack-objects would never see EOF on stdin
+	 * (which matters for --geometric where we feed it via
+	 * cmd.in).  Test for ">0" rather than ">=0": fd 0 is the
+	 * CHILD_PROCESS_INIT default for cmd.in in the non-geometric
+	 * (no_stdin) path, which is *not* a pipe we own.
+	 */
+	if (aggregate_loop_opt > 0) {
+		if ((cmd.in > 0 &&
+		     set_cloexec_or_error(cmd.in,
+					  _("main pack-objects input"))) ||
+		    (cmd.out > 0 &&
+		     set_cloexec_or_error(cmd.out,
+					  _("main pack-objects output")))) {
+			/*
+			 * pack-objects is already running and still needs its
+			 * emit-file paths, so leave pack-aggregate cleanup
+			 * until the normal cleanup path after pack-objects
+			 * exits.
+			 */
+			aggregate_loop_opt = 0;
+		} else if (start_pack_aggregate(&aggregate, cmd.out)) {
+			aggregate_loop_opt = 0;
+		}
+	}
 
 	if (geometry.split_factor) {
 		FILE *in = xfdopen(cmd.in, "w");
@@ -707,6 +1165,8 @@ int cmd_repack(int argc,
 	string_list_sort(&names);
 
 	odb_close(repo->objects);
+	if (aggregate.started)
+		install_aggregate_keep_markers(&aggregate, packdir, &names);
 
 	/*
 	 * Ok we have prepared all new packfiles.
@@ -742,12 +1202,22 @@ int cmd_repack(int argc,
 			goto cleanup;
 	}
 
+	/*
+	 * Cruft has been written, all new packs are installed (and
+	 * ".keep"-marked), and the MIDX writer has read its explicit
+	 * include list; the remaining work is small and fast.  Stop
+	 * pack-aggregate now, *before* odb_reprepare()
+	 * or any delete/prune step that might otherwise race it.
+	 */
+	stop_pack_aggregate(&aggregate);
+
 	odb_reprepare(repo->objects);
 
 	if (delete_redundant) {
 		int opts = 0;
 		bool wrote_incremental_midx = write_midx == REPACK_WRITE_MIDX_INCREMENTAL;
 
+		trace2_region_enter("repack", "pack-cleanup", repo);
 		existing_packs_remove_redundant(&existing, packdir,
 						wrote_incremental_midx);
 
@@ -755,6 +1225,7 @@ int cmd_repack(int argc,
 			pack_geometry_remove_redundant(&geometry, &names,
 						       &existing, packdir,
 						       wrote_incremental_midx);
+		trace2_region_leave("repack", "pack-cleanup", repo);
 		if (show_progress)
 			opts |= PRUNE_PACKED_VERBOSE;
 		prune_packed_objects(opts);
@@ -779,6 +1250,7 @@ int cmd_repack(int argc,
 	}
 
 cleanup:
+	stop_pack_aggregate(&aggregate);
 	string_list_clear(&keep_pack_list, 0);
 	string_list_clear(&names, 1);
 	oidset_clear(&drop_oids);

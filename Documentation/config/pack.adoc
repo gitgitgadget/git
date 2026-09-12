@@ -39,11 +39,22 @@ is set to "multi", reuse parts of just the bitmapped packfile. This
 can reduce memory and CPU usage to serve fetches, but might result in
 sending a slightly larger pack. Defaults to true.
 
+pack.aggregateMaxObjects::
+	Default for linkgit:git-pack-aggregate[1]'s `--max-objects`
+	option.  Defaults to `100000`; see that option for details.
+
+pack.aggregateMaxLooseObjects::
+	Default for linkgit:git-pack-aggregate[1]'s `--max-loose-objects`
+	option.  Defaults to `100000`; see that option for details.
+
+pack.aggregateMaxPacks::
+	Default for linkgit:git-pack-aggregate[1]'s `--max-packs`
+	option.  Defaults to `10000`; see that option for details.
+
 pack.island::
 	An extended regular expression configuring a set of delta
 	islands. See "DELTA ISLANDS" in linkgit:git-pack-objects[1]
 	for details.
-
 pack.islandCore::
 	Specify an island name which gets to have its objects be
 	packed first. This creates a kind of pseudo-pack at the front

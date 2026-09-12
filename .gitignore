@@ -119,6 +119,7 @@
 /git-name-rev
 /git-notes
 /git-p4
+/git-pack-aggregate
 /git-pack-redundant
 /git-pack-objects
 /git-pack-refs
