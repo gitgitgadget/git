@@ -493,6 +493,15 @@ core.excludesFile::
 	If `$XDG_CONFIG_HOME` is either not set or empty, `$HOME/.config/git/ignore`
 	is used instead. See linkgit:gitignore[5].
 
+core.gitLocalIgnore::
+	If set to `true`, Git additionally reads ignore patterns from
+	a file named `.gitlocalignore` at the root of the working tree.
+	This file is meant for machine-local, uncommitted ignore rules:
+	it is ignored by Git itself (self-excluding) and is never tracked.
+	Its patterns are applied with lower precedence than
+	`.git/info/exclude` but higher than `core.excludesFile`.
+	Defaults to `false`. See linkgit:gitignore[5].
+
 core.askPass::
 	Some commands (e.g. svn and http interfaces) that interactively
 	ask for a password can be told to use an external program given
