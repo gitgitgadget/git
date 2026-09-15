@@ -99,6 +99,11 @@ all advice messages.
 		a configured remote but looks like a `<remote>/<branch>` ref,
 		suggesting that the remote and branch be given as separate
 		arguments.
+	pushShallowBoundary::
+		Shown when a push from a shallow clone is rejected because
+		the remote could not unpack the pack, hinting that a shallow
+		boundary may have omitted objects and suggesting the refs be
+		pushed one at a time.
 	pushUnqualifiedRefname::
 		Shown when linkgit:git-push[1] gives up trying to
 		guess based on the source and destination refs what
