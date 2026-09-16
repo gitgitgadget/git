@@ -1327,6 +1327,7 @@ LIB_OBJS += sparse-index.o
 LIB_OBJS += split-index.o
 LIB_OBJS += stable-qsort.o
 LIB_OBJS += statinfo.o
+LIB_OBJS += strbuf-safe.o
 LIB_OBJS += strbuf.o
 LIB_OBJS += string-list.o
 LIB_OBJS += strmap.o

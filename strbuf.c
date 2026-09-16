@@ -8,6 +8,8 @@
 #include "utf8.h"
 #include "date.h"
 
+#define STRBUF_DIE(f) die(_("unexpected error during string manipulation: %s"), f)
+
 bool starts_with(const char *str, const char *prefix)
 {
 	for (; ; str++, prefix++)
@@ -105,13 +107,8 @@ void strbuf_attach(struct strbuf *sb, void *buf, size_t len, size_t alloc)
 
 void strbuf_grow(struct strbuf *sb, size_t extra)
 {
-	int new_buf = !sb->alloc;
-	size_t new_len = st_add3(sb->len, extra, 1);
-	if (new_buf)
-		sb->buf = NULL;
-	ALLOC_GROW(sb->buf, new_len, sb->alloc);
-	if (new_buf)
-		sb->buf[0] = '\0';
+	if (sstrbuf_grow(sb, extra))
+		STRBUF_DIE("strbuf_grow");
 }
 
 void strbuf_trim(struct strbuf *sb)

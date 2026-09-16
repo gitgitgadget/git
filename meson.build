@@ -532,6 +532,7 @@ libgit_sources = [
   'split-index.c',
   'stable-qsort.c',
   'statinfo.c',
+  'strbuf-safe.c',
   'strbuf.c',
   'string-list.c',
   'strmap.c',

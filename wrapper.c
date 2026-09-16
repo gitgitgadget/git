@@ -144,20 +144,28 @@ int xstrncmpz(const char *s, const char *t, size_t len)
 	return s[len] == '\0' ? 0 : 1;
 }
 
-void *xrealloc(void *ptr, size_t size)
+int srealloc(void **ptr, size_t size)
 {
-	void *ret;
-
 	if (!size) {
-		free(ptr);
-		return xmalloc(0);
+		free(*ptr);
+		if ((*ptr = malloc(1)))
+			return 0;
+		return -1;
 	}
 
-	memory_limit_check(size, 0);
-	ret = realloc(ptr, size);
-	if (!ret)
+	if (safe_memory_limit_check(size, 0))
+		return -1;
+	if ((*ptr = realloc(*ptr, size)))
+		return 0;
+
+	return -1;
+}
+
+void *xrealloc(void *ptr, size_t size)
+{
+	if (srealloc(&ptr, size))
 		die("Out of memory, realloc failed");
-	return ret;
+	return ptr;
 }
 
 void *xcalloc(size_t nmemb, size_t size)

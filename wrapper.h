@@ -27,6 +27,9 @@ char *xgetcwd(void);
 FILE *fopen_for_writing(const char *path);
 FILE *fopen_or_warn(const char *path, const char *mode);
 
+/* safe versions of helpers above. */
+int srealloc(void **ptr, size_t size);
+
 /*
  * Like strncmp, but only return zero if s is NUL-terminated and exactly len
  * characters long.  If it is not, consider it greater than t.

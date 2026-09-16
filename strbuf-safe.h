@@ -85,4 +85,11 @@ struct strbuf {
 extern char strbuf_slopbuf[];
 #define STRBUF_INIT  { .buf = strbuf_slopbuf }
 
+enum safe_result {
+	SUCCESS = 0,
+	MEMORY_ERROR,
+};
+
+enum safe_result sstrbuf_grow(struct strbuf *sb, size_t extra);
+
 #endif /* STRBUF_SAFE_H */
