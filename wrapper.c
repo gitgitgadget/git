@@ -30,20 +30,29 @@ void initialize_git_alloc_limit(void)
 	}
 }
 
-static int memory_limit_check(size_t size, int gentle)
+static int safe_memory_limit_check(size_t size, int verbose)
 {
-	initialize_git_alloc_limit();
-
-	if (size > git_alloc_limit) {
-		if (gentle) {
+	size_t limit = git_alloc_limit ? git_alloc_limit : SIZE_MAX;
+	if (size > limit) {
+		if (verbose)
 			error("attempting to allocate %"PRIuMAX" over limit %"PRIuMAX,
 			      (uintmax_t)size, (uintmax_t)git_alloc_limit);
-			return -1;
-		} else
-			die("attempting to allocate %"PRIuMAX" over limit %"PRIuMAX,
-			    (uintmax_t)size, (uintmax_t)git_alloc_limit);
+		return -1;
 	}
 	return 0;
+}
+
+static int memory_limit_check(size_t size, int gentle)
+{
+	int res;
+	initialize_git_alloc_limit();
+
+	res = safe_memory_limit_check(size, gentle);
+	if (res && !gentle) {
+		die("attempting to allocate %"PRIuMAX" over limit %"PRIuMAX,
+		    (uintmax_t)size, (uintmax_t)git_alloc_limit);
+	}
+	return res;
 }
 
 char *xstrdup(const char *str)
