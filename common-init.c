@@ -39,6 +39,8 @@ static void setup_environment(void)
 	char *git_replace_ref_base;
 	const char *replace_ref_base;
 
+	initialize_git_alloc_limit();
+
 	if (getenv(NO_REPLACE_OBJECTS_ENVIRONMENT))
 		disable_replace_refs();
 	replace_ref_base = getenv(GIT_REPLACE_REF_BASE_ENVIRONMENT);

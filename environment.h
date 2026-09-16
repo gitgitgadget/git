@@ -5,6 +5,7 @@
 #include "branch.h"
 
 /* Double-check local_repo_env below if you add to this list. */
+#define GIT_ALLOC_LIMIT "GIT_ALLOC_LIMIT"
 #define GIT_DIR_ENVIRONMENT "GIT_DIR"
 #define GIT_COMMON_DIR_ENVIRONMENT "GIT_COMMON_DIR"
 #define GIT_NAMESPACE_ENVIRONMENT "GIT_NAMESPACE"

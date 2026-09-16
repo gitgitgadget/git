@@ -688,6 +688,12 @@ For each path `GIT_EXTERNAL_DIFF` is called, two environment variables,
 
 other
 ~~~~~
+
+`GIT_ALLOC_LIMIT`::
+	A number limiting how much memory can be allocated in a single
+	hunk. This only limits single allocations and does not limit the
+	total memory used by the process.
+
 `GIT_MERGE_VERBOSITY`::
 	A number controlling the amount of output shown by
 	the recursive merge strategy.  Overrides merge.verbosity.

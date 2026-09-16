@@ -180,4 +180,10 @@ static inline unsigned log2u(uintmax_t sz)
 	return l - 1;
 }
 
+/*
+ * Initialize the global state for GIT_ALLOC_LIMIT at an appropriate
+ * time so it can be effective for safe allocation methods.
+ */
+void initialize_git_alloc_limit(void);
+
 #endif /* WRAPPER_H */

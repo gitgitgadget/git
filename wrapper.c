@@ -6,6 +6,7 @@
 
 #include "git-compat-util.h"
 #include "abspath.h"
+#include "environment.h"
 #include "parse.h"
 #include "gettext.h"
 #include "strbuf.h"
@@ -18,22 +19,29 @@
 #undef SystemFunction036
 #endif
 
+static size_t git_alloc_limit = 0;
+
+void initialize_git_alloc_limit(void)
+{
+	if (!git_alloc_limit) {
+		git_alloc_limit = git_env_ulong(GIT_ALLOC_LIMIT, 0);
+		if (!git_alloc_limit)
+			git_alloc_limit = SIZE_MAX;
+	}
+}
+
 static int memory_limit_check(size_t size, int gentle)
 {
-	static size_t limit = 0;
-	if (!limit) {
-		limit = git_env_ulong("GIT_ALLOC_LIMIT", 0);
-		if (!limit)
-			limit = SIZE_MAX;
-	}
-	if (size > limit) {
+	initialize_git_alloc_limit();
+
+	if (size > git_alloc_limit) {
 		if (gentle) {
 			error("attempting to allocate %"PRIuMAX" over limit %"PRIuMAX,
-			      (uintmax_t)size, (uintmax_t)limit);
+			      (uintmax_t)size, (uintmax_t)git_alloc_limit);
 			return -1;
 		} else
 			die("attempting to allocate %"PRIuMAX" over limit %"PRIuMAX,
-			    (uintmax_t)size, (uintmax_t)limit);
+			    (uintmax_t)size, (uintmax_t)git_alloc_limit);
 	}
 	return 0;
 }
