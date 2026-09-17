@@ -7,6 +7,7 @@
 #include "quote.h"
 #include "version.h"
 #include "json-writer.h"
+#include "strbuf.h"
 #include "trace2/tr2_dst.h"
 #include "trace2/tr2_sid.h"
 #include "trace2/tr2_sysenv.h"

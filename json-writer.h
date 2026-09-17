@@ -70,7 +70,7 @@
  * of the given strings.
  */
 
-#include "strbuf.h"
+#include "strbuf-safe.h"
 
 struct json_writer
 {

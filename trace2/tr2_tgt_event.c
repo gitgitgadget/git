@@ -5,6 +5,7 @@
 #include "json-writer.h"
 #include "repository.h"
 #include "run-command.h"
+#include "strbuf.h"
 #include "version.h"
 #include "trace2/tr2_dst.h"
 #include "trace2/tr2_tbuf.h"
