@@ -8,6 +8,8 @@
 #include "utf8.h"
 #include "date.h"
 
+#define STRBUF_DIE(f) die(_("unexpected error during string manipulation: %s"), f)
+
 bool starts_with(const char *str, const char *prefix)
 {
 	for (; ; str++, prefix++)
@@ -68,18 +70,14 @@ char strbuf_slopbuf[1];
 
 void strbuf_init(struct strbuf *sb, size_t hint)
 {
-	struct strbuf blank = STRBUF_INIT;
-	memcpy(sb, &blank, sizeof(*sb));
-	if (hint)
-		strbuf_grow(sb, hint);
+	if (sstrbuf_init(sb, hint))
+		STRBUF_DIE("strbuf_init");
 }
 
 void strbuf_release(struct strbuf *sb)
 {
-	if (sb->alloc) {
-		free(sb->buf);
-		strbuf_init(sb, 0);
-	}
+	if (sstrbuf_release(sb))
+		STRBUF_DIE("strbuf_release");
 }
 
 char *strbuf_detach(struct strbuf *sb, size_t *sz)
@@ -105,13 +103,8 @@ void strbuf_attach(struct strbuf *sb, void *buf, size_t len, size_t alloc)
 
 void strbuf_grow(struct strbuf *sb, size_t extra)
 {
-	int new_buf = !sb->alloc;
-	size_t new_len = st_add3(sb->len, extra, 1);
-	if (new_buf)
-		sb->buf = NULL;
-	ALLOC_GROW(sb->buf, new_len, sb->alloc);
-	if (new_buf)
-		sb->buf[0] = '\0';
+	if (sstrbuf_grow(sb, extra))
+		STRBUF_DIE("strbuf_grow");
 }
 
 void strbuf_trim(struct strbuf *sb)

@@ -2,6 +2,9 @@
 
 #include "git-compat-util.h"
 #include "json-writer.h"
+#include "strbuf.h"
+/* banned-die must be last. */
+#include "banned-die.h"
 
 void jw_init(struct json_writer *jw)
 {
@@ -9,10 +12,15 @@ void jw_init(struct json_writer *jw)
 	memcpy(jw, &blank, sizeof(*jw));;
 }
 
-void jw_release(struct json_writer *jw)
+int jw_release(struct json_writer *jw)
 {
-	strbuf_release(&jw->json);
-	strbuf_release(&jw->open_stack);
+	enum safe_result result = SUCCESS;
+
+	/* attempt both removals without short-circuiting. */
+	result = sstrbuf_release(&jw->json) || result;
+	result = sstrbuf_release(&jw->open_stack) || result;
+
+	return result;
 }
 
 /*
@@ -98,16 +106,17 @@ static void maybe_add_comma(struct json_writer *jw)
 		jw->need_comma = 1;
 }
 
-static void fmt_double(struct json_writer *jw, int precision,
-			      double value)
+static int fmt_double(struct json_writer *jw, int precision,
+		      double value)
 {
 	if (precision < 0) {
 		strbuf_addf(&jw->json, "%f", value);
+		return 0;
 	} else {
 		struct strbuf fmt = STRBUF_INIT;
 		strbuf_addf(&fmt, "%%.%df", precision);
 		strbuf_addf(&jw->json, fmt.buf, value);
-		strbuf_release(&fmt);
+		return sstrbuf_release(&fmt);
 	}
 }
 
@@ -234,8 +243,8 @@ static void kill_indent(struct strbuf *sb,
 	}
 }
 
-static void append_sub_jw(struct json_writer *jw,
-			  const struct json_writer *value)
+static int append_sub_jw(struct json_writer *jw,
+			 const struct json_writer *value)
 {
 	/*
 	 * If both are pretty, increase the indentation of the sub_jw
@@ -254,18 +263,17 @@ static void append_sub_jw(struct json_writer *jw,
 		struct strbuf sb = STRBUF_INIT;
 		increase_indent(&sb, value, jw->open_stack.len * 2);
 		strbuf_addbuf(&jw->json, &sb);
-		strbuf_release(&sb);
-		return;
+		return sstrbuf_release(&sb);
 	}
 	if (!jw->pretty && value->pretty) {
 		struct strbuf sb = STRBUF_INIT;
 		kill_indent(&sb, value);
 		strbuf_addbuf(&jw->json, &sb);
-		strbuf_release(&sb);
-		return;
+		return sstrbuf_release(&sb);
 	}
 
 	strbuf_addbuf(&jw->json, &value->json);
+	return 0;
 }
 
 void jw_object_sub_jw(struct json_writer *jw, const char *key,

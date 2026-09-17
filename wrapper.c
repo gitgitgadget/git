@@ -6,6 +6,7 @@
 
 #include "git-compat-util.h"
 #include "abspath.h"
+#include "environment.h"
 #include "parse.h"
 #include "gettext.h"
 #include "strbuf.h"
@@ -18,24 +19,40 @@
 #undef SystemFunction036
 #endif
 
-static int memory_limit_check(size_t size, int gentle)
+static size_t git_alloc_limit = 0;
+
+void initialize_git_alloc_limit(void)
 {
-	static size_t limit = 0;
-	if (!limit) {
-		limit = git_env_ulong("GIT_ALLOC_LIMIT", 0);
-		if (!limit)
-			limit = SIZE_MAX;
+	if (!git_alloc_limit) {
+		git_alloc_limit = git_env_ulong(GIT_ALLOC_LIMIT, 0);
+		if (!git_alloc_limit)
+			git_alloc_limit = SIZE_MAX;
 	}
+}
+
+static int safe_memory_limit_check(size_t size, int verbose)
+{
+	size_t limit = git_alloc_limit ? git_alloc_limit : SIZE_MAX;
 	if (size > limit) {
-		if (gentle) {
+		if (verbose)
 			error("attempting to allocate %"PRIuMAX" over limit %"PRIuMAX,
-			      (uintmax_t)size, (uintmax_t)limit);
-			return -1;
-		} else
-			die("attempting to allocate %"PRIuMAX" over limit %"PRIuMAX,
-			    (uintmax_t)size, (uintmax_t)limit);
+			      (uintmax_t)size, (uintmax_t)git_alloc_limit);
+		return -1;
 	}
 	return 0;
+}
+
+static int memory_limit_check(size_t size, int gentle)
+{
+	int res;
+	initialize_git_alloc_limit();
+
+	res = safe_memory_limit_check(size, gentle);
+	if (res && !gentle) {
+		die("attempting to allocate %"PRIuMAX" over limit %"PRIuMAX,
+		    (uintmax_t)size, (uintmax_t)git_alloc_limit);
+	}
+	return res;
 }
 
 char *xstrdup(const char *str)
@@ -127,20 +144,28 @@ int xstrncmpz(const char *s, const char *t, size_t len)
 	return s[len] == '\0' ? 0 : 1;
 }
 
-void *xrealloc(void *ptr, size_t size)
+int srealloc(void **ptr, size_t size)
 {
-	void *ret;
-
 	if (!size) {
-		free(ptr);
-		return xmalloc(0);
+		free(*ptr);
+		if ((*ptr = malloc(1)))
+			return 0;
+		return -1;
 	}
 
-	memory_limit_check(size, 0);
-	ret = realloc(ptr, size);
-	if (!ret)
+	if (safe_memory_limit_check(size, 0))
+		return -1;
+	if ((*ptr = realloc(*ptr, size)))
+		return 0;
+
+	return -1;
+}
+
+void *xrealloc(void *ptr, size_t size)
+{
+	if (srealloc(&ptr, size))
 		die("Out of memory, realloc failed");
-	return ret;
+	return ptr;
 }
 
 void *xcalloc(size_t nmemb, size_t size)

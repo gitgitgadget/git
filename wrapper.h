@@ -27,6 +27,9 @@ char *xgetcwd(void);
 FILE *fopen_for_writing(const char *path);
 FILE *fopen_or_warn(const char *path, const char *mode);
 
+/* safe versions of helpers above. */
+int srealloc(void **ptr, size_t size);
+
 /*
  * Like strncmp, but only return zero if s is NUL-terminated and exactly len
  * characters long.  If it is not, consider it greater than t.
@@ -179,5 +182,11 @@ static inline unsigned log2u(uintmax_t sz)
 
 	return l - 1;
 }
+
+/*
+ * Initialize the global state for GIT_ALLOC_LIMIT at an appropriate
+ * time so it can be effective for safe allocation methods.
+ */
+void initialize_git_alloc_limit(void);
 
 #endif /* WRAPPER_H */
