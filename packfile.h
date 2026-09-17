@@ -144,6 +144,13 @@ enum kept_pack_type {
 struct packed_git **packfile_store_get_kept_pack_cache(struct odb_source_packed *store,
 						       unsigned flags);
 
+/*
+ * Drop the cache of kept packs so that the next call to
+ * `packfile_store_get_kept_pack_cache()` rebuilds it, e.g. after changing
+ * which packs are kept in core.
+ */
+void packfile_store_invalidate_kept_pack_cache(struct odb_source_packed *store);
+
 struct pack_window {
 	struct pack_window *next;
 	unsigned char *base;
