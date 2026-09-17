@@ -91,5 +91,7 @@ enum safe_result {
 };
 
 enum safe_result sstrbuf_grow(struct strbuf *sb, size_t extra);
+enum safe_result sstrbuf_init(struct strbuf *sb, size_t hint);
+enum safe_result sstrbuf_release(struct strbuf *sb);
 
 #endif /* STRBUF_SAFE_H */

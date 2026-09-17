@@ -32,3 +32,21 @@ enum safe_result sstrbuf_grow(struct strbuf *sb, size_t extra)
 
 	return SUCCESS;
 }
+
+enum safe_result sstrbuf_init(struct strbuf *sb, size_t hint)
+{
+	struct strbuf blank = STRBUF_INIT;
+	memcpy(sb, &blank, sizeof(*sb));
+	if (!hint)
+		return 0;
+	return sstrbuf_grow(sb, hint);
+}
+
+enum safe_result sstrbuf_release(struct strbuf *sb)
+{
+	if (sb->alloc) {
+		free(sb->buf);
+		return sstrbuf_init(sb, 0);
+	}
+	return 0;
+}

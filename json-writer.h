@@ -103,9 +103,10 @@ struct json_writer
 void jw_init(struct json_writer *jw);
 
 /*
- * Release the internal buffers of a json_writer.
+ * Release the internal buffers of a json_writer. Returns nonzero on
+ * failure.
  */
-void jw_release(struct json_writer *jw);
+int jw_release(struct json_writer *jw);
 
 /*
  * Begin the json_writer using an object as the top-level data structure. If

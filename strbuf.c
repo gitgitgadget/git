@@ -70,18 +70,14 @@ char strbuf_slopbuf[1];
 
 void strbuf_init(struct strbuf *sb, size_t hint)
 {
-	struct strbuf blank = STRBUF_INIT;
-	memcpy(sb, &blank, sizeof(*sb));
-	if (hint)
-		strbuf_grow(sb, hint);
+	if (sstrbuf_init(sb, hint))
+		STRBUF_DIE("strbuf_init");
 }
 
 void strbuf_release(struct strbuf *sb)
 {
-	if (sb->alloc) {
-		free(sb->buf);
-		strbuf_init(sb, 0);
-	}
+	if (sstrbuf_release(sb))
+		STRBUF_DIE("strbuf_release");
 }
 
 char *strbuf_detach(struct strbuf *sb, size_t *sz)
