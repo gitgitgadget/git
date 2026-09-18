@@ -280,4 +280,16 @@ int run_hooks(struct repository *r, const char *hook_name);
  */
 LAST_ARG_MUST_BE_NULL
 int run_hooks_l(struct repository *r, const char *hook_name, ...);
+
+/**
+ * Check if the use of '--no-verify' (or '-n') is permitted according to
+ * the 'hooks.allowNoVerify' configuration and 'GIT_ALLOW_NO_VERIFY' environment
+ * variable.
+ *
+ * If permitted, this function returns normally (or emits a warning if configured
+ * to 'warn'). If disallowed, it outputs advice on how to override the workflow
+ * guardrail in an emergency, then aborts with die().
+ */
+void validate_no_verify(struct repository *r, const char *opt);
+
 #endif
