@@ -14,6 +14,25 @@ static uint32_t pack_geometry_weight(struct packed_git *p)
 	return p->num_objects;
 }
 
+/*
+ * True only for a durably installed "pack-<hash>" basename.  This
+ * rejects an in-flight ".tmp-<pid>-pack-<hash>" staging file written by
+ * a concurrent repack or pack-aggregate, which the object-store scan
+ * (matching any "*.idx") would otherwise feed to pack-objects.
+ */
+static int is_canonical_pack_basename(const char *base, size_t hexsz)
+{
+	const char *hex;
+	size_t i;
+
+	if (!skip_prefix(base, "pack-", &hex))
+		return 0;
+	for (i = 0; i < hexsz; i++)
+		if (!isxdigit(hex[i]))
+			return 0;
+	return !strcmp(hex + hexsz, ".pack");
+}
+
 static int pack_geometry_cmp(const void *va, const void *vb)
 {
 	uint32_t aw = pack_geometry_weight(*(struct packed_git **)va),
@@ -88,6 +107,10 @@ void pack_geometry_init(struct pack_geometry *geometry,
 		if (p->is_cruft)
 			continue;
 
+		if (!is_canonical_pack_basename(pack_basename(p),
+						existing->repo->hash_algo->hexsz))
+			continue;
+
 		if (p->pack_promisor) {
 			ALLOC_GROW(geometry->promisor_pack,
 				   geometry->promisor_pack_nr + 1,
@@ -108,6 +131,115 @@ void pack_geometry_init(struct pack_geometry *geometry,
 	QSORT(geometry->pack, geometry->pack_nr, pack_geometry_cmp);
 	QSORT(geometry->promisor_pack, geometry->promisor_pack_nr, pack_geometry_cmp);
 	strbuf_release(&buf);
+}
+
+static uint32_t find_rebalancing_pack(struct packed_git **pack,
+				    uint32_t pack_nr, uint64_t total_size,
+				    int split_factor)
+{
+	uint32_t i;
+	int rebalance = 0;
+
+	if (split_factor < 2)
+		return pack_nr;
+
+	for (i = 0; i < pack_nr; i++) {
+		uint64_t size = pack_geometry_weight(pack[i]);
+		uint64_t combined_size, next_size;
+
+		if (!rebalance) {
+			if (size <= total_size / split_factor)
+				continue;
+			if (total_size <= size / split_factor)
+				break;
+			rebalance = 1;
+		}
+
+		/*
+		 * Smaller kept packs fit below this pack's estimated output.
+		 * Evaluate each candidate alone, rather than accumulating them.
+		 */
+		combined_size = u64_add(total_size, size);
+		if (i + 1 == pack_nr)
+			return i;
+		next_size = pack_geometry_weight(pack[i + 1]);
+		if (combined_size <= next_size / split_factor)
+			return i;
+	}
+	return pack_nr;
+}
+
+/*
+ * Move any packs marked with a `.baddeltas` sidecar from the kept
+ * region of `pack[]` into the rollup region.  A `.baddeltas` marker
+ * declares that the pack's existing deltas are stale (e.g. because
+ * the pack was assembled by `git pack-aggregate`, which concatenates
+ * input packs without performing a fresh delta search).  We do not
+ * want such packs to sit on the geometric ladder indefinitely:
+ * rolling them up forces the next `pack-objects` invocation to
+ * recompute deltas across their objects, while leaving any
+ * `.keep`-protected pack alone (those are filtered out by
+ * `pack_geometry_init()`).
+ *
+ * Include one additional pack if needed to keep the enlarged output
+ * geometric with the retained packs.
+ *
+ * Demotion preserves the ascending sort order of the kept region so
+ * that `pack_geometry_preferred_pack()` continues to return the
+ * largest local kept pack.
+ */
+static void demote_bad_delta_packs(struct pack_geometry *geometry)
+{
+	struct packed_git **demoted, **retained;
+	uint32_t d_nr = 0, r_nr = 0, kept_nr;
+	uint32_t k;
+	uint64_t total_size = 0;
+
+	if (geometry->split == geometry->pack_nr)
+		return;
+
+	kept_nr = geometry->pack_nr - geometry->split;
+	for (k = geometry->split; k < geometry->pack_nr; k++) {
+		if (geometry->pack[k]->has_bad_deltas)
+			d_nr++;
+	}
+	if (!d_nr)
+		return;
+
+	ALLOC_ARRAY(demoted, st_add(d_nr, 1));
+	ALLOC_ARRAY(retained, kept_nr - d_nr);
+	for (k = 0; k < geometry->split; k++)
+		total_size = u64_add(total_size,
+				    pack_geometry_weight(geometry->pack[k]));
+
+	d_nr = 0;
+	for (k = geometry->split; k < geometry->pack_nr; k++) {
+		struct packed_git *p = geometry->pack[k];
+
+		if (p->has_bad_deltas) {
+			demoted[d_nr++] = p;
+			total_size = u64_add(total_size,
+					    pack_geometry_weight(p));
+		} else
+			retained[r_nr++] = p;
+	}
+
+	k = find_rebalancing_pack(retained, r_nr, total_size,
+				  geometry->split_factor);
+	if (k < r_nr) {
+		demoted[d_nr++] = retained[k];
+		MOVE_ARRAY(retained + k, retained + k + 1, r_nr - k - 1);
+		r_nr--;
+	}
+
+	memcpy(&geometry->pack[geometry->split], demoted,
+	       d_nr * sizeof(*geometry->pack));
+	memcpy(&geometry->pack[geometry->split + d_nr], retained,
+	       r_nr * sizeof(*geometry->pack));
+	geometry->split += d_nr;
+
+	free(demoted);
+	free(retained);
 }
 
 static uint32_t compute_pack_geometry_split(struct packed_git **pack, size_t pack_nr,
@@ -192,6 +324,7 @@ void pack_geometry_split(struct pack_geometry *geometry)
 {
 	geometry->split = compute_pack_geometry_split(geometry->pack, geometry->pack_nr,
 						      geometry->split_factor);
+	demote_bad_delta_packs(geometry);
 	geometry->promisor_split = compute_pack_geometry_split(geometry->promisor_pack,
 							       geometry->promisor_pack_nr,
 							       geometry->split_factor);

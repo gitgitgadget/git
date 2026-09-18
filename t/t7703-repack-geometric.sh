@@ -541,4 +541,52 @@ test_expect_success 'geometric repack works with promisor packs' '
 	)
 '
 
+test_expect_success 'geometric repack ignores in-flight .tmp-* packs' '
+	git init geometric-tmp &&
+	test_when_finished "rm -fr geometric-tmp" &&
+	(
+		cd geometric-tmp &&
+
+		# Build several packs whose sizes do not already form a
+		# geometric progression, so that a --geometric=2 repack
+		# would roll the smaller ones together.
+		for i in 1 2 3 4 5 6
+		do
+			n=$((i * 3)) &&
+			j=0 &&
+			while test $j -lt $n
+			do
+				echo "obj-$i-$j" | git hash-object -w --stdin &&
+				j=$((j + 1)) || return 1
+			done |
+			git pack-objects --window=0 $packdir/pack \
+				>/dev/null || return 1
+		done &&
+		git prune-packed &&
+
+		# Stage the smallest pack under an in-flight
+		# ".tmp-<pid>-pack-<hash>" name, as a concurrent repack or
+		# pack-aggregate would before renaming it into place.  The
+		# geometric roll-up must not select it as pack-objects input
+		# (it may vanish under us mid-read), and with -d it must not
+		# delete it either.
+		victim=$(ls -S $packdir/pack-*.pack | tail -n 1) &&
+		vb=$(basename "$victim" .pack) &&
+		for e in pack idx rev
+		do
+			from=$packdir/${vb}.$e &&
+			if test -f "$from"
+			then
+				mv "$from" $packdir/.tmp-1234-${vb}.$e ||
+				return 1
+			fi
+		done &&
+
+		git repack --geometric 2 -d &&
+
+		test_path_is_file $packdir/.tmp-1234-${vb}.pack &&
+		test_path_is_file $packdir/.tmp-1234-${vb}.idx
+	)
+'
+
 test_done
