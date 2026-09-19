@@ -111,6 +111,7 @@ struct fetch_config {
 	int recurse_submodules;
 	int parallel;
 	int submodule_fetch_jobs;
+	int shallow;
 };
 
 static int git_fetch_config(const char *k, const char *v,
@@ -172,6 +173,11 @@ static int git_fetch_config(const char *k, const char *v,
 		else
 			die(_("invalid value for '%s': '%s'"),
 			    "fetch.output", v);
+		return 0;
+	}
+
+	if (!strcmp(k, "fetch.shallow")) {
+		fetch_config->shallow = git_config_bool(k, v);
 		return 0;
 	}
 
@@ -1958,15 +1964,19 @@ static int do_fetch(struct transport *transport,
 		refspec_ref_prefixes(rs, &transport_ls_refs_options.ref_prefixes);
 	} else {
 		struct branch *branch = branch_get(NULL);
+		int tracks_this_remote = branch && branch_has_merge_config(branch) &&
+			!strcmp(branch->remote_name, transport->remote->name);
+		int narrow_to_tracked_ref = config->shallow &&
+			is_repository_shallow(the_repository) && tracks_this_remote;
 
 		if (transport->remote->fetch.nr) {
-			refspec_ref_prefixes(&transport->remote->fetch,
-					     &transport_ls_refs_options.ref_prefixes);
+			if (!narrow_to_tracked_ref)
+				refspec_ref_prefixes(&transport->remote->fetch,
+						     &transport_ls_refs_options.ref_prefixes);
 			if (follow_remote_head != FOLLOW_REMOTE_NEVER)
 				do_set_head = 1;
 		}
-		if (branch && branch_has_merge_config(branch) &&
-		    !strcmp(branch->remote_name, transport->remote->name)) {
+		if (tracks_this_remote) {
 			int i;
 			for (i = 0; i < branch->merge_nr; i++) {
 				strvec_push(&transport_ls_refs_options.ref_prefixes,
