@@ -22,6 +22,7 @@
 #include "repo-settings.h"
 #include "repository.h"
 #include "setup.h"
+#include "shallow.h"
 #include "midx.h"
 #include "commit-reach.h"
 #include "date.h"
@@ -824,9 +825,65 @@ static int get_oid_basic(struct repository *r, const char *str, int len,
 	return 0;
 }
 
+/*
+ * When a "name~<n>" or "name^<n>" walk runs out of parents at "commit",
+ * and that is because "commit" is where this shallow repository's history
+ * was cut off (rather than commit genuinely being a root commit), let the
+ * user know that fetching more history might be what they are after.
+ *
+ * "suggested_depth" is the --deepen value to recommend. For "name^<n>"
+ * this is always 1: deepening by one generation fetches "commit"'s real
+ * parent list in full, whatever it turns out to contain, regardless of
+ * which parent index <n> asked for. If "name" looks like
+ * "<remote>/<branch>" and <remote> is a configured remote, the suggested
+ * command names that remote and branch instead of leaving them as
+ * placeholders.
+ */
+static void advise_if_shallow_cutoff(struct repository *r,
+				     const char *name, int namelen,
+				     struct commit *commit,
+				     unsigned lookup_flags,
+				     int suggested_depth)
+{
+	struct commit_graft *graft;
+	const char *slash;
+	struct strbuf cmd = STRBUF_INIT;
+
+	if (lookup_flags & GET_OID_QUIETLY)
+		return;
+	if (!is_repository_shallow(r))
+		return;
+	graft = lookup_commit_graft(r, &commit->object.oid);
+	if (!graft || graft->nr_parent != -1)
+		return;
+
+	slash = memchr(name, '/', namelen);
+	if (slash) {
+		char *remote_candidate = xstrndup(name, slash - name);
+		if (remote_is_configured(remote_get(remote_candidate), 0))
+			strbuf_addf(&cmd, "git fetch --deepen=%d %s %.*s",
+				    suggested_depth, remote_candidate,
+				    (int)(name + namelen - (slash + 1)), slash + 1);
+		free(remote_candidate);
+	}
+	if (!cmd.len)
+		strbuf_addf(&cmd, "git fetch --deepen=%d <remote> <branch>",
+			    suggested_depth);
+
+	advise_if_enabled(ADVICE_SHALLOW_HISTORY,
+			   _("'%.*s' does not have that many ancestors locally.\n"
+			     "History stops at %s because this repository is a\n"
+			     "shallow clone. To fetch more of it, try:\n"
+			     "\n"
+			     "  %s"),
+			   namelen, name, oid_to_hex(&commit->object.oid), cmd.buf);
+	strbuf_release(&cmd);
+}
+
 static enum get_oid_result get_parent(struct repository *r,
 				      const char *name, int len,
-				      struct object_id *result, int idx)
+				      struct object_id *result, int idx,
+				      unsigned lookup_flags)
 {
 	struct object_id oid;
 	enum get_oid_result ret = get_oid_1(r, name, len, &oid,
@@ -851,13 +908,15 @@ static enum get_oid_result get_parent(struct repository *r,
 		}
 		p = p->next;
 	}
+	advise_if_shallow_cutoff(r, name, len, commit, lookup_flags, 1);
 	return MISSING_OBJECT;
 }
 
 static enum get_oid_result get_nth_ancestor(struct repository *r,
 					    const char *name, int len,
 					    struct object_id *result,
-					    int generation)
+					    int generation,
+					    unsigned lookup_flags)
 {
 	struct object_id oid;
 	struct commit *commit;
@@ -871,8 +930,14 @@ static enum get_oid_result get_nth_ancestor(struct repository *r,
 		return MISSING_OBJECT;
 
 	while (generation--) {
-		if (repo_parse_commit(r, commit) || !commit->parents)
+		if (repo_parse_commit(r, commit))
 			return MISSING_OBJECT;
+		if (!commit->parents) {
+			/* Remaining "generation" plus this failed step is the actual gap. */
+			advise_if_shallow_cutoff(r, name, len, commit,
+						 lookup_flags, generation + 1);
+			return MISSING_OBJECT;
+		}
 		commit = commit->parents->item;
 	}
 	oidcpy(result, &commit->object.oid);
@@ -1119,9 +1184,9 @@ static enum get_oid_result get_oid_1(struct repository *r,
 		else if (num > INT_MAX)
 			return MISSING_OBJECT;
 		if (has_suffix == '^')
-			return get_parent(r, name, len1, oid, num);
+			return get_parent(r, name, len1, oid, num, lookup_flags);
 		/* else if (has_suffix == '~') -- goes without saying */
-		return get_nth_ancestor(r, name, len1, oid, num);
+		return get_nth_ancestor(r, name, len1, oid, num, lookup_flags);
 	}
 
 	ret = peel_onion(r, name, len, oid, lookup_flags);
