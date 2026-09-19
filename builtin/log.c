@@ -47,6 +47,7 @@
 #include "commit-reach.h"
 #include "promisor-remote.h"
 #include "range-diff.h"
+#include "shallow.h"
 #include "tmp-objdir.h"
 #include "tree.h"
 #include "userdiff.h"
@@ -396,9 +397,32 @@ static void cmd_log_init(int argc, const char **argv, const char *prefix,
 	cmd_log_init_finish(argc, argv, prefix, rev, opt, cfg);
 }
 
+static void advise_if_log_stopped_at_shallow_boundary(struct rev_info *rev,
+						       struct commit *last_shown)
+{
+	if (!last_shown)
+		return;
+	/* a plain "git log" running out of history is expected */
+	if (rev->max_count < 0 && rev->max_age == (timestamp_t)-1)
+		return;
+	if (!is_repository_shallow(the_repository))
+		return;
+	if (!commit_is_shallow_boundary(the_repository, &last_shown->object.oid))
+		return;
+	wait_for_pager();
+	advise_if_enabled(ADVICE_SHALLOW_HISTORY,
+			   _("'%s' stopped at %s because this repository is a shallow\n"
+			     "clone, and might have more history upstream that was never fetched."),
+			   "git log",
+			   repo_find_unique_abbrev(the_repository,
+						    &last_shown->object.oid,
+						    DEFAULT_ABBREV));
+}
+
 static int cmd_log_walk_no_free(struct rev_info *rev)
 {
 	struct commit *commit;
+	struct commit *last_shown = NULL;
 	int saved_nrl = 0;
 	int saved_dcctc = 0;
 	int result;
@@ -412,6 +436,7 @@ static int cmd_log_walk_no_free(struct rev_info *rev)
 	 * retain that state information if replacing rev->diffopt in this loop
 	 */
 	while ((commit = get_revision(rev)) != NULL) {
+		last_shown = commit;
 		if (!log_tree_commit(rev, commit) && rev->max_count >= 0)
 			/*
 			 * We decremented max_count in get_revision,
@@ -437,6 +462,7 @@ static int cmd_log_walk_no_free(struct rev_info *rev)
 		if (rev->diffopt.degraded_cc_to_c)
 			saved_dcctc = 1;
 	}
+	advise_if_log_stopped_at_shallow_boundary(rev, last_shown);
 	rev->diffopt.degraded_cc_to_c = saved_dcctc;
 	rev->diffopt.needed_rename_limit = saved_nrl;
 

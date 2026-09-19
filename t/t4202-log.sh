@@ -2452,4 +2452,77 @@ test_expect_success 'log --invert-grep --grep --author' '
 	test_cmp expect actual
 '
 
+check_log_shallow_history_advice () {
+	oid=$1 &&
+	grep '^hint:' err >actual &&
+	cat >expect <<-EOF &&
+	hint: 'git log' stopped at $oid because this repository is a shallow
+	hint: clone, and might have more history upstream that was never fetched.
+	hint: Disable this message with "git config set advice.shallowHistory false"
+	EOF
+	test_cmp expect actual
+}
+
+test_expect_success 'set up linear history for shallow log advice tests' '
+	git checkout --orphan loghist &&
+	test_commit loghist_1 &&
+	test_commit loghist_2 &&
+	test_commit loghist_3 &&
+	test_commit loghist_4 &&
+	test_commit loghist_5 &&
+	git checkout main
+'
+
+test_expect_success 'log -<n> advises when it runs out of history at a shallow boundary' '
+	git clone --no-local --depth=2 --branch loghist --single-branch \
+		.git shallow-log-advice &&
+	test_when_finished "rm -rf shallow-log-advice" &&
+	oid=$(git -C shallow-log-advice rev-parse --short origin/loghist~1) &&
+	git -C shallow-log-advice log -5 --oneline origin/loghist >out 2>err &&
+	check_log_shallow_history_advice "$oid"
+'
+
+test_expect_success 'log --since advises when it runs out of history at a shallow boundary' '
+	git clone --no-local --depth=2 --branch loghist --single-branch \
+		.git shallow-log-advice-since &&
+	test_when_finished "rm -rf shallow-log-advice-since" &&
+	oid=$(git -C shallow-log-advice-since rev-parse --short origin/loghist~1) &&
+	git -C shallow-log-advice-since log --since=2000-01-01 --oneline \
+		origin/loghist >out 2>err &&
+	check_log_shallow_history_advice "$oid"
+'
+
+test_expect_success 'log without -<n> or --since does not advise at a shallow boundary' '
+	git clone --no-local --depth=1 --branch loghist --single-branch \
+		.git shallow-log-plain &&
+	test_when_finished "rm -rf shallow-log-plain" &&
+	git -C shallow-log-plain log --oneline origin/loghist >out 2>err &&
+	test_grep ! "^hint:" err
+'
+
+test_expect_success 'log -<n> does not advise when satisfied within local history' '
+	git clone --no-local --depth=5 --branch loghist --single-branch \
+		.git shallow-log-satisfied &&
+	test_when_finished "rm -rf shallow-log-satisfied" &&
+	git -C shallow-log-satisfied log -2 --oneline origin/loghist >out 2>err &&
+	test_grep ! "^hint:" err
+'
+
+test_expect_success 'log -<n> shallow history advice can be disabled' '
+	git clone --no-local --depth=1 --branch loghist --single-branch \
+		.git shallow-log-off &&
+	test_when_finished "rm -rf shallow-log-off" &&
+	git -C shallow-log-off -c advice.shallowHistory=false \
+		log -5 --oneline origin/loghist >out 2>err &&
+	test_grep ! "^hint:" err
+'
+
+test_expect_success 'log -<n> does not advise in a non-shallow repository' '
+	test_when_finished "rm -rf non-shallow-log" &&
+	git init -q non-shallow-log &&
+	test_commit -C non-shallow-log only-commit &&
+	git -C non-shallow-log log -20 --oneline >out 2>err &&
+	test_grep ! "^hint:" err
+'
+
 test_done
