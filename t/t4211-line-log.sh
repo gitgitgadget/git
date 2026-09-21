@@ -781,6 +781,32 @@ test_expect_success '--summary shows new file on root commit' '
 	test_grep "create mode 100644 file.c" actual
 '
 
+test_expect_success '-L :funcname: excludes trailing empty lines at EOF' '
+	git init trailing-empty &&
+	(
+		cd trailing-empty &&
+		test_commit --printf --no-tag "add func.py" \
+			func.py "def foo():\n    return 1\n" &&
+		test_commit --printf --no-tag "add trailing empty lines" \
+			func.py "def foo():\n    return 1\n\n\n\n" &&
+		git log -L :foo:func.py --format="%s" >actual &&
+		test_grep ! "add trailing empty lines" actual
+	)
+'
+
+test_expect_success '-L :funcname: excludes empty lines between functions' '
+	git init empty-between-funcs &&
+	(
+		cd empty-between-funcs &&
+		test_commit --printf --no-tag "add two funcs" \
+			func.py "def foo():\n    return 1\n\ndef bar():\n    return 2\n" &&
+		test_commit --printf --no-tag "add empty lines between" \
+			func.py "def foo():\n    return 1\n\n\n\ndef bar():\n    return 2\n" &&
+		git log -L :foo:func.py --format="%s" >actual &&
+		test_grep ! "add empty lines between" actual
+	)
+'
+
 test_expect_success 'get_commit_action() does not mutate a not-yet-walked commit' '
 	git init peek &&
 	(
