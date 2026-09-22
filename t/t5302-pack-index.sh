@@ -309,4 +309,54 @@ test_expect_success DEFAULT_HASH_ALGORITHM 'index-pack --fsck-objects outside of
 	)
 '
 
+test_expect_success 'index-pack --promisor rejects malformed commits' '
+	test_when_finished "rm -rf malformed-src malformed-dst malformed.pack bad-commit" &&
+	test_create_repo malformed-src &&
+	test_create_repo malformed-dst &&
+	printf "tree not-an-object\n\nmessage\n" >bad-commit &&
+	bad_oid=$(git -C malformed-src hash-object --literally -t commit \
+		-w --stdin <bad-commit) &&
+	printf "%s\n" "$bad_oid" |
+		git -C malformed-src pack-objects --stdout >malformed.pack &&
+	test_must_fail git -C malformed-dst index-pack --stdin --promisor \
+		<malformed.pack 2>err &&
+	test_grep "invalid tree line in commit $bad_oid" err
+'
+
+test_expect_success 'index-pack --promisor rejects conflicting link types' '
+	test_when_finished "rm -rf conflict-src conflict-dst conflict.pack bad-commit" &&
+	test_create_repo conflict-src &&
+	test_create_repo conflict-dst &&
+	tree_oid=$(git -C conflict-src mktree </dev/null) &&
+	{
+		printf "tree %s\n" "$tree_oid" &&
+		printf "parent %s\n\nmessage\n" "$tree_oid"
+	} >bad-commit &&
+	commit_oid=$(git -C conflict-src hash-object --literally -t commit \
+		-w --stdin <bad-commit) &&
+	printf "%s\n%s\n" "$tree_oid" "$commit_oid" |
+		git -C conflict-src pack-objects --stdout >conflict.pack &&
+	test_must_fail git -C conflict-dst index-pack --stdin --promisor \
+		<conflict.pack 2>err &&
+	test_grep "object $tree_oid is referred to as both a tree and a commit" err
+'
+
+test_expect_success 'index-pack --promisor verifies tag target types' '
+	test_when_finished "rm -rf tag-src tag-dst tag.pack bad-tag" &&
+	test_create_repo tag-src &&
+	test_create_repo tag-dst &&
+	tree_oid=$(git -C tag-src mktree </dev/null) &&
+	{
+		printf "object %s\n" "$tree_oid" &&
+		printf "type commit\ntag wrong-type\n\nmessage\n"
+	} >bad-tag &&
+	tag_oid=$(git -C tag-src hash-object --literally -t tag \
+		-w --stdin <bad-tag) &&
+	printf "%s\n%s\n" "$tree_oid" "$tag_oid" |
+		git -C tag-src pack-objects --stdout >tag.pack &&
+	test_must_fail git -C tag-dst index-pack --stdin --promisor \
+		<tag.pack 2>err &&
+	test_grep "object $tree_oid is a tree, but was referred to as a commit" err
+'
+
 test_done
