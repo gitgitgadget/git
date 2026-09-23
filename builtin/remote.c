@@ -16,6 +16,7 @@
 #include "rebase.h"
 #include "refs.h"
 #include "refspec.h"
+#include "shallow.h"
 #include "odb.h"
 #include "strvec.h"
 #include "commit-reach.h"
@@ -127,13 +128,17 @@ static void add_branch(const char *key, const char *branchname,
 		       const char *remotename, int mirror, struct strbuf *tmp)
 {
 	strbuf_reset(tmp);
-	strbuf_addch(tmp, '+');
-	if (mirror)
-		strbuf_addf(tmp, "refs/%s:refs/%s",
-				branchname, branchname);
-	else
-		strbuf_addf(tmp, "refs/heads/%s:refs/remotes/%s/%s",
-				branchname, remotename, branchname);
+	if (!strcmp(branchname, ":")) {
+		strbuf_addstr(tmp, "+:");
+	} else {
+		strbuf_addch(tmp, '+');
+		if (mirror)
+			strbuf_addf(tmp, "refs/%s:refs/%s",
+					branchname, branchname);
+		else
+			strbuf_addf(tmp, "refs/heads/%s:refs/remotes/%s/%s",
+					branchname, remotename, branchname);
+	}
 	repo_config_set_multivar(the_repository, key, tmp->buf, "^$", 0);
 }
 
@@ -233,11 +238,13 @@ static int add(int argc, const char **argv, const char *prefix,
 		strbuf_reset(&buf);
 		strbuf_addf(&buf, "remote.%s.fetch", name);
 		if (track.nr == 0)
-			string_list_append(&track, "*");
-		for (size_t i = 0; i < track.nr; i++) {
+			string_list_append(&track,
+				mirror == MIRROR_NONE &&
+				is_repository_shallow(the_repository) ?
+				":" : "*");
+		for (size_t i = 0; i < track.nr; i++)
 			add_branch(buf.buf, track.items[i].string,
 				   name, mirror, &buf2);
-		}
 	}
 
 	if (mirror & MIRROR_PUSH) {

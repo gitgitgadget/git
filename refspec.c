@@ -49,6 +49,11 @@ static int parse_refspec(struct refspec_item *item, const char *refspec,
 		return 1;
 	}
 
+	if (fetch && rhs == lhs && rhs[1] == '\0') {
+		item->tracking = 1;
+		return 1;
+	}
+
 	if (rhs) {
 		size_t rlen = strlen(++rhs);
 		is_glob = (1 <= rlen && strchr(rhs, '*'));
@@ -181,6 +186,7 @@ void refspec_item_clear(struct refspec_item *item)
 	item->force = 0;
 	item->pattern = 0;
 	item->matching = 0;
+	item->tracking = 0;
 	item->exact_sha1 = 0;
 }
 
@@ -373,7 +379,7 @@ static int refspec_find_negative_match(struct refspec *rs, struct refspec_item *
 		struct refspec_item *refspec = &rs->items[i];
 		char *expn_name;
 
-		if (refspec->negative)
+		if (refspec->negative || refspec->tracking)
 			continue;
 
 		/* Note the reversal of src and dst */

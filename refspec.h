@@ -27,6 +27,7 @@ struct refspec_item {
 	unsigned matching : 1;
 	unsigned exact_sha1 : 1;
 	unsigned negative : 1;
+	unsigned tracking : 1;
 
 	char *src;
 	char *dst;

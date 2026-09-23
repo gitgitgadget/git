@@ -988,6 +988,29 @@ void ref_push_report_free(struct ref_push_report *report)
 
 int remote_find_tracking(struct remote *remote, struct refspec_item *refspec)
 {
+	if (remote->fetch.nr == 1 && remote->fetch.items[0].tracking) {
+		struct strbuf prefix = STRBUF_INIT;
+		const char *branch_name;
+		int ret = -1;
+
+		strbuf_addf(&prefix, "refs/remotes/%s/", remote->name);
+		if (!refspec->src) {
+			if (refspec->dst &&
+			    skip_prefix(refspec->dst, prefix.buf, &branch_name)) {
+				refspec->src = xstrfmt("refs/heads/%s", branch_name);
+				refspec->force = 1;
+				ret = 0;
+			}
+		} else if (skip_prefix(refspec->src, "refs/heads/", &branch_name)) {
+			free(refspec->dst);
+			refspec->dst = xstrfmt("%s%s", prefix.buf, branch_name);
+			refspec->force = 1;
+			ret = 0;
+		}
+		strbuf_release(&prefix);
+		return ret;
+	}
+
 	return refspec_find_match(&remote->fetch, refspec);
 }
 
@@ -1874,6 +1897,35 @@ int branch_merge_matches(struct branch *branch,
 	return refname_match(branch->merge[i]->src, refname);
 }
 
+struct branches_tracking_remote_cb_data {
+	struct remote *remote;
+	struct string_list *tracked;
+};
+
+static int add_if_tracking_remote(const struct reference *ref, void *cb_data)
+{
+	struct branches_tracking_remote_cb_data *data = cb_data;
+	struct branch *branch;
+
+	branch = branch_get(ref->name);
+	if (!branch_has_merge_config(branch) ||
+	    strcmp(branch->remote_name, data->remote->name))
+		return 0;
+
+	for (int i = 0; i < branch->merge_nr; i++)
+		string_list_insert(data->tracked, branch->merge[i]->src);
+
+	return 0;
+}
+
+void branches_tracking_remote(struct remote *remote, struct string_list *tracked)
+{
+	struct branches_tracking_remote_cb_data data = { remote, tracked };
+
+	refs_for_each_branch_ref(get_main_ref_store(the_repository),
+				  add_if_tracking_remote, &data);
+}
+
 __attribute__((format (printf,2,3)))
 static char *error_buf(struct strbuf *err, const char *fmt, ...)
 {
@@ -2138,7 +2190,7 @@ int get_fetch_map(const struct ref *remote_refs,
 {
 	struct ref *ref_map, **rmp;
 
-	if (refspec->negative)
+	if (refspec->negative || refspec->tracking)
 		return 0;
 
 	if (refspec->pattern) {

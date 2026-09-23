@@ -48,6 +48,16 @@ Negative refspecs can themselves be pattern refspecs. However, they may only
 contain a _<src>_ and do not specify a _<dst>_. Fully spelled out hex object
 names are also not supported.
 +
+The special refspec `:` (or `+:` to allow non-fast-forward updates)
+directs Git to fetch whichever branches at the remote our local branches
+have as their `@{upstream}`, plus the remote's default branch, which is
+always included so that it is available even before anything is set up
+to track it. Unlike the same syntax when pushing, the local branch name
+plays no role here beyond identifying which remote branch to fetch: the
+result is written to `refs/remotes/<remote>/<branch>` using the remote's
+own branch name, and several local branches built on the same remote
+branch only cause it to be fetched once.
++
 `tag <tag>` means the same as `refs/tags/<tag>:refs/tags/<tag>`;
 it requests fetching everything up to the given tag.
 +

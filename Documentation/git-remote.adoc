@@ -52,6 +52,13 @@ Add a remote named _<name>_ for the repository at
 _<URL>_.  The command `git fetch <name>` can then be used to create and
 update remote-tracking branches `<name>/<branch>`.
 +
+If the repository is already a shallow repository (see linkgit:git-clone[1]
+`--depth`) and neither `-t` nor `--mirror` is given, the remote is set up
+with the special tracking refspec (see the _<refspec>_ entry in
+linkgit:git-fetch[1]) instead of the default glob refspec, so that
+`git fetch <name>` does not need to negotiate history for every branch
+the remote has.
++
 With `-f` option, `git fetch <name>` is run immediately after
 the remote information is set up.
 +
