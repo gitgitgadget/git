@@ -34,7 +34,8 @@ struct packed_git {
 		 do_not_close:1,
 		 pack_promisor:1,
 		 multi_pack_index:1,
-		 is_cruft:1;
+		 is_cruft:1,
+		 has_bad_deltas:1;
 	unsigned char hash[GIT_MAX_RAWSZ];
 	struct revindex_entry *revindex;
 	const uint32_t *revindex_data;
@@ -175,6 +176,11 @@ char *odb_pack_name(struct repository *r, struct strbuf *buf,
 const char *pack_basename(struct packed_git *p);
 
 /*
+ * Return nonzero for a "pack-<hash>.pack" basename with hexsz hex digits.
+ */
+int is_canonical_pack_basename(const char *base, size_t hexsz);
+
+/*
  * Parse the pack idx file found at idx_path and create a packed_git struct
  * which can be used with find_pack_entry_one().
  *
@@ -306,6 +312,9 @@ int unpack_object_header(struct packed_git *, struct pack_window **, off_t *, si
 off_t get_delta_base(struct packed_git *p, struct pack_window **w_curs,
 		     off_t *curpos, enum object_type type,
 		     off_t delta_obj_offset);
+int get_delta_base_oid(struct packed_git *p, struct pack_window **w_curs,
+		       off_t curpos, struct object_id *oid,
+		       enum object_type type, off_t delta_obj_offset);
 
 int packfile_read_object_stream(struct odb_stream **out,
 				const struct object_id *oid,

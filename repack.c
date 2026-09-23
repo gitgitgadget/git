@@ -330,6 +330,7 @@ static struct {
 	{".mtimes", 1},
 	{".bitmap", 1},
 	{".promisor", 1},
+	{".baddeltas", 1},
 	{".idx"},
 };
 
