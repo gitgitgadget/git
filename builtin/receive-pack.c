@@ -1785,6 +1785,13 @@ static void set_connectivity_errors(struct command *commands,
 			/* to be checked in update_shallow_ref() */
 			continue;
 
+		/*
+		 * The bulk check already reported rev-list's diagnostics;
+		 * this per-ref pass only attributes the failure, so keep it
+		 * quiet rather than repeat those errors for every ref.
+		 */
+		opt.quiet = 1;
+
 		odb_transaction_env(transaction, &env);
 		opt.env = env.v;
 
