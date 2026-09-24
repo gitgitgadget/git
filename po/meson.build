@@ -1,4 +1,5 @@
 languages = [
+  'af',
   'bg',
   'de',
   'el',

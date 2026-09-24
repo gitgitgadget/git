@@ -1,0 +1,2156 @@
+# Afrikaans translation of git-gui.
+# Copyright (C) 2007 Shawn Pearce, et al.
+# This file is distributed under the same license as the git-gui package.
+#
+# Stéfan Driaan Turvey <stefanturvey1912@gmail.com>, 2026.
+msgid ""
+msgstr ""
+"Project-Id-Version: git-gui\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-16 11:05+0200\n"
+"PO-Revision-Date: 2026-09-24 07:31+0200\n"
+"Last-Translator: Stéfan Driaan Turvey <stefanturvey1912@gmail.com>\n"
+"Language-Team: Stéfan Driaan Turvey <stefanturvey1912@gmail.com>\n"
+"Language: af\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#, tcl-format
+msgid "Invalid font specified in %s:"
+msgstr "Ongeldige lettertipe in %s gespesifiseer:"
+
+msgid "Main Font"
+msgstr "Hooflettertipe"
+
+msgid "Diff/Console Font"
+msgstr "Verskil-/konsolelettertipe"
+
+msgid "git-gui: fatal error"
+msgstr "git-gui: fatale fout"
+
+msgid "Cannot find git in PATH."
+msgstr "Kan nie git in PATH vind nie."
+
+msgid "Cannot parse Git version string:"
+msgstr "Kan nie die Git-weergawestring ontleed nie:"
+
+msgid "Insufficient git version, require: "
+msgstr "Ontoereikende git-weergawe, vereis: "
+
+msgid "git returned:"
+msgstr "git het teruggegee:"
+
+msgid "Invalid configuration:"
+msgstr "Ongeldige konfigurasie:"
+
+msgid "Unusable repo/worktree:"
+msgstr "Onbruikbare bewaarplek/werkboom:"
+
+msgid "Git directory not found:"
+msgstr "Git-gids nie gevind nie:"
+
+msgid "No working directory"
+msgstr "Geen werkgids nie"
+
+msgid "Cannot use bare repository:"
+msgstr "Kan nie kaal bewaarplek gebruik nie:"
+
+msgid "Refreshing file status..."
+msgstr "Verfris tans lêerstatus..."
+
+msgid "Scanning for modified files ..."
+msgstr "Soek tans na gewysigde lêers ..."
+
+msgid "Calling prepare-commit-msg hook..."
+msgstr "Roep tans prepare-commit-msg-haak aan..."
+
+msgid "Commit declined by prepare-commit-msg hook."
+msgstr "Vaslegging deur prepare-commit-msg-haak geweier."
+
+msgid "Ready."
+msgstr "Gereed."
+
+#, tcl-format
+msgid ""
+"Display limit (gui.maxfilesdisplayed = %s) reached, not showing all %s files."
+msgstr ""
+"Vertoonlimiet (gui.maxfilesdisplayed = %s) bereik, nie al %s lêers word "
+"gewys nie."
+
+msgid "Unmodified"
+msgstr "Ongewysig"
+
+msgid "Modified, not staged"
+msgstr "Gewysig, nie geplaas nie"
+
+msgid "Staged for commit"
+msgstr "Geplaas vir vaslegging"
+
+msgid "Portions staged for commit"
+msgstr "Gedeeltes geplaas vir vaslegging"
+
+msgid "Staged for commit, missing"
+msgstr "Geplaas vir vaslegging, ontbreek"
+
+msgid "File type changed, not staged"
+msgstr "Lêertipe verander, nie geplaas nie"
+
+msgid "File type changed, old type staged for commit"
+msgstr "Lêertipe verander, ou tipe geplaas vir vaslegging"
+
+msgid "File type changed, staged"
+msgstr "Lêertipe verander, geplaas"
+
+msgid "File type change staged, modification not staged"
+msgstr "Lêertipeverandering geplaas, wysiging nie geplaas nie"
+
+msgid "File type change staged, file missing"
+msgstr "Lêertipeverandering geplaas, lêer ontbreek"
+
+msgid "Untracked, not staged"
+msgstr "Onnaspoorbaar, nie geplaas nie"
+
+msgid "Missing"
+msgstr "Ontbreek"
+
+msgid "Staged for removal"
+msgstr "Geplaas vir verwydering"
+
+msgid "Staged for removal, still present"
+msgstr "Geplaas vir verwydering, steeds teenwoordig"
+
+msgid "Requires merge resolution"
+msgstr "Vereis oplossing van saamsmelting"
+
+msgid "Couldn't find gitk in PATH"
+msgstr "Kon nie gitk in PATH vind nie"
+
+#, tcl-format
+msgid "Starting %s... please wait..."
+msgstr "Begin tans %s... wag asseblief..."
+
+msgid "Couldn't find git gui in PATH"
+msgstr "Kon nie git gui in PATH vind nie"
+
+msgid "Repository"
+msgstr "Bewaarplek"
+
+msgid "Edit"
+msgstr "Redigeer"
+
+msgid "Branch"
+msgstr "Tak"
+
+msgid "Commit@@noun"
+msgstr "Vaslegging"
+
+msgid "Merge"
+msgstr "Saamsmelt"
+
+msgid "Remote"
+msgstr "Afgeleë"
+
+msgid "Tools"
+msgstr "Gereedskap"
+
+msgid "Explore Working Copy"
+msgstr "Verken werkkopie"
+
+msgid "Git Bash"
+msgstr "Git Bash"
+
+msgid "Browse Current Branch's Files"
+msgstr "Blaai deur huidige tak se lêers"
+
+msgid "Browse Branch Files..."
+msgstr "Blaai deur taklêers..."
+
+msgid "Visualize Current Branch's History"
+msgstr "Visualiseer huidige tak se geskiedenis"
+
+msgid "Visualize All Branch History"
+msgstr "Visualiseer alle takke se geskiedenis"
+
+#, tcl-format
+msgid "Browse %s's Files"
+msgstr "Blaai deur %s se lêers"
+
+#, tcl-format
+msgid "Visualize %s's History"
+msgstr "Visualiseer %s se geskiedenis"
+
+msgid "Database Statistics"
+msgstr "Databasisstatistiek"
+
+msgid "Compress Database"
+msgstr "Pak databasis saam"
+
+msgid "Verify Database"
+msgstr "Verifieer databasis"
+
+msgid "Create Desktop Icon"
+msgstr "Skep werkskermikoon"
+
+msgid "Quit"
+msgstr "Verlaat"
+
+msgid "Undo"
+msgstr "Ontdoen"
+
+msgid "Redo"
+msgstr "Herdoen"
+
+msgid "Cut"
+msgstr "Knip"
+
+msgid "Copy"
+msgstr "Kopieer"
+
+msgid "Paste"
+msgstr "Plak"
+
+msgid "Delete"
+msgstr "Skrap"
+
+msgid "Select All"
+msgstr "Kies alles"
+
+msgid "Create..."
+msgstr "Skep..."
+
+msgid "Checkout..."
+msgstr "Check uit..."
+
+msgid "Rename..."
+msgstr "Hernoem..."
+
+msgid "Delete..."
+msgstr "Skrap..."
+
+msgid "Reset..."
+msgstr "Herstel..."
+
+msgid "Done"
+msgstr "Klaar"
+
+msgid "Commit@@verb"
+msgstr "Lê vas"
+
+msgid "Amend Last Commit"
+msgstr "Wysig laaste vaslegging"
+
+msgid "Rescan"
+msgstr "Herskandeer"
+
+msgid "Stage To Commit"
+msgstr "Plaas vir vaslegging"
+
+msgid "Stage Changed Files To Commit"
+msgstr "Plaas gewysigde lêers vir vaslegging"
+
+msgid "Unstage From Commit"
+msgstr "Ontplaas uit vaslegging"
+
+msgid "Revert Changes"
+msgstr "Keer veranderinge om"
+
+msgid "Show Less Context"
+msgstr "Wys minder konteks"
+
+msgid "Show More Context"
+msgstr "Wys meer konteks"
+
+msgid "Sign Off"
+msgstr "Teken af"
+
+msgid "Local Merge..."
+msgstr "Plaaslike saamsmelting..."
+
+msgid "Abort Merge..."
+msgstr "Staak saamsmelting..."
+
+msgid "Add..."
+msgstr "Voeg by..."
+
+msgid "Push..."
+msgstr "Stoot..."
+
+msgid "Delete Branch..."
+msgstr "Skrap tak..."
+
+msgid "Options..."
+msgstr "Opsies..."
+
+msgid "Remove..."
+msgstr "Verwyder..."
+
+msgid "Help"
+msgstr "Hulp"
+
+#, tcl-format
+msgid "About %s"
+msgstr "Aangaande %s"
+
+msgid "Online Documentation"
+msgstr "Aanlyn dokumentasie"
+
+msgid "Show SSH Key"
+msgstr "Wys SSH-sleutel"
+
+msgid "usage:"
+msgstr "gebruik:"
+
+msgid "Usage"
+msgstr "Gebruik"
+
+#, tcl-format
+msgid "fatal: no such file '%s' in worktree"
+msgstr "fataal: geen lêer '%s' in werkboom nie"
+
+#, tcl-format
+msgid "fatal: '%s' is not a valid rev'"
+msgstr "fataal: '%s' is nie 'n geldige revisie nie'"
+
+#, tcl-format
+msgid "'%s' is not a directory in rev '%s'"
+msgstr "'%s' is nie 'n gids in revisie '%s' nie"
+
+#, tcl-format
+msgid "'%s' is not a filename in rev '%s'"
+msgstr "'%s' is nie 'n lêernaam in revisie '%s' nie"
+
+msgid "Current Branch:"
+msgstr "Huidige tak:"
+
+msgid "Unstaged Changes"
+msgstr "Ongeplaasde veranderinge"
+
+msgid "Staged Changes (Will Commit)"
+msgstr "Geplaasde veranderinge (sal vasgelê word)"
+
+msgid "Stage Changed"
+msgstr "Plaas gewysigdes"
+
+msgid "Push"
+msgstr "Stoot"
+
+msgid "Initial Commit Message:"
+msgstr "Aanvanklike vasleggingsboodskap:"
+
+msgid "Amended Commit Message:"
+msgstr "Gewysigde vasleggingsboodskap:"
+
+msgid "Amended Initial Commit Message:"
+msgstr "Gewysigde aanvanklike vasleggingsboodskap:"
+
+msgid "Amended Merge Commit Message:"
+msgstr "Gewysigde saamsmeltvasleggingsboodskap:"
+
+msgid "Merge Commit Message:"
+msgstr "Saamsmeltvasleggingsboodskap:"
+
+msgid "Commit Message:"
+msgstr "Vasleggingsboodskap:"
+
+msgid "Copy All"
+msgstr "Kopieer alles"
+
+msgid "File:"
+msgstr "Lêer:"
+
+msgid "Open"
+msgstr "Open"
+
+msgid "Refresh"
+msgstr "Verfris"
+
+msgid "Decrease Font Size"
+msgstr "Verklein lettergrootte"
+
+msgid "Increase Font Size"
+msgstr "Vergroot lettergrootte"
+
+msgid "Encoding"
+msgstr "Enkodering"
+
+msgid "Apply/Reverse Hunk"
+msgstr "Pas brok toe/keer om"
+
+msgid "Apply/Reverse Line"
+msgstr "Pas reël toe/keer om"
+
+msgid "Revert Hunk"
+msgstr "Keer brok om"
+
+msgid "Revert Line"
+msgstr "Keer reël om"
+
+msgid "Undo Last Revert"
+msgstr "Ontdoen laaste omkering"
+
+msgid "Run Merge Tool"
+msgstr "Voer saamsmeltgereedskap uit"
+
+msgid "Use Remote Version"
+msgstr "Gebruik afgeleë weergawe"
+
+msgid "Use Local Version"
+msgstr "Gebruik plaaslike weergawe"
+
+msgid "Revert To Base"
+msgstr "Keer terug na basis"
+
+msgid "Visualize These Changes In The Submodule"
+msgstr "Visualiseer hierdie veranderinge in die submodule"
+
+msgid "Visualize Current Branch History In The Submodule"
+msgstr "Visualiseer huidige tak se geskiedenis in die submodule"
+
+msgid "Visualize All Branch History In The Submodule"
+msgstr "Visualiseer alle takke se geskiedenis in die submodule"
+
+msgid "Start git gui In The Submodule"
+msgstr "Begin git gui in die submodule"
+
+msgid "Unstage Hunk From Commit"
+msgstr "Ontplaas brok uit vaslegging"
+
+msgid "Unstage Lines From Commit"
+msgstr "Ontplaas reëls uit vaslegging"
+
+msgid "Revert Lines"
+msgstr "Keer reëls om"
+
+msgid "Unstage Line From Commit"
+msgstr "Ontplaas reël uit vaslegging"
+
+msgid "Stage Hunk For Commit"
+msgstr "Plaas brok vir vaslegging"
+
+msgid "Stage Lines For Commit"
+msgstr "Plaas reëls vir vaslegging"
+
+msgid "Stage Line For Commit"
+msgstr "Plaas reël vir vaslegging"
+
+msgid "Initializing..."
+msgstr "Inisialiseer tans..."
+
+msgid "git-gui - a graphical user interface for Git."
+msgstr "git-gui - 'n grafiese gebruikerskoppelvlak vir Git."
+
+#, tcl-format
+msgid "%s (%s): File Viewer"
+msgstr "%s (%s): Lêerbekyker"
+
+msgid "Commit:"
+msgstr "Vaslegging:"
+
+msgid "Copy Commit"
+msgstr "Kopieer vaslegging"
+
+msgid "Find Text..."
+msgstr "Soek teks..."
+
+msgid "Goto Line..."
+msgstr "Gaan na reël..."
+
+msgid "Do Full Copy Detection"
+msgstr "Doen volledige kopie-opsporing"
+
+msgid "Show History Context"
+msgstr "Wys geskiedeniskonteks"
+
+msgid "Blame Parent Commit"
+msgstr "Blameer ouervaslegging"
+
+#, tcl-format
+msgid "Reading %s..."
+msgstr "Lees tans %s..."
+
+msgid "Error"
+msgstr "Fout"
+
+msgid "Loading copy/move tracking annotations..."
+msgstr "Laai tans kopieer-/skuifnaspooraantekeninge..."
+
+msgid "lines annotated"
+msgstr "reëls geannoteer"
+
+msgid "Loading original location annotations..."
+msgstr "Laai tans aantekeninge van oorspronklike ligging..."
+
+msgid "Annotation complete."
+msgstr "Annotering voltooi."
+
+msgid "Busy"
+msgstr "Besig"
+
+msgid "Annotation process is already running."
+msgstr "Annoteringsproses loop reeds."
+
+msgid "Running thorough copy detection..."
+msgstr "Voer tans deeglike kopie-opsporing uit..."
+
+msgid "Loading annotation..."
+msgstr "Laai tans annotering..."
+
+msgid "Author:"
+msgstr "Outeur:"
+
+msgid "Committer:"
+msgstr "Vaslegger:"
+
+msgid "Original File:"
+msgstr "Oorspronklike lêer:"
+
+msgid "Cannot find HEAD commit:"
+msgstr "Kan nie HEAD-vaslegging vind nie:"
+
+msgid "Cannot find parent commit:"
+msgstr "Kan nie ouervaslegging vind nie:"
+
+msgid "Unable to display parent"
+msgstr "Kan nie ouer vertoon nie"
+
+msgid "Error loading diff:"
+msgstr "Fout met laai van verskil:"
+
+msgid "Originally By:"
+msgstr "Oorspronklik deur:"
+
+msgid "In File:"
+msgstr "In lêer:"
+
+msgid "Copied Or Moved Here By:"
+msgstr "Hierheen gekopieer of geskuif deur:"
+
+#, tcl-format
+msgid "%s (%s): Checkout Branch"
+msgstr "%s (%s): Check tak uit"
+
+msgid "Checkout Branch"
+msgstr "Check tak uit"
+
+msgid "Checkout"
+msgstr "Check uit"
+
+msgid "Cancel"
+msgstr "Kanselleer"
+
+msgid "Revision"
+msgstr "Revisie"
+
+msgid "Options"
+msgstr "Opsies"
+
+msgid "Fetch Tracking Branch"
+msgstr "Haal volgtak"
+
+msgid "Detach From Local Branch"
+msgstr "Ontkoppel van plaaslike tak"
+
+#, tcl-format
+msgid "%s (%s): Create Branch"
+msgstr "%s (%s): Skep tak"
+
+msgid "Create New Branch"
+msgstr "Skep nuwe tak"
+
+msgid "Create"
+msgstr "Skep"
+
+msgid "Branch Name"
+msgstr "Taknaam"
+
+msgid "Name:"
+msgstr "Naam:"
+
+msgid "Match Tracking Branch Name"
+msgstr "Pas by volgtak se naam"
+
+msgid "Starting Revision"
+msgstr "Beginrevisie"
+
+msgid "Update Existing Branch:"
+msgstr "Werk bestaande tak by:"
+
+msgid "No"
+msgstr "Nee"
+
+msgid "Fast Forward Only"
+msgstr "Slegs vooruitspoel"
+
+msgid "Reset"
+msgstr "Herstel"
+
+msgid "Checkout After Creation"
+msgstr "Check uit na skepping"
+
+msgid "Please select a tracking branch."
+msgstr "Kies asseblief 'n volgtak."
+
+#, tcl-format
+msgid "Tracking branch %s is not a branch in the remote repository."
+msgstr "Volgtak %s is nie 'n tak in die afgeleë bewaarplek nie."
+
+msgid "Please supply a branch name."
+msgstr "Verskaf asseblief 'n taknaam."
+
+#, tcl-format
+msgid "'%s' is not an acceptable branch name."
+msgstr "'%s' is nie 'n aanvaarbare taknaam nie."
+
+#, tcl-format
+msgid "%s (%s): Delete Branch"
+msgstr "%s (%s): Skrap tak"
+
+msgid "Delete Local Branch"
+msgstr "Skrap plaaslike tak"
+
+msgid "Local Branches"
+msgstr "Plaaslike takke"
+
+msgid "Delete Only If Merged Into"
+msgstr "Skrap slegs indien saamgesmelt in"
+
+msgid "Always (Do not perform merge checks)"
+msgstr "Altyd (moenie saamsmeltkontroles uitvoer nie)"
+
+#, tcl-format
+msgid "The following branches are not completely merged into %s:"
+msgstr "Die volgende takke is nie volledig in %s saamgesmelt nie:"
+
+msgid ""
+"Recovering deleted branches is difficult.\n"
+"\n"
+"Delete the selected branches?"
+msgstr ""
+"Dit is moeilik om geskrapte takke te herwin.\n"
+"\n"
+"Skrap die gekose takke?"
+
+#, tcl-format
+msgid " - %s:"
+msgstr " - %s:"
+
+#, tcl-format
+msgid ""
+"Failed to delete branches:\n"
+"%s"
+msgstr ""
+"Kon nie takke skrap nie:\n"
+"%s"
+
+#, tcl-format
+msgid "%s (%s): Rename Branch"
+msgstr "%s (%s): Hernoem tak"
+
+msgid "Rename Branch"
+msgstr "Hernoem tak"
+
+msgid "Rename"
+msgstr "Hernoem"
+
+msgid "Branch:"
+msgstr "Tak:"
+
+msgid "New Name:"
+msgstr "Nuwe naam:"
+
+msgid "Please select a branch to rename."
+msgstr "Kies asseblief 'n tak om te hernoem."
+
+#, tcl-format
+msgid "Branch '%s' already exists."
+msgstr "Tak '%s' bestaan reeds."
+
+#, tcl-format
+msgid "Failed to rename '%s'."
+msgstr "Kon nie '%s' hernoem nie."
+
+msgid "Starting..."
+msgstr "Begin tans..."
+
+#, tcl-format
+msgid "%s (%s): File Browser"
+msgstr "%s (%s): Lêerblaaier"
+
+#, tcl-format
+msgid "Loading %s..."
+msgstr "Laai tans %s..."
+
+msgid "[Up To Parent]"
+msgstr "[Op na ouer]"
+
+#, tcl-format
+msgid "%s (%s): Browse Branch Files"
+msgstr "%s (%s): Blaai deur taklêers"
+
+msgid "Browse Branch Files"
+msgstr "Blaai deur taklêers"
+
+msgid "Browse"
+msgstr "Blaai"
+
+#, tcl-format
+msgid "Fetching %s from %s"
+msgstr "Haal tans %s vanaf %s"
+
+#, tcl-format
+msgid "fatal: Cannot resolve %s"
+msgstr "fataal: Kan nie %s oplos nie"
+
+msgid "Close"
+msgstr "Sluit"
+
+#, tcl-format
+msgid "Branch '%s' does not exist."
+msgstr "Tak '%s' bestaan nie."
+
+#, tcl-format
+msgid "Failed to configure simplified git-pull for '%s'."
+msgstr "Kon nie vereenvoudigde git-pull vir '%s' konfigureer nie."
+
+#, tcl-format
+msgid ""
+"Branch '%s' already exists.\n"
+"\n"
+"It cannot fast-forward to %s.\n"
+"A merge is required."
+msgstr ""
+"Tak '%s' bestaan reeds.\n"
+"\n"
+"Dit kan nie na %s vooruitspoel nie.\n"
+"'n Saamsmelting is nodig."
+
+#, tcl-format
+msgid "Merge strategy '%s' not supported."
+msgstr "Saamsmeltstrategie '%s' word nie ondersteun nie."
+
+#, tcl-format
+msgid "Failed to update '%s'."
+msgstr "Kon nie '%s' bywerk nie."
+
+msgid "Staging area (index) is already locked."
+msgstr "Plaasarea (indeks) is reeds gesluit."
+
+msgid ""
+"Last scanned state does not match repository state.\n"
+"\n"
+"Another Git program has modified this repository since the last scan.  A "
+"rescan must be performed before the current branch can be changed.\n"
+"\n"
+"The rescan will be automatically started now.\n"
+msgstr ""
+"Laaste geskandeerde toestand stem nie ooreen met die bewaarplek se toestand "
+"nie.\n"
+"\n"
+"'n Ander Git-program het hierdie bewaarplek sedert die laaste skandering "
+"gewysig.  'n Herskandering moet uitgevoer word voordat die huidige tak "
+"verander kan word.\n"
+"\n"
+"Die herskandering sal nou outomaties begin word.\n"
+
+#, tcl-format
+msgid "Updating working directory to '%s'..."
+msgstr "Werk tans werkgids by na '%s'..."
+
+msgid "files checked out"
+msgstr "lêers uitgecheck"
+
+#, tcl-format
+msgid "Aborted checkout of '%s' (file level merging is required)."
+msgstr "Uitcheck van '%s' gestaak (saamsmelting op lêervlak is nodig)."
+
+msgid "File level merge required."
+msgstr "Saamsmelting op lêervlak is nodig."
+
+#, tcl-format
+msgid "Staying on branch '%s'."
+msgstr "Bly op tak '%s'."
+
+msgid ""
+"You are no longer on a local branch.\n"
+"\n"
+"If you wanted to be on a branch, create one now starting from 'This Detached "
+"Checkout'."
+msgstr ""
+"Jy is nie meer op 'n plaaslike tak nie.\n"
+"\n"
+"As jy op 'n tak wou wees, skep nou een wat by 'Hierdie ontkoppelde uitcheck' "
+"begin."
+
+#, tcl-format
+msgid "Checked out '%s'."
+msgstr "'%s' uitgecheck."
+
+#, tcl-format
+msgid "Resetting '%s' to '%s' will lose the following commits:"
+msgstr "Om '%s' na '%s' te herstel sal die volgende vasleggings verloor:"
+
+msgid "Recovering lost commits may not be easy."
+msgstr "Dit is dalk nie maklik om verlore vasleggings te herwin nie."
+
+#, tcl-format
+msgid "Reset '%s'?"
+msgstr "Herstel '%s'?"
+
+msgid "Visualize"
+msgstr "Visualiseer"
+
+#, tcl-format
+msgid ""
+"Failed to set current branch.\n"
+"\n"
+"This working directory is only partially switched.  We successfully updated "
+"your files, but failed to update an internal Git file.\n"
+"\n"
+"This should not have occurred.  %s will now close and give up."
+msgstr ""
+"Kon nie huidige tak stel nie.\n"
+"\n"
+"Hierdie werkgids is slegs gedeeltelik oorgeskakel.  Ons het jou lêers "
+"suksesvol bygewerk, maar kon nie 'n interne Git-lêer bywerk nie.\n"
+"\n"
+"Dit moes nie gebeur het nie.  %s sal nou sluit en opgee."
+
+msgid "Select"
+msgstr "Kies"
+
+msgid "Font Family"
+msgstr "Lettertipefamilie"
+
+msgid "Font Size"
+msgstr "Lettergrootte"
+
+msgid "Font Example"
+msgstr "Lettertipevoorbeeld"
+
+msgid ""
+"This is example text.\n"
+"If you like this text, it can be your font."
+msgstr ""
+"Dit is voorbeeldteks.\n"
+"As jy van hierdie teks hou, kan dit jou lettertipe wees."
+
+msgid "Git Gui"
+msgstr "Git Gui"
+
+msgid "Create New Repository"
+msgstr "Skep nuwe bewaarplek"
+
+msgid "New..."
+msgstr "Nuut..."
+
+msgid "Clone Existing Repository"
+msgstr "Kloon bestaande bewaarplek"
+
+msgid "Clone..."
+msgstr "Kloon..."
+
+msgid "Open Existing Repository"
+msgstr "Open bestaande bewaarplek"
+
+msgid "Open..."
+msgstr "Open..."
+
+msgid "Recent Repositories"
+msgstr "Onlangse bewaarplekke"
+
+msgid "Open Recent Repository:"
+msgstr "Open onlangse bewaarplek:"
+
+#, tcl-format
+msgid "Failed to create repository %s:"
+msgstr "Kon nie bewaarplek %s skep nie:"
+
+msgid "Directory:"
+msgstr "Gids:"
+
+msgid "Git Repository"
+msgstr "Git-bewaarplek"
+
+#, tcl-format
+msgid "Directory %s already exists."
+msgstr "Gids %s bestaan reeds."
+
+#, tcl-format
+msgid "File %s already exists."
+msgstr "Lêer %s bestaan reeds."
+
+msgid "Clone"
+msgstr "Kloon"
+
+msgid "Source Location:"
+msgstr "Bronligging:"
+
+msgid "Target Directory:"
+msgstr "Teikengids:"
+
+msgid "Clone Type:"
+msgstr "Kloontipe:"
+
+msgid "Standard (Fast, Semi-Redundant, Hardlinks)"
+msgstr "Standaard (vinnig, semi-oortollig, harde skakels)"
+
+msgid "Full Copy (Slower, Redundant Backup)"
+msgstr "Volledige kopie (stadiger, oortollige rugsteun)"
+
+msgid "Shared (Fastest, Not Recommended, No Backup)"
+msgstr "Gedeel (vinnigste, nie aanbeveel nie, geen rugsteun nie)"
+
+msgid "Recursively clone submodules too"
+msgstr "Kloon submodules ook rekursief"
+
+#, tcl-format
+msgid "Not a Git repository: %s"
+msgstr "Nie 'n Git-bewaarplek nie: %s"
+
+msgid "Hardlinks are unavailable.  Falling back to copying."
+msgstr "Harde skakels is nie beskikbaar nie.  Val terug op kopiëring."
+
+msgid "Standard only available for local repository."
+msgstr "Standaard is slegs vir 'n plaaslike bewaarplek beskikbaar."
+
+msgid "Shared only available for local repository."
+msgstr "Gedeel is slegs vir 'n plaaslike bewaarplek beskikbaar."
+
+#, tcl-format
+msgid "Location %s already exists."
+msgstr "Ligging %s bestaan reeds."
+
+#, tcl-format
+msgid "Cloning from %s"
+msgstr "Kloon tans vanaf %s"
+
+msgid "Clone failed."
+msgstr "Kloon het misluk."
+
+msgid "Repository:"
+msgstr "Bewaarplek:"
+
+#, tcl-format
+msgid "Failed to open repository %s:"
+msgstr "Kon nie bewaarplek %s open nie:"
+
+msgid "This Detached Checkout"
+msgstr "Hierdie ontkoppelde uitcheck"
+
+msgid "Revision Expression:"
+msgstr "Revisie-uitdrukking:"
+
+msgid "Local Branch"
+msgstr "Plaaslike tak"
+
+msgid "Tracking Branch"
+msgstr "Volgtak"
+
+msgid "Tag"
+msgstr "Etiket"
+
+#, tcl-format
+msgid "Invalid revision: %s"
+msgstr "Ongeldige revisie: %s"
+
+msgid "No revision selected."
+msgstr "Geen revisie gekies nie."
+
+msgid "Revision expression is empty."
+msgstr "Revisie-uitdrukking is leeg."
+
+msgid "Updated"
+msgstr "Bygewerk"
+
+msgid "URL"
+msgstr "URL"
+
+msgid ""
+"There is nothing to amend.\n"
+"\n"
+"You are about to create the initial commit.  There is no commit before this "
+"to amend.\n"
+msgstr ""
+"Daar is niks om te wysig nie.\n"
+"\n"
+"U is op die punt om die eerste vaslegging te skep.  Daar is geen vaslegging "
+"hiervoor om te wysig nie.\n"
+
+msgid ""
+"Cannot amend while merging.\n"
+"\n"
+"You are currently in the middle of a merge that has not been fully "
+"completed.  You cannot amend the prior commit unless you first abort the "
+"current merge activity.\n"
+msgstr ""
+"Kan nie wysig tydens 'n saamsmelting nie.\n"
+"\n"
+"U is tans in die middel van 'n saamsmelting wat nog nie heeltemal voltooi is "
+"nie.  U kan nie die vorige vaslegging wysig nie, tensy u eers die huidige "
+"saamsmelting staak.\n"
+
+msgid "Error loading commit data for amend:"
+msgstr "Fout met die laai van vasleggingsdata om te wysig:"
+
+msgid "Unable to obtain your identity:"
+msgstr "Kan nie u identiteit bepaal nie:"
+
+msgid "Invalid GIT_COMMITTER_IDENT:"
+msgstr "Ongeldige GIT_COMMITTER_IDENT:"
+
+#, tcl-format
+msgid "warning: Tcl does not support encoding '%s'."
+msgstr "waarskuwing: Tcl ondersteun nie enkodering '%s' nie."
+
+msgid ""
+"Last scanned state does not match repository state.\n"
+"\n"
+"Another Git program has modified this repository since the last scan.  A "
+"rescan must be performed before another commit can be created.\n"
+"\n"
+"The rescan will be automatically started now.\n"
+msgstr ""
+"Die laaste geskandeerde toestand stem nie ooreen met die toestand van die "
+"bewaarplek nie.\n"
+"\n"
+"'n Ander Git-program het hierdie bewaarplek sedert die laaste skandering "
+"gewysig.  'n Herskandering moet gedoen word voordat nog 'n vaslegging geskep "
+"kan word.\n"
+"\n"
+"Die herskandering sal nou outomaties begin word.\n"
+
+#, tcl-format
+msgid ""
+"Unmerged files cannot be committed.\n"
+"\n"
+"File %s has merge conflicts.  You must resolve them and stage the file "
+"before committing.\n"
+msgstr ""
+"Lêers wat nie saamgesmelt is nie, kan nie vasgelê word nie.\n"
+"\n"
+"Lêer %s het saamsmeltkonflikte.  U moet dit oplos en die lêer plaas voordat "
+"u vaslê.\n"
+
+#, tcl-format
+msgid ""
+"Unknown file state %s detected.\n"
+"\n"
+"File %s cannot be committed by this program.\n"
+msgstr ""
+"Onbekende lêertoestand %s bespeur.\n"
+"\n"
+"Lêer %s kan nie deur hierdie program vasgelê word nie.\n"
+
+msgid ""
+"No changes to commit.\n"
+"\n"
+"You must stage at least 1 file before you can commit.\n"
+msgstr ""
+"Geen veranderinge om vas te lê nie.\n"
+"\n"
+"U moet ten minste 1 lêer plaas voordat u kan vaslê.\n"
+
+msgid "Calling pre-commit hook..."
+msgstr "Roep pre-commit-haak aan..."
+
+msgid "Commit declined by pre-commit hook."
+msgstr "Vaslegging deur pre-commit-haak geweier."
+
+msgid ""
+"You are about to commit on a detached head. This is a potentially dangerous "
+"thing to do because if you switch to another branch you will lose your "
+"changes and it can be difficult to retrieve them later from the reflog. You "
+"should probably cancel this commit and create a new branch to continue.\n"
+" \n"
+" Do you really want to proceed with your Commit?"
+msgstr ""
+"U is op die punt om op 'n ontkoppelde HEAD vas te lê. Dit is moontlik "
+"gevaarlik, want as u na 'n ander tak oorskakel, sal u u veranderinge verloor "
+"en dit kan moeilik wees om hulle later uit die reflog te herwin. U moet "
+"waarskynlik hierdie vaslegging kanselleer en 'n nuwe tak skep om voort te "
+"gaan.\n"
+" \n"
+" Wil u regtig met u vaslegging voortgaan?"
+
+msgid "Calling commit-msg hook..."
+msgstr "Roep commit-msg-haak aan..."
+
+msgid "Commit declined by commit-msg hook."
+msgstr "Vaslegging deur commit-msg-haak geweier."
+
+msgid ""
+"Please supply a commit message.\n"
+"\n"
+"A good commit message has the following format:\n"
+"\n"
+"- First line: Describe in one sentence what you did.\n"
+"- Second line: Blank\n"
+"- Remaining lines: Describe why this change is good.\n"
+msgstr ""
+"Verskaf asseblief 'n vasleggingsboodskap.\n"
+"\n"
+"'n Goeie vasleggingsboodskap het die volgende formaat:\n"
+"\n"
+"- Eerste reël: Beskryf in een sin wat u gedoen het.\n"
+"- Tweede reël: Leeg\n"
+"- Oorblywende reëls: Beskryf waarom hierdie verandering goed is.\n"
+
+msgid "Committing changes..."
+msgstr "Lê veranderinge vas..."
+
+msgid "write-tree failed:"
+msgstr "write-tree het misluk:"
+
+msgid "Commit failed."
+msgstr "Vaslegging het misluk."
+
+#, tcl-format
+msgid "Commit %s appears to be corrupt"
+msgstr "Vaslegging %s blyk korrup te wees"
+
+msgid ""
+"No changes to commit.\n"
+"\n"
+"No files were modified by this commit and it was not a merge commit.\n"
+"\n"
+"A rescan will be automatically started now.\n"
+msgstr ""
+"Geen veranderinge om vas te lê nie.\n"
+"\n"
+"Geen lêers is deur hierdie vaslegging gewysig nie en dit was nie 'n "
+"saamsmeltvaslegging nie.\n"
+"\n"
+"'n Herskandering sal nou outomaties begin word.\n"
+
+msgid "No changes to commit."
+msgstr "Geen veranderinge om vas te lê nie."
+
+msgid "commit-tree failed:"
+msgstr "commit-tree het misluk:"
+
+msgid "update-ref failed:"
+msgstr "update-ref het misluk:"
+
+#, tcl-format
+msgid "Created commit %s: %s"
+msgstr "Vaslegging %s geskep: %s"
+
+msgid "Working... please wait..."
+msgstr "Besig... wag asseblief..."
+
+msgid "Success"
+msgstr "Sukses"
+
+msgid "Error: Command Failed"
+msgstr "Fout: Opdrag het misluk"
+
+msgid "Number of loose objects"
+msgstr "Aantal los objekte"
+
+msgid "Disk space used by loose objects"
+msgstr "Skyfspasie deur los objekte gebruik"
+
+msgid "Number of packed objects"
+msgstr "Aantal gepakte objekte"
+
+msgid "Number of packs"
+msgstr "Aantal pakke"
+
+msgid "Disk space used by packed objects"
+msgstr "Skyfspasie deur gepakte objekte gebruik"
+
+msgid "Packed objects waiting for pruning"
+msgstr "Gepakte objekte wat wag om gesnoei te word"
+
+msgid "Garbage files"
+msgstr "Rommellêers"
+
+#, tcl-format
+msgid "%s:"
+msgstr "%s:"
+
+#, tcl-format
+msgid "%s (%s): Database Statistics"
+msgstr "%s (%s): Databasisstatistiek"
+
+msgid "Compressing the object database"
+msgstr "Kompakteer die objekdatabasis"
+
+msgid "Verifying the object database with fsck-objects"
+msgstr "Verifieer die objekdatabasis met fsck-objects"
+
+#, tcl-format
+msgid ""
+"This repository currently has approximately %i loose objects.\n"
+"\n"
+"To maintain optimal performance it is strongly recommended that you compress "
+"the database.\n"
+"\n"
+"Compress the database now?"
+msgstr ""
+"Hierdie bewaarplek het tans ongeveer %i los objekte.\n"
+"\n"
+"Om optimale werkverrigting te behou, word sterk aanbeveel dat u die "
+"databasis kompakteer.\n"
+"\n"
+"Kompakteer die databasis nou?"
+
+#, tcl-format
+msgid "Invalid date from Git: %s"
+msgstr "Ongeldige datum van Git: %s"
+
+msgid ""
+"* No differences detected; stage the file to de-list it from Unstaged "
+"Changes.\n"
+msgstr ""
+"* Geen verskille bespeur nie; plaas die lêer om dit uit Ongeplaasde "
+"Veranderinge te verwyder.\n"
+
+msgid "* Click to find other files that may have the same state.\n"
+msgstr "* Klik om ander lêers te vind wat dalk dieselfde toestand het.\n"
+
+#, tcl-format
+msgid "Loading diff of %s..."
+msgstr "Laai verskil van %s..."
+
+msgid ""
+"LOCAL: deleted\n"
+"REMOTE:\n"
+msgstr ""
+"PLAASLIK: geskrap\n"
+"AFGELEË:\n"
+
+msgid ""
+"REMOTE: deleted\n"
+"LOCAL:\n"
+msgstr ""
+"AFGELEË: geskrap\n"
+"PLAASLIK:\n"
+
+msgid "LOCAL:\n"
+msgstr "PLAASLIK:\n"
+
+msgid "REMOTE:\n"
+msgstr "AFGELEË:\n"
+
+#, tcl-format
+msgid "Unable to display %s"
+msgstr "Kan nie %s vertoon nie"
+
+msgid "Error loading file:"
+msgstr "Fout met die laai van lêer:"
+
+msgid "Git Repository (subproject)"
+msgstr "Git-bewaarplek (subprojek)"
+
+msgid "* Binary file (not showing content)."
+msgstr "* Binêre lêer (inhoud word nie gewys nie)."
+
+#, tcl-format
+msgid ""
+"* Untracked file is %d bytes.\n"
+"* Showing only first %d bytes.\n"
+msgstr ""
+"* Onnaspoorbare lêer is %d grepe.\n"
+"* Wys slegs die eerste %d grepe.\n"
+
+#, tcl-format
+msgid ""
+"\n"
+"* Untracked file clipped here by %s.\n"
+"* To see the entire file, use an external editor.\n"
+msgstr ""
+"\n"
+"* Onnaspoorbare lêer hier deur %s afgesny.\n"
+"* Gebruik 'n eksterne redigeerder om die hele lêer te sien.\n"
+
+msgid "Failed to unstage selected hunk."
+msgstr "Kon nie gekose brok ontplaas nie."
+
+msgid "Failed to revert selected hunk."
+msgstr "Kon nie gekose brok omkeer nie."
+
+msgid "Failed to stage selected hunk."
+msgstr "Kon nie gekose brok plaas nie."
+
+msgid "Failed to unstage selected line."
+msgstr "Kon nie gekose reël ontplaas nie."
+
+msgid "Failed to revert selected line."
+msgstr "Kon nie gekose reël omkeer nie."
+
+msgid "Failed to stage selected line."
+msgstr "Kon nie gekose reël plaas nie."
+
+msgid "Failed to undo last revert."
+msgstr "Kon nie laaste omkering ongedaan maak nie."
+
+msgid "Default"
+msgstr "Verstek"
+
+#, tcl-format
+msgid "System (%s)"
+msgstr "Stelsel (%s)"
+
+msgid "Other"
+msgstr "Ander"
+
+#, tcl-format
+msgid "%s: error"
+msgstr "%s: fout"
+
+#, tcl-format
+msgid "%s: warning"
+msgstr "%s: waarskuwing"
+
+#, tcl-format
+msgid "%s hook failed:"
+msgstr "%s-haak het misluk:"
+
+msgid "You must correct the above errors before committing."
+msgstr "U moet die bostaande foute regstel voordat u vaslê."
+
+#, tcl-format
+msgid "%s (%s): error"
+msgstr "%s (%s): fout"
+
+msgid "Unable to unlock the index."
+msgstr "Kan nie die indeks ontsluit nie."
+
+msgid "Index Error"
+msgstr "Indeksfout"
+
+msgid ""
+"Updating the Git index failed.  A rescan will be automatically started to "
+"resynchronize git-gui."
+msgstr ""
+"Bywerking van die Git-indeks het misluk.  'n Herskandering sal outomaties "
+"begin word om git-gui te hersinchroniseer."
+
+msgid "Continue"
+msgstr "Gaan voort"
+
+msgid "Unlock Index"
+msgstr "Ontsluit indeks"
+
+msgid "files"
+msgstr "lêers"
+
+msgid "Unstaging selected files from commit"
+msgstr "Ontplaas gekose lêers uit vaslegging"
+
+#, tcl-format
+msgid "Unstaging %s from commit"
+msgstr "Ontplaas %s uit vaslegging"
+
+msgid "Ready to commit."
+msgstr "Gereed om vas te lê."
+
+msgid "Adding selected files"
+msgstr "Voeg gekose lêers by"
+
+#, tcl-format
+msgid "Adding %s"
+msgstr "Voeg %s by"
+
+#, tcl-format
+msgid "Stage %d untracked files?"
+msgstr "Plaas %d onnaspoorbare lêers?"
+
+msgid "Adding all changed files"
+msgstr "Voeg alle veranderde lêers by"
+
+#, tcl-format
+msgid "Revert changes in file %s?"
+msgstr "Keer veranderinge in lêer %s om?"
+
+#, tcl-format
+msgid "Revert changes in these %i files?"
+msgstr "Keer veranderinge in hierdie %i lêers om?"
+
+msgid "Any unstaged changes will be permanently lost by the revert."
+msgstr ""
+"Enige ongeplaasde veranderinge sal deur die omkering permanent verlore gaan."
+
+msgid "Do Nothing"
+msgstr "Doen niks"
+
+#, tcl-format
+msgid "Delete untracked file %s?"
+msgstr "Skrap onnaspoorbare lêer %s?"
+
+#, tcl-format
+msgid "Delete these %i untracked files?"
+msgstr "Skrap hierdie %i onnaspoorbare lêers?"
+
+msgid "Files will be permanently deleted."
+msgstr "Lêers sal permanent geskrap word."
+
+msgid "Delete Files"
+msgstr "Skrap lêers"
+
+msgid "Deleting"
+msgstr "Skrap"
+
+msgid "Encountered errors deleting files:\n"
+msgstr "Foute teëgekom met die skrap van lêers:\n"
+
+#, tcl-format
+msgid "None of the %d selected files could be deleted."
+msgstr "Geeneen van die %d gekose lêers kon geskrap word nie."
+
+#, tcl-format
+msgid "%d of the %d selected files could not be deleted."
+msgstr "%d van die %d gekose lêers kon nie geskrap word nie."
+
+msgid "Reverting selected files"
+msgstr "Keer gekose lêers om"
+
+#, tcl-format
+msgid "Reverting %s"
+msgstr "Keer %s om"
+
+msgid "Goto Line:"
+msgstr "Gaan na reël:"
+
+msgid "Go"
+msgstr "Gaan"
+
+msgid ""
+"Cannot merge while amending.\n"
+"\n"
+"You must finish amending this commit before starting any type of merge.\n"
+msgstr ""
+"Kan nie saamsmelt terwyl daar gewysig word nie.\n"
+"\n"
+"U moet klaar wees met die wysiging van hierdie vaslegging voordat u enige "
+"soort saamsmelting begin.\n"
+
+msgid ""
+"Last scanned state does not match repository state.\n"
+"\n"
+"Another Git program has modified this repository since the last scan.  A "
+"rescan must be performed before a merge can be performed.\n"
+"\n"
+"The rescan will be automatically started now.\n"
+msgstr ""
+"Die laaste geskandeerde toestand stem nie ooreen met die toestand van die "
+"bewaarplek nie.\n"
+"\n"
+"'n Ander Git-program het hierdie bewaarplek sedert die laaste skandering "
+"gewysig.  'n Herskandering moet gedoen word voordat 'n saamsmelting gedoen "
+"kan word.\n"
+"\n"
+"Die herskandering sal nou outomaties begin word.\n"
+
+#, tcl-format
+msgid ""
+"You are in the middle of a conflicted merge.\n"
+"\n"
+"File %s has merge conflicts.\n"
+"\n"
+"You must resolve them, stage the file, and commit to complete the current "
+"merge.  Only then can you begin another merge.\n"
+msgstr ""
+"U is in die middel van 'n saamsmelting met konflikte.\n"
+"\n"
+"Lêer %s het saamsmeltkonflikte.\n"
+"\n"
+"U moet dit oplos, die lêer plaas en vaslê om die huidige saamsmelting te "
+"voltooi.  Eers dan kan u 'n ander saamsmelting begin.\n"
+
+#, tcl-format
+msgid ""
+"You are in the middle of a change.\n"
+"\n"
+"File %s is modified.\n"
+"\n"
+"You should complete the current commit before starting a merge.  Doing so "
+"will help you abort a failed merge, should the need arise.\n"
+msgstr ""
+"U is in die middel van 'n verandering.\n"
+"\n"
+"Lêer %s is gewysig.\n"
+"\n"
+"U moet die huidige vaslegging voltooi voordat u 'n saamsmelting begin.  Dit "
+"sal u help om 'n mislukte saamsmelting te staak, indien nodig.\n"
+
+#, tcl-format
+msgid "%s of %s"
+msgstr "%s van %s"
+
+#, tcl-format
+msgid "Merging %s and %s..."
+msgstr "Smelt %s en %s saam..."
+
+msgid "Merge completed successfully."
+msgstr "Saamsmelting suksesvol voltooi."
+
+msgid "Merge failed.  Conflict resolution is required."
+msgstr "Saamsmelting het misluk.  Konflikoplossing is nodig."
+
+#, tcl-format
+msgid "%s (%s): Merge"
+msgstr "%s (%s): Saamsmelt"
+
+#, tcl-format
+msgid "Merge Into %s"
+msgstr "Smelt saam in %s"
+
+msgid "Revision To Merge"
+msgstr "Revisie om saam te smelt"
+
+msgid ""
+"Cannot abort while amending.\n"
+"\n"
+"You must finish amending this commit.\n"
+msgstr ""
+"Kan nie staak terwyl daar gewysig word nie.\n"
+"\n"
+"U moet klaar wees met die wysiging van hierdie vaslegging.\n"
+
+msgid ""
+"Abort merge?\n"
+"\n"
+"Aborting the current merge will cause *ALL* uncommitted changes to be lost.\n"
+"\n"
+"Continue with aborting the current merge?"
+msgstr ""
+"Staak saamsmelting?\n"
+"\n"
+"As die huidige saamsmelting gestaak word, sal *ALLE* veranderinge wat nie "
+"vasgelê is nie, verlore gaan.\n"
+"\n"
+"Gaan voort om die huidige saamsmelting te staak?"
+
+msgid ""
+"Reset changes?\n"
+"\n"
+"Resetting the changes will cause *ALL* uncommitted changes to be lost.\n"
+"\n"
+"Continue with resetting the current changes?"
+msgstr ""
+"Herstel veranderinge?\n"
+"\n"
+"As die veranderinge herstel word, sal *ALLE* veranderinge wat nie vasgelê is "
+"nie, verlore gaan.\n"
+"\n"
+"Gaan voort om die huidige veranderinge te herstel?"
+
+msgid "Aborting"
+msgstr "Staak"
+
+msgid "files reset"
+msgstr "lêers herstel"
+
+msgid "Abort failed."
+msgstr "Staking het misluk."
+
+msgid "Abort completed.  Ready."
+msgstr "Staking voltooi.  Gereed."
+
+msgid "Force resolution to the base version?"
+msgstr "Dwing oplossing na die basisweergawe?"
+
+msgid "Force resolution to this branch?"
+msgstr "Dwing oplossing na hierdie tak?"
+
+msgid "Force resolution to the other branch?"
+msgstr "Dwing oplossing na die ander tak?"
+
+#, tcl-format
+msgid ""
+"Note that the diff shows only conflicting changes.\n"
+"\n"
+"%s will be overwritten.\n"
+"\n"
+"This operation can be undone only by restarting the merge."
+msgstr ""
+"Let daarop dat die verskil slegs konflikterende veranderinge wys.\n"
+"\n"
+"%s sal oorskryf word.\n"
+"\n"
+"Hierdie bewerking kan slegs ongedaan gemaak word deur die saamsmelting weer "
+"te begin."
+
+#, tcl-format
+msgid "File %s seems to have unresolved conflicts, still stage?"
+msgstr "Lêer %s blyk onopgeloste konflikte te hê; plaas steeds?"
+
+#, tcl-format
+msgid "Adding resolution for %s"
+msgstr "Voeg oplossing vir %s by"
+
+msgid "Cannot resolve deletion or link conflicts using a tool"
+msgstr "Kan nie skrappings- of skakelkonflikte met 'n hulpmiddel oplos nie"
+
+msgid "Conflict file does not exist"
+msgstr "Konfliklêer bestaan nie"
+
+#, tcl-format
+msgid "Not a GUI merge tool: '%s'"
+msgstr "Nie 'n grafiese saamsmelthulpmiddel nie: '%s'"
+
+#, tcl-format
+msgid ""
+"Unable to process square brackets in \"mergetool.%s.cmd\" configuration "
+"option.\n"
+"\n"
+"Please remove the square brackets."
+msgstr ""
+"Kan nie vierkantige hakies in die konfigurasie-opsie \"mergetool.%s.cmd\" "
+"verwerk nie.\n"
+"\n"
+"Verwyder asseblief die vierkantige hakies."
+
+#, tcl-format
+msgid ""
+"Unsupported merge tool '%s'.\n"
+"\n"
+"To use this tool, configure \"mergetool.%s.cmd\" as shown in the git-config "
+"manual page."
+msgstr ""
+"Saamsmelthulpmiddel '%s' word nie ondersteun nie.\n"
+"\n"
+"Om hierdie hulpmiddel te gebruik, stel \"mergetool.%s.cmd\" op soos in die "
+"git-config-handleidingbladsy getoon."
+
+msgid "Merge tool is already running, terminate it?"
+msgstr "Saamsmelthulpmiddel loop reeds; beëindig dit?"
+
+#, tcl-format
+msgid ""
+"Error retrieving versions:\n"
+"%s"
+msgstr ""
+"Fout met die ophaal van weergawes:\n"
+"%s"
+
+#, tcl-format
+msgid ""
+"Could not start the merge tool:\n"
+"\n"
+"%s"
+msgstr ""
+"Kon nie die saamsmelthulpmiddel begin nie:\n"
+"\n"
+"%s"
+
+msgid "Running merge tool..."
+msgstr "Voer saamsmelthulpmiddel uit..."
+
+msgid "Merge tool failed."
+msgstr "Saamsmelthulpmiddel het misluk."
+
+#, tcl-format
+msgid "Invalid global encoding '%s'"
+msgstr "Ongeldige globale enkodering '%s'"
+
+#, tcl-format
+msgid "Invalid repo encoding '%s'"
+msgstr "Ongeldige bewaarplek-enkodering '%s'"
+
+msgid "Restore Defaults"
+msgstr "Herstel verstekwaardes"
+
+msgid "Save"
+msgstr "Stoor"
+
+#, tcl-format
+msgid "%s Repository"
+msgstr "%s-bewaarplek"
+
+msgid "Global (All Repositories)"
+msgstr "Globaal (alle bewaarplekke)"
+
+msgid "User Name"
+msgstr "Gebruikersnaam"
+
+msgid "Email Address"
+msgstr "E-posadres"
+
+msgid "Summarize Merge Commits"
+msgstr "Som saamsmeltvasleggings op"
+
+msgid "Merge Verbosity"
+msgstr "Saamsmelt-breedsprakigheid"
+
+msgid "Show Diffstat After Merge"
+msgstr "Wys verskilstatistiek ná saamsmelting"
+
+msgid "Use Merge Tool"
+msgstr "Gebruik saamsmelthulpmiddel"
+
+msgid "Trust File Modification Timestamps"
+msgstr "Vertrou lêerwysigingstydstempels"
+
+msgid "Prune Tracking Branches During Fetch"
+msgstr "Snoei volgtakke tydens haal"
+
+msgid "Match Tracking Branches"
+msgstr "Pas volgtakke"
+
+msgid "Use Textconv For Diffs and Blames"
+msgstr "Gebruik textconv vir verskille en blameer"
+
+msgid "Blame Copy Only On Changed Files"
+msgstr "Blameer kopieë slegs in veranderde lêers"
+
+msgid "Maximum Length of Recent Repositories List"
+msgstr "Maksimum lengte van lys van onlangse bewaarplekke"
+
+msgid "Minimum Letters To Blame Copy On"
+msgstr "Minimum letters om kopieë te blameer"
+
+msgid "Blame History Context Radius (days)"
+msgstr "Blameer-geskiedeniskonteksradius (dae)"
+
+msgid "Number of Diff Context Lines"
+msgstr "Aantal verskil-konteksreëls"
+
+msgid "Additional Diff Parameters"
+msgstr "Bykomende verskilparameters"
+
+msgid "Commit Message Text Width"
+msgstr "Teksbreedte van vasleggingsboodskap"
+
+msgid "New Branch Name Template"
+msgstr "Sjabloon vir nuwe taknaam"
+
+msgid "Default File Contents Encoding"
+msgstr "Verstek-enkodering van lêerinhoud"
+
+msgid "Warn before committing to a detached head"
+msgstr "Waarsku voordat op 'n ontkoppelde HEAD vasgelê word"
+
+msgid "Staging of untracked files"
+msgstr "Plasing van onnaspoorbare lêers"
+
+msgid "Show untracked files"
+msgstr "Wys onnaspoorbare lêers"
+
+msgid "Tab spacing"
+msgstr "Oortjiespasiëring"
+
+msgid "Change"
+msgstr "Verander"
+
+msgid "Spelling Dictionary:"
+msgstr "Speltoetswoordeboek:"
+
+msgid "Change Font"
+msgstr "Verander lettertipe"
+
+#, tcl-format
+msgid "Choose %s"
+msgstr "Kies %s"
+
+msgid "pt."
+msgstr "pt."
+
+msgid "Preferences"
+msgstr "Voorkeure"
+
+msgid "Failed to completely save options:"
+msgstr "Kon nie opsies volledig stoor nie:"
+
+#, tcl-format
+msgid "%s (%s): Add Remote"
+msgstr "%s (%s): Voeg afgeleë by"
+
+msgid "Add New Remote"
+msgstr "Voeg nuwe afgeleë by"
+
+msgid "Add"
+msgstr "Voeg by"
+
+msgid "Remote Details"
+msgstr "Afgeleë besonderhede"
+
+msgid "Location:"
+msgstr "Ligging:"
+
+msgid "Further Action"
+msgstr "Verdere aksie"
+
+msgid "Fetch Immediately"
+msgstr "Haal onmiddellik"
+
+msgid "Initialize Remote Repository and Push"
+msgstr "Inisialiseer afgeleë bewaarplek en stoot"
+
+msgid "Do Nothing Else Now"
+msgstr "Doen nou niks anders nie"
+
+msgid "Please supply a remote name."
+msgstr "Verskaf asseblief 'n afgeleë naam."
+
+#, tcl-format
+msgid "'%s' is not an acceptable remote name."
+msgstr "'%s' is nie 'n aanvaarbare afgeleë naam nie."
+
+#, tcl-format
+msgid "Failed to add remote '%s' of location '%s'."
+msgstr "Kon nie afgeleë '%s' met ligging '%s' byvoeg nie."
+
+#, tcl-format
+msgid "fetch %s"
+msgstr "haal %s"
+
+#, tcl-format
+msgid "Fetching the %s"
+msgstr "Haal %s"
+
+#, tcl-format
+msgid "Do not know how to initialize repository at location '%s'."
+msgstr "Weet nie hoe om die bewaarplek by ligging '%s' te inisialiseer nie."
+
+#, tcl-format
+msgid "push %s"
+msgstr "stoot %s"
+
+#, tcl-format
+msgid "Setting up the %s (at %s)"
+msgstr "Stel %s op (by %s)"
+
+#, tcl-format
+msgid "%s (%s): Delete Branch Remotely"
+msgstr "%s (%s): Skrap tak op afgeleë"
+
+msgid "Delete Branch Remotely"
+msgstr "Skrap tak op afgeleë"
+
+msgid "From Repository"
+msgstr "Van bewaarplek"
+
+msgid "Remote:"
+msgstr "Afgeleë:"
+
+msgid "Arbitrary Location:"
+msgstr "Willekeurige ligging:"
+
+msgid "Branches"
+msgstr "Takke"
+
+msgid "Delete Only If"
+msgstr "Skrap slegs indien"
+
+msgid "Merged Into:"
+msgstr "Saamgesmelt in:"
+
+msgid "A branch is required for 'Merged Into'."
+msgstr "'n Tak word vir 'Saamgesmelt in' vereis."
+
+#, tcl-format
+msgid ""
+"The following branches are not completely merged into %s:\n"
+"\n"
+" - %s"
+msgstr ""
+"Die volgende takke is nie heeltemal in %s saamgesmelt nie:\n"
+"\n"
+" - %s"
+
+#, tcl-format
+msgid ""
+"One or more of the merge tests failed because you have not fetched the "
+"necessary commits.  Try fetching from %s first."
+msgstr ""
+"Een of meer van die saamsmelttoetse het misluk omdat u nie die nodige "
+"vasleggings gehaal het nie.  Probeer eers van %s haal."
+
+msgid "Please select one or more branches to delete."
+msgstr "Kies asseblief een of meer takke om te skrap."
+
+#, tcl-format
+msgid "Deleting branches from %s"
+msgstr "Skrap takke van %s"
+
+msgid "No repository selected."
+msgstr "Geen bewaarplek gekies nie."
+
+#, tcl-format
+msgid "Scanning %s..."
+msgstr "Skandeer %s..."
+
+msgid "Push to"
+msgstr "Stoot na"
+
+msgid "Remove Remote"
+msgstr "Verwyder afgeleë"
+
+msgid "Prune from"
+msgstr "Snoei van"
+
+msgid "Fetch from"
+msgstr "Haal van"
+
+msgid "All"
+msgstr "Alle"
+
+msgid "Find:"
+msgstr "Vind:"
+
+msgid "Next"
+msgstr "Volgende"
+
+msgid "Prev"
+msgstr "Vorige"
+
+msgid "RegExp"
+msgstr "RegUitdr"
+
+msgid "Case"
+msgstr "Hoof/klein"
+
+#, tcl-format
+msgid "%s (%s): Create Desktop Icon"
+msgstr "%s (%s): Skep werkskermikoon"
+
+#, tcl-format
+msgid "Replace existing shortcut: %s?"
+msgstr "Vervang bestaande kortpad: %s?"
+
+msgid "Cannot write shortcut:"
+msgstr "Kan nie kortpad skryf nie:"
+
+msgid "Cannot write icon:"
+msgstr "Kan nie ikoon skryf nie:"
+
+msgid "Unsupported spell checker"
+msgstr "Speltoetser word nie ondersteun nie"
+
+msgid "Spell checking is unavailable"
+msgstr "Speltoetsing is nie beskikbaar nie"
+
+msgid "Invalid spell checking configuration"
+msgstr "Ongeldige speltoetskonfigurasie"
+
+#, tcl-format
+msgid "Reverting dictionary to %s."
+msgstr "Stel woordeboek terug na %s."
+
+msgid "Spell checker silently failed on startup"
+msgstr "Speltoetser het stilweg by opstart misluk"
+
+msgid "Unrecognized spell checker"
+msgstr "Onherkende speltoetser"
+
+msgid "No Suggestions"
+msgstr "Geen voorstelle nie"
+
+msgid "Unexpected EOF from spell checker"
+msgstr "Onverwagte EOF van speltoetser"
+
+msgid "Spell Checker Failed"
+msgstr "Speltoetser het misluk"
+
+msgid "No keys found."
+msgstr "Geen sleutels gevind nie."
+
+#, tcl-format
+msgid "Found a public key in: %s"
+msgstr "Publieke sleutel gevind in: %s"
+
+msgid "Generate Key"
+msgstr "Genereer sleutel"
+
+msgid "Copy To Clipboard"
+msgstr "Kopieer na knipbord"
+
+msgid "Your OpenSSH Public Key"
+msgstr "U publieke OpenSSH-sleutel"
+
+msgid "Generating..."
+msgstr "Genereer..."
+
+#, tcl-format
+msgid ""
+"Could not start ssh-keygen:\n"
+"\n"
+"%s"
+msgstr ""
+"Kon nie ssh-keygen begin nie:\n"
+"\n"
+"%s"
+
+msgid "Generation failed."
+msgstr "Generering het misluk."
+
+msgid "Generation succeeded, but no keys found."
+msgstr "Generering het geslaag, maar geen sleutels is gevind nie."
+
+#, tcl-format
+msgid "Your key is in: %s"
+msgstr "U sleutel is in: %s"
+
+#, tcl-format
+msgid "%s ... %*i of %*i %s (%3i%%)"
+msgstr "%s ... %*i van %*i %s (%3i%%)"
+
+#, tcl-format
+msgid "%s (%s): Add Tool"
+msgstr "%s (%s): Voeg hulpmiddel by"
+
+msgid "Add New Tool Command"
+msgstr "Voeg nuwe hulpmiddelopdrag by"
+
+msgid "Add globally"
+msgstr "Voeg globaal by"
+
+msgid "Tool Details"
+msgstr "Hulpmiddelbesonderhede"
+
+msgid "Use '/' separators to create a submenu tree:"
+msgstr "Gebruik '/'-skeiers om 'n subkieslysboom te skep:"
+
+msgid "Command:"
+msgstr "Opdrag:"
+
+msgid "Show a dialog before running"
+msgstr "Wys 'n dialoog voor uitvoering"
+
+msgid "Ask the user to select a revision (sets $REVISION)"
+msgstr "Vra die gebruiker om 'n revisie te kies (stel $REVISION)"
+
+msgid "Ask the user for additional arguments (sets $ARGS)"
+msgstr "Vra die gebruiker vir bykomende argumente (stel $ARGS)"
+
+msgid "Don't show the command output window"
+msgstr "Moenie die opdraguitvoervenster wys nie"
+
+msgid "Run only if a diff is selected ($FILENAME not empty)"
+msgstr "Voer slegs uit as 'n verskil gekies is ($FILENAME nie leeg nie)"
+
+msgid "Please supply a name for the tool."
+msgstr "Verskaf asseblief 'n naam vir die hulpmiddel."
+
+#, tcl-format
+msgid "Tool '%s' already exists."
+msgstr "Hulpmiddel '%s' bestaan reeds."
+
+#, tcl-format
+msgid ""
+"Could not add tool:\n"
+"%s"
+msgstr ""
+"Kon nie hulpmiddel byvoeg nie:\n"
+"%s"
+
+#, tcl-format
+msgid "%s (%s): Remove Tool"
+msgstr "%s (%s): Verwyder hulpmiddel"
+
+msgid "Remove Tool Commands"
+msgstr "Verwyder hulpmiddelopdragte"
+
+msgid "Remove"
+msgstr "Verwyder"
+
+msgid "(Blue denotes repository-local tools)"
+msgstr "(Blou dui bewaarplek-plaaslike hulpmiddels aan)"
+
+#, tcl-format
+msgid "%s (%s):"
+msgstr "%s (%s):"
+
+#, tcl-format
+msgid "Run Command: %s"
+msgstr "Voer opdrag uit: %s"
+
+msgid "Arguments"
+msgstr "Argumente"
+
+msgid "OK"
+msgstr "Goed"
+
+#, tcl-format
+msgid "Running %s requires a selected file."
+msgstr "Om %s uit te voer, moet 'n lêer gekies wees."
+
+#, tcl-format
+msgid "Are you sure you want to run %1$s on file \"%2$s\"?"
+msgstr "Is u seker u wil %1$s op lêer \"%2$s\" uitvoer?"
+
+#, tcl-format
+msgid "Are you sure you want to run %s?"
+msgstr "Is u seker u wil %s uitvoer?"
+
+#, tcl-format
+msgid "Tool: %s"
+msgstr "Hulpmiddel: %s"
+
+#, tcl-format
+msgid "Running: %s"
+msgstr "Voer uit: %s"
+
+#, tcl-format
+msgid "Tool completed successfully: %s"
+msgstr "Hulpmiddel suksesvol voltooi: %s"
+
+#, tcl-format
+msgid "Tool failed: %s"
+msgstr "Hulpmiddel het misluk: %s"
+
+#, tcl-format
+msgid "Fetching new changes from %s"
+msgstr "Haal nuwe veranderinge van %s"
+
+#, tcl-format
+msgid "remote prune %s"
+msgstr "snoei afgeleë %s"
+
+#, tcl-format
+msgid "Pruning tracking branches deleted from %s"
+msgstr "Snoei volgtakke wat van %s geskrap is"
+
+msgid "fetch all remotes"
+msgstr "haal alle afgeleës"
+
+msgid "Fetching new changes from all remotes"
+msgstr "Haal nuwe veranderinge van alle afgeleës"
+
+msgid "remote prune all remotes"
+msgstr "snoei alle afgeleës"
+
+msgid "Pruning tracking branches deleted from all remotes"
+msgstr "Snoei volgtakke wat van alle afgeleës geskrap is"
+
+#, tcl-format
+msgid "Pushing changes to %s"
+msgstr "Stoot veranderinge na %s"
+
+#, tcl-format
+msgid "Mirroring to %s"
+msgstr "Weerspieël na %s"
+
+#, tcl-format
+msgid "Pushing %s %s to %s"
+msgstr "Stoot %s %s na %s"
+
+msgid "Push Branches"
+msgstr "Stoot takke"
+
+msgid "Source Branches"
+msgstr "Brontakke"
+
+msgid "Destination Repository"
+msgstr "Bestemmingsbewaarplek"
+
+msgid "Transfer Options"
+msgstr "Oordragopsies"
+
+msgid "Force overwrite existing branch (may discard changes)"
+msgstr "Dwing oorskrywing van bestaande tak (kan veranderinge weggooi)"
+
+msgid "Use thin pack (for slow network connections)"
+msgstr "Gebruik dun pak (vir stadige netwerkverbindings)"
+
+msgid "Include tags"
+msgstr "Sluit etikette in"
+
+#, tcl-format
+msgid "%s (%s): Push"
+msgstr "%s (%s): Stoot"
