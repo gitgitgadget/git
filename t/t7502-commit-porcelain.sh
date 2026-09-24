@@ -1003,4 +1003,31 @@ test_expect_success WITH_BREAKING_CHANGES 'core.commentChar=auto is rejected' '
 	test_cmp expect actual
 '
 
+test_expect_success 'warn when a commit is dated before its parent' '
+	test_when_finished "git checkout main 2>/dev/null || git checkout master" &&
+	git checkout -b clock-skew &&
+	test_commit --date "2026-09-25T10:00:00+0000" skew-parent &&
+	echo skew >skew-child &&
+	git add skew-child &&
+	GIT_COMMITTER_DATE="2026-09-13T06:00:00+0000" \
+		git commit -m "behind its parent" 2>actual &&
+	test_grep "earlier than its parent" actual
+'
+
+test_expect_success 'no warning when commit dates increase' '
+	echo forward >skew-forward &&
+	git add skew-forward &&
+	GIT_COMMITTER_DATE="2026-09-26T06:00:00+0000" \
+		git commit -m "after its parent" 2>actual &&
+	test_grep ! "earlier than its parent" actual
+'
+
+test_expect_success 'advice.clockSkew silences the warning' '
+	echo quiet >skew-quiet &&
+	git add skew-quiet &&
+	GIT_COMMITTER_DATE="2026-09-14T06:00:00+0000" \
+		git -c advice.clockSkew=false commit -m quiet 2>actual &&
+	test_grep ! "earlier than its parent" actual
+'
+
 test_done

@@ -38,6 +38,13 @@ all advice messages.
 		configuration variable for how to set a given remote
 		to be used by default in some situations where this
 		advice would be printed.
+	clockSkew::
+		Shown by linkgit:git-commit[1] when the commit being
+		created is dated earlier than one of its parents, which
+		usually means the system clock is wrong. History
+		traversal assumes commit dates do not decrease, so such
+		a commit can cause commands like `git log --since` to
+		skip the commits behind it.
 	commitBeforeMerge::
 		Shown when linkgit:git-merge[1] refuses to
 		merge to avoid overwriting local changes.
