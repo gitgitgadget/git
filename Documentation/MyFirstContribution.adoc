@@ -26,7 +26,7 @@ useful additional context:
 [[getting-help]]
 === Getting Help
 
-If you get stuck, you can seek help in the following places.
+If you get stuck, ask for help in the following places.
 
 ==== git@vger.kernel.org
 
