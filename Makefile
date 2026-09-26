@@ -567,8 +567,9 @@ include shared.mak
 # by the git project to migrate to using sha1collisiondetection as a
 # submodule.
 #
-# Define DC_SHA1_RS to use the sha1dc Rust crate instead of the default
-# C implementation. This requires Rust 1.87 or newer.
+# Define DC_SHA1_RS to use the sha1dc Rust crate by default, with the C
+# implementation available via core.sha1dcBackend=c. This requires Rust
+# 1.87 or newer.
 #
 # === SHA-256 backend ===
 #
@@ -2170,6 +2171,7 @@ ifdef APPLE_COMMON_CRYPTO_SHA1
 	BASIC_CFLAGS += -DSHA1_APPLE
 else
 	BASIC_CFLAGS += -DSHA1_DC
+	LIB_OBJS += sha1dc_git.o
 ifdef DC_SHA1_RS
 	BASIC_CFLAGS += -DDC_SHA1_RS
 	CARGO_ARGS += --features sha1dc-rs
@@ -2177,8 +2179,7 @@ ifdef DC_SHA1_RS
 ifeq ($(uname_S),MINGW)
 	EXTLIBS += -luserenv
 endif
-else
-	LIB_OBJS += sha1dc_git.o
+endif
 ifdef DC_SHA1_EXTERNAL
         ifdef DC_SHA1_SUBMODULE
                 ifneq ($(DC_SHA1_SUBMODULE),auto)
@@ -2201,7 +2202,6 @@ endif
 		-DSHA1DC_INIT_SAFE_HASH_DEFAULT=0 \
 		-DSHA1DC_CUSTOM_INCLUDE_SHA1_C="\"git-compat-util.h\"" \
 		-DSHA1DC_CUSTOM_INCLUDE_UBC_CHECK_C="\"git-compat-util.h\""
-endif
 endif
 endif
 endif
