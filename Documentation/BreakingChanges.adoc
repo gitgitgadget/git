@@ -114,6 +114,10 @@ applications and forges.
 +
 There is no plan to deprecate the "sha1" object format at this point in time.
 +
+Support for "git diff X..Y" syntax will be removed. Use "git diff X Y" instead.
+This will open up the syntax for a more consistent interpretation of
+"git diff $(git merge-base X Y) Y".
++
 Cf. <2f5de416-04ba-c23d-1e0b-83bb655829a7@zombino.com>,
 <20170223155046.e7nxivfwqqoprsqj@LykOS.localdomain>,
 <CA+EOSBncr=4a4d8n9xS4FNehyebpmX8JiUwCsXD47EQDE+DiUQ@mail.gmail.com>.
