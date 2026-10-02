@@ -53,6 +53,11 @@ sub report {
 	$exit_code = 1;
 }
 
+# assume the first line is formatted like 'gitglossary(7)'
+my $firstline = <>;
+$firstline =~ m/\((\d)\)/;
+my $man_section_number = $1;
+
 my $last_was_section;
 my @actual_order;
 while (my $line = <>) {
@@ -93,6 +98,8 @@ while (my $line = <>) {
 
 		for my $section (sort keys %SECTIONS) {
 			next if !$SECTIONS{$section}->{required} or exists $actual_sections{$section};
+			# Synopsis is not required in section 7
+			next if ($section eq "SYNOPSIS" && $man_section_number eq "7");
 			report("has no required '$section' section!");
 		}
 
