@@ -15,9 +15,11 @@
 #include "hex.h"
 #include "commit.h"
 #include "diff.h"
+#include "path.h"
 #include "revision.h"
 #include "quote.h"
 #include "string-list.h"
+#include "strmap.h"
 #include "mailmap.h"
 #include "parse-options.h"
 #include "prio-queue.h"
@@ -768,8 +770,12 @@ static int git_blame_config(const char *var, const char *value,
 		ret = git_config_pathname(&str, var, value);
 		if (ret)
 			return ret;
-		if (str)
-			string_list_insert(&ignore_revs_file_list, str);
+		if (str) {
+			if (!*str)
+				string_list_clear(&ignore_revs_file_list, 0);
+			else
+				string_list_append(&ignore_revs_file_list, str);
+		}
 		free(str);
 		return 0;
 	}
@@ -936,16 +942,24 @@ static void build_ignorelist(struct blame_scoreboard *sb,
 {
 	struct string_list_item *i;
 	struct object_id oid;
+	struct strset seen_files = STRSET_INIT;
+	size_t start_idx = 0, idx;
+
+	for (idx = 0; idx < ignore_revs_file_list->nr; idx++) {
+		if (!*ignore_revs_file_list->items[idx].string)
+			start_idx = idx + 1;
+	}
 
 	oidset_init(&sb->ignore_list, 0);
-	for_each_string_list_item(i, ignore_revs_file_list) {
-		if (!strcmp(i->string, ""))
-			oidset_clear(&sb->ignore_list);
-		else
-			oidset_parse_file_carefully(&sb->ignore_list, i->string,
+	for (idx = start_idx; idx < ignore_revs_file_list->nr; idx++) {
+		const char *path = ignore_revs_file_list->items[idx].string;
+
+		if (strset_add(&seen_files, path))
+			oidset_parse_file_carefully(&sb->ignore_list, path,
 						    the_repository->hash_algo,
 						    peel_to_commit_oid, sb);
 	}
+	strset_clear(&seen_files);
 	for_each_string_list_item(i, ignore_rev_list) {
 		if (repo_get_oid_committish(the_repository, i->string, &oid) ||
 		    peel_to_commit_oid(&oid, sb))
@@ -1020,6 +1034,20 @@ int cmd_blame(int argc,
 	const char *const *opt_usage = cmd_is_annotate ? annotate_opt_usage : blame_opt_usage;
 
 	setup_default_color_by_age();
+	{
+		const char *work_tree = repo_get_work_tree(the_repository);
+
+		if (work_tree) {
+			char *default_file = mkpathdup("%s/%s", work_tree,
+						       ".git-blame-ignore-revs");
+			struct stat st;
+
+			if (!lstat(default_file, &st) && S_ISREG(st.st_mode) &&
+			    !access(default_file, R_OK))
+				string_list_append(&ignore_revs_file_list, default_file);
+			free(default_file);
+		}
+	}
 	repo_config(the_repository, git_blame_config, &output_option);
 	repo_init_revisions(the_repository, &revs, NULL);
 	revs.date_mode = blame_date_mode;
