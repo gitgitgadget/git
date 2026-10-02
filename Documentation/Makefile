@@ -113,6 +113,7 @@ SP_ARTICLES += $(API_DOCS)
 
 TECH_DOCS += BreakingChanges
 TECH_DOCS += DecisionMaking
+TECH_DOCS += WorkflowForGit
 TECH_DOCS += ReviewingGuidelines
 TECH_DOCS += MyFirstContribution
 TECH_DOCS += MyFirstObjectWalk

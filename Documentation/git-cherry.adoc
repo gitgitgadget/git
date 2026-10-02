@@ -46,7 +46,7 @@ Patch workflows
 ~~~~~~~~~~~~~~~
 
 git-cherry is frequently used in patch-based workflows (see
-linkgit:gitworkflows[7]) to determine if a series of patches has been
+the `WorkflowForGit` document) to determine if a series of patches has been
 applied by the upstream maintainer.  In such a workflow you might
 create and send a topic branch like this:
 

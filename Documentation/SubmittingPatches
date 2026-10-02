@@ -150,7 +150,8 @@ speaking it is actually a particular commit (typically the HEAD, or tip,
 of the branch).
 
 There are several important branches to be aware of. Namely, there are
-four integration branches as discussed in linkgit:gitworkflows[7]:
+four integration branches as discussed in
+link:WorkflowForGit.html[WorkflowForGit]:
 
 * maint
 * master
@@ -173,7 +174,8 @@ parent of this commit is the tip of the topic branch.
 There is one guiding principle for choosing the right starting point: in
 general, always base your work on the oldest integration branch that
 your change is relevant to (see "Merge upwards" in
-linkgit:gitworkflows[7]).  What this principle means is that for the
+link:WorkflowForGit.html[WorkflowForGit]).
+What this principle means is that for the
 vast majority of cases, the starting point for new work should be the
 latest HEAD commit of `maint` or `master` based on the following cases:
 
