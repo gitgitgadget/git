@@ -79,4 +79,27 @@ test_expect_success 'checkout --overwrite-ignore should succeed if only ignored 
 	test_path_is_file some_dir
 '
 
+test_expect_success 'checkout switching to a tracked file replaces a tracked directory' '
+	git init -b main dir-to-file &&
+	(
+		cd dir-to-file &&
+
+		>Gitweb &&
+		git add Gitweb &&
+		git commit -m "add Gitweb" &&
+
+		git checkout --orphan todo &&
+		git reset --hard &&
+		mkdir -p gitweb/subdir &&
+		>gitweb/subdir/file &&
+		git add gitweb &&
+		git commit -m "add gitweb/subdir/file" &&
+
+		git checkout main &&
+
+		test_path_is_file Gitweb &&
+		test_path_is_missing gitweb/subdir/file
+	)
+'
+
 test_done
