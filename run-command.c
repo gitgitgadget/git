@@ -36,7 +36,19 @@ struct child_to_clean {
 	struct child_to_clean *next;
 };
 static struct child_to_clean *children_to_clean;
+static struct child_to_clean *children_to_free;
 static int installed_child_cleanup_handler;
+
+static void dispose_child(struct child_to_clean *p, int in_signal)
+{
+	if (in_signal) {
+		/* The previous signal handler may return instead of exiting. */
+		p->next = children_to_free;
+		children_to_free = p;
+	} else {
+		free(p);
+	}
+}
 
 static void cleanup_children(int sig, int in_signal)
 {
@@ -63,8 +75,7 @@ static void cleanup_children(int sig, int in_signal)
 			p->next = children_to_wait_for;
 			children_to_wait_for = p;
 		} else {
-			if (!in_signal)
-				free(p);
+			dispose_child(p, in_signal);
 		}
 	}
 
@@ -75,8 +86,7 @@ static void cleanup_children(int sig, int in_signal)
 		while (waitpid(p->pid, NULL, 0) < 0 && errno == EINTR)
 			; /* spin waiting for process exit or error */
 
-		if (!in_signal)
-			free(p);
+		dispose_child(p, in_signal);
 	}
 }
 
@@ -90,6 +100,11 @@ static void cleanup_children_on_signal(int sig)
 static void cleanup_children_on_exit(void)
 {
 	cleanup_children(SIGTERM, 0);
+	while (children_to_free) {
+		struct child_to_clean *p = children_to_free;
+		children_to_free = p->next;
+		free(p);
+	}
 }
 
 static void mark_child_for_cleanup(pid_t pid, struct child_process *process)
@@ -555,7 +570,35 @@ static inline void set_cloexec(int fd)
 		fcntl(fd, F_SETFD, flags | FD_CLOEXEC);
 }
 
-static int wait_or_whine(pid_t pid, const char *argv0, int in_signal)
+static int child_process_status(int status, const char *argv0, int in_signal,
+				int quiet_termination)
+{
+	int code = -1;
+
+	if (WIFSIGNALED(status)) {
+		code = WTERMSIG(status);
+		if (!in_signal &&
+		    code != SIGINT && code != SIGQUIT && code != SIGPIPE &&
+		    !(quiet_termination && (code == SIGTERM || code == SIGKILL)))
+			error("%s died of signal %d", argv0, code);
+		/*
+		 * This return value is chosen so that code & 0xff
+		 * mimics the exit code that a POSIX shell would report for
+		 * a program that died from this signal.
+		 */
+		code += 128;
+	} else if (WIFEXITED(status)) {
+		code = WEXITSTATUS(status);
+	} else {
+		if (!in_signal)
+			error("waitpid is confused (%s)", argv0);
+	}
+
+	return code;
+}
+
+static int wait_or_whine(pid_t pid, const char *argv0, int in_signal,
+			 int quiet_termination)
 {
 	int status, code = -1;
 	pid_t waiting;
@@ -571,21 +614,9 @@ static int wait_or_whine(pid_t pid, const char *argv0, int in_signal)
 	} else if (waiting != pid) {
 		if (!in_signal)
 			error("waitpid is confused (%s)", argv0);
-	} else if (WIFSIGNALED(status)) {
-		code = WTERMSIG(status);
-		if (!in_signal && code != SIGINT && code != SIGQUIT && code != SIGPIPE)
-			error("%s died of signal %d", argv0, code);
-		/*
-		 * This return value is chosen so that code & 0xff
-		 * mimics the exit code that a POSIX shell would report for
-		 * a program that died from this signal.
-		 */
-		code += 128;
-	} else if (WIFEXITED(status)) {
-		code = WEXITSTATUS(status);
 	} else {
-		if (!in_signal)
-			error("waitpid is confused (%s)", argv0);
+		code = child_process_status(status, argv0, in_signal,
+					    quiet_termination);
 	}
 
 	if (!in_signal)
@@ -894,7 +925,7 @@ fail_pipe:
 		 * At this point we know that fork() succeeded, but exec()
 		 * failed. Errors have been reported to our stderr.
 		 */
-		wait_or_whine(cmd->pid, cmd->args.v[0], 0);
+		wait_or_whine(cmd->pid, cmd->args.v[0], 0, 0);
 		child_err_spew(cmd, &cerr);
 		failed_errno = errno;
 		cmd->pid = -1;
@@ -1003,16 +1034,90 @@ end_of_spawn:
 
 int finish_command(struct child_process *cmd)
 {
-	int ret = wait_or_whine(cmd->pid, cmd->args.v[0], 0);
+	int ret = wait_or_whine(cmd->pid, cmd->args.v[0], 0,
+				cmd->quiet_termination);
 	trace2_child_exit(cmd, ret);
 	child_process_clear(cmd);
 	invalidate_lstat_cache();
 	return ret;
 }
 
+int terminate_command(struct child_process *cmd, unsigned int timeout_ms)
+{
+	uint64_t deadline;
+	int status, ret, failed_errno = 0;
+	pid_t waiting;
+
+	if (kill(cmd->pid, SIGTERM) && errno != ESRCH)
+		failed_errno = errno;
+	deadline = getnanotime() + timeout_ms * 1000000ULL;
+
+	for (;;) {
+		waiting = waitpid(cmd->pid, &status, WNOHANG);
+		if (waiting == cmd->pid) {
+			failed_errno = 0;
+			break;
+		}
+		if (waiting < 0 && errno == EINTR)
+			continue;
+		if (waiting < 0) {
+			failed_errno = errno;
+			error_errno("waitpid for %s failed", cmd->args.v[0]);
+			if (failed_errno != ECHILD)
+				return -1;
+			ret = -1;
+			goto cleanup;
+		}
+		if (getnanotime() >= deadline) {
+			int sig = SIGKILL;
+
+			if (failed_errno) {
+				errno = failed_errno;
+				return error_errno("could not terminate %s",
+						   cmd->args.v[0]);
+			}
+#ifdef GIT_WINDOWS_NATIVE
+			/* Windows SIGTERM already uses TerminateProcess(). */
+			sig = SIGTERM;
+#endif
+			if (kill(cmd->pid, sig) && errno != ESRCH) {
+				failed_errno = errno;
+				deadline = getnanotime() + timeout_ms * 1000000ULL;
+				continue;
+			}
+			do {
+				waiting = waitpid(cmd->pid, &status, 0);
+			} while (waiting < 0 && errno == EINTR);
+			if (waiting < 0) {
+				failed_errno = errno;
+				error_errno("waitpid for %s failed",
+					    cmd->args.v[0]);
+				if (failed_errno != ECHILD)
+					return -1;
+				ret = -1;
+			} else {
+				ret = child_process_status(status,
+							    cmd->args.v[0], 0, 1);
+			}
+			goto cleanup;
+		}
+		sleep_millisec(50);
+	}
+
+	ret = child_process_status(status, cmd->args.v[0], 0, 1);
+
+cleanup:
+	clear_child_for_cleanup(cmd->pid);
+	trace2_child_exit(cmd, ret);
+	child_process_clear(cmd);
+	invalidate_lstat_cache();
+	errno = failed_errno;
+	return ret;
+}
+
 int finish_command_in_signal(struct child_process *cmd)
 {
-	int ret = wait_or_whine(cmd->pid, cmd->args.v[0], 1);
+	int ret = wait_or_whine(cmd->pid, cmd->args.v[0], 1, 0);
 	if (ret != -1)
 		trace2_child_exit(cmd, ret);
 	return ret;
@@ -1278,7 +1383,7 @@ error:
 int finish_async(struct async *async)
 {
 #ifdef NO_PTHREADS
-	int ret = wait_or_whine(async->pid, "child process", 0);
+	int ret = wait_or_whine(async->pid, "child process", 0, 0);
 
 	invalidate_lstat_cache();
 
@@ -1405,7 +1510,7 @@ static int pump_io_round(struct io_pump *slots, int nr, struct pollfd *pfd)
 static int pump_io(struct io_pump *slots, int nr)
 {
 	struct pollfd *pfd;
-	int i;
+	int i, error = 0;
 
 	for (i = 0; i < nr; i++)
 		slots[i].error = 0;
@@ -1415,24 +1520,30 @@ static int pump_io(struct io_pump *slots, int nr)
 		; /* nothing */
 	free(pfd);
 
-	/* There may be multiple errno values, so just pick the first. */
-	for (i = 0; i < nr; i++) {
-		if (slots[i].error) {
-			errno = slots[i].error;
-			return -1;
-		}
+	/* Do not let an expected EPIPE mask other I/O errors. */
+	for (i = 0; i < nr; i++)
+		if (slots[i].error && (!error || error == EPIPE))
+			error = slots[i].error;
+	if (error) {
+		errno = error;
+		return -1;
 	}
 	return 0;
 }
 
 
-int pipe_command(struct child_process *cmd,
-		 const char *in, size_t in_len,
-		 struct strbuf *out, size_t out_hint,
-		 struct strbuf *err, size_t err_hint)
+int pipe_command_with_status(struct child_process *cmd,
+			     const char *in, size_t in_len,
+			     struct strbuf *out, size_t out_hint,
+			     struct strbuf *err, size_t err_hint,
+			     int *status)
 {
 	struct io_pump io[3];
 	int nr = 0;
+	int ret, io_error;
+
+	if (status)
+		*status = -1;
 
 	if (in)
 		cmd->in = -1;
@@ -1475,12 +1586,30 @@ int pipe_command(struct child_process *cmd,
 		nr++;
 	}
 
-	if (pump_io(io, nr) < 0) {
-		finish_command(cmd); /* throw away exit code */
+	if (status)
+		sigchain_push(SIGPIPE, SIG_IGN);
+	ret = pump_io(io, nr);
+	io_error = ret ? errno : 0;
+	if (status)
+		sigchain_pop(SIGPIPE);
+
+	ret = finish_command(cmd);
+	if (status)
+		*status = ret;
+	if (io_error) {
+		errno = io_error;
 		return -1;
 	}
+	return ret;
+}
 
-	return finish_command(cmd);
+int pipe_command(struct child_process *cmd,
+		 const char *in, size_t in_len,
+		 struct strbuf *out, size_t out_hint,
+		 struct strbuf *err, size_t err_hint)
+{
+	return pipe_command_with_status(cmd, in, in_len, out, out_hint,
+					err, err_hint, NULL);
 }
 
 enum child_state {

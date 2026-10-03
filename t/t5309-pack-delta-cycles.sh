@@ -1,6 +1,6 @@
 #!/bin/sh
 
-test_description='test index-pack handling of delta cycles in packfiles'
+test_description='test handling of delta cycles in packfiles'
 
 . ./test-lib.sh
 . "$TEST_DIRECTORY"/lib-pack.sh
@@ -34,6 +34,45 @@ test_expect_success 'index-pack works with a single delta (B->A)' '
 	git index-pack --stdin <ba.pack &&
 	git cat-file -t $A &&
 	git cat-file -t $B
+'
+
+pack_delta_bases () {
+	git verify-pack -v "$1" >verify &&
+	awk '$2 == "blob" { print $1, (NF == 7 ? $7 : "base") }' verify
+}
+
+test_expect_success '--prefer-reused-deltas retains the selected delta instead of forming a cycle' '
+	clear_packs &&
+	git index-pack --stdin <ab.pack >ab.hash &&
+	git index-pack --stdin <ba.pack >ba.hash &&
+	ab="pack-$(cut -f2 ab.hash)" &&
+	ba="pack-$(cut -f2 ba.hash)" &&
+
+	cat >expect-ab <<-EOF &&
+	$A $B
+	$B base
+	EOF
+	cat >expect-ba <<-EOF &&
+	$A base
+	$B $A
+	EOF
+	pack_delta_bases ".git/objects/pack/$ab.idx" >actual &&
+	test_cmp expect-ab actual &&
+	pack_delta_bases ".git/objects/pack/$ba.idx" >actual &&
+	test_cmp expect-ba actual &&
+
+	# Visit ba first: A is a base, then B is a delta against A.
+	# Switching to the A-against-B copy in ab would form a cycle.
+	test-tool chmtime =1000000000 ".git/objects/pack/$ab.pack" &&
+	test-tool chmtime =1000000200 ".git/objects/pack/$ba.pack" &&
+	printf "%s.pack\n%s.pack\n" "$ba" "$ab" >packs &&
+	git pack-objects --stdin-packs --window=0 --prefer-reused-deltas \
+		out <packs >out.hash &&
+
+	# Keep B against A. Forming and then breaking the cycle would
+	# instead keep A against B, since A was enumerated first.
+	pack_delta_bases "out-$(cat out.hash).idx" >actual &&
+	test_cmp expect-ba actual
 '
 
 test_expect_success 'index-pack detects missing base objects' '

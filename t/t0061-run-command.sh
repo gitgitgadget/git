@@ -35,12 +35,114 @@ test_expect_success 'run_command can run a command' '
 	test_must_be_empty err
 '
 
+test_expect_success !MINGW 'terminate_command handles termination and reaping' '
+	for mode in exit term ignore
+	do
+		case "$mode" in
+		exit) status=7 ;;
+		term) status=143 ;;
+		ignore) status=137 ;;
+		esac &&
+		echo "status=$status args=0" >expect &&
+		test-tool run-command terminate "$mode" >actual 2>err &&
+		test_cmp expect actual &&
+		test_must_be_empty err || return 1
+	done
+'
+
+test_expect_success !MINGW 'terminate_command handles an already-reaped child' '
+	echo "status=-1 args=0" >expect &&
+	test-tool run-command terminate reaped >actual 2>err &&
+	test_cmp expect actual &&
+	test_grep "waitpid for test-tool failed" err &&
+	test_grep ! "unexpected cleanup callback" err
+'
+
+test_expect_success MINGW 'terminate_command reaps an exited child' '
+	echo "status=7 args=0" >expect &&
+	test-tool run-command terminate exited >actual 2>err &&
+	test_cmp expect actual &&
+	test_must_be_empty err
+'
+
+test_expect_success !MINGW 'signal cleanup can return to its caller' '
+	for mode in signal signal-wait
+	do
+		case "$mode" in
+		signal) status=143 ;;
+		signal-wait) status=0 ;;
+		esac &&
+		echo "status=$status args=0" >expect &&
+		test-tool run-command terminate "$mode" >actual 2>err &&
+		test_cmp expect actual &&
+		if test "$mode" = signal
+		then
+			test_grep "died of signal 15" err &&
+			test_grep ! "unexpected cleanup callback" err
+		else
+			test_must_be_empty err
+		fi || return 1
+	done
+'
+
+test_expect_success !MINGW 'quiet termination preserves status and other diagnostics' '
+	write_script signal-exit <<-\EOF &&
+	case "$1" in
+	exit) exit 7 ;;
+	*) kill -"$1" $$ ;;
+	esac
+	EOF
+	test_expect_code 143 test-tool run-command run-command \
+		./signal-exit TERM 2>err &&
+	test_grep "died of signal 15" err &&
+	for mode in TERM KILL HUP exit
+	do
+		case "$mode" in
+		TERM) status=143 ;;
+		KILL) status=137 ;;
+		HUP) status=129 ;;
+		exit) status=7 ;;
+		esac &&
+		test_expect_code "$status" test-tool run-command quiet-run-command \
+			./signal-exit "$mode" 2>err &&
+		if test "$mode" = HUP
+		then
+			test_grep "died of signal 1" err
+		else
+			test_must_be_empty err
+		fi || return 1
+	done
+'
 
 test_lazy_prereq RUNS_COMMANDS_FROM_PWD '
 	write_script runs-commands-from-pwd <<-\EOF &&
 	true
 	EOF
 	runs-commands-from-pwd >/dev/null 2>&1
+'
+
+test_expect_success !MINGW 'pipe_command reports I/O errors separately from child status' '
+	for mode in success failure term cancel cancel-failure legacy \
+		consume consume-failure
+	do
+		result=-1 &&
+		broken_pipe=1 &&
+		case "$mode" in
+		success) status=0 ;;
+		failure|cancel-failure) status=7 ;;
+		term|cancel) status=143 ;;
+		legacy) status=-1 ;;
+		consume) status=0 result=0 broken_pipe=0 ;;
+		consume-failure) status=7 result=7 broken_pipe=0 ;;
+		esac &&
+		cat >expect <<-EOF &&
+		result=$result status=$status broken-pipe=$broken_pipe
+		output
+		EOF
+		test-tool run-command pipe-command "$mode" >actual 2>err &&
+		test_cmp expect actual &&
+		test_must_be_empty err || return 1
+	done
 '
 
 test_expect_success !RUNS_COMMANDS_FROM_PWD 'run_command is restricted to PATH' '
