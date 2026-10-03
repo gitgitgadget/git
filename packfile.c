@@ -1870,6 +1870,12 @@ int packfile_fill_entry(struct packed_git *p,
 	return 1;
 }
 
+void packfile_store_invalidate_kept_pack_cache(struct odb_source_packed *store)
+{
+	FREE_AND_NULL(store->kept_cache.packs);
+	store->kept_cache.flags = 0;
+}
+
 static void maybe_invalidate_kept_pack_cache(struct odb_source_packed *store,
 					     unsigned flags)
 {
@@ -1877,8 +1883,7 @@ static void maybe_invalidate_kept_pack_cache(struct odb_source_packed *store,
 		return;
 	if (store->kept_cache.flags == flags)
 		return;
-	FREE_AND_NULL(store->kept_cache.packs);
-	store->kept_cache.flags = 0;
+	packfile_store_invalidate_kept_pack_cache(store);
 }
 
 struct packed_git **packfile_store_get_kept_pack_cache(struct odb_source_packed *store,
