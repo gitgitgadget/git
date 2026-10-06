@@ -3,673 +3,613 @@ gittutorial(7)
 
 NAME
 ----
-gittutorial - A tutorial introduction to Git
-
-SYNOPSIS
---------
-[verse]
-git *
+gittutorial - Introduction to Git for beginners
 
 DESCRIPTION
 -----------
 
-This tutorial explains how to import a new project into Git, make
-changes to it, and share changes with other developers.
+This tutorial explains how to import a project's code into Git, make
+changes to it, and upload the project to the Internet.
 
-If you are instead primarily interested in using Git to fetch a project,
-for example, to test the latest version, you may prefer to start with
-the first two chapters of link:user-manual.html[The Git User's Manual].
+We'll show you how to use the commands `git commit`, `git add`,
+`git diff`, `git status`, and `git push`.
 
-First, note that you can get documentation for a command such as
-`git log --graph` with:
+Command line vs GUI
+-------------------
+
+Git is a command line program, but there are many excellent GUIs for
+Git built by the community. For example, if you use an IDE to edit your
+code, it might already have a built-in Git integration that you can use.
+
+In this tutorial, we'll give instructions for the command line version
+of Git, but you can also follow along in a GUI. You can also do some
+tasks in a GUI and some tasks on the command line. It's up to you.
+
+What we'll be doing
+-------------------
+
+Git lets you take snapshots of your code, like a checkpoint in a video
+game. In this tutorial we're going to explain a very basic Git
+workflow, which is:
+
+1. Create an empty folder
+2. Start using Git to manage the code in that folder
+3. Create 2 files and tell Git to save a snapshot of them
+4. Make changes to one of the files
+5. Tell Git to take another snapshot
+6. Repeat steps 4-5 any time you want to update your code
+
+We'll also explain how to use Git to put your code on the Internet.
+
+Step 1: Make sure Git is installed
+----------------------------------
+
+To do this tutorial, you'll need:
+
+1. Git to be installed. You might already have it installed,
+   and if not there are directions at https://git-scm.com/install/
+2. A folder on your computer with code that you want to start managing
+   with Git.
+
+You can check if Git is installed by running this in your terminal:
 
 ------------------------------------------------
-$ man git-log
+$ git --version
 ------------------------------------------------
 
-or:
+[[step_2]]
+Step 2: Introduce yourself to Git
+---------------------------------
+
+The first time you use Git on a computer, it's a good idea to tell Git
+your name and public email address. If you don't, you'll get a lot of
+warnings from Git. To do this, run:
 
 ------------------------------------------------
-$ git help log
+$ git config --global user.name "Namey McName"
+$ git config --global user.email you@example.com
 ------------------------------------------------
 
-With the latter, you can use the manual viewer of your choice; see
-linkgit:git-help[1] for more information.
+The name and email is so that other people you're collaborating with can
+know who made the changes. You can set them to anything you want.
 
-It is a good idea to introduce yourself to Git with your name and
-public email address before doing any operation.  The easiest
-way to do so is:
-
-------------------------------------------------
-$ git config --global user.name "Your Name Comes Here"
-$ git config --global user.email you@yourdomain.example.com
-------------------------------------------------
-
-
-Importing a new project
------------------------
-
-Assume you have a tarball `project.tar.gz` with your initial work.  You
-can place it under Git revision control as follows.
+To check if the name and email have been set, you can run these
+commands:
 
 ------------------------------------------------
-$ tar xzf project.tar.gz
-$ cd project
+$ git config user.name
+$ git config user.email
+------------------------------------------------
+
+Set your default branch name to `main`, by running this command.
+Git is going to change its default branch name to `main` soon, so this
+sets you up well for the future.
+
+------------------------------------------------
+$ git config --global init.defaultBranch main
+------------------------------------------------
+
+If there's no output, then it succeeded.
+
+Step 3: Create an empty folder and 2 files
+------------------------------------------
+
+In your terminal, create an empty folder and change directories into it.
+Later on you could follow the same steps in this tutorial to take an
+existing project and start managing it with Git, but we're going to use
+an empty project so that everyone following this tutorial has the exact
+same files.
+
+For example, run these commands to make a folder called `myproject`
+
+------------------------------------------------
+$ mkdir myproject
+$ cd myproject
+------------------------------------------------
+
+Create 2 files in this directory, so we have something to work with.
+
+Make a file called README.md, with these contents:
+
+------------------------------------------------
+We're doing a Git tutorial!
+We need 2 lines in this file so here's a second one
+------------------------------------------------
+
+And a file called `hello.py`, with these contents:
+
+------------------------------------------------
+print("hello world")
+------------------------------------------------
+
+Save the two files and keep them open in your text editor so you can
+easily edit them later. The exact contents aren't too important, but
+we'll use those contents in the example output later.
+
+You can check that the files are in the right place by running `ls`,
+like this:
+
+
+------------------------------------------------
+$ ls
+------------------------------------------------
+
+The output should be like this:
+
+------------------------------------------------
+hello.py
+README.md
+------------------------------------------------
+
+Step 4: Create a Git repository
+-------------------------------
+
+A Git repository is a folder which stores snapshots. It's usually a
+hidden folder called `.git`. Every time you take a snapshot, Git stores
+a copy of the contents of every file you're tracking.
+
+This might feel unbelievable, but Git uses compression so you can easily
+store tens of thousands of snapshots without using too much disk space.
+
+You can create a Git repository for any folder in your computer by
+running the command `git init`.
+
+Run `git init` in the folder you just created, like this:
+
+------------------------------------------------
 $ git init
 ------------------------------------------------
 
-Git will reply
+Git will reply:
 
 ------------------------------------------------
 Initialized empty Git repository in .git/
 ------------------------------------------------
 
-You've now initialized the working directory--you may notice a new
-directory created, named `.git`.
+You might notice a new hidden folder was created, named `.git`.
 
-Next, tell Git to take a snapshot of the contents of all files under the
-current directory (note the `.`), with `git add`:
+Step 5: Take your first snapshot
+--------------------------------
+
+Next, we're going to take a snapshot of all the files in the directory
+and tell Git to store them. Taking a snapshot in Git is a two step
+process: first you need to run `git add` and then `git commit`.
+
+The reason it's a two step process is that sometimes you might not
+actually want Git to store a snapshot of _all_ the files in a folder.
+For example, if you have a file full of private personal information
+called `personal.csv`, and a Python script called `process_data.py`, you
+might want Git to keep a snapshot of the Python script but not the
+private data.
+
+For now, we're going to store a snapshot of every file in your folder,
+as well as in every subfolder.
+
+The first step of creating a snapshot is to tell Git which files you
+want to include in the next snapshot using `git add`. To tell Git
+"include all files", run this command:
 
 ------------------------------------------------
 $ git add .
 ------------------------------------------------
 
-This snapshot is now stored in a temporary staging area which Git calls
-the "index".  You can permanently store the contents of the index in the
-repository with `git commit`:
+Next you can create the snapshot using the `git commit` command, like
+this. The `-m` flag stands for "message", and it lets you set a reminder
+for your future self of what you were doing. The message ("Initial
+commit" in this example) can say anything you want.
 
 ------------------------------------------------
-$ git commit
+$ git commit -m "Initial commit"
 ------------------------------------------------
 
-This will prompt you for a commit message.  You've now stored the first
-version of your project in Git.
+You've now stored the first version of your project in Git! From now on
+we're going to use the word "commit" instead of "snapshot", since that's
+the term Git uses.
 
-Making changes
---------------
+Step 6: Make a change
+---------------------
 
-Modify some files, then add their updated contents to the index:
+Now, let's learn how to make a change to a file and review the change you made.
+In this example, we'll update the file `README.md`, but you can edit a
+different file.
 
-------------------------------------------------
-$ git add file1 file2 file3
-------------------------------------------------
+First open `README.md` in your favourite text editor, make a tiny or
+silly change, and save it.
 
-You are now ready to commit.  You can see what is about to be committed
-using `git diff` with the `--cached` option:
-
-------------------------------------------------
-$ git diff --cached
-------------------------------------------------
-
-(Without `--cached`, `git diff` will show you any changes that
-you've made but not yet added to the index.)  You can also get a brief
-summary of the situation with `git status`:
+Next, in the terminal, run the command `git status` to get a summary of
+what you changed since the last Git commit.
 
 ------------------------------------------------
 $ git status
-On branch master
-Changes to be committed:
-  (use "git restore --staged <file>..." to unstage)
-
-	modified:   file1
-	modified:   file2
-	modified:   file3
-
 ------------------------------------------------
 
-If you need to make any further adjustments, do so now, and then add any
-newly modified content to the index.  Finally, commit your changes with:
+The output will look something like this:
 
 ------------------------------------------------
-$ git commit
+On branch main
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+        modified:   README.md
 ------------------------------------------------
 
-This will again prompt you for a message describing the change, and then
-record a new version of the project.
+This output says that we've changed `README.md` since the last time
+we committed.
 
-Alternatively, instead of running `git add` beforehand, you can use
-
-------------------------------------------------
-$ git commit -a
-------------------------------------------------
-
-which will automatically notice any modified (but not new) files, add
-them to the index, and commit, all in one step.
-
-A note on commit messages: Though not required, it's a good idea to
-begin the commit message with a single short (no more than 50
-characters) line summarizing the change, followed by a blank line and
-then a more thorough description. The text up to the first blank line in
-a commit message is treated as the commit title, and that title is used
-throughout Git.  For example, linkgit:git-format-patch[1] turns a
-commit into email, and it uses the title on the Subject line and the
-rest of the commit in the body.
-
-Git tracks content not files
-----------------------------
-
-Many revision control systems provide an `add` command that tells the
-system to start tracking changes to a new file.  Git's `add` command
-does something simpler and more powerful: `git add` is used both for new
-and newly modified files, and in both cases it takes a snapshot of the
-given files and stages that content in the index, ready for inclusion in
-the next commit.
-
-Viewing project history
------------------------
-
-At any point you can view the history of your changes using
-
-------------------------------------------------
-$ git log
-------------------------------------------------
-
-If you also want to see complete diffs at each step, use
-
-------------------------------------------------
-$ git log -p
-------------------------------------------------
-
-Often the overview of the change is useful to get a feel of
-each step
-
-------------------------------------------------
-$ git log --stat --summary
-------------------------------------------------
-
-Managing branches
------------------
-
-A single Git repository can maintain multiple branches of
-development.  To create a new branch named `experimental`, use
-
-------------------------------------------------
-$ git branch experimental
-------------------------------------------------
-
-If you now run
-
-------------------------------------------------
-$ git branch
-------------------------------------------------
-
-you'll get a list of all existing branches:
-
-------------------------------------------------
-  experimental
-* master
-------------------------------------------------
-
-The `experimental` branch is the one you just created, and the
-`master` branch is a default branch that was created for you
-automatically.  The asterisk marks the branch you are currently on;
-type
-
-------------------------------------------------
-$ git switch experimental
-------------------------------------------------
-
-to switch to the `experimental` branch.  Now edit a file, commit the
-change, and switch back to the `master` branch:
-
-------------------------------------------------
-(edit file)
-$ git commit -a
-$ git switch master
-------------------------------------------------
-
-Check that the change you made is no longer visible, since it was
-made on the `experimental` branch and you're back on the `master` branch.
-
-You can make a different change on the `master` branch:
-
-------------------------------------------------
-(edit file)
-$ git commit -a
-------------------------------------------------
-
-at this point the two branches have diverged, with different changes
-made in each.  To merge the changes made in `experimental` into `master`, run
-
-------------------------------------------------
-$ git merge experimental
-------------------------------------------------
-
-If the changes don't conflict, you're done.  If there are conflicts,
-markers will be left in the problematic files showing the conflict;
+Next, if you want to see the details of how you've changed `README.md`,
+you can run `git diff`.
 
 ------------------------------------------------
 $ git diff
 ------------------------------------------------
 
-will show this.  Once you've edited the files to resolve the
-conflicts,
+The output will look something like this:
 
 ------------------------------------------------
-$ git commit -a
+diff --git a/README.md b/README.md
+index 7ebaecb3..5a4ff712 100644
+--- a/README.md
++++ b/README.md
+@@ -1,2 +1,2 @@
+ Here are some Python scripts!
++I hope you like them.
 ------------------------------------------------
 
-will commit the result of the merge. Finally,
+This output says that we added one line, saying "I hope you like them.".
+By default Git will show the lines you removed in red, and the lines you
+added in green.
+
+Step 7: Make another commit (easy way)
+--------------------------------------
+
+Now let's tell Git to save the new version of `README.md` by making
+another commit! To tell Git to snapshot all files that Git is tracking
+and commit them, run this command:
 
 ------------------------------------------------
-$ gitk
+$ git commit -am "Update README"
 ------------------------------------------------
 
-will show a nice graphical representation of the resulting history.
+This is similar to the two step process in Step 4 where we used `git
+add` and `git commit` to make a commit, but with a shortcut that lets
+you do both in just one command. The `-a` stands for "all".
 
-At this point you could delete the `experimental` branch with
+Step 7b: Make another commit (longer way)
+-----------------------------------------
 
-------------------------------------------------
-$ git branch -d experimental
-------------------------------------------------
-
-This command ensures that the changes in the `experimental` branch are
-already in the current branch.
-
-If you develop on a branch `crazy-idea`, then regret it, you can always
-delete the branch with
-
--------------------------------------
-$ git branch -D crazy-idea
--------------------------------------
-
-Branches are cheap and easy, so this is a good way to try something
-out.
-
-Using Git for collaboration
----------------------------
-
-Suppose that Alice has started a new project with a Git repository in
-`/home/alice/project`, and that Bob, who has a home directory on the
-same machine, wants to contribute.
-
-Bob begins with:
+`git commit -am` is a fast way to snapshot all the files that Git is
+tracking. But if you want Git to ignore changes to certain files, you
+can instead do a 2-step process like in Step 4 where first you run `git
+add` for every file that's been changed and that you want to include in
+the next commit, like this:
 
 ------------------------------------------------
-bob$ git clone /home/alice/project myrepo
+$ git add README.md
 ------------------------------------------------
 
-This creates a new directory `myrepo` containing a clone of Alice's
-repository.  The clone is on an equal footing with the original
-project, possessing its own copy of the original project's history.
-
-Bob then makes some changes and commits them:
+and then run `git commit` (without the `-a`), like this:
 
 ------------------------------------------------
-(edit files)
-bob$ git commit -a
-(repeat as necessary)
+$ git commit -m "Update README"
 ------------------------------------------------
 
-When he's ready, he tells Alice to pull changes from the repository
-at `/home/bob/myrepo`.  She does this with:
+Step 8: Make a change and throw it away
+---------------------------------------
+
+One of the most useful things about Git is that it lets you safely
+experiment: you never need to be scared to change your code because you
+can always go back to the old version.
+
+Before starting to experiment, run `git status` to check the current
+state of your Git repository:
 
 ------------------------------------------------
-alice$ cd /home/alice/project
-alice$ git pull /home/bob/myrepo master
+$ git status
+On branch main
+
+nothing to commit, working tree clean
 ------------------------------------------------
 
-This merges the changes from Bob's `master` branch into Alice's
-current branch.  If Alice has made her own changes in the meantime,
-then she may need to manually fix any conflicts.
+This "working tree clean" message means that there haven't been any
+changes since your last commit.
 
-The `pull` command thus performs two operations: it fetches changes
-from a remote branch, then merges them into the current branch.
-
-Note that in general, Alice would want her local changes committed before
-initiating this `pull`.  If Bob's work conflicts with what Alice did since
-their histories forked, Alice will use her working tree and the index to
-resolve conflicts, and existing local changes will interfere with the
-conflict resolution process (Git will still perform the fetch but will
-refuse to merge -- Alice will have to get rid of her local changes in
-some way and pull again when this happens).
-
-Alice can peek at what Bob did without merging first, using the `fetch`
-command; this allows Alice to inspect what Bob did, using a special
-symbol `FETCH_HEAD`, in order to determine if he has anything worth
-pulling, like this:
+Now make a change to your code, and run `git status` again. Like last
+time, you should see a message like this:
 
 ------------------------------------------------
-alice$ git fetch /home/bob/myrepo master
-alice$ git log -p HEAD..FETCH_HEAD
+$ git status
+On branch main
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+        modified:   README.md
 ------------------------------------------------
 
-This operation is safe even if Alice has uncommitted local changes.
-The range notation `HEAD..FETCH_HEAD` means "show everything that is reachable
-from the `FETCH_HEAD` but exclude anything that is reachable from `HEAD`".
-Alice already knows everything that leads to her current state (`HEAD`),
-and reviews what Bob has in his state (`FETCH_HEAD`) that she has not
-seen with this command.
+This tells us that `README.md` has been changed since the last commit.
+But we don't actually want this change, so let's undo it! We can restore
+`README.md` back to how it was at the most recent commit using the `git
+restore` command.
 
-If Alice wants to visualize what Bob did since their histories forked
-she can issue the following command:
-
-------------------------------------------------
-$ gitk HEAD..FETCH_HEAD
-------------------------------------------------
-
-This uses the same two-dot range notation we saw earlier with `git log`.
-
-Alice may want to view what both of them did since they forked.
-She can use three-dot form instead of the two-dot form:
+**WARNING**: `git restore` can't be reversed! Any time you run it it's
+important to be absolutely sure that you're okay with throwing away your
+changes since the last commit.
 
 ------------------------------------------------
-$ gitk HEAD...FETCH_HEAD
+$ git restore README.md
 ------------------------------------------------
 
-This means "show everything that is reachable from either one, but
-exclude anything that is reachable from both of them".
+Now open `README.md` again. You should see that your changes have been undone.
 
-Please note that these range notations can be used with both `gitk`
-and `git log`.
+You can stop here!
+------------------
 
-After inspecting what Bob did, if there is nothing urgent, Alice may
-decide to continue working without pulling from Bob.  If Bob's history
-does have something Alice would immediately need, Alice may choose to
-stash her work-in-progress first, do a `pull`, and then finally unstash
-her work-in-progress on top of the resulting history.
+The commands we've learned so far (`git init`, `git add`, `git commit`,
+`git diff`, `git status`, and `git restore`) are enough to get a lot out
+of Git on their own.
 
-When you are working in a small closely knit group, it is not
-unusual to interact with the same repository over and over
-again.  By defining 'remote' repository shorthand, you can make
-it easier:
+With these commands, you can keep copies of past versions of your code
+on your computer and safely experiment with big changes to your code.
 
-------------------------------------------------
-alice$ git remote add bob /home/bob/myrepo
-------------------------------------------------
+When using Git this way, all of your code just lives on your computer.
+But if you want to put your code on the Internet so that other people
+can use it or back it up, then you'll need to learn about one more
+command: `git push`.
 
-With this, Alice can perform the first part of the `pull` operation
-alone using the `git fetch` command without merging them with her own
-branch, using:
+The rest of this tutorial is about how to upload your code to a Git
+repository on the Internet. The high level process is:
 
--------------------------------------
-alice$ git fetch bob
--------------------------------------
+1. Create an account on the Git host
+2. Configure Git so that it can login to the Git host to make changes
+3. Run `git push origin main` to upload your code
 
-Unlike the longhand form, when Alice fetches from Bob using a
-remote repository shorthand set up with `git remote`, what was
-fetched is stored in a remote-tracking branch, in this case
-`bob/master`.  So after this:
+Navigating the Git host's UI can be tricky, and it's hard for us to
+give you exact directions because the UIs change a lot.
 
--------------------------------------
-alice$ git log -p master..bob/master
--------------------------------------
+Step 9: Create an account on a Git host
+---------------------------------------
 
-shows a list of all the changes that Bob made since he branched from
-Alice's `master` branch.
+To put your code on the Internet, you need it to be hosted somewhere.
+The easiest way to do this is to sign up with a Git host. There's a list
+of Git hosts (many of them offer free accounts) at
+https://git-scm.com/tools/hosting. GitHub and GitLab are two popular hosts.
 
-After examining those changes, Alice
-could merge the changes into her `master` branch:
+If you're comfortable running a server, there are other ways to host
+a Git repository on the internet, like connecting through SSH or open
+source Git forge software to your server.
 
--------------------------------------
-alice$ git merge bob/master
+Step 10: Create an SSH key (if needed)
 -------------------------------------
 
-This `merge` can also be done by 'pulling from her own remote-tracking
-branch', like this:
+For Git to upload changes to another Git repository, it needs a way to
+login to that repository. One of the most popular ways to do this is
+with an SSH key.
 
--------------------------------------
-alice$ git pull . remotes/bob/master
--------------------------------------
+If you don't already have an SSH key, you'll need to create one. On Mac
+or Linux, you can check if you already have an SSH key by running:
 
-Note that git pull always merges into the current branch,
-regardless of what else is given on the command line.
+-------------------------------------------
+$ ls ~/.ssh/*.pub
+-------------------------------------------
 
-Later, Bob can update his repo with Alice's latest changes using
+If you don't already have an SSH key, run:
 
--------------------------------------
-bob$ git pull
--------------------------------------
+-------------------------------------------
+$ ssh-keygen
+-------------------------------------------
 
-Note that he doesn't need to give the path to Alice's repository;
-when Bob cloned Alice's repository, Git stored the location of her
-repository in the repository configuration, and that location is
-used for pulls:
+`ssh-keygen` will ask you for some details.
+The easiest way to do this is to just press Enter at every prompt until
+it's done.
 
--------------------------------------
-bob$ git config --get remote.origin.url
-/home/alice/project
--------------------------------------
+NOTE: All of the advice about how to use SSH in this tutorial is aimed
+at getting it to work as quickly as possible. Setting up SSH in a secure
+way is very far outside the scope of this tutorial. If you have a
+security team in your organization, they might have very different
+opinions about the appropriate way to configure authentication with Git.
 
-(The complete configuration created by `git clone` is visible using
-`git config list`, and the linkgit:git-config[1] man page
-explains the meaning of each option.)
+Step 11: Tell the Git host your SSH public key
+----------------------------------------------
 
-Git also keeps a pristine copy of Alice's `master` branch under the
-name `origin/master`:
+First, find your SSH key like this (on Mac or Linux):
 
--------------------------------------
-bob$ git branch -r
-  origin/master
--------------------------------------
+-------------------------------------------
+$ ls ~/.ssh/*.pub
+-------------------------------------------
 
-If Bob later decides to work from a different host, he can still
-perform clones and pulls using the ssh protocol:
+That will output something like
 
--------------------------------------
-bob$ git clone alice.org:/home/alice/project myrepo
--------------------------------------
+-------------------------------------------
+/home/alice/.ssh/id_ed25519.pub
+-------------------------------------------
 
-Alternatively, Git has a native protocol, or can use http;
-see linkgit:git-pull[1] for details.
+Copy the contents of that file to your clipboard. It's important that
+the filename ends in `.pub` ("pub" stands for "public").
 
-Git can also be used in a CVS-like mode, with a central repository
-that various users push changes to; see linkgit:git-push[1] and
-linkgit:gitcvs-migration[7].
+Then login to your account on the Git host you chose and paste the SSH
+key into the appropriate place. Depending on the Git host, it's likely
+under "SSH keys" in your settings. If it asks you what type of SSH key,
+look for something like "Authentication Key".
 
-Exploring history
------------------
+Once you've done this, you're done! Git will automatically use your SSH
+key to try to connect.
 
-Git history is represented as a series of interrelated commits.  We
-have already seen that the `git log` command can list those commits.
-Note that first line of each `git log` entry also gives a name for the
-commit:
+Step 12: Create an empty Git repository on the Git host
+-------------------------------------------------------
 
--------------------------------------
-$ git log
-commit c82a22c39cbc32576f64f5c6b3f24b99ea8149c7
-Author: Junio C Hamano <junkio@cox.net>
-Date:   Tue May 16 17:18:22 2006 -0700
+Go to the Git host's website and create a new Git repository.
 
-    merge-base: Clarify the comments on post processing.
--------------------------------------
+**WARNING**: If you create a public repository and push your repository
+to it, then your name and email address, as well as the contents of
+any files you committed and every previous version of those files, will
+be on the public internet. Some Git hosts have the option to create
+a private repository instead, to keep your information private.
 
-We can give this name to `git show` to see the details about this
-commit.
+Step 13: Find the address of the repository
+-------------------------------------------
 
--------------------------------------
-$ git show c82a22c39cbc32576f64f5c6b3f24b99ea8149c7
--------------------------------------
+Now, find the address of the repository on your Git host. It should look
+something like this:
 
-But there are other ways to refer to commits.  You can use any initial
-part of the name that is long enough to uniquely identify the commit:
+-------------------------------------------
+git@git.example.com:username/repo.git
+-------------------------------------------
 
--------------------------------------
-$ git show c82a22c39c	# the first few characters of the name are
-			# usually enough
-$ git show HEAD		# the tip of the current branch
-$ git show experimental	# the tip of the "experimental" branch
--------------------------------------
+(where `example.com`, `username` and `repo` will be replaced with the
+actual values).
 
-Every commit usually has one "parent" commit
-which points to the previous state of the project:
+If you can only find an address starting with `https://`, then
+you can often translate it to the SSH format by replacing `https://`
+with `git@` and replacing the `/` after the domain name with an `:`.
+Here's how:
 
--------------------------------------
-$ git show HEAD^  # to see the parent of HEAD
-$ git show HEAD^^ # to see the grandparent of HEAD
-$ git show HEAD~4 # to see the great-great grandparent of HEAD
--------------------------------------
+-------------------------------------------
+https://git.example.com/username/repo
+^^^^^^^^               ^
+replace with "git@"    replace with ":"
+-------------------------------------------
 
-Note that merge commits may have more than one parent:
+Step 14: push your changes
+--------------------------
 
--------------------------------------
-$ git show HEAD^1 # show the first parent of HEAD (same as HEAD^)
-$ git show HEAD^2 # show the second parent of HEAD
--------------------------------------
+Finally, we're ready to send the information in your local Git repository
+to the one on the internet!
 
-You can also give commits names of your own; after running
+First, tell Git about the other repository by running `git remote add`
+in your terminal
+(replace `git@example.com:username/repo.git` with the actual address):
 
--------------------------------------
-$ git tag v2.5 1b2e1d63ff
--------------------------------------
+-------------------------------------------
+$ git remote add origin git@example.com:username/repo.git
+-------------------------------------------
 
-you can refer to `1b2e1d63ff` by the name `v2.5`.  If you intend to
-share this name with other people (for example, to identify a release
-version), you should create a "tag" object, and perhaps sign it; see
-linkgit:git-tag[1] for details.
+This tells Git to save the URL `git@example.com:username/repo.git` in
+your Git repository's configuration under the name `origin`, so that you
+can use it later. If you make a mistake while doing this, you can run
+`git remote remove origin` and try again.
 
-Any Git command that needs to know a commit can take any of these
-names.  For example:
+Then tell Git to send the information, with `git push`
+(if this doesn't work, read the "Troubleshooting `git push`" section for advice!):
 
--------------------------------------
-$ git diff v2.5 HEAD	 # compare the current HEAD to v2.5
-$ git branch stable v2.5 # start a new branch named "stable" based
-			 # at v2.5
-$ git reset --hard HEAD^ # reset your current branch and working
-			 # directory to its state at HEAD^
--------------------------------------
+-------------------------------------------
+$ git push -u origin main
+-------------------------------------------
 
-Be careful with that last command: in addition to losing any changes
-in the working directory, it will also remove all later commits from
-this branch.  If this branch is the only branch containing those
-commits, they will be lost.  Also, don't use `git reset` on a
-publicly-visible branch that other developers pull from, as it will
-force needless merges on other developers to clean up the history.
-If you need to undo changes that you have pushed, use `git revert`
-instead.
+`origin` refers to the URL we just added (`git@example.com:username/repo.git`),
+and `main` is the name of your current Git branch. You can use any name
+(not just `origin`), but using `origin` often makes things easier
+because it's the default for `git push` and `git pull`.
+We haven't covered branches yet, but `main` is the default branch name.
 
-The `git grep` command can search for strings in any version of your
-project, so
+Any time you want to set up a new repository, you can repeat steps
+11-13, with one exception: you only need to pass `-u` the first time
+you push. Afterwards you can just run the command:
 
--------------------------------------
-$ git grep "hello" v2.5
--------------------------------------
+-------------------------------------------
+$ git push origin main
+-------------------------------------------
 
-searches for all occurrences of "hello" in `v2.5`.
+It should output something like this:
 
-If you leave out the commit name, `git grep` will search any of the
-files it manages in your current directory.  So
+-------------------------------------------
+To example.com:example_username/example
+ * [new branch]        main -> main
+-------------------------------------------
 
--------------------------------------
-$ git grep "hello"
--------------------------------------
+Troubleshooting `git push`
+--------------------------
 
-is a quick way to search just the files that are tracked by Git.
+There are 3 main errors you might run into when running `git push origin main`.
+Getting errors when running `git push` is actually a big part of using
+Git, so congratulations! If you get to this part of the tutorial, you
+get a little bonus experience in debugging.
 
-Many Git commands also take sets of commits, which can be specified
-in a number of ways.  Here are some examples with `git log`:
+Here's a guide to why they're happening and how to fix them.
 
--------------------------------------
-$ git log v2.5..v2.6            # commits between v2.5 and v2.6
-$ git log v2.5..                # commits since v2.5
-$ git log --since="2 weeks ago" # commits from the last 2 weeks
-$ git log v2.5.. Makefile       # commits since v2.5 which modify
-				# Makefile
--------------------------------------
+**Problem 1**: You pushed to `main`, but your branch actually isn't called `main`
 
-You can also give `git log` a "range" of commits where the first is not
-necessarily an ancestor of the second; for example, if the tips of
-the branches `stable` and `master` diverged from a common
-commit some time ago, then
+Here's the error:
+```
+$ git push origin main
+error: src refspec main does not match any
+```
 
--------------------------------------
-$ git log stable..master
--------------------------------------
+This might happen if you didn't set `init.defaultBranch` to `main` in
+<<step_2,Step 2>>.
 
-will list commits made in the `master` branch but not in the
-stable branch, while
+If you want to check the name of your current branch, you can run `git
+status`. For example, in this output, the current branch is "master".
 
--------------------------------------
-$ git log master..stable
--------------------------------------
+-------------------------------------------
+$ git status
+On branch master
 
-will show the list of commits made on the stable branch but not
-the `master` branch.
+...
+-------------------------------------------
 
-The `git log` command has a weakness: it must present commits in a
-list.  When the history has lines of development that diverged and
-then merged back together, the order in which `git log` presents
-those commits is meaningless.
+To push your branch, you have a few options:
 
-Most projects with multiple contributors (such as the Linux kernel,
-or Git itself) have frequent merges, and `gitk` does a better job of
-visualizing their history.  For example,
+* rename your branch to `main`, by running `git branch -m main`
+  and then run `git push origin main`
+* run `git push origin master`
+  (where `master` is the name of your actual current branch)
 
--------------------------------------
-$ gitk --since="2 weeks ago" drivers/
--------------------------------------
+**Problem 2: SSH error**
 
-allows you to browse any commits from the last 2 weeks of commits
-that modified files under the `drivers` directory.  (Note: you can
-adjust gitk's fonts by holding down the control key while pressing
-"-" or "+".)
+Here's the error:
 
-Finally, most commands that take filenames will optionally allow you
-to precede any filename by a commit, to specify a particular version
-of the file:
+-----
+$ git push origin main
+The authenticity of host 'github.com (140.82.116.3)' can't be established.
+ED25519 key fingerprint is: SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU
+This key is not known by any other names.
+Are you sure you want to continue connecting (yes/no/[fingerprint])?
+-----
 
--------------------------------------
-$ git diff v2.5:Makefile HEAD:Makefile.in
--------------------------------------
+Git uses SSH to connect during `git push`, and this message happens when
+SSH connects to a new site that you haven't connected to before.
 
-You can also use `git show` to see any such file:
+The easiest way to handle this is to type "yes" and press Enter.
 
--------------------------------------
-$ git show v2.5:Makefile
--------------------------------------
+**Problem 3: the repository already exists**
 
-Next Steps
-----------
+Here's the error:
 
-This tutorial should be enough to perform basic distributed revision
-control for your projects.  However, to fully understand the depth
-and power of Git you need to understand two simple ideas on which it
-is based:
+---------------------
+$ git push origin main
+! [rejected]        main -> main (fetch first)
+error: failed to push some refs to 'example.com:example/example.git'
+hint: Updates were rejected because the remote contains work that you do not
+hint: have locally.
+---------------------
 
-  * The object database is the rather elegant system used to
-    store the history of your project--files, directories, and
-    commits.
+If you see an error like this, it means that when you created the
+repository on your Git host, it created a repository with a file in it
+to try to help you out. (that's the "work that you do not have locally"
+in the error message)
 
-  * The index file is a cache of the state of a directory tree,
-    used to create commits, check out working directories, and
-    hold the various trees involved in a merge.
+You can fix this either by deleting the repository and recreating it, or
+by running:
 
-Part two of this tutorial explains the object
-database, the index file, and a few other odds and ends that you'll
-need to make the most of Git. You can find it at linkgit:gittutorial-2[7].
+---------------------
+$ git push --force origin main
+---------------------
 
-If you don't want to continue with that right away, a few other
-digressions that may be interesting at this point are:
+**WARNING**: In general it's quite dangerous to use `--force` because
+it can erase work on the online repository in a way that's difficult to
+recover. But if you know for sure that you just created the repository 2
+minutes ago and there's nothing in it, then it's okay.
 
-  * linkgit:git-format-patch[1], linkgit:git-am[1]: These convert
-    series of git commits into emailed patches, and vice versa,
-    useful for projects such as the Linux kernel which rely heavily
-    on emailed patches.
+MORE USEFUL GIT COMMANDS
+------------------------
 
-  * linkgit:git-bisect[1]: When there is a regression in your
-    project, one way to track down the bug is by searching through
-    the history to find the exact commit that's to blame.  `git bisect`
-    can help you perform a binary search for that commit.  It is
-    smart enough to perform a close-to-optimal search even in the
-    case of complex non-linear history with lots of merged branches.
-
-  * linkgit:gitworkflows[7]: Gives an overview of recommended
-    workflows.
-
-  * linkgit:giteveryday[7]: Everyday Git with 20 Commands Or So.
-
-  * linkgit:gitcvs-migration[7]: Git for CVS users.
+* To tell Git to "un-add" a file that you added by accident, run
+  `git rm --cached FILENAME`
 
 SEE ALSO
 --------
-linkgit:gittutorial-2[7],
-linkgit:gitcvs-migration[7],
-linkgit:gitcore-tutorial[7],
-linkgit:gitglossary[7],
 linkgit:git-help[1],
-linkgit:gitworkflows[7],
-linkgit:giteveryday[7],
-link:user-manual.html[The Git User's Manual]
 
 GIT
 ---
