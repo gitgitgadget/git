@@ -234,6 +234,12 @@ void close_pack_index(struct packed_git *);
 
 int close_pack_fd(struct packed_git *p);
 
+/*
+ * Return the process's soft fd limit, using platform fallbacks when needed
+ * and returning 1 if no limit can be determined.
+ */
+unsigned int get_max_fd_limit(void);
+
 uint32_t get_pack_fanout(struct packed_git *p, uint32_t value);
 
 struct object_database;

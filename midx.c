@@ -902,6 +902,59 @@ static void midx_report(const char *fmt, ...)
 	va_end(ap);
 }
 
+/* Whether we have already printed the missing-pack hint. */
+static int verify_midx_missing_pack_reported;
+
+/* Check whether the .pack file for pack_int_id is missing. */
+static int midx_pack_vanished(struct multi_pack_index *m, uint32_t pack_int_id)
+{
+	struct strbuf path = STRBUF_INIT;
+	int vanished;
+
+	pack_int_id = midx_for_pack(&m, pack_int_id);
+	strbuf_addf(&path, "%s/pack/%s", m->source->base.path,
+		    m->pack_names[pack_int_id]);
+	strbuf_strip_suffix(&path, ".idx");
+	strbuf_addstr(&path, ".pack");
+	vanished = access(path.buf, F_OK) < 0 && errno == ENOENT;
+	strbuf_release(&path);
+	return vanished;
+}
+
+static void midx_report_missing_pack_hint(struct multi_pack_index *m,
+					  uint32_t pack_int_id)
+{
+	if (!verify_midx_missing_pack_reported &&
+	    midx_pack_vanished(m, pack_int_id)) {
+		verify_midx_missing_pack_reported = 1;
+		fprintf(stderr, "%s\n",
+			_("a pack referenced by the multi-pack-index is "
+			  "missing; concurrent maintenance may have replaced "
+			  "it; retry after concurrent maintenance completes"));
+	}
+}
+
+/*
+ * Estimate room for 1..256 packs, budgeting two fds per pack and aiming
+ * to leave 64 fds for other uses.
+ */
+static uint32_t midx_verify_preopen_budget(void)
+{
+	uint32_t budget = 256;
+	unsigned int max_fds = get_max_fd_limit();
+
+	if (max_fds > 64) {
+		uint32_t avail = (max_fds - 64) / 2;
+		if (avail < budget)
+			budget = avail;
+	} else {
+		budget = 1;
+	}
+	if (budget < 1)
+		budget = 1;
+	return budget;
+}
+
 struct pair_pos_vs_id
 {
 	uint32_t pos;
@@ -933,10 +986,13 @@ int verify_midx_file(struct odb_source_packed *source, unsigned flags)
 	struct repository *r = source->base.odb->repo;
 	struct pair_pos_vs_id *pairs = NULL;
 	uint32_t i;
+	uint32_t total_packs;
+	int preopen_packs;
 	struct progress *progress = NULL;
 	struct multi_pack_index *m = load_multi_pack_index(source);
 	struct multi_pack_index *curr;
 	verify_midx_error = 0;
+	verify_midx_missing_pack_reported = 0;
 
 	if (!m) {
 		int result = 0;
@@ -956,13 +1012,25 @@ int verify_midx_file(struct odb_source_packed *source, unsigned flags)
 	if (!midx_checksum_valid(m))
 		midx_report(_("incorrect checksum"));
 
+	total_packs = m->num_packs + m->num_packs_in_base;
+
+	/*
+	 * Reopening by name races with repack pack removal;
+	 * avoid it when possible.
+	 */
+	preopen_packs = total_packs <= midx_verify_preopen_budget();
+
 	if (flags & MIDX_PROGRESS)
 		progress = start_delayed_progress(r,
 						  _("Looking for referenced packfiles"),
-						  m->num_packs + m->num_packs_in_base);
-	for (i = 0; i < m->num_packs + m->num_packs_in_base; i++) {
-		if (prepare_midx_pack(m, i))
+						  total_packs);
+	for (i = 0; i < total_packs; i++) {
+		if (prepare_midx_pack(m, i)) {
 			midx_report("failed to load pack in position %d", i);
+			midx_report_missing_pack_hint(m, i);
+		} else if (preopen_packs) {
+			is_pack_valid(nth_midxed_pack(m, i));
+		}
 
 		display_progress(progress, i + 1);
 	}
@@ -1027,7 +1095,8 @@ int verify_midx_file(struct odb_source_packed *source, unsigned flags)
 		struct pack_entry e;
 		off_t m_offset, p_offset;
 
-		if (i > 0 && pairs[i-1].pack_int_id != pairs[i].pack_int_id &&
+		if (!preopen_packs &&
+		    i > 0 && pairs[i-1].pack_int_id != pairs[i].pack_int_id &&
 		    nth_midxed_pack(m, pairs[i-1].pack_int_id)) {
 			uint32_t pack_int_id = pairs[i-1].pack_int_id;
 			struct packed_git *p = nth_midxed_pack(m, pack_int_id);
@@ -1041,12 +1110,14 @@ int verify_midx_file(struct odb_source_packed *source, unsigned flags)
 		if (midx_fill_entry(m, &oid, &e, NULL) != MIDX_FILL_HIT) {
 			midx_report(_("failed to load pack entry for oid[%d] = %s"),
 				    pairs[i].pos, oid_to_hex(&oid));
+			midx_report_missing_pack_hint(m, pairs[i].pack_int_id);
 			continue;
 		}
 
 		if (open_pack_index(e.p)) {
 			midx_report(_("failed to load pack-index for packfile %s"),
 				    e.p->pack_name);
+			midx_report_missing_pack_hint(m, pairs[i].pack_int_id);
 			break;
 		}
 
