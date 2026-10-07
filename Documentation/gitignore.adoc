@@ -7,7 +7,7 @@ gitignore - Specifies intentionally untracked files to ignore
 
 SYNOPSIS
 --------
-$XDG_CONFIG_HOME/git/ignore, $GIT_COMMON_DIR/info/exclude, .gitignore
+$XDG_CONFIG_HOME/git/ignore, $GIT_COMMON_DIR/info/exclude, .gitignore, .gitlocalignore
 
 DESCRIPTION
 -----------
@@ -34,10 +34,17 @@ precedence, the last matching pattern decides the outcome):
    includes such `.gitignore` files in its repository, containing patterns for
    files generated as part of the project build.
 
- * Patterns read from `$GIT_COMMON_DIR/info/exclude`.
+  * Patterns read from `$GIT_COMMON_DIR/info/exclude`.
 
- * Patterns read from the file specified by the configuration
-   variable `core.excludesFile`.
+  * Patterns read from a `.gitlocalignore` file at the root of the
+    working tree, but only when the `core.gitLocalIgnore` configuration
+    variable is enabled (it is `false` by default). This file is intended
+    for machine-local, uncommitted ignore rules: Git ignores the file
+    itself (self-excluding) and never tracks it. Its precedence is below
+    `$GIT_COMMON_DIR/info/exclude` but above `core.excludesFile`.
+
+  * Patterns read from the file specified by the configuration
+    variable `core.excludesFile`.
 
 Which file to place a pattern in depends on how the pattern is meant to
 be used.
@@ -57,7 +64,15 @@ be used.
    the user's editor of choice) generally go into a file specified by
    `core.excludesFile` in the user's `~/.gitconfig`. Its default value is
    $XDG_CONFIG_HOME/git/ignore. If $XDG_CONFIG_HOME is either not set or
-   empty, $HOME/.config/git/ignore is used instead.
+    empty, $HOME/.config/git/ignore is used instead.
+
+  * Patterns which apply only to your local machine and which you do
+    not want to share or commit (e.g., paths that exist only in your
+    checkout) can go into a `.gitlocalignore` file at the root of the
+    working tree, once `core.gitLocalIgnore` is enabled. Unlike the
+    other files above, `.gitlocalignore` is ignored by Git itself and
+    will never be tracked or pushed.
+
 
 The underlying Git plumbing tools, such as
 'git ls-files' and 'git read-tree', read
