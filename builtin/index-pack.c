@@ -1561,30 +1561,14 @@ static void write_special_file(const char *suffix, const char *msg,
 {
 	struct strbuf name_buf = STRBUF_INIT;
 	const char *filename;
-	int fd;
-	int msg_len = strlen(msg);
 
 	if (pack_name)
 		filename = derive_filename(pack_name, "pack", suffix, &name_buf);
 	else
 		filename = odb_pack_name(the_repository, &name_buf, hash, suffix);
 
-	fd = safe_create_file_with_leading_directories(the_repository, filename);
-	if (fd < 0) {
-		if (errno != EEXIST)
-			die_errno(_("cannot write %s file '%s'"),
-				  suffix, filename);
-	} else {
-		if (msg_len > 0) {
-			write_or_die(fd, msg, msg_len);
-			write_or_die(fd, "\n", 1);
-		}
-		if (close(fd) != 0)
-			die_errno(_("cannot close written %s file '%s'"),
-				  suffix, filename);
-		if (report)
-			*report = suffix;
-	}
+	if (write_pack_marker_file(the_repository, filename, msg) && report)
+		*report = suffix;
 	strbuf_release(&name_buf);
 }
 

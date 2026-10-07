@@ -599,6 +599,25 @@ void stage_tmp_packfiles(struct repository *repo,
 	free(mtimes_tmp_name);
 }
 
+int write_pack_marker_file(struct repository *repo, const char *filename,
+			   const char *msg)
+{
+	int fd = safe_create_file_with_leading_directories(repo, filename);
+
+	if (fd < 0) {
+		if (errno == EEXIST)
+			return 0;
+		die_errno(_("cannot write file '%s'"), filename);
+	}
+	if (*msg) {
+		write_or_die(fd, msg, strlen(msg));
+		write_or_die(fd, "\n", 1);
+	}
+	if (close(fd))
+		die_errno(_("cannot close written file '%s'"), filename);
+	return 1;
+}
+
 void write_promisor_file(const char *promisor_name, struct ref **sought, int nr_sought)
 {
 	int i, err;
