@@ -134,6 +134,29 @@ This will result in only b (a and c are cleared).
 	rely solely on the server's ref advertisement to find commits
 	in common.
 
+`push.shallowExcludeBoundary`::
+	When pushing from a shallow repository, Git can omit the shallow
+	grafts' objects from the generated pack rather than resending the
+	full toplevel tree of those grafts.  This assumes the receiver
+	already has those objects.  If it does not, the receiver rejects
+	the push rather than accepting incomplete history. This setting
+	controls that behavior and accepts three values:
++
+--
+`abort`;;
+	If the push reaches such a boundary, refuse it rather than
+	choosing whether to send or omit it.
+`true`;;
+	(the default) Omit the boundary objects (fast). If the receiver
+	does not have them, the push is rejected.
+`false`;;
+	Send the boundary objects, retaining the historical behavior.
+	This can send the boundary's entire tree, which may be very
+	large.  This is only needed when pushing to a receiver that
+	accepts new shallow roots (i.e. one with `receive.shallowUpdate`
+	enabled), which is very rare.
+--
+
 `push.useBitmaps`::
 	If set to `false`, disable use of bitmaps for `git push` even if
 	`pack.useBitmaps` is `true`, without preventing other git operations
