@@ -1,0 +1,43 @@
+`HEAD` is where Git stores your current branch. `HEAD` can either be:
+
+1. A branch, which is your current branch.
+2. A commit ID, when you don't have a current branch.
+   This is called "detached HEAD state".
+
+It can sometimes be useful for `HEAD` to be a commit ID.
+For example, it lets you look at an old version of your code
+(with `git checkout COMMIT_ID`).
+
+The only problem is that if you create new commits while in detached
+HEAD state, those commits won't be on a branch. This makes those new
+commits much harder to find later. Also, Git considers commits that
+aren't on any branch (or a tag or other reference) to be garbage.
+Git will eventually permanently delete those "garbage" commits during
+garbage collection.
+
+There are 3 main ways you can end up in detached HEAD state
+unintentionally:
+
+1. `git checkout COMMIT_ID`, where `COMMIT_ID` is a commit ID
+2. `git checkout v1.3`, where v1.3 is a tag name
+3. `git checkout origin/main`, where `origin/main` is
+   a remote-tracking branch
+
+Checking out a tag puts you in detached HEAD state because `HEAD` can
+only be a branch or a commit, not a tag or any other reference.
+So `git checkout TAG` will set HEAD to the commit for that tag.
+
+The easiest way to avoid accidentally ending up in detached HEAD state
+is to use linkgit:git-switch[1] instead of linkgit:git-checkout[1] to
+switch branches. `git switch` won't let you detach unless you explicitly
+pass the `--detach` argument.
+
+To get back onto a branch, you can:
+
+1. Switch to the branch you want to be on, with `git switch BRANCHNAME`.
+2. Create a new branch at the current commit, with `git switch -c BRANCHNAME`.
+   You might want to do this if you've created new commits, so that you can
+   find the commit later and so that it won't be garbage collected.
+
+If you create commits in detached HEAD state that aren't on a branch,
+you can find them later using linkgit:git-reflog[1].
