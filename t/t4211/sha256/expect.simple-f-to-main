@@ -8,7 +8,7 @@ diff --git a/a.c b/a.c
 index 75c0119..3a78aaf 100644
 --- a/a.c
 +++ b/a.c
-@@ -3,14 +3,14 @@
+@@ -3,13 +3,13 @@
  long f(long x)
  {
  	int s = 0;
@@ -23,7 +23,6 @@ index 75c0119..3a78aaf 100644
 - * A comment.
 + * This is only an example!
   */
- 
 
 commit ccf97b9878189c40a981da50b15713bb80a35755326320ec80900caf22ced46f
 Author: Thomas Rast <trast@student.ethz.ch>
@@ -35,7 +34,7 @@ diff --git a/a.c b/a.c
 index 7a296b9..75c0119 100644
 --- a/a.c
 +++ b/a.c
-@@ -3,14 +3,14 @@
+@@ -3,13 +3,13 @@
 -int f(int x)
 +long f(long x)
  {
@@ -50,7 +49,6 @@ index 7a296b9..75c0119 100644
  /*
   * A comment.
   */
- 
 
 commit f6434acd34260a6c9f61e96d96bf9a323d330561df5b1ca2631104f82026dfed
 Author: Thomas Rast <trast@student.ethz.ch>
@@ -62,7 +60,7 @@ diff --git a/a.c b/a.c
 index 9f550c3..7a296b9 100644
 --- a/a.c
 +++ b/a.c
-@@ -3,13 +3,14 @@
+@@ -3,12 +3,13 @@
  int f(int x)
  {
  	int s = 0;
@@ -76,7 +74,6 @@ index 9f550c3..7a296b9 100644
  /*
   * A comment.
   */
- 
 
 commit 1dd7e9b2b1699324b53b341e728653b913bc192a14dfea168c5b51f2b3d03592
 Author: Thomas Rast <trast@student.ethz.ch>
@@ -89,7 +86,7 @@ new file mode 100644
 index 0000000..9f550c3
 --- /dev/null
 +++ b/a.c
-@@ -0,0 +3,13 @@
+@@ -0,0 +3,12 @@
 +int f(int x)
 +{
 +	int s = 0;
@@ -102,4 +99,3 @@ index 0000000..9f550c3
 +/*
 + * A comment.
 + */
-+

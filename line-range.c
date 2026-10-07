@@ -233,6 +233,17 @@ static const char *parse_range_funcname(
 		(*end)++;
 	}
 
+	/* exclude trailing blank lines from the function range */
+	while (*end > *begin + 1) {
+		const char *bol = nth_line_cb(cb_data, *end - 1);
+		const char *eol = nth_line_cb(cb_data, *end);
+		while (bol < eol && isspace(*bol))
+			bol++;
+		if (bol < eol)
+			break;
+		(*end)--;
+	}
+
 	regfree(&regexp);
 	if (xecfg)
 		xdiff_clear_find_func(xecfg);
