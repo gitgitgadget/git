@@ -1,4 +1,5 @@
 #include "git-compat-util.h"
+#include "config.h"
 #include "gettext.h"
 #include "hex.h"
 #include "odb.h"
@@ -62,6 +63,27 @@ static int check_connected_promisor(struct repository *repo,
 		if (!found)
 			return 0;
 	} while ((*oid = fn(cb_data)) != NULL);
+
+	return 1;
+}
+
+static int incremental_check_applicable(struct repository *repo,
+					struct check_connected_options *opt)
+{
+	const char *algorithm = NULL;
+
+	if (repo_config_get_string_tmp(repo,
+				       "transfer.connectivitycheck",
+				       &algorithm))
+		return 0;
+	if (!strcasecmp(algorithm, "full"))
+		return 0;
+	if (strcasecmp(algorithm, "incremental"))
+		die(_("unknown transfer.connectivityCheck algorithm '%s'"),
+		    algorithm);
+
+	if (opt->is_deepening_fetch)
+		return 0;
 
 	return 1;
 }
@@ -133,6 +155,9 @@ int check_connected(struct repository *repo,
 	if (opt->progress)
 		strvec_pushf(&rev_list.args, "--progress=%s",
 			     _("Checking connectivity"));
+	if (incremental_check_applicable(repo, opt))
+		strvec_push(&rev_list.args,
+			    "--verify-trees-incremental");
 
 	rev_list.git_cmd = 1;
 	if (opt->env)
