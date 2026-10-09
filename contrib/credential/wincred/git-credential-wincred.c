@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <io.h>
 #include <fcntl.h>
+#include <wchar.h>
 #include <wincred.h>
 
 /* common helpers */
@@ -148,51 +149,74 @@ static void get_credential(void)
 {
 	CREDENTIALW **creds;
 	DWORD num_creds;
-	int i;
-	CREDENTIAL_ATTRIBUTEW *attr;
-	WCHAR *secret;
-	WCHAR *line;
-	WCHAR *remaining_lines;
-	WCHAR *part;
-	WCHAR *remaining_parts;
 
 	if (!CredEnumerateW(L"git:*", 0, &num_creds, &creds))
 		return;
 
-	/* search for the first credential that matches username */
-	for (i = 0; i < num_creds; ++i)
+	/* search for the first credential that matches target and username */
+	for (int i = 0; i < num_creds; ++i) {
 		if (match_cred(creds[i], 0)) {
-			write_item("username", creds[i]->UserName,
-				creds[i]->UserName ? wcslen(creds[i]->UserName) : 0);
-			if (creds[i]->CredentialBlobSize > 0) {
-				secret = xmalloc(creds[i]->CredentialBlobSize + sizeof(WCHAR));
-				wcsncpy_s(secret, creds[i]->CredentialBlobSize, (LPCWSTR)creds[i]->CredentialBlob, creds[i]->CredentialBlobSize / sizeof(WCHAR));
-				line = wcstok_s(secret, L"\r\n", &remaining_lines);
-				write_item("password", line, line ? wcslen(line) : 0);
-				while(line != NULL) {
-					part = wcstok_s(line, L"=", &remaining_parts);
-					if (!wcscmp(part, L"oauth_refresh_token")) {
-						write_item("oauth_refresh_token", remaining_parts, remaining_parts ? wcslen(remaining_parts) : 0);
-					}
-					line = wcstok_s(NULL, L"\r\n", &remaining_lines);
-				}
-				free(secret);
+			LPCWSTR username = creds[i]->UserName;
+			LPCWSTR blob = (LPCWSTR)creds[i]->CredentialBlob;
+			LPCWSTR end;
+			DWORD wlen;
+
+			write_item("username", username, username ? wcslen(username) : 0);
+
+			wlen = creds[i]->CredentialBlobSize / sizeof(WCHAR);
+
+			// check if content is single line
+			if ((end = wmemchr(blob, '\n', wlen)) == NULL) {
+				write_item("password", blob, wlen);
 			} else {
-				write_item("password",
-						(LPCWSTR)creds[i]->CredentialBlob,
-						creds[i]->CredentialBlobSize / sizeof(WCHAR));
+				DWORD length = end++ - blob;
+
+				// correct remaining size and drop carriage return at line end
+				wlen -= length + 1;
+				if (length && blob[length - 1] == '\r') {
+					--length;
+				}
+				write_item("password", blob, length);
+
+				// key/value content starting on next line
+				blob = end;
+				do {
+					LPCWSTR value;
+
+					// find line end
+					if ((end = wmemchr(blob, '\n', wlen)) == NULL) {
+						length = wlen;
+					} else {
+						length = end++ - blob;
+						// correct remaining size and drop carriage return at line end
+						wlen -= length + 1;
+						if (length && blob[length - 1] == '\r') {
+							--length;
+						}
+					}
+					// find key/value separator for extended credential info
+					if ((value = wmemchr(blob, '=', length)) != NULL) {
+						static const LPCWSTR refresh = L"oauth_refresh_token";
+						DWORD klen = value - blob;
+
+						// write entries known to git credential protocol
+						if (klen == wcslen(refresh) && memcmp(blob, refresh, klen) == 0) {
+							write_item("oauth_refresh_token", value + 1, length - klen - 1);
+						}
+					}
+				} while ((blob = end));
 			}
 			for (int j = 0; j < creds[i]->AttributeCount; j++) {
-				attr = creds[i]->Attributes + j;
+				CREDENTIAL_ATTRIBUTEW *attr = creds[i]->Attributes + j;
+
 				if (!wcscmp(attr->Keyword, L"git_password_expiry_utc")) {
-					write_item("password_expiry_utc", (LPCWSTR)attr->Value,
-					attr->ValueSize / sizeof(WCHAR));
+					write_item("password_expiry_utc", (LPCWSTR)attr->Value, attr->ValueSize / sizeof(WCHAR));
 					break;
 				}
 			}
 			break;
 		}
-
+	}
 	CredFree(creds);
 }
 
