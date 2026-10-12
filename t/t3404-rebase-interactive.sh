@@ -1562,6 +1562,13 @@ test_expect_success 'rebase -i respects rebase.missingCommitsCheck = error' '
 	test B = $(git cat-file commit HEAD^ | sed -ne \$p)
 '
 
+test_expect_success 'rebase -i rejects rebase.missingCommitsCheck without a value' '
+	rebase_setup_and_clean missing-commit &&
+	test_when_finished "test_might_fail git rebase --abort" &&
+	test_must_fail git -c rebase.missingCommitsCheck rebase -i --root 2>err &&
+	test_grep "missing value for .rebase.missingcommitscheck." err
+'
+
 test_expect_success 'rebase --edit-todo respects rebase.missingCommitsCheck = ignore' '
 	test_config rebase.missingCommitsCheck ignore &&
 	rebase_setup_and_clean missing-commit &&
