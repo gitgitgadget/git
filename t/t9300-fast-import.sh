@@ -3938,4 +3938,72 @@ test_expect_success 'Y: rewrite submodules' '
 	)
 '
 
+cat >Y-reference-pending-sha256 <<\Y_INPUT_END
+commit refs/heads/main
+committer A U Thor <author@example.com> 1712563200 +0000
+data 14
+commit message
+M 644 inline test file
+data 14
+dummy content
+
+tag newtag
+from 17e650f097a4db6fe069c96935360d3ccc9b35c4018728c5f311a4217c2ced3d
+tagger A U Thor <author@example.com> 1712563300 +0000
+data 11
+tag message
+# no emty line after tag data!
+reset refs/heads/other
+from 85edc5eac315bc680677b2fc71622bd77476f057eb8dc8ed6a497803a24f1f46
+
+commit refs/heads/further
+committer A U Thor <author@example.com> 1712563400 +0000
+data 21
+what about 2nd commit
+from 17e650f097a4db6fe069c96935360d3ccc9b35c4018728c5f311a4217c2ced3d
+M 644 inline other test file
+data 19
+more dummy content
+
+done
+Y_INPUT_END
+
+cat >Y-reference-pending-sha1 <<\Y_INPUT_END
+commit refs/heads/main
+committer A U Thor <author@example.com> 1712563200 +0000
+data 14
+commit message
+M 644 inline test file
+data 14
+dummy content
+
+tag newtag
+from 85b46dd918355ff17b4109ec738723d42f235a04
+tagger A U Thor <author@example.com> 1712563300 +0000
+data 11
+tag message
+# no emty line after tag data!
+reset refs/heads/other
+from ec6c4db71feb5f66615214dad2324ce030e777a7
+
+commit refs/heads/further
+committer A U Thor <author@example.com> 1712563400 +0000
+data 21
+what about 2nd commit
+from 85b46dd918355ff17b4109ec738723d42f235a04
+M 644 inline other test file
+data 19
+more dummy content
+
+done
+Y_INPUT_END
+
+test_expect_success 'Y: reference pending tag or commit' '
+	git init reference-pending &&
+	(
+		cd reference-pending &&
+		git fast-import < "../Y-reference-pending-$(git rev-parse --show-object-format)"
+	)
+'
+
 test_done
