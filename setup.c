@@ -1472,6 +1472,8 @@ static int allowed_bare_repo_cb(const char *key, const char *value,
 	if (strcasecmp(key, "safe.bareRepository"))
 		return 0;
 
+	if (!value)
+		return config_error_nonbool(key);
 	if (!strcmp(value, "explicit")) {
 		*allowed_bare_repo = ALLOWED_BARE_REPO_EXPLICIT;
 		return 0;
