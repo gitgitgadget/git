@@ -1,0 +1,2663 @@
+commit 0ce24c2cb223528ad84dc518f0069ba8dc17b282
+Author: Stéfan Driaan Turvey <stefanturvey1912@gmail.com>
+Date:   Wed Sep 23 13:36:09 2026 +0200
+
+    l10n: af: add Afrikaans translation
+    
+    Add a full Afrikaans translation of Git (6476 messages) and
+    register the Afrikaans team in po/TEAMS.
+    
+    Signed-off-by: Stéfan Driaan Turvey <stefanturvey1912@gmail.com>
+    Signed-off-by: Jiang Xin <worldhello.net@gmail.com>
+
+commit bc312c315c1a142ac4513aea3e1f00f7ea9419aa
+Author: Daniel Pereira <danielmaraboo@gmail.com>
+Date:   Thu Sep 17 21:20:39 2026 -0300
+
+    l10n: pt_BR: add Brazilian Portuguese translation
+    
+    Add the initial Brazilian Portuguese translation of Git and register
+    the language team in po/TEAMS.
+    
+    All 6476 messages are translated against the git.pot for v2.56.0-rc1.
+    The file header carries a glossary documenting the terminology in use:
+    Git command and concept names (branch, commit, merge, rebase, checkout,
+    push, fetch, stash, tag, pack, worktree, ...) are kept in English while
+    the surrounding prose is translated, and literal configuration values
+    and command-line options are never translated.
+    
+    Signed-off-by: Daniel Pereira <danielmaraboo@gmail.com>
+    Signed-off-by: Jiang Xin <worldhello.net@gmail.com>
+
+commit a2a8f6ba37019e7c48699bb471312c442c126574
+Author: Arkadii Yakovets <2201626+arkid15r@users.noreply.github.com>
+Date:   Sun Sep 20 21:40:49 2026 -0700
+
+    l10n: uk: add 2.56 translation
+    
+    Co-authored-by: Kate Golovanova <kate@kgthreads.com>
+    Signed-off-by: Arkadii Yakovets <2201626+arkid15r@users.noreply.github.com>
+    Signed-off-by: Kate Golovanova <kate@kgthreads.com>
+
+commit f7dcca73f3bc394203d6f3fd731897c4053463cc
+Author: Mikel Forcada <mikel.forcada@gmail.com>
+Date:   Tue Sep 22 18:51:31 2026 +0200
+
+    l10n: Update Catalan Translation
+    
+    Signed-off-by: Mikel Forcada <mikel.forcada@gmail.com>
+
+commit 2e3e58a51d9e5b8356f9eede3e8b5f2b962a97bf
+Author: lilydjwg <lilydjwg@gmail.com>
+Date:   Fri Sep 11 18:49:26 2026 +0800
+
+    l10n: zh_CN: updated translation for 2.56
+    
+    Signed-off-by: lilydjwg <lilydjwg@gmail.com>
+
+commit e051aa97dc742812d654d5effcf44735e91121ea
+Author: Aindriú Mac Giolla Eoin <aindriu80@gmail.com>
+Date:   Sat Sep 19 11:17:33 2026 +0100
+
+    l10n: ga.po: update for Git 2.56
+    
+    Signed-off-by: Aindriú Mac Giolla Eoin <aindriu80@gmail.com>
+
+commit d4586f38f77fab3956f5fdb2521b7a2f92372f66
+Author: Emir SARI <emir_sari@icloud.com>
+Date:   Wed Sep 16 17:32:40 2026 +0300
+
+    l10n: tr: Update Turkish translations
+    
+    Signed-off-by: Emir SARI <emir_sari@icloud.com>
+
+commit 334a9a3867784dd0f916a887419ce1dec44f9063
+Author: Jean-Noël Avila <jn.avila@free.fr>
+Date:   Tue Sep 15 20:04:07 2026 +0200
+
+    l10n: fr: update translation for git 2.56.0
+    
+    Signed-off-by: Jean-Noël Avila <jn.avila@free.fr>
+
+commit 4805c1ff999c2f7283c87c7a29635dba8a08855e
+Author: Peter Krefting <peter@softwolves.pp.se>
+Date:   Mon Sep 21 14:25:02 2026 +0100
+
+    l10n: sv.po: Update Swedish translation
+    
+    Signed-off-by: Peter Krefting <peter@softwolves.pp.se>
+    Reviewed-by: Tuomas Ahola <taahol@utu.fi>
+    Reviewed-by: AI, by way of Jiang Xin <worldhello.net@gmail.com>
+
+commit 8f3ec9333f9acacd51f91617c8ae13487512bd72
+Author: Bagas Sanjaya <bagasdotme@gmail.com>
+Date:   Mon Sep 14 15:55:00 2026 +0700
+
+    l10n: po-id for 2.56
+    
+    Update following components:
+    
+      * bisect.c
+      * builtin/add.c
+      * builtin/bisect.c
+      * builtin/branch.c
+      * builtin/cat-file.c
+      * builtin/checkout.c
+      * builtin/commit.c
+      * builtin/diff.c
+      * builtin/fast-export.c
+      * builtin/fast-import.c
+      * builtin/fetch.c
+      * builtin/history.c
+      * builtin/multi-pack-index.c
+      * builtin/mv.c
+      * builtin/push.c
+      * builtin/refs.c
+      * builtin/repack.c
+      * builtin/replay.c
+      * builtin/repo.c
+      * builtin/rev-list.c
+      * builtin/worktree.c
+      * bundle-uri.c
+      * command-list.h
+      * diff.c
+      * git.c
+      * imap-send.c
+      * list-objects-filter.c
+      * merge-ort.c
+      * object-file.c
+      * pack-bitmap.c
+      * promisor-remote.c
+      * remote.c
+      * replay.c
+      * setup.c
+      * sequencer.c
+      * transport-helper.c
+      * usage.c
+      * git-send-email.perl
+    
+    Translate following new components:
+    
+      * commit-reach.c
+      * fetch-object-info.c
+      * odb.c
+      * odb/source-files.c
+      * odb/transaction.c
+      * odb/transaction.h
+    
+    Signed-off-by: Bagas Sanjaya <bagasdotme@gmail.com>
+
+commit 7d00999b10579708fc3c2512cb0a55eff4e7565f
+Author: Matt Hunter <m@lfurio.us>
+Date:   Fri Jun 19 05:44:26 2026 -0400
+
+    fetch: add configuration variable fetch.followRemoteHEAD
+    
+    'fetch.followRemoteHEAD' is added as a generic setting used by all
+    remotes for which 'remote.<name>.followRemoteHEAD' is undefined.  If
+    both variables are undefined, a builtin default of "create" is in
+    effect, matching the previous behavior.
+    
+    As mentioned in the previous patch, 'fetch.followRemoteHEAD' supports
+    all of the values that its 'remote' counterpart does _except_
+    warn-if-not-$branch, due to its tighter coupling to individual remote
+    repositories.
+    
+    This setting interacts with the do_fetch mechanism in the same way as
+    the previous does, but there are opportunities for improved
+    user-experience discussed in [1].  See the included NEEDSWORK comment as
+    well.
+    
+    Documentation and advice messages for both of the followRemoteHEAD
+    variables are reworded to better capture the relationship between the
+    two.
+    
+    The added tests assert feature parity between the two followRemoteHEAD
+    variables, as well as the fact that 'remote.<name>.followRemoteHEAD'
+    always supersedes this new configurable default.
+    
+    [1]: https://lore.kernel.org/git/xmqqh5n213bw.fsf@gitster.g/
+    
+    Helped-by: Junio C Hamano <gitster@pobox.com>
+    Signed-off-by: Matt Hunter <m@lfurio.us>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 5dd8043581ca331dcb59ab721aefb5881128e124
+Author: Christian Couder <christian.couder@gmail.com>
+Date:   Wed May 27 16:08:18 2026 +0200
+
+    promisor-remote: trust known remotes matching acceptFromServerUrl
+    
+    A previous commit introduced the `promisor.acceptFromServerUrl` config
+    variable along with the machinery to parse and validate the URL glob
+    patterns and optional remote name prefixes it contains. However, these
+    URL patterns are not yet tied into the client's acceptance logic.
+    
+    When a promisor remote is already configured locally, its fields (like
+    authentication tokens) may occasionally need to be refreshed by the
+    server. If `promisor.acceptFromServer` is set to the secure default
+    ("None"), these updates are rejected, potentially causing future
+    fetches to fail.
+    
+    To enable such targeted updates for trusted URLs, let's use the URL
+    patterns from `promisor.acceptFromServerUrl` as an additional URL
+    based allowlist.
+    
+    Concretely, let's check the advertised URLs against the URL glob
+    patterns by introducing a new small helper function called
+    url_matches_accept_list(), which iterates over the glob patterns and
+    returns the first matching allowed_url entry (or NULL).
+    
+    The URL matching is done component by component: scheme and port are
+    compared exactly, the host and path are matched with wildmatch().
+    Before matching, the advertised URL is passed through url_normalize()
+    so that case variations in the scheme/host, percent-encoding tricks,
+    and ".." path segments cannot bypass the allowlist.
+    
+    The username and password components of the URL are intentionally
+    ignored during matching to allow servers to rotate them, though using
+    the 'token' field of the capability is preferred over embedding
+    credentials in the URL.
+    
+    Let's then use this helper in should_accept_remote() so that a known
+    remote whose URL matches the allowlist is accepted.
+    
+    To prepare for this new logic, let's also:
+    
+     - Add an 'accept_urls' parameter to should_accept_remote().
+    
+     - Replace the BUG() guard in the ACCEPT_KNOWN_URL case with an
+       explicit 'if (accept == ACCEPT_KNOWN_URL) return' and a new
+       BUG() guard in the ACCEPT_NONE case.
+    
+     - Call accept_from_server_url() from filter_promisor_remote()
+       and relax its early return so that the function is entered when
+       `accept_urls` has entries even if `accept == ACCEPT_NONE`.
+    
+    With this, many organizations may only need something like:
+    
+      git config set --global \
+              promisor.acceptFromServerUrl "https://my-org.com/*"
+    
+    to accept only their own remotes. And if they need to accept additional
+    remotes in some specific repos, they can also set:
+    
+      git config set promisor.acceptFromServer knownUrl
+    
+    and configure the additional remote manually only in the repos where
+    they are needed.
+    
+    Let's then properly document `promisor.acceptFromServerUrl` in
+    "promisor.adoc" as an additive security allowlist for known remotes,
+    including the URL normalization behavior and the component-wise
+    matching, and let's mention it in "gitprotocol-v2.adoc".
+    
+    Also let's clarify in the documentation how
+    `promisor.acceptFromServerUrl` interacts with
+    `promisor.acceptFromServer`:
+    
+     - Precedence: when both options are set,
+       `promisor.acceptFromServerUrl` is consulted first. If a matching
+       pattern leads to acceptance, the remote is accepted regardless of
+       `promisor.acceptFromServer`. Otherwise the decision is left to
+       `promisor.acceptFromServer`.
+    
+     - URL-mismatch guard: even when the advertised URL matches the
+       allowlist, an already-existing client-side remote whose configured
+       URL differs from the advertised one is not accepted through
+       `promisor.acceptFromServerUrl`. `promisor.acceptFromServer=all` and
+       `=knownName` keep their pre-existing, looser semantics.
+    
+    The precedence paragraph is intentionally scoped here to known remotes
+    only (field updates). A following commit that introduces auto-creation
+    of unknown remotes will extend it to cover that case as well.
+    
+    Signed-off-by: Christian Couder <chriscool@tuxfamily.org>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit b2ec8e90c201d2395b67f89f3bf38bb472e43460
+Author: Taylor Blau <me@ttaylorr.com>
+Date:   Tue Feb 24 14:00:13 2026 -0500
+
+    midx: do not require packs to be sorted in lexicographic order
+    
+    The MIDX file format currently requires that pack files be identified by
+    the lexicographic ordering of their names (that is, a pack having a
+    checksum beginning with "abc" would have a numeric pack_int_id which is
+    smaller than the same value for a pack beginning with "bcd").
+    
+    As a result, it is impossible to combine adjacent MIDX layers together
+    without permuting bits from bitmaps that are in more recent layer(s).
+    
+    To see why, consider the following example:
+    
+              | packs       | preferred pack
+      --------+-------------+---------------
+      MIDX #0 | { X, Y, Z } | Y
+      MIDX #1 | { A, B, C } | B
+      MIDX #2 | { D, E, F } | D
+    
+    , where MIDX #2's base MIDX is MIDX #1, and so on. Suppose that we want
+    to combine MIDX layers #0 and #1, to create a new layer #0' containing
+    the packs from both layers. With the original three MIDX layers, objects
+    are laid out in the bitmap in the order they appear in their source
+    pack, and the packs themselves are arranged according to the pseudo-pack
+    order. In this case, that ordering is Y, X, Z, B, A, C.
+    
+    But recall that the pseudo-pack ordering is defined by the order that
+    packs appear in the MIDX, with the exception of the preferred pack,
+    which sorts ahead of all other packs regardless of its position within
+    the MIDX. In the above example, that means that pack 'Y' could be placed
+    anywhere (so long as it is designated as preferred), however, all other
+    packs must be placed in the location listed above.
+    
+    Because that ordering isn't sorted lexicographically, it is impossible
+    to compact MIDX layers in the above configuration without permuting the
+    object-to-bit-position mapping. Changing this mapping would affect all
+    bitmaps belonging to newer layers, rendering the bitmaps associated with
+    MIDX #2 unreadable.
+    
+    One of the goals of MIDX compaction is that we are able to shrink the
+    length of the MIDX chain *without* invalidating bitmaps that belong to
+    newer layers, and the lexicographic ordering constraint is at odds with
+    this goal.
+    
+    However, packs do not *need* to be lexicographically ordered within the
+    MIDX. As far as I can gather, the only reason they are sorted lexically
+    is to make it possible to perform a binary search over the pack names in
+    a MIDX, necessary to make `midx_contains_pack()`'s performance
+    logarithmic in the number of packs rather than linear.
+    
+    Relax this constraint by allowing MIDX writes to proceed with packs that
+    are not arranged in lexicographic order. `midx_contains_pack()` will
+    lazily instantiate a `pack_names_sorted` array on the MIDX, which will
+    be used to implement the binary search over pack names.
+    
+    This change produces MIDXs which may not be correctly read with external
+    tools or older versions of Git. Though older versions of Git know how to
+    gracefully degrade and ignore any MIDX(s) they consider corrupt,
+    external tools may not be as robust. To avoid unintentionally breaking
+    any such tools, guard this change behind a version bump in the MIDX's
+    on-disk format.
+    
+    Signed-off-by: Taylor Blau <me@ttaylorr.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit ef2f1845ec4b683df791bfd956f551b096a38009
+Author: Christian Couder <christian.couder@gmail.com>
+Date:   Mon Feb 16 14:23:15 2026 +0100
+
+    fetch-pack: wire up and enable auto filter logic
+    
+    Previous commits have set up an infrastructure for `--filter=auto` to
+    automatically prepare a partial clone filter based on what the server
+    advertised and the client accepted.
+    
+    Using that infrastructure, let's now enable the `--filter=auto` option
+    in `git clone` and `git fetch` by setting `allow_auto_filter` to 1.
+    
+    Note that these small changes mean that when `git clone --filter=auto`
+    or `git fetch --filter=auto` are used, "auto" is automatically saved
+    as the partial clone filter for the server on the client. Therefore
+    subsequent calls to `git fetch` on the client will automatically use
+    this "auto" mode even without `--filter=auto`.
+    
+    Let's also set `allow_auto_filter` to 1 in `transport.c`, as the
+    transport layer must be able to accept the "auto" filter spec even if
+    the invoking command hasn't fully parsed it yet.
+    
+    When an "auto" filter is requested, let's have the "fetch-pack.c" code
+    in `do_fetch_pack_v2()` compute a filter and send it to the server.
+    
+    In `do_fetch_pack_v2()` the logic also needs to check for the
+    "promisor-remote" capability and call `promisor_remote_reply()` to
+    parse advertised remotes and populate the list of those accepted (and
+    their filters).
+    
+    Signed-off-by: Christian Couder <chriscool@tuxfamily.org>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 59b28f928b2b3b91033ee4e9cbe0cf51a781e55b
+Author: Julia Evans <julia@jvns.ca>
+Date:   Wed Oct 15 13:13:29 2025 +0000
+
+    doc: git-pull: clarify options for integrating remote branch
+    
+    From user feedback:
+    
+    - One user is confused about the current default ("I was convinced that
+      the git default was still to merge on pull")
+    - One user is confused about why "git fetch" isn't mentioned earlier
+    - One user says they always forget what the arguments to `git pull` are
+      and that it's not immediately obvious that `--no-rebase` means "merge"
+    - One user wants `--ff-only` to be mentioned
+    
+    Resolve this by listing the options for integrating the the remote
+    branch. This should help users figure out at a glance which one they
+    want to do, and make it clearer that --ff-only is the default.
+    
+    Signed-off-by: Julia Evans <julia@jvns.ca>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 428d7a0d89017a03089988f6512bcc779099ee3c
+Author: Julia Evans <julia@jvns.ca>
+Date:   Mon Oct 6 18:58:48 2025 +0000
+
+    doc: add an UPSTREAM BRANCHES section to pull/push/fetch
+    
+    From user feedback: one user mentioned that they don't know what the
+    term "upstream branch" means. As far as I can tell, the most complete
+    description is under the `--track` option in `git branch`. Upstreams
+    are an important concept in Git and the `git branch` man page is not an
+    obvious place for that information to live.
+    
+    There's also a very terse description of "upstream branch" in the
+    glossary that's missing a lot of key information, like the fact that the
+    upstream is used by `git status` and `git pull`, as well as a
+    description in `git-config` in `branch.<name>.remote` which doesn't
+    explain the relationship to `git status` either.
+    
+    Since the `git pull`, `git push`, and `git fetch` man pages already
+    include sections on REMOTES and the syntax for URLs, add a section on
+    UPSTREAM BRANCHES to `urls-remotes.adoc`.
+    
+    In the new UPSTREAM BRANCHES section, cover the various ways that
+    upstreams branches are automatically set in Git, since users may
+    mistakenly think that their branch does not have an upstream branch if
+    they didn't explicitly set one.
+    
+    A terminology note: Git uses two terms for this concept:
+    
+    - "tracking" as in "the tracking information for the 'foo' branch"
+      or the `--track` option to `git branch`
+    - "upstream" or "upstream branch", as in `git push --set-upstream`.
+      This term is also used in the `git rebase` man page to refer to the
+      first argument to `git rebase`, as well as in `git pull` to refer to
+      the branch which is going to be merged into the current branch ("merge
+      the upstream branch into the current branch")
+    
+    Use "upstream branch" as a heading for this concept even though the term
+    "upstream branch" is not always used strictly in the sense of "the
+    tracking information for the current branch". "Upstream" is used much
+    more often than "tracking" in the Git docs to refer to this concept and
+    the goal is to help users understand the docs.
+    
+    Signed-off-by: Julia Evans <julia@jvns.ca>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 4bf7ae3123b2d2a2b0656af31c16401407664a9f
+Author: Christian Couder <christian.couder@gmail.com>
+Date:   Mon Sep 8 07:30:48 2025 +0200
+
+    promisor-remote: allow a server to advertise more fields
+    
+    For now the "promisor-remote" protocol capability can only pass "name"
+    and "url" information from a server to a client in the form
+    "name=<remote_name>,url=<remote_url>".
+    
+    To allow clients to make more informed decisions about which promisor
+    remotes they accept, let's make it possible to pass more information
+    by introducing a new "promisor.sendFields" configuration variable.
+    
+    On the server side, information about a remote `foo` is stored in
+    configuration variables named `remote.foo.<variable-name>`. To make
+    it clearer and simpler, we use `field` and `field name` like this:
+    
+      * `field name` refers to the <variable-name> part of such a
+        configuration variable, and
+    
+      * `field` refers to both the `field name` and the value of such a
+        configuration variable.
+    
+    The "promisor.sendFields" configuration variable should contain a
+    comma or space separated list of field names that will be looked up
+    in the configuration of the remote on the server to find the values
+    that will be passed to the client.
+    
+    Only a set of predefined field names are allowed. The only field
+    names in this set are "partialCloneFilter" and "token". The
+    "partialCloneFilter" field name specifies the filter definition used
+    by the promisor remote, and the "token" field name can provide an
+    authentication credential for accessing it.
+    
+    For example, if "promisor.sendFields" is set to "partialCloneFilter",
+    and the server has the "remote.foo.partialCloneFilter" config
+    variable set to a value, then that value will be passed in the
+    "partialCloneFilter" field in the form "partialCloneFilter=<value>"
+    after the "name" and "url" fields.
+    
+    A following commit will allow the client to use the information to
+    decide if it accepts the remote or not. For now the client doesn't do
+    anything with the additional information it receives.
+    
+    Signed-off-by: Christian Couder <chriscool@tuxfamily.org>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 79ee0dce2a61b7552f9b5c73f0cf2d974a20a029
+Author: Mikel Forcada <mikel.forcada@gmail.com>
+Date:   Fri Aug 15 22:40:41 2025 +0200
+
+    l10n: Update Catalan Translation for Git 2.51-rc2
+    
+    Edit: We are continuing to follow the existing PO file convention, which
+    includes filenames but strips out line numbers from the file-location
+    comments. This standard was set by our former lead, Jordi Mas, and we
+    are maintaining it for project-wide consistency.
+    
+    Signed-off-by: Mikel Forcada <mikel.forcada@gmail.com>
+    Signed-off-by: Jiang Xin <worldhello.net@gmail.com>
+
+commit b5b3ddbe5c56c7ded95e7c47c985dc6d61f73ea0
+Author: Christian Couder <christian.couder@gmail.com>
+Date:   Wed Jul 9 16:12:53 2025 +0200
+
+    fast-(import|export): improve on commit signature output format
+    
+    A recent commit, d9cb0e6ff8 (fast-export, fast-import: add support for
+    signed-commits, 2025-03-10), added support for signed commits to
+    fast-export and fast-import.
+    
+    When a signed commit is processed, fast-export can output either
+    "gpgsig sha1" or "gpgsig sha256" depending on whether the signed
+    commit uses the SHA-1 or SHA-256 Git object format.
+    
+    However, this implementation has a number of limitations:
+    
+      - the output format was not properly described in the documentation,
+      - the output format is not very informative as it doesn't even say
+        if the signature is an OpenPGP, an SSH, or an X509 signature,
+      - the implementation doesn't support having both one signature on
+        the SHA-1 object and one on the SHA-256 object.
+    
+    Let's improve on these limitations by improving fast-export and
+    fast-import so that:
+    
+      - all the signatures are exported,
+      - at most one signature on the SHA-1 object and one on the SHA-256
+        are imported,
+      - if there is more than one signature on the SHA-1 object or on
+        the SHA-256 object, fast-import emits a warning for each
+        additional signature,
+      - the output format is "gpgsig <git-hash-algo> <signature-format>",
+        where <git-hash-algo> is the Git object format as before, and
+        <signature-format> is the signature type ("openpgp", "x509",
+        "ssh" or "unknown"),
+      - the output is properly documented.
+    
+    About the output format:
+    
+      - <git-hash-algo> allows to know which representation of the commit
+        was signed (the SHA-1 or the SHA-256 version) which helps with
+        both signature verification and interoperability between repos
+        with different hash functions,
+    
+      - <signature-format> helps tools that process the fast-export
+        stream, so they don't have to parse the ASCII armor to identify
+        the signature type.
+    
+    It could be even better to be able to import more than one signature
+    on the SHA-1 object and on the SHA-256 object, but other parts of
+    Git don't handle that well for now, so this is left for future
+    improvements.
+    
+    Helped-by: brian m. carlson <sandals@crustytoothpaste.net>
+    Helped-by: Elijah Newren <newren@gmail.com>
+    Signed-off-by: Christian Couder <chriscool@tuxfamily.org>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit bf5ce434db6234fb6cd86935a553263c16f890ce
+Author: Aindriú Mac Giolla Eoin <aindriu80@gmail.com>
+Date:   Fri May 16 00:25:38 2025 +0100
+
+    l10n: Add full Irish translation (ga.po)
+    
+    - Added complete Irish translation (ga.po).
+    - Added entry for Irish in po/TEAMS.
+    - Corrected email format and removed trailing whitespace.
+    - Translated new strings from Git 2.50.0-rc0
+    
+    Signed-off-by: Aindriú Mac Giolla Eoin <aindriu80@gmail.com>
+
+commit d460267613da14eba959eb225e2cbf6a1e132eb1
+Author: Christian Couder <christian.couder@gmail.com>
+Date:   Tue Feb 18 12:32:02 2025 +0100
+
+    Add 'promisor-remote' capability to protocol v2
+    
+    When a server S knows that some objects from a repository are available
+    from a promisor remote X, S might want to suggest to a client C cloning
+    or fetching the repo from S that C may use X directly instead of S for
+    these objects.
+    
+    Note that this could happen both in the case S itself doesn't have the
+    objects and borrows them from X, and in the case S has the objects but
+    knows that X is better connected to the world (e.g., it is in a
+    $LARGEINTERNETCOMPANY datacenter with petabit/s backbone connections)
+    than S. Implementation of the latter case, which would require S to
+    omit in its response the objects available on X, is left for future
+    improvement though.
+    
+    Then C might or might not, want to get the objects from X. If S and C
+    can agree on C using X directly, S can then omit objects that can be
+    obtained from X when answering C's request.
+    
+    To allow S and C to agree and let each other know about C using X or
+    not, let's introduce a new "promisor-remote" capability in the
+    protocol v2, as well as a few new configuration variables:
+    
+      - "promisor.advertise" on the server side, and:
+      - "promisor.acceptFromServer" on the client side.
+    
+    By default, or if "promisor.advertise" is set to 'false', a server S will
+    not advertise the "promisor-remote" capability.
+    
+    If S doesn't advertise the "promisor-remote" capability, then a client C
+    replying to S shouldn't advertise the "promisor-remote" capability
+    either.
+    
+    If "promisor.advertise" is set to 'true', S will advertise its promisor
+    remotes with a string like:
+    
+      promisor-remote=<pr-info>[;<pr-info>]...
+    
+    where each <pr-info> element contains information about a single
+    promisor remote in the form:
+    
+      name=<pr-name>[,url=<pr-url>]
+    
+    where <pr-name> is the urlencoded name of a promisor remote and
+    <pr-url> is the urlencoded URL of the promisor remote named <pr-name>.
+    
+    For now, the URL is passed in addition to the name. In the future, it
+    might be possible to pass other information like a filter-spec that the
+    client may use when cloning from S, or a token that the client may use
+    when retrieving objects from X.
+    
+    It is C's responsibility to arrange how it can reach X though, so pieces
+    of information that are usually outside Git's concern, like proxy
+    configuration, must not be distributed over this protocol.
+    
+    It might also be possible in the future for "promisor.advertise" to have
+    other values. For example a value like "onlyName" could prevent S from
+    advertising URLs, which could help in case C should use a different URL
+    for X than the URL S is using. (The URL S is using might be an internal
+    one on the server side for example.)
+    
+    By default or if "promisor.acceptFromServer" is set to "None", C will
+    not accept to use the promisor remotes that might have been advertised
+    by S. In this case, C will not advertise any "promisor-remote"
+    capability in its reply to S.
+    
+    If "promisor.acceptFromServer" is set to "All" and S advertised some
+    promisor remotes, then on the contrary, C will accept to use all the
+    promisor remotes that S advertised and C will reply with a string like:
+    
+      promisor-remote=<pr-name>[;<pr-name>]...
+    
+    where the <pr-name> elements are the urlencoded names of all the
+    promisor remotes S advertised.
+    
+    In a following commit, other values for "promisor.acceptFromServer" will
+    be implemented, so that C will be able to decide the promisor remotes it
+    accepts depending on the name and URL it received from S. So even if
+    that name and URL information is not used much right now, it will be
+    needed soon.
+    
+    Helped-by: Taylor Blau <me@ttaylorr.com>
+    Helped-by: Patrick Steinhardt <ps@pks.im>
+    Signed-off-by: Christian Couder <chriscool@tuxfamily.org>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 238c0c095f21f919fd268d8519d6b1b07ffc1540
+Author: Bagas Sanjaya <bagasdotme@gmail.com>
+Date:   Wed Dec 18 14:16:48 2024 +0700
+
+    l10n: po-id for 2.48
+    
+    Update following components:
+    
+      * advice.c
+      * archive.c
+      * builtin/checkout.c
+      * builtin/clone.c
+      * builtin/config.c
+      * builtin/describe.c
+      * builtin/fetch.c
+      * builtin/gc.c
+      * builtin/index-pack.c
+      * builtin/notes.c
+      * builtin/pack-objects.c
+      * builtin/remote.c
+      * builtin/worktree.c
+      * commit.c
+      * fetch-pack.c
+      * hook.c
+      * object-name.c
+      * refs.c
+      * refs/files-backend.c
+      * remote.c
+      * worktree.c
+    
+    Translate following new components:
+    
+      * cache-tree.c
+      * daemon.c
+      * merge-ll.c
+    
+    Signed-off-by: Bagas Sanjaya <bagasdotme@gmail.com>
+
+commit bba9dd6a96c464e2b32226be81cb1f30257c78c0
+Author: Teng Long <dyroneteng@gmail.com>
+Date:   Sat Jan 4 00:30:11 2025 +0800
+
+    l10n: zh_CN: updated translation for 2.48
+    
+    Signed-off-by: Teng Long <dyroneteng@gmail.com>
+
+commit 10fd0e120317de28002e510d6becc049b81b851f
+Author: Arkadii Yakovets <ark@cho.red>
+Date:   Sat Jan 4 19:26:33 2025 -0800
+
+    l10n: uk: v2.48 update
+    
+    Co-authored-by: Kate Golovanova <kate@kgthreads.com>
+    Signed-off-by: Arkadii Yakovets <ark@cho.red>
+    Signed-off-by: Kate Golovanova <kate@kgthreads.com>
+
+commit a2df58fb15aa6319e1f4159d0218814245e48e35
+Author: Vũ Tiến Hưng <newcomerminecraft@gmail.com>
+Date:   Sun Jan 5 01:54:04 2025 +0700
+
+    l10n: vi: Updated translation for 2.48
+    
+    Signed-off-by: Vũ Tiến Hưng <newcomerminecraft@gmail.com>
+
+commit b1dbc87686db1da0d9ee8ece2e6faa78354f2970
+Author: Ralf Thielow <ralf.thielow@gmail.com>
+Date:   Fri Dec 20 17:45:01 2024 +0100
+
+    l10n: Update German translation
+    
+    Reviewed-by: Matthias Rüster <matthias.ruester@gmail.com>
+    Signed-off-by: Ralf Thielow <ralf.thielow@gmail.com>
+
+commit 1a18bf3a5b251557a7b10a496f9036f00790086a
+Author: Emir SARI <emir_sari@icloud.com>
+Date:   Wed Dec 18 19:10:42 2024 +0300
+
+    l10n: tr: Update Turkish translations for 2.48
+    
+    Signed-off-by: Emir SARI <emir_sari@icloud.com>
+
+commit 956b486cacff05ebbe580eb9d89a1c508c4fa3a3
+Author: Peter Krefting <peter@softwolves.pp.se>
+Date:   Mon Dec 30 12:04:46 2024 +0100
+
+    l10n: sv.po: Update Swedish translation
+    
+    Signed-off-by: Peter Krefting <peter@softwolves.pp.se>
+
+commit 31f5549c285ec793a67a9d072db38fec087c7e32
+Author: Jean-Noël Avila <jn.avila@free.fr>
+Date:   Fri Dec 20 18:37:48 2024 +0100
+
+    l10n: fr: v2.48.0
+    
+    Signed-off-by: Jean-Noël Avila <jn.avila@free.fr>
+
+commit 2c3ca00b48fb06f1b59ee6fa4401346e42806cb2
+Author: Yi-Jyun Pan <pan93412@gmail.com>
+Date:   Sat Dec 28 13:23:19 2024 +0800
+
+    l10n: zh_TW: Git 2.48 round 2
+    
+    Co-authored-by: Lumynous <lumynou5.tw@gmail.com>
+    Signed-off-by: Yi-Jyun Pan <pan93412@gmail.com>
+
+commit 40fdd46b7f90b40f58a2b9f4bba5735c29dc82a8
+Author: Alexander Shopov <ash@kambanaria.org>
+Date:   Sat Dec 21 18:30:14 2024 +0100
+
+    l10n: bg.po: Updated Bulgarian translation (5804t)
+    
+    Signed-off-by: Alexander Shopov <ash@kambanaria.org>
+
+commit 904339edbd80ec5676616af6e072b41804c1c8eb
+Author: Patrick Steinhardt <ps@pks.im>
+Date:   Fri Dec 6 14:24:59 2024 +0100
+
+    Introduce support for the Meson build system
+    
+    Introduce support for the Meson build system, a "modern" meta build
+    system that supports many different platforms, including Linux, macOS,
+    Windows and BSDs. Meson supports different backends, including Ninja,
+    Xcode and Microsoft Visual Studio. Several common IDEs provide an
+    integration with it.
+    
+    The biggest contender compared to Meson is probably CMake as outlined in
+    our "Documentation/technical/build-systems.txt" file. Based on my own
+    personal experience from working with both build systems extensively I
+    strongly favor Meson over CMake. In my opinion, it feels significantly
+    easier to use with a syntax that feels more like a "real" programming
+    language. The second big reason is that Meson supports Rust natively,
+    which may prove to be important given that the project may pick up Rust
+    as another language eventually.
+    
+    Using Meson is rather straight-forward. An example:
+    
+        ```
+        # Meson uses out-of-tree builds. You can set up multiple build
+        # directories, how you name them is completely up to you.
+        $ mkdir build
+        $ cd build
+        $ meson setup .. -Dprefix=/tmp/git-installation
+    
+        # Build the project. This also provides several other targets like
+        e.g. `install` or `test`.
+        $ ninja
+    
+        # Meson has been wired up to support execution of our test suites.
+        # Both our unit tests and our integration tests are supported.
+        # Running `meson test` without any arguments will execute all tests,
+        # but the syntax supports globbing to select only some tests.
+        $ meson test 't-*'
+        # Execute single test interactively to allow for debugging.
+        $ meson test 't0000-*' --interactive --test-args=-ix
+        ```
+    
+    The build instructions have been successfully tested on the following
+    systems, tests are passing:
+    
+      - Apple macOS 10.15.
+    
+      - FreeBSD 14.1.
+    
+      - NixOS 24.11.
+    
+      - OpenBSD 7.6.
+    
+      - Ubuntu 24.04.
+    
+      - Windows 10 with Cygwin.
+    
+      - Windows 10 with MinGW64, except for t9700, which is also broken with
+        our Makefile.
+    
+      - Windows 10 with Visual Studio 2022 toolchain, using the Native Tools
+        Command Prompt with `meson setup --vsenv`. Tests pass, except for
+        t9700.
+    
+      - Windows 10 with Visual Studio 2022 solution, using the Native Tools
+        Command Prompt with `meson setup --backend vs2022`. Tests pass,
+        except for t9700.
+    
+      - Windows 10 with VS Code, using the Meson plug-in.
+    
+    It is expected that there will still be rough edges in the current
+    version. If this patch lands the expectation is that it will coexist
+    with our other build systems for a while. Like this, distributions can
+    slowly migrate over to Meson and report any findings they have to us
+    such that we can continue to iterate. A potential cutoff date for other
+    build systems may be Git 3.0.
+    
+    Some notes:
+    
+      - The installed distribution is structured somewhat differently than
+        how it used to be the case. All of our binaries are installed into
+        `$libexec/git-core`, while all binaries part of `$bindir` are now
+        symbolic links pointing to the former. This rule is consistent in
+        itself and thus easier to reason about.
+    
+      - We do not install dashed binaries into `$libexec/git-core` anymore,
+        so there won't e.g. be a symlink for git-add(1). These are not
+        required by modern Git and there isn't really much of a use case for
+        those anymore. By not installing those symlinks we thus start the
+        deprecation of this layout.
+    
+      - We're targeting Meson 1.3.0, which has been released relatively
+        recently November 2023. The only feature we use from that version is
+        `fs.relative_to()`, which we could replace if necessary. If so, we
+        could start to target Meson 1.0.0 and newer, released in December
+        2022.
+    
+      - The whole build instructions count around 3300 lines, half of which
+        is listing all of our code and test files. Our Makefiles are around
+        5000 lines, autoconf adds another 1300 lines. CMake in comparison
+        has only 1200 linescode, but it avoids listing individual files and
+        does not wire up auto-configuration as extensively as the Meson
+        instructions do.
+    
+      - We bundle a set of subproject wrappers for curl, expat, openssl,
+        pcre2 and zlib. This allows developers to build Git without these
+        dependencies preinstalled, and Meson will fetch and build them
+        automatically. This is especially helpful on Windows.
+    
+    Helped-by: Eli Schwartz <eschwartz@gentoo.org>
+    Signed-off-by: Patrick Steinhardt <ps@pks.im>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit ad739f525eec917198887055f1a815e78d7c66be
+Author: Bence Ferdinandy <bence@ferdinandy.com>
+Date:   Thu Dec 5 13:16:20 2024 +0100
+
+    fetch set_head: move warn advice into advise_if_enabled
+    
+    Advice about what to do when getting a warning is typed out explicitly
+    twice and is printed as regular output. The output is also tested for.
+    Extract the advice message into a single place and use a wrapper
+    function, so if later the advice is made more chatty the signature only
+    needs to be changed in once place. Remove the testing for the advice
+    output in the tests.
+    
+    Signed-off-by: Bence Ferdinandy <bence@ferdinandy.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 8ff65c7a53144bf9f90709ff3fe47cf83f82e8eb
+Author: Tobias Boesch <tobias.boesch@miele.com>
+Date:   Thu Sep 12 10:17:57 2024 +0000
+
+    git gui: add directly calling merge tool from configuration
+    
+    git gui can open a merge tool when conflicts are detected (Right click
+    in the diff of the file with conflicts).
+    The merge tools that are allowed to use are hard coded into git gui.
+    
+    If one wants to add a new merge tool it has to be added to git gui
+    through a source code change.
+    This is not convenient in comparison to how it works in git (without gui).
+    
+    git itself has configuration options for a merge tools path and command
+    in the git configuration.
+    New merge tools can be set up there without a source code change.
+    
+    Those options are used only by pure git in contrast to git gui. git calls
+    the configured merge tools directly from the configuration while git Gui
+    doesn't.
+    
+    With this change git gui can call merge tools configured in the
+    configuration directly without a change in git gui source code.
+    It needs a configured "merge.tool" and a configured
+    "mergetool.<mergetool name>.cmd" configuration entry as shown in the
+    git-config manual page.
+    
+    Configuration example:
+    [merge]
+            tool = vscode
+    [mergetool "vscode"]
+            cmd = \"the/path/to/Code.exe\" --wait --merge \"$LOCAL\" \"$REMOTE\" \"$BASE\" \"$MERGED\"
+    
+    Without the "mergetool.<mergetool name>.cmd" entry and an unsupported
+    "merge.tool" entry, git gui behaves mainly as before this change and
+    informs the user about an unsupported merge tool. In addtition, it also
+    shows a hint to add a configuration entry to use the tool as an
+    unsupported tool with degraded support.
+    
+    If a wrong "mergetool.<mergetool name>.cmd" is configured by accident,
+    it gets handled by git gui already. In this case git gui informs the
+    user that the merge tool couldn't be opened. This behavior is preserved
+    by this change and should not change.
+    
+    "Beyond Compare 3" and "Visual Studio Code" were tested as manually
+    configured merge tools.
+    
+    Signed-off-by: Tobias Boesch <tobias.boesch@miele.com>
+    Signed-off-by: Johannes Sixt <j6t@kdbg.org>
+
+commit d7b97b7185521e3b9364b3abc6553df2480da173
+Author: René Scharfe <l.s.r@web.de>
+Date:   Sun Jun 9 09:41:44 2024 +0200
+
+    diff: let external diffs report that changes are uninteresting
+    
+    The options --exit-code and --quiet instruct git diff to indicate
+    whether it found any significant changes by exiting with code 1 if it
+    did and 0 if there were none.  Currently this doesn't work if external
+    diff programs are involved, as we have no way to learn what they found.
+    
+    Add that ability in the form of the new configuration options
+    diff.trustExitCode and diff.<driver>.trustExitCode and the environment
+    variable GIT_EXTERNAL_DIFF_TRUST_EXIT_CODE.  They pair with the config
+    options diff.external and diff.<driver>.command and the environment
+    variable GIT_EXTERNAL_DIFF, respectively.
+    
+    The new options are off by default, keeping the old behavior.  Enabling
+    them indicates that the external diff returns exit code 1 if it finds
+    significant changes and 0 if it doesn't, like diff(1).
+    
+    The name of the new options is taken from the git difftool and mergetool
+    options of similar purpose.  (There they enable passing on the exit code
+    of a diff tool and to infer whether a merge done by a merge tool is
+    successful.)
+    
+    The new feature sets the diff flag diff_from_contents in
+    diff_setup_done() if we need the exit code and are allowed to call
+    external diffs.  This disables the optimization that avoids calling the
+    program with --quiet.  Add it back by skipping the call if the external
+    diff is not able to report empty diffs.  We can only do that check after
+    evaluating the file-specific attributes in run_external_diff().
+    
+    If we do run the external diff with --quiet, send its output to
+    /dev/null.
+    
+    I considered checking the output of the external diff to check whether
+    its empty.  It was added as 11be65cfa4 (diff: fix --exit-code with
+    external diff, 2024-05-05) and quickly reverted, as it does not work
+    with external diffs that do not write to stdout.  There's no reason why
+    a graphical diff tool would even need to write anything there at all.
+    
+    I also considered using a non-zero exit code for empty diffs, which
+    could be done without adding new configuration options.  We'd need to
+    disable the optimization that allows git diff --quiet to skip calling
+    external diffs, though -- that might be quite surprising if graphical
+    diff programs are involved.  And assigning the opposite meaning of the
+    exit codes compared to diff(1) and git diff --exit-code to the external
+    diff can cause unnecessary confusion.
+    
+    Suggested-by: Phillip Wood <phillip.wood123@gmail.com>
+    Signed-off-by: René Scharfe <l.s.r@web.de>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit faf558b23ef55b18f395d1f7a7c2714ccc1320e2
+Author: Taylor Blau <me@ttaylorr.com>
+Date:   Thu May 23 17:26:42 2024 -0400
+
+    pseudo-merge: implement support for selecting pseudo-merge commits
+    
+    Teach the new pseudo-merge machinery how to select non-bitmapped commits
+    for inclusion in different pseudo-merge group(s) based on a handful of
+    criteria.
+    
+    Note that the selected pseudo-merge commits aren't actually used or
+    written anywhere yet. This will be done in the following commit.
+    
+    Signed-off-by: Taylor Blau <me@ttaylorr.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit e69ac42fcc866d3d6f84ea42bc656673440a07f5
+Author: Jeff King <peff@peff.net>
+Date:   Tue Apr 16 04:52:13 2024 -0400
+
+    docs: document security issues around untrusted .git dirs
+    
+    For a long time our general philosophy has been that it's unsafe to run
+    arbitrary Git commands if you don't trust the hooks or config in .git,
+    but that running upload-pack should be OK. E.g., see 1456b043fc (Remove
+    post-upload-hook, 2009-12-10), or the design of uploadpack.packObjectsHook.
+    
+    But we never really documented this (and even the discussions that led
+    to 1456b043fc were not on the public list!). Let's try to make our
+    approach more clear, but also be realistic that even upload-pack carries
+    some risk.
+    
+    Helped-by: Filip Hejsek <filip.hejsek@gmail.com>
+    Helped-by: Junio C Hamano <gitster@pobox.com>
+    Signed-off-by: Jeff King <peff@peff.net>
+    Signed-off-by: Johannes Schindelin <johannes.schindelin@gmx.de>
+
+commit 0f8edf7317c7eb152bf045ed99b46072439088a6
+Author: John Cai <johncai86@gmail.com>
+Date:   Thu Feb 1 01:38:02 2024 +0000
+
+    index-pack: --fsck-objects to take an optional argument for fsck msgs
+    
+    git-index-pack has a --strict option that can take an optional argument
+    to provide a list of fsck issues to change their severity.
+    --fsck-objects does not have such a utility, which would be useful if
+    one would like to be more lenient or strict on data integrity in a
+    repository.
+    
+    Like --strict, allow --fsck-objects to also take a list of fsck msgs to
+    change the severity.
+    
+    Remove the "For internal use only" note for --fsck-objects, and document
+    the option. This won't often be used by the normal end user, but it
+    turns out it is useful for Git forges like GitLab.
+    
+    Reviewed-by: Christian Couder <christian.couder@gmail.com>
+    Signed-off-by: John Cai <johncai86@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 2811019f47b7b6f4be256598612c3f574d8c242d
+Author: John Cai <johncai86@gmail.com>
+Date:   Thu Feb 1 01:38:01 2024 +0000
+
+    index-pack: test and document --strict=<msg-id>=<severity>...
+    
+    5d477a334a (fsck (receive-pack): allow demoting errors to warnings,
+    2015-06-22) allowed a list of fsck msg to downgrade to be passed to
+    --strict. However this is a hidden argument that was not documented nor
+    tested. Though it is true that most users would not call this option
+    directly, (nor use index-pack for that matter) it is still useful to
+    document and test this feature.
+    
+    Reviewed-by: Christian Couder <christian.couder@gmail.com>
+    Signed-off-by: John Cai <johncai86@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 3ff010d8c703819c097c5bcfc0656305e14d4d0c
+Author: Arkadii Yakovets <ark@cho.red>
+Date:   Tue Apr 11 18:24:42 2023 -0700
+
+    l10n: uk: add initial translation
+    
+    Co-authored-by: Kate Golovanova <kate@kgthreads.com>
+    Signed-off-by: Arkadii Yakovets <ark@cho.red>
+    Signed-off-by: Kate Golovanova <kate@kgthreads.com>
+
+commit ecbc23e4c580e9a204b7b463046f7bb3d11f8749
+Author: Rudy Rigot <rudy.rigot@gmail.com>
+Date:   Wed Nov 30 00:52:16 2022 +0000
+
+    status: modernize git-status "slow untracked files" advice
+    
+    `git status` can be slow when there are a large number of
+    untracked files and directories since Git must search the entire
+    worktree to enumerate them.  When it is too slow, Git prints
+    advice with the elapsed search time and a suggestion to disable
+    the search using the `-uno` option.  This suggestion also carries
+    a warning that might scare off some users.
+    
+    However, these days, `-uno` isn't the only option.  Git can reduce
+    the time taken to enumerate untracked files by caching results from
+    previous `git status` invocations, when the `core.untrackedCache`
+    and `core.fsmonitor` features are enabled.
+    
+    Update the `git status` man page to explain these configuration
+    options, and update the advice to provide more detail about the
+    current configuration and to refer to the updated documentation.
+    
+    Signed-off-by: Rudy Rigot <rudy.rigot@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 5f5af3735dede73d6714311e20f17c7f77b1d907
+Author: Glen Choo <glencbz@gmail.com>
+Date:   Thu Jul 14 21:27:57 2022 +0000
+
+    Documentation/git-config.txt: add SCOPES section
+    
+    In a subsequent commit, we will introduce "protected configuration",
+    which is easiest to describe in terms of configuration scopes (i.e. it's
+    the union of the 'system', 'global', and 'command' scopes). This
+    description is fine for ML discussions, but it's inadequate for end
+    users because we don't provide a good description of "configuration
+    scopes" in the public docs.
+    
+    145d59f482 (config: add '--show-scope' to print the scope of a config
+    value, 2020-02-10) introduced the word "scope" to our public docs, but
+    that only enumerates the scopes and assumes the user can figure out
+    what those values mean.
+    
+    Add a SCOPES section to Documentation/git-config.txt that describes the
+    configuration scopes, their corresponding CLI options, and mentions that
+    some configuration options are only respected in certain scopes. Then,
+    use the word "scope" to simplify the FILES section and change some
+    confusing wording.
+    
+    Signed-off-by: Glen Choo <chooglen@google.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 650134a47894244b3804b5d175439b362453fa4a
+Author: René Scharfe <l.s.r@web.de>
+Date:   Wed Jun 15 18:58:38 2022 +0200
+
+    archive: update format documentation
+    
+    Mention all formats in the --format section, use backtick quoting for
+    literal values throughout, clarify the description of the configuration
+    option.
+    
+    Helped-by: Junio C Hamano <gitster@pobox.com>
+    Signed-off-by: René Scharfe <l.s.r@web.de>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit e448263716f1c89ddcd6e5423c2c119d767b5518
+Author: Jiang Xin <worldhello.net@gmail.com>
+Date:   Thu May 26 22:50:31 2022 +0800
+
+    po/git.pot: this is now a generated file
+    
+    We no longer keep track of the contents of this file.
+    
+    Signed-off-by: Jiang Xin <zhiyou.jx@alibaba-inc.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 031e2f7ae195069d00d21cde906fce5b0318dbdd
+Author: Elijah Newren <newren@gmail.com>
+Date:   Thu Jul 22 05:04:48 2021 +0000
+
+    pull: abort by default when fast-forwarding is not possible
+    
+    We have for some time shown a long warning when the user does not
+    specify how to reconcile divergent branches with git pull.  Make it an
+    error now.
+    
+    Initial-patch-by: Alex Henrie <alexhenrie24@gmail.com>
+    Signed-off-by: Elijah Newren <newren@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit f74d11471fa8870d4bcbe7dbff2f3ddac6783e7f
+Author: Johannes Schindelin <Johannes.Schindelin@gmx.de>
+Date:   Thu Jun 10 08:29:24 2021 +0000
+
+    multimail: stop shipping a copy
+    
+    The multimail project is developed independently and has its own project
+    page. Traditionally, we shipped a copy in contrib/.
+    
+    However, such a copy is prone to become stale, and users are much better
+    served to be directed to the actual project instead.
+    
+    Signed-off-by: Johannes Schindelin <johannes.schindelin@gmx.de>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit f1aa29944320e51441e5b5e32591e69f2fa74de2
+Author: Đoàn Trần Công Danh <congdanhqx@gmail.com>
+Date:   Mon May 10 00:12:11 2021 +0700
+
+    mailinfo: allow squelching quoted CRLF warning
+    
+    In previous change, Git starts to warn for quoted CRLF in decoded
+    base64/QP email. Despite those warnings are usually helpful,
+    quoted CRLF could be part of some users' workflow.
+    
+    Let's give them an option to turn off the warning completely.
+    
+    Signed-off-by: Đoàn Trần Công Danh <congdanhqx@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit b0adcc311bab2d91337ac70c2b19cde11a1ad441
+Author: Christopher Diaz Riveros <christopher.diaz.riv@gmail.com>
+Date:   Sun Mar 7 18:31:14 2021 -0500
+
+    l10n: es: 2.31.0 round 2
+    
+    Signed-off-by: Christopher Diaz Riveros <christopher.diaz.riv@gmail.com>
+
+commit 8c4abfb8be40bdb115eddd5f22768e65fe217570
+Author: Bagas Sanjaya <bagasdotme@gmail.com>
+Date:   Sat Feb 20 18:21:42 2021 +0700
+
+    l10n: start Indonesian translation
+    
+      * Initialize PO file
+      * Translate init-db.c
+      * Translate wt-status.c
+      * Translate builtin/clone.c
+      * Translate builtin/checkout.c
+      * Translate builtin/fetch.c
+      * Complete core translations:
+        * builtin/remote.c
+        * builtin/index-pack.c
+        * push.c
+        * reset.c
+      * Sync with l10n upstream
+    
+    Signed-off-by: Bagas Sanjaya <bagasdotme@gmail.com>
+
+commit a093f0ba9560b935d0f5124f6bc9a70dad08ead8
+Author: Dimitriy Ryazantcev <dimitriy.ryazantcev@gmail.com>
+Date:   Fri Jan 29 21:39:52 2021 +0200
+
+    l10n: ru.po: update Russian translation
+    
+    Kudos to Philipp Bartsch for whitespace fixes and his helper script[1].
+    
+    [1]: https://git.grmr.de/phil/pocheck
+    
+    Signed-off-by: Dimitriy Ryazantcev <dimitriy.ryazantcev@gmail.com>
+
+commit ce81b1da230cf04e231ce337c2946c0671ffb303
+Author: Patrick Steinhardt <ps@pks.im>
+Date:   Tue Jan 12 13:26:45 2021 +0100
+
+    config: add new way to pass config via `--config-env`
+    
+    While it's already possible to pass runtime configuration via `git -c
+    <key>=<value>`, it may be undesirable to use when the value contains
+    sensitive information. E.g. if one wants to set `http.extraHeader` to
+    contain an authentication token, doing so via `-c` would trivially leak
+    those credentials via e.g. ps(1), which typically also shows command
+    arguments.
+    
+    To enable this usecase without leaking credentials, this commit
+    introduces a new switch `--config-env=<key>=<envvar>`. Instead of
+    directly passing a value for the given key, it instead allows the user
+    to specify the name of an environment variable. The value of that
+    variable will then be used as value of the key.
+    
+    Co-authored-by: Jeff King <peff@peff.net>
+    Signed-off-by: Patrick Steinhardt <ps@pks.im>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit b77b318bd25b41598020e688cbf4e18194ae9fbd
+Author: Arusekk <arek_koz@o2.pl>
+Date:   Thu Dec 3 00:19:58 2020 +0100
+
+    l10n: pl.po: add translation and set team leader
+    
+    Signed-off-by: Arusekk <arek_koz@o2.pl>
+
+commit d9488fea4141c9b6fa7b0a45701afb71a6058871
+Author: Jiang Xin <worldhello.net@gmail.com>
+Date:   Thu Sep 24 08:51:52 2020 +0800
+
+    l10n: zh_CN: for git v2.29.0 l10n round 1 and 2
+    
+    Translate 124 new messages (5013t0f0u) for git 2.29.0.
+    
+    Reviewed-by: 依云 <lilydjwg@gmail.com>
+    Reviewed-by: Fangyi Zhou <me@fangyi.io>
+    Signed-off-by: Jiang Xin <worldhello.net@gmail.com>
+
+commit 0016b618182f642771dc589cf0090289f9fe1b4f
+Author: Derrick Stolee <stolee@gmail.com>
+Date:   Thu Oct 15 17:22:04 2020 +0000
+
+    maintenance: add troubleshooting guide to docs
+    
+    The 'git maintenance run' subcommand takes a lock on the object database
+    to prevent concurrent processes from competing for resources. This is an
+    important safety measure to prevent possible repository corruption and
+    data loss.
+    
+    This feature can lead to confusing behavior if a user is not aware of
+    it. Add a TROUBLESHOOTING section to the 'git maintenance' builtin
+    documentation that discusses these tradeoffs. The short version of this
+    section is that Git will not corrupt your repository, but if the list of
+    scheduled tasks takes longer than an hour then some scheduled tasks may
+    be dropped due to this object database collision. For example, a
+    long-running "daily" task at midnight might prevent an "hourly" task
+    from running at 1AM.
+    
+    The opposite is also possible, but less likely as long as the "hourly"
+    tasks are much faster than the "daily" and "weekly" tasks.
+    
+    Helped-by: Junio C Hamano <gitster@pobox.com>
+    Signed-off-by: Derrick Stolee <dstolee@microsoft.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 0cc3679465a8fe8f591a84a2fe813a69d657e8c3
+Author: Matthias Rüster <matthias.ruester@gmail.com>
+Date:   Mon Oct 12 17:10:49 2020 +0200
+
+    l10n: de.po: Update German translation for Git 2.29.0
+    
+    Reviewed-by: Ralf Thielow <ralf.thielow@gmail.com>
+    Reviewed-by: Phillip Szelat <phillip.szelat@gmail.com>
+    Signed-off-by: Matthias Rüster <matthias.ruester@gmail.com>
+
+commit 8d41d1045cecbaa9f6e44b1af42816b51c579853
+Author: Trần Ngọc Quân <vnwildman@gmail.com>
+Date:   Tue Oct 13 08:38:20 2020 +0700
+
+    l10n: vi(5013t): Updated translation for v2.29.0 rd2
+    
+    Signed-off-by: Tran Ngoc Quan <vnwildman@gmail.com>
+
+commit c8774d0670b62447ae344d89a3d9bba354d53e0e
+Author: Daniel Santos <hello@brighterdan.com>
+Date:   Mon Oct 12 09:47:24 2020 +0100
+
+    l10n: pt_PT: make on po/pt_PT.po
+    
+    Pull from the language Coordenator repository and
+    `make` done at the top-level directory.
+    
+    Signed-off-by: Daniel Santos <hello@brighterdan.com>
+
+commit 9a1497faca2c734bfc0e1682cfe19f4c0ca0926b
+Author: Alexander Shopov <ash@kambanaria.org>
+Date:   Sun Oct 11 14:46:54 2020 +0200
+
+    l10n: bg.po: Updated Bulgarian translation (5013t)
+    
+    Signed-off-by: Alexander Shopov <ash@kambanaria.org>
+
+commit db7ca47599bd1f42b34ffda96669ca33f72c662a
+Author: Peter Krefting <peter@softwolves.pp.se>
+Date:   Sun Oct 11 11:54:47 2020 +0100
+
+    l10n: sv.po: Update Swedish translation (5013t0f0u)
+    
+    Signed-off-by: Peter Krefting <peter@softwolves.pp.se>
+
+commit bc66326381cc39dc1d48a94136dac9894917467f
+Author: Yi-Jyun Pan <pan93412@gmail.com>
+Date:   Sat Oct 10 19:34:56 2020 +0800
+
+    l10n: zh_TW.po: v2.29.0 round 2 (2 untranslated)
+    
+    Signed-off-by: pan93412 <pan93412@gmail.com>
+
+commit 8dadc33bfb50a202e857d8188351712a6ba6d79a
+Author: Jean-Noël Avila <jn.avila@free.fr>
+Date:   Wed Oct 7 21:55:55 2020 +0200
+
+    l10n: fr: v2.29.0 rnd 1
+    
+    Signed-off-by: Jean-Noël Avila <jn.avila@free.fr>
+
+commit 283aa916c626085ef45067643deac62781baa1bc
+Author: Alessandro Menti <alessandro.menti@alessandromenti.it>
+Date:   Wed Oct 7 21:43:55 2020 +0200
+
+    l10n: it.po: update the Italian translation for Git 2.29.0 round 1
+    
+    Signed-off-by: Alessandro Menti <alessandro.menti@alessandromenti.it>
+
+commit ae372f11d4f79904d7a060f98ddc083349ff6f5b
+Author: Emir Sarı <bitigchi@me.com>
+Date:   Tue Oct 6 16:44:21 2020 +0300
+
+    l10n: tr: v2.29.0 round 1
+    
+    Signed-off-by: Emir Sarı <bitigchi@me.com>
+
+commit 008a5d481ef1636efab82a72fd0b542b3d750e60
+Author: Jordi Mas <jmas@softcatala.org>
+Date:   Tue Oct 6 11:36:15 2020 +0200
+
+    l10n: Update Catalan translation
+    
+    Signed-off-by: Jordi Mas <jmas@softcatala.org>
+
+commit e13da2db28904ef70c15228fe16e25888820927c
+Author: Jiang Xin <worldhello.net@gmail.com>
+Date:   Tue Oct 6 09:16:18 2020 +0800
+
+    l10n: git.pot: v2.29.0 round 1 (124 new, 42 removed)
+    
+    Generate po/git.pot from v2.29.0-rc0 for git v2.29.0 l10n round 1.
+    
+    Signed-off-by: Jiang Xin <worldhello.net@gmail.com>
+
+commit 1d42b4d01c95cae37e9c0ebe0ed7c9418f2d6c25
+Author: Ævar Arnfjörð Bjarmason <avarab@gmail.com>
+Date:   Mon Sep 21 12:39:54 2020 +0200
+
+    remote-mediawiki tests: use CLI installer
+    
+    Replace the use of screen-scraping in the test environment
+    installation with simply invoking MediaWiki's command-line
+    installer.
+    
+    The old code being deleted here relied on our own hardcoded POST
+    parameter names & the precise layout of MediaWiki's GUI installer at a
+    given version. Somewhere between [1] and now this inevitably broke.
+    
+    As far as I can tell there was never a reason for this screen-scraping
+    hack, when [1] was introduced it hardcoded MediaWiki 1.19.0, the CLI
+    installer was introduced in 1.17.0. Perhaps the authors weren't aware
+    of it, or this code was written for an older version.
+    
+    This allows us to simply delete our own template version of
+    LocalSettings.php, it'll instead be provided by the CLI installer.
+    
+    While we're at it let's fix a few things, these changes weren't
+    practical to split up (I'd need to fix code I was about to mostly
+    delete)
+    
+      * Use MediaWiki's own defaults where possible, e.g. before we'd name
+        the database "wikidb.sqlite", now we'll simply use whatever name
+        MediaWiki prefers (currently my_wiki.sqlite) by only supplying the
+        directory name the SQLite file will be dropped into, not the full
+        path.
+    
+      * Put all of our database & download assets into a new "mediawiki/"
+        folder. This makes it easier to reason about as the current &
+        template "backup" database the tests keep swapping around live
+        next to each other.
+    
+        This'll also prevent future potential breakage as there isn't a
+        single SQLite database. MediaWiki also creates a job queue
+        database and a couple of cache databases. In practice it seems we
+        got away with not resetting these when we reset the main database,
+        but it's the sort of thing that could break in the future (reset,
+        main store doesn't have the article, but the cache does).
+    
+      * The "delete" function now only deletes the MediaWiki installation
+        & database, not the downloaded .tar.gz file. This makes us
+        friendlier to a developer on a slow connection.
+    
+    1. 5ef6ad1785 ("git-remote-mediawiki: scripts to install, delete and
+       clear a MediaWiki", 2012-07-06)
+    
+    Signed-off-by: Ævar Arnfjörð Bjarmason <avarab@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit dd84e528a34c3822e7ab0473a95e411665b37681
+Author: Drew DeVault <sir@cmpwn.com>
+Date:   Thu Jul 23 20:44:32 2020 -0400
+
+    git-send-email: die if sendmail.* config is set
+    
+    I've seen several people mis-configure git send-email on their first
+    attempt because they set the sendmail.* config options - not
+    sendemail.*. This patch detects this mistake and bails out with a
+    friendly warning.
+    
+    Signed-off-by: Drew DeVault <sir@cmpwn.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 2149b6748f478badf1e19a8f11190837b2dccb6b
+Author: brian m. carlson <sandals@crustytoothpaste.net>
+Date:   Mon Mar 30 11:55:18 2020 +0000
+
+    docs: add a FAQ
+    
+    Git is an enormously flexible and powerful piece of software.  However,
+    it can be intimidating for many users and there are a set of common
+    questions that users often ask.  While we already have some new user
+    documentation, it's worth adding a FAQ to address common questions that
+    users often have.  Even though some of this is addressed elsewhere in
+    the documentation, experience has shown that it is difficult for users
+    to find, so a centralized location is helpful.
+    
+    Add such a FAQ and fill it with some common questions and answers.
+    While there are few entries now, we can expand it in the future to cover
+    more things as we find new questions that users have.  Let's also add
+    section markers so that people answering questions can directly link
+    users to the proper answer.
+    
+    The FAQ also addresses common configuration questions that apply not
+    only to Git as an independent piece of software but also the ecosystem
+    of CI tools and hosting providers that people use, since these are the
+    source of common questions.  An attempt has been made to avoid
+    mentioning any particular provider or tool, but to nevertheless cover
+    common configurations that apply to a wide variety of such tools.
+    
+    Note that the long lines for certain questions are required, since
+    Asciidoctor does not permit broken lines there.
+    
+    Signed-off-by: brian m. carlson <sandals@crustytoothpaste.net>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit dd2c2696528990e608f3ee1fce03b53af6c171e4
+Author: Emir Sarı <bitigchi@me.com>
+Date:   Mon Mar 9 21:41:28 2020 +0300
+
+    l10n: tr: Add Turkish translations
+    
+    Signed-off-by: Emir Sarı <bitigchi@me.com>
+
+commit 9917eca79410b020b9d48f3e8c874bd1b95aeaf4
+Author: Yi-Jyun Pan <pan93412@gmail.com>
+Date:   Wed Nov 20 19:14:22 2019 +0800
+
+    l10n: zh_TW: add translation for v2.24.0
+    
+    Based on commit a5cd71ca4a ("l10n: zh_CN: for git v2.24.0 l10n round
+    1~2", 2019-10-29).
+    
+    Signed-off-by: Yi-Jyun Pan <pan93412@gmail.com>
+    Reviewed-by: Franklin Weng <franklin@goodhorse.idv.tw>
+    Signed-off-by: Jiang Xin <worldhello.net@gmail.com>
+
+commit e0479fa07387a7f84dad04a258cd2dc2861c9df9
+Author: Emily Shaffer <nasamuffin@google.com>
+Date:   Fri Oct 11 16:55:54 2019 -0700
+
+    documentation: add tutorial for object walking
+    
+    Existing documentation on object walks seems to be primarily intended
+    as a reference for those already familiar with the procedure. This
+    tutorial attempts to give an entry-level guide to a couple of bare-bones
+    object walks so that new Git contributors can learn the concepts
+    without having to wade through options parsing or special casing.
+    
+    The target audience is a Git contributor who is just getting started
+    with the concept of object walking. The goal is to prepare this
+    contributor to be able to understand and modify existing commands which
+    perform revision walks more easily, although it will also prepare
+    contributors to create new commands which perform walks.
+    
+    The tutorial covers a basic overview of the structs involved during
+    object walk, setting up a basic commit walk, setting up a basic
+    all-object walk, and adding some configuration changes to both walk
+    types. It intentionally does not cover how to create new commands or
+    search for options from the command line or gitconfigs.
+    
+    There is an associated patchset at
+    https://github.com/nasamuffin/git/tree/revwalk that contains a reference
+    implementation of the code generated by this tutorial.
+    
+    Signed-off-by: Emily Shaffer <emilyshaffer@google.com>
+    Helped-by: Eric Sunshine <sunshine@sunshineco.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit b6a8d09f6d85693dad19bbcfd2b18f9e6fc81ee4
+Author: Ævar Arnfjörð Bjarmason <avarab@gmail.com>
+Date:   Sun Apr 7 21:52:10 2019 +0200
+
+    gc docs: include the "gc.*" section from "config" in "gc"
+    
+    Rather than duplicating the documentation for the various "gc" options
+    let's include the "gc" docs from git-config. They were mostly better
+    already, and now we don't have the same docs in two places with subtly
+    different wording.
+    
+    In the cases where the git-gc(1) docs were saying something the "gc"
+    docs in git-config(1) didn't cover move the relevant section over to
+    the git-config(1) docs.
+    
+    Signed-off-by: Ævar Arnfjörð Bjarmason <avarab@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit bb236fb44afb38d0ed4000f584cdd9ace1712852
+Author: Alessandro Menti <alessandro.menti@alessandromenti.it>
+Date:   Sun Feb 17 18:04:51 2019 +0100
+
+    l10n: it: update the Italian translation
+    
+    Signed-off-by: Alessandro Menti <alessandro.menti@alessandromenti.it>
+
+commit 4953cf69a3cb2bedf7b239c9a84f7fd5d8e95c98
+Author: Jimmy Angelakos <vyruss@hellug.gr>
+Date:   Fri Feb 15 02:28:19 2019 +0000
+
+    l10n: el: add Greek l10n team and essential translations
+    
+    Signed-off-by: Jimmy Angelakos <vyruss@hellug.gr>
+
+commit 18b421d4f609c63fa4d50141a3fe8243cd13e0e9
+Author: Nguyễn Thái Ngọc Duy <pclouds@gmail.com>
+Date:   Sat Oct 27 08:23:47 2018 +0200
+
+    config.txt: move user.* to a separate file
+    
+    Signed-off-by: Nguyễn Thái Ngọc Duy <pclouds@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit a123a47f40b963b448a4920fccc34a089f603afd
+Author: Dimitriy Ryazantcev <dimitriy.ryazantcev@gmail.com>
+Date:   Tue Aug 28 18:43:15 2018 +0300
+
+    l10n: ru.po: update Russian translation
+    
+    Signed-off-by: Dimitriy Ryazantcev <dimitriy.ryazantcev@gmail.com>
+
+commit 8524bf7cc1719b035977a5de795dc68583be8a6d
+Author: Jordi Mas <jmas@softcatala.org>
+Date:   Tue Apr 10 22:22:42 2018 +0200
+
+    l10n: Update Catalan translation
+    
+    Signed-off-by: Jordi Mas <jmas@softcatala.org>
+
+commit 8bb6d60dd6b6f2f72fe091cb03d571dbdc01aa3e
+Author: Ralf Thielow <ralf.thielow@gmail.com>
+Date:   Fri Mar 16 18:41:16 2018 +0100
+
+    l10n: de.po: translate 132 new messages
+    
+    Translate 132 new messages came from git.pot update in abc8de64d (l10n:
+    git.pot: v2.17.0 round 1 (132 new, 44 removed)).
+    
+    Signed-off-by: Ralf Thielow <ralf.thielow@gmail.com>
+
+commit 31e5e17b2203e8baf0f8b28e0bedef32415ab6f7
+Author: Jiang Xin <worldhello.net@gmail.com>
+Date:   Thu Feb 22 09:17:34 2018 +0800
+
+    l10n: zh_CN: for git v2.17.0 l10n round 1
+    
+    Translate 132 new messages (3376t0f0u) for git 2.17.0-rc0.
+    
+    Reviewed-by: 依云 <lilydjwg@gmail.com>
+    Reviewed-by: Fangyi Zhou <fangyi.zhou@yuriko.moe>
+    Signed-off-by: Jiang Xin <worldhello.net@gmail.com>
+
+commit 1be5ae8a4b6a7a200be919c683d6c37683ec7df9
+Author: Changwoo Ryu <cwryu@debian.org>
+Date:   Mon Mar 19 13:59:50 2018 +0900
+
+    l10n: ko.po: Update Korean translation
+    
+    Signed-off-by: Changwoo Ryu <cwryu@debian.org>
+    Signed-off-by: Sihyeon Jang <uneedsihyeon@gmail.com>
+    Signed-off-by: Gwan-gyeong Mun <elongbug@gmail.com>
+    Reviewed-by: Changwoo Ryu <cwryu@debian.org>
+
+commit 1439a72e17ec76df6bffffe71a641689e8a5b01b
+Author: Peter Krefting <peter@softwolves.pp.se>
+Date:   Sun Mar 18 20:57:00 2018 +0100
+
+    l10n: sv.po: Update Swedish translation (3376t0f0u)
+    
+    Signed-off-by: Peter Krefting <peter@softwolves.pp.se>
+
+commit 6a07148356dd997f835e359f2179f2f0ab799159
+Author: Jean-Noël Avila <jn.avila@free.fr>
+Date:   Fri Mar 16 23:39:49 2018 +0100
+
+    l10n: fr.po v2.17.0 round 1
+    
+    Signed-off-by: Jean-Noël Avila <jn.avila@free.fr>
+
+commit 1a849b56ac868967641e4acf03a8e1923d03494d
+Author: Trần Ngọc Quân <vnwildman@gmail.com>
+Date:   Sat Mar 17 07:53:33 2018 +0700
+
+    l10n: vi.po(3376t): Updated Vietnamese translation for v2.17
+    
+    Signed-off-by: Tran Ngoc Quan <vnwildman@gmail.com>
+
+commit 31243e7fff0ab66293ca846df98750495028cb42
+Author: Alexander Shopov <ash@kambanaria.org>
+Date:   Fri Mar 16 09:55:13 2018 +0100
+
+    l10n: bg.po: Updated Bulgarian translation (3376t)
+    
+    Signed-off-by: Alexander Shopov <ash@kambanaria.org>
+
+commit 33ac3e8968a1d51f2bf2e5f85ffbbe81d4631ac3
+Author: Christopher Díaz Riveros <chrisadr@gentoo.org>
+Date:   Thu Mar 15 21:55:20 2018 -0500
+
+    l10n: es.po: Update Spanish translation 2.17.0
+    
+    Signed-off-by: Christopher Diaz Riveros <chrisadr@gentoo.org>
+
+commit abc8de64d2610f2be9848052fb5a7d1e5db7cd49
+Author: Jiang Xin <worldhello.net@gmail.com>
+Date:   Fri Mar 16 07:34:52 2018 +0800
+
+    l10n: git.pot: v2.17.0 round 1 (132 new, 44 removed)
+    
+    Generate po/git.pot from v2.17.0-rc0 for git v2.17.0 l10n round 1.
+    
+    Signed-off-by: Jiang Xin <worldhello.net@gmail.com>
+
+commit 9caa70697b3b85eb11caaa5b5fd506baccfb0bac
+Author: Stefan Beller <stefanbeller@gmail.com>
+Date:   Mon Feb 12 11:44:04 2018 -0800
+
+    send-email: error out when relogin delay is missing
+    
+    When the batch size is neither configured nor given on the command
+    line, but the relogin delay is given, then the current code ignores
+    the relogin delay setting.
+    
+    This is unsafe as there was some intention when setting the batch size.
+    One workaround would be to just assume a batch size of 1 as a default.
+    This however may be bad UX, as then the user may wonder why it is sending
+    slowly without apparent batching.
+    
+    Error out for now instead of potentially confusing the user.
+    As 5453b83bdf (send-email: --batch-size to work around some SMTP
+    server limit, 2017-05-21) lays out, we rather want to not have this
+    interface anyway and would rather want to react on the server throttling
+    dynamically.
+    
+    Helped-by: Eric Sunshine <sunshine@sunshineco.com>
+    Signed-off-by: Stefan Beller <sbeller@google.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 97716d217c1ea00adfc64e4f6bb85c1236d661ff
+Author: Ævar Arnfjörð Bjarmason <avarab@gmail.com>
+Date:   Fri Feb 9 20:32:15 2018 +0000
+
+    fetch: add a --prune-tags option and fetch.pruneTags config
+    
+    Add a --prune-tags option to git-fetch, along with fetch.pruneTags
+    config option and a -P shorthand (-p is --prune). This allows for
+    doing any of:
+    
+        git fetch -p -P
+        git fetch --prune --prune-tags
+        git fetch -p -P origin
+        git fetch --prune --prune-tags origin
+    
+    Or simply:
+    
+        git config fetch.prune true &&
+        git config fetch.pruneTags true &&
+        git fetch
+    
+    Instead of the much more verbose:
+    
+        git fetch --prune origin 'refs/tags/*:refs/tags/*' '+refs/heads/*:refs/remotes/origin/*'
+    
+    Before this feature it was painful to support the use-case of pulling
+    from a repo which is having both its branches *and* tags deleted
+    regularly, and have our local references to reflect upstream.
+    
+    At work we create deployment tags in the repo for each rollout, and
+    there's *lots* of those, so they're archived within weeks for
+    performance reasons.
+    
+    Without this change it's hard to centrally configure such repos in
+    /etc/gitconfig (on servers that are only used for working with
+    them). You need to set fetch.prune=true globally, and then for each
+    repo:
+    
+        git -C {} config --replace-all remote.origin.fetch "refs/tags/*:refs/tags/*" "^\+*refs/tags/\*:refs/tags/\*$"
+    
+    Now I can simply set fetch.pruneTags=true in /etc/gitconfig as well,
+    and users running "git pull" will automatically get the pruning
+    semantics I want.
+    
+    Even though "git remote" has corresponding "prune" and "update
+    --prune" subcommands I'm intentionally not adding a corresponding
+    prune-tags or "update --prune --prune-tags" mode to that command.
+    
+    It's advertised (as noted in my recent "git remote doc: correct
+    dangerous lies about what prune does") as only modifying remote
+    tracking references, whereas any --prune-tags option is always going
+    to modify what from the user's perspective is a local copy of the tag,
+    since there's no such thing as a remote tracking tag.
+    
+    Ideally add_prune_tags_to_fetch_refspec() would be something that
+    would use ALLOC_GROW() to grow the 'fetch` member of the 'remote'
+    struct. Instead I'm realloc-ing remote->fetch and adding the
+    tag_refspec to the end.
+    
+    The reason is that parse_{fetch,push}_refspec which allocate the
+    refspec (ultimately remote->fetch) struct are called many places that
+    don't have access to a 'remote' struct. It would be hard to change all
+    their callsites to be amenable to carry around the bookkeeping
+    variables required for dynamic allocation.
+    
+    All the other callers of the API first incrementally construct the
+    string version of the refspec in remote->fetch_refspec via
+    add_fetch_refspec(), before finally calling parse_fetch_refspec() via
+    some variation of remote_get().
+    
+    It's less of a pain to deal with the one special case that needs to
+    modify already constructed refspecs than to chase down and change all
+    the other callsites. The API I'm adding is intentionally not
+    generalized because if we add more of these we'd probably want to
+    re-visit how this is done.
+    
+    See my "Re: [BUG] git remote prune removes local tags, depending on
+    fetch config" (87po6ahx87.fsf@evledraar.gmail.com;
+    https://public-inbox.org/git/87po6ahx87.fsf@evledraar.gmail.com/) for
+    more background info.
+    
+    Signed-off-by: Ævar Arnfjörð Bjarmason <avarab@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 780494b1f5c3744860c485d1e9f1b23879f8936f
+Author: Ben Peart <benpeart@microsoft.com>
+Date:   Fri Sep 22 12:35:41 2017 -0400
+
+    fsmonitor: add documentation for the fsmonitor extension.
+    
+    This includes the core.fsmonitor setting, the fsmonitor integration hook,
+    and the fsmonitor index extension.
+    
+    Also add documentation for the new fsmonitor options to ls-files and
+    update-index.
+    
+    Signed-off-by: Ben Peart <benpeart@microsoft.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 752414ae4310cd304f5e31649aaab2dcf307057c
+Author: Jonathan Nieder <jrnieder@gmail.com>
+Date:   Wed Sep 27 21:43:21 2017 -0700
+
+    technical doc: add a design doc for hash function transition
+    
+    This document describes what a transition to a new hash function for
+    Git would look like.  Add it to Documentation/technical/ as the plan
+    of record so that future changes can be recorded as patches.
+    
+    Also-by: Brandon Williams <bmwill@google.com>
+    Also-by: Jonathan Tan <jonathantanmy@google.com>
+    Also-by: Stefan Beller <sbeller@google.com>
+    Signed-off-by: Jonathan Nieder <jrnieder@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 627d9342fe38598c995578d57cec6cbad1dcbc69
+Author: Brandon Williams <bwilliams.eng@gmail.com>
+Date:   Thu Jun 22 11:43:46 2017 -0700
+
+    submodule: convert is_submodule_initialized to work on a repository
+    
+    Convert 'is_submodule_initialized()' to take a repository object and
+    while we're at it, lets rename the function to 'is_submodule_active()'
+    and remove the NEEDSWORK comment.
+    
+    Signed-off-by: Brandon Williams <bmwill@google.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit a086f921a725319a6f0c2c3aacf676c890b3ce3e
+Author: Brandon Williams <bwilliams.eng@gmail.com>
+Date:   Fri Mar 17 15:38:01 2017 -0700
+
+    submodule: decouple url and submodule interest
+    
+    Currently the submodule.<name>.url config option is used to determine if
+    a given submodule is of interest to the user.  This ends up being
+    cumbersome in a world where we want to have different submodules checked
+    out in different worktrees or a more generalized mechanism to select
+    which submodules are of interest.
+    
+    In a future with worktree support for submodules, there will be multiple
+    working trees, each of which may only need a subset of the submodules
+    checked out.  The URL (which is where the submodule repository can be
+    obtained) should not differ between different working trees.
+    
+    It may also be convenient for users to more easily specify groups of
+    submodules they are interested in as opposed to running "git submodule
+    init <path>" on each submodule they want checked out in their working
+    tree.
+    
+    To this end two config options are introduced, submodule.active and
+    submodule.<name>.active.  The submodule.active config holds a pathspec
+    that specifies which submodules should exist in the working tree.  The
+    submodule.<name>.active config is a boolean flag used to indicate if
+    that particular submodule should exist in the working tree.
+    
+    Its important to note that submodule.active functions differently than
+    the other configuration options since it takes a pathspec.  This allows
+    users to adopt at least two new workflows:
+    
+      1. Submodules can be grouped with a leading directory, such that a
+         pathspec e.g. 'lib/' would cover all library-ish modules to allow
+         those who are interested in library-ish modules to set
+         "submodule.active = lib/" just once to say any and all modules in
+         'lib/' are interesting.
+    
+      2. Once the pathspec-attribute feature is invented, users can label
+         submodules with attributes to group them, so that a broad pathspec
+         with attribute requirements, e.g. ':(attr:lib)', can be used to say
+         any and all modules with the 'lib' attribute are interesting.
+         Since the .gitattributes file, just like the .gitmodules file, is
+         tracked by the superproject, when a submodule moves in the
+         superproject tree, the project can adjust which path gets the
+         attribute in .gitattributes, just like it can adjust which path has
+         the submodule in .gitmodules.
+    
+    Neither of these two additional configuration options solve the problem
+    of wanting different submodules checked out in different worktrees
+    because multiple worktrees share .git/config.  Only once per-worktree
+    configurations become a reality can this be solved, but this is a
+    necessary preparatory step for that future.
+    
+    Given these multiple ways to check if a submodule is of interest, the
+    more fine-grained submodule.<name>.active option has the highest order
+    of precedence followed by the pathspec check against submodule.active.
+    To ensure backwards compatibility, if neither of these options are set,
+    git falls back to checking the submodule.<name>.url option to determine
+    if a submodule is interesting.
+    
+    Signed-off-by: Brandon Williams <bmwill@google.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 4d5c2956969a6690db2bbb2f3ff40459c09d7646
+Author: Dan Aloni <alonid@gmail.com>
+Date:   Sat Feb 6 08:23:36 2016 +0200
+
+    ident: add user.useConfigOnly boolean for when ident shouldn't be guessed
+    
+    It used to be that:
+    
+       git config --global user.email "(none)"
+    
+    was a viable way for people to force themselves to set user.email in
+    each repository.  This was helpful for people with more than one
+    email address, targeting different email addresses for different
+    clones, as it barred git from creating a commit unless the user.email
+    config was set in the per-repo config to the correct email address.
+    
+    A recent change, 19ce497c (ident: keep a flag for bogus
+    default_email, 2015-12-10), however, declared that an explicitly
+    configured user.email is not bogus, no matter what its value is, so
+    this hack no longer works.
+    
+    Provide the same functionality by adding a new configuration
+    variable user.useConfigOnly; when this variable is set, the
+    user must explicitly set user.email configuration.
+    
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+    Helped-by: Eric Sunshine <sunshine@sunshineco.com>
+    Signed-off-by: Jeff King <peff@peff.net>
+    Signed-off-by: Dan Aloni <alonid@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit bc6bf2d7641d6c2450b347d5a0b2f954728bf4d9
+Author: Alexander Kuleshov <kuleshovmail@gmail.com>
+Date:   Wed Jan 13 06:20:11 2016 -0700
+
+    format-patch: introduce format.outputDirectory configuration
+    
+    We can pass -o/--output-directory to the format-patch command to store
+    patches in some place other than the working directory. This patch
+    introduces format.outputDirectory configuration option for same
+    purpose.
+    
+    The case of usage of this configuration option can be convenience
+    to not pass every time -o/--output-directory if an user has pattern
+    to store all patches in the /patches directory for example.
+    
+    The format.outputDirectory has lower priority than command line
+    option, so if user will set format.outputDirectory and pass the
+    command line option, a result will be stored in a directory that
+    passed to command line option.
+    
+    Signed-off-by: Alexander Kuleshov <kuleshovmail@gmail.com>
+    Signed-off-by: Stephen P. Smith <ischis2@cox.net>
+    Reviewed-by: Eric Sunshine <sunshine@sunshineco.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 4f655e22b76fed49b0c32bcdcd899934215b9a6d
+Author: Jacob Keller <jacob.keller@gmail.com>
+Date:   Mon Aug 17 14:33:34 2015 -0700
+
+    notes: teach git-notes about notes.<name>.mergeStrategy option
+    
+    Teach notes about a new "notes.<name>.mergeStrategy" option for
+    configuring the notes merge strategy when merging into
+    refs/notes/<name>. This option allows for the selection of merge
+    strategy for particular notes refs, rather than all notes ref merges, as
+    user may not want cat_sort_uniq for all refs, but only some. Note that
+    the <name> is the local reference we are merging into, not the remote
+    ref we merged from. The assumption is that users will mostly want to
+    configure separate local ref merge strategies rather than strategies
+    depending on which remote ref they merge from.
+    
+    notes.<name>.mergeStrategy overrides the general behavior as it is more
+    specific.
+    
+    Signed-off-by: Jacob Keller <jacob.keller@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit d2d68d9975da4a15dfca0e6e59001948e5bf57f9
+Author: Jacob Keller <jacob.keller@gmail.com>
+Date:   Mon Aug 17 14:33:33 2015 -0700
+
+    notes: add notes.mergeStrategy option to select default strategy
+    
+    Teach git-notes about "notes.mergeStrategy" to select a general strategy
+    for all notes merges. This enables a user to always get expected merge
+    strategy such as "cat_sort_uniq" without having to pass the "-s" option
+    manually.
+    
+    Signed-off-by: Jacob Keller <jacob.keller@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 16cf51c7a2e82f27577bb1bdcdc013c34815803e
+Author: Michael Rappazzo <rappazzo@gmail.com>
+Date:   Sat Jun 13 12:26:58 2015 -0400
+
+    git-rebase--interactive.sh: add config option for custom instruction format
+    
+    A config option 'rebase.instructionFormat' can override the
+    default 'oneline' format of the rebase instruction list.
+    
+    Since the list is parsed using the left, right or boundary mark plus
+    the sha1, they are prepended to the instruction format.
+    
+    Signed-off-by: Michael Rappazzo <rappazzo@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 341e7e8eda3dbeb6867f4f8f45b671201b807de5
+Author: Junio C Hamano <gitster@pobox.com>
+Date:   Wed Jun 25 12:21:11 2014 -0700
+
+    Git 2.0.1
+    
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit cb682f8cfe63ecd0da08a526f404d295e51e3ab1
+Author: Junio C Hamano <gitster@pobox.com>
+Date:   Mon Jun 16 12:39:35 2014 -0700
+
+    Third batch for 2.1
+    
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 502b0a1ad145a7d77733008946c833ba7d3d100d
+Author: Jonathan Nieder <jrnieder@gmail.com>
+Date:   Fri May 9 13:12:46 2014 -0700
+
+    contrib: remove git-diffall
+    
+    The functionality of the "git diffall" script in contrib/ was
+    incorporated into "git difftool" when the --dir-diff option was added
+    in v1.7.11 (ca. June, 2012).  Once difftool learned those features,
+    the diffall script became obsolete.
+    
+    The only difference in behavior is that when comparing to the working
+    tree, difftool copies any files modified by the user back to the
+    working tree when the diff tool exits.  "git diffall" required the
+    --copy-back option to do the same.  All other diffall options have the
+    same meaning in difftool.
+    
+    Make life easier for people choosing a tool to use by removing the old
+    diffall script.  A pointer in the release notes should be enough to
+    help current users migrate.
+    
+    Helped-by: Tim Henigan <tim.henigan@gmail.com>
+    Signed-off-by: Jonathan Nieder <jrnieder@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 00eda23228acb68c85a76f977f4e59f82189ce3f
+Author: Junio C Hamano <gitster@pobox.com>
+Date:   Thu Mar 13 14:01:17 2014 -0700
+
+    Update draft release notes to Git 2.0
+    
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit bc501f69fc6d697968d472afbabe6af97a758b12
+Author: Michael Haggerty <mhagger@alum.mit.edu>
+Date:   Sun Jul 14 10:09:02 2013 +0200
+
+    git-multimail: an improved replacement for post-receive-email
+    
+    Add git-multimail, a tool for generating notification emails for
+    pushes to a Git repository.  It is largely plug-in compatible with
+    post-receive-email, and is proposed to eventually replace that script.
+    The advantages of git-multimail relative to post-receive-email are
+    described in README.migrate-from-post-receive-email.
+    
+    git-multimail is organized in a directory contrib/hooks/multimail.
+    The directory contains:
+    
+    * git_multimail.py -- a Python module that can generate notification
+      emails for pushes to a Git repository.  The file can be used
+      directly as a post-receive script (configured via git config
+      settings), or it can be imported as a Python module and configured
+      via arbitrary Python code.
+    
+    * README -- user-level documentation for configuring and using
+      git-multimail.
+    
+    * post-receive -- an example of building a post-receive script that
+      imports git_multimail.py as a Python module, with an example of how
+      to change the email templates.
+    
+    * README.migrate-from-post-receive-email -- documentation targeted at
+      current users of post-receive-email, explaining the differences and
+      how to migrate a post-receive-email configuration to git-multimail.
+    
+    * migrate-mailhook-config -- a script that can migrate a user's
+      post-receive-email configuration options to the equivalent
+      git-multimail options.
+    
+    * README.Git -- a short explanation of the relationship between
+      git-multimail and the rest of the Git project, plus the exact date
+      and revision when this version was taken from the upstream project.
+    
+    All but the last file are taken verbatim from the upstream
+    git-multimail project.
+    
+    git-multimail is originally derived from post-receive-email and also
+    incorporates suggestions from the mailing list as well as patches by
+    the people listed below.
+    
+    Signed-off-by: Michael Haggerty <mhagger@alum.mit.edu>
+    Contributions-by: Matthieu Moy <Matthieu.Moy@imag.fr>
+    Contributions-by: Ramkumar Ramachandra <artagnon@gmail.com>
+    Contributions-by: Chris Hiestand <chrishiestand@gmail.com>
+    Contributions-by: Michiel Holtkamp <git@elfstone.nl>
+    Contributions-by: Ævar Arnfjörð Bjarmason <avarab@gmail.com>
+    Reviewed-by: Jonathan Nieder <jrnieder@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 9721ac90106e1f6c86a2f18d92fc262fe1ffbffc
+Author: Ramkumar Ramachandra <r@artagnon.com>
+Date:   Mon Jun 3 01:44:07 2013 +0530
+
+    contrib: remove continuous/ and patches/
+    
+    They haven't been touched in six years.
+    
+    Signed-off-by: Ramkumar Ramachandra <artagnon@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit c0179c0d33b0fc3c8ad30246eece220e0442fb6e
+Author: Matthieu Moy <git@matthieu-moy.fr>
+Date:   Thu Feb 14 16:36:54 2013 +0100
+
+    git.txt: update description of the configuration mechanism
+    
+    The old Git version where it appeared is now useful only to historians,
+    not to normal users. Also, the text was mentioning only the per-repo
+    config file, but this is a good place to teach that customization can
+    also be made per-user.
+    
+    While at it, remove a now-defunct e-mail from an example.
+    
+    Signed-off-by: Matthieu Moy <Matthieu.Moy@imag.fr>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit bcd45b4085f9269a536c8fb1963ac8380bfac0e8
+Author: Junio C Hamano <gitster@pobox.com>
+Date:   Fri Feb 1 12:52:08 2013 -0800
+
+    Update draft release notes to 1.8.2
+    
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 6454d9f166236965c84650f72ecdd17e309394d6
+Author: Philip Oakley <philipoakley@iee.email>
+Date:   Sun Oct 21 22:34:10 2012 +0100
+
+    Doc format-patch: clarify --notes use case
+    
+    Remove double negative, and include the repeat usage across
+    versions of a patch series.
+    
+    Signed-off-by: Philip Oakley <philipoakley@iee.org>
+    Signed-off-by: Jeff King <peff@peff.net>
+
+commit 5ef6ad178521d146ccef84c8f4d2993d5c77c7e6
+Author: Guillaume Sasdy <guillaume.sasdy@ensimag.imag.fr>
+Date:   Fri Jul 6 12:03:04 2012 +0200
+
+    git-remote-mediawiki: scripts to install, delete and clear a MediaWiki
+    
+    install_wiki.sh allows the user to install a MediaWiki instance in a
+    single shell command. Like "git instaweb", it configures and launches
+    lighttpd without requiring root priviledges. To simplify database
+    management, it uses SQLite, which doesn't require a running daemon, and
+    allows reseting the database by simply replacing a single file. This
+    allows install_wiki to also defines a function wiki_reset which clear all
+    content of the previously created wiki, which will be very useful to run
+    several indepenant tests on the same wiki.
+    
+    Note those functionnalities are made to be used from the user command
+    line in the directory git/contrib/mw-to-git/t/
+    
+    Signed-off-by: Simon CATHEBRAS <Simon.Cathebras@ensimag.imag.fr>
+    Signed-off-by: Julien KHAYAT <Julien.Khayat@ensimag.imag.fr>
+    Signed-off-by: Simon Perrat <simon.perrat@ensimag.imag.fr>
+    Signed-off-by: Charles ROUSSEL <Charles.Roussel@ensimag.imag.fr>
+    Signed-off-by: Guillaume SASDY <Guillaume.Sasdy@ensimag.imag.fr>
+    Signed-off-by: Matthieu Moy <Matthieu.Moy@imag.fr>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 1252bbe1c685450ec76ac750e8b0c2e0b762f93f
+Author: Tim Henigan <tim.henigan@gmail.com>
+Date:   Fri Feb 24 14:48:57 2012 -0500
+
+    contrib: add git-diffall script
+    
+    The 'git difftool' allows the user to view diffs using an external tool.
+    It runs a separate instance of the tool for each file in the diff. This
+    makes it tedious to review changes spanning multiple files.
+    
+    The 'git-diffall' script instead prepares temporary directories with the
+    files to be compared and launches a single instance of the external diff
+    tool to view them (i.e. a directory diff).
+    
+    The 'diff.tool' or 'merge.tool' configuration variable is used to specify
+    which external tool is used.
+    
+    Signed-off-by: Tim Henigan <tim.henigan@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit d79bcd68056250d7c03bf9b12728ee2fd85a0ab3
+Author: Junio C Hamano <gitster@pobox.com>
+Date:   Tue Jul 19 10:44:51 2011 -0700
+
+    Update draft release notes to 1.7.7
+    
+    The second batch of topics for this cycle are now in.
+    
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 052fbea26e51121d155ccaa3b0ae6ac892cc41ea
+Author: Pascal Obry <pascal@obry.net>
+Date:   Mon Sep 6 20:12:11 2010 +0200
+
+    New send-email option smtpserveroption.
+    
+    The new command line parameter --smtp-server-option or default
+    configuration sendemail.smtpserveroption can be used to pass
+    specific options to the SMTP server. Update the documentation
+    accordingly.
+    
+    Signed-off-by: Pascal Obry <pascal@obry.net>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 6df42ab98480dcac473ca7d701cfca4a0051d0c1
+Author: Petr Onderka <gsvick@gmail.com>
+Date:   Wed Sep 1 00:42:43 2010 +0200
+
+    Add global and system-wide gitattributes
+    
+    Allow gitattributes to be set globally and system wide. This way, settings
+    for particular file types can be set in one place and apply for all user's
+    repositories.
+    
+    The location of system-wide attributes file is $(prefix)/etc/gitattributes.
+    The location of the global file can be configured by setting
+    core.attributesfile.
+    
+    Some parts of the code were copied from the implementation of the same
+    functionality in config.c.
+    
+    Signed-off-by: Petr Onderka <gsvick@gmail.com>
+    Signed-off-by: Matthieu Moy <Matthieu.Moy@imag.fr>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 06300d9753349a83212360445d241d70a46375fa
+Author: Jonathan Nieder <jrnieder@gmail.com>
+Date:   Sun Feb 14 06:02:35 2010 -0600
+
+    git.1: Clarify the behavior of the --paginate option
+    
+    The --paginate option is meant to negate the effect of an explicit or
+    implicit pager.<cmd> = false setting.  Thus it turns the pager on if
+    output is going to a terminal rather than unconditionally.
+    
+    Signed-off-by: Jonathan Nieder <jrnieder@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 69a9cd31b18008cbacfb35406a1bfa17fc1f352a
+Author: Christian Couder <christian.couder@gmail.com>
+Date:   Sun Nov 8 16:09:47 2009 +0100
+
+    Documentation: add "Fighting regressions with git bisect" article
+    
+    This patch adds an asciidoc version of the "Fighting regressions with
+    git bisect" article that the author wrote for the Linux-Kongress
+    2009 (http://www.linux-kongress.org/2009).
+    
+    This paper might be interesting to people who want to learn as much as
+    possible about "git bisect" from a single document.
+    
+    The slides of the related presentation are available at:
+    
+    http://www.linux-kongress.org/2009/slides/fighting_regressions_with_git_bisect_christian_couder.pdf
+    
+    But the Linux Kongress people will not publish this paper online because
+    they print the papers on their UpTimes magazine
+    (http://www.lob.de/isbn/978-3-86541-358-1). But they don't take away the
+    rights of the author (which is very nice), so I have the right to publish
+    it.
+    
+    Signed-off-by: Christian Couder <chriscool@tuxfamily.org>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 434a6db7dcf8688fe08098e218113c18b7c9aeaf
+Author: Nicolas Sebrecht <nicolas.s.dev@gmx.fr>
+Date:   Fri Sep 11 02:29:58 2009 +0200
+
+    add documentation for mailinfo.scissors and '--no-scissors'
+    
+    Signed-off-by: Nicolas Sebrecht <nicolas.s.dev@gmx.fr>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 2b72ccb20a3b758afb9de410a955f01d1b411414
+Author: Peter Krefting <peter@softwolves.pp.se>
+Date:   Thu Sep 3 13:15:00 2009 +0100
+
+    Add script for importing bits-and-pieces to Git.
+    
+    Allows the user to import version history that is stored in bits and
+    pieces in the file system, for instance snapshots of old development
+    trees, or day-by-day backups. A configuration file is used to
+    describe the relationship between the different files and allow
+    describing branches and merges, as well as authorship and commit
+    messages.
+    
+    Output is created in a format compatible with git-fast-import.
+    
+    Full documentation is provided inline in perldoc format.
+    
+    Signed-off-by: Peter Krefting <peter@softwolves.pp.se>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 09caa24facae88e19cce1c12f21dac935cbf0909
+Author: Trent Piepho <tpiepho@gmail.com>
+Date:   Tue May 12 15:48:56 2009 -0700
+
+    send-email: Add config option for sender address
+    
+    The sender address, as specified with the '--from' command line option,
+    couldn't be set in the config file.  So add a new config option,
+    'sendemail.from', which sets it.  One can use 'sendemail.<identity>.from'
+    as well of course, which is likely the more useful case.
+    
+    The sender address would default to GIT_AUTHOR_IDENT, which is usually the
+    right thing, but this doesn't allow switching based on the identity
+    selected.  It's possible to switch the SMTP server and envelope sender by
+    using the '--identity' option, in which case one probably wants to use a
+    different from address as well, but this had to be manually specified.
+    
+    The documentation for 'from' is also corrected somewhat.  If '--from' is
+    specified (or the new sendemail.from option is used) then the user isn't
+    prompted.  The default with no '--from' option (or sendemail.from option)
+    is GIT_AUTHOR_IDENT first then GIT_COMMITTER_IDENT, not just
+    GIT_COMMITTER_IDENT.
+    
+    Signed-off-by: Trent Piepho <xyzzy@speakeasy.org>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit a9c3821ca2fec065260b4314d61337a7529aba5b
+Author: Tor Arne Vestbø <torarnv@gmail.com>
+Date:   Sun Mar 1 23:11:38 2009 +0100
+
+    git-rebase: Add --stat and --no-stat for producing diffstat on rebase
+    
+    The behavior of --verbose is unchanged, but uses a different state
+    variable internally, so that the meaning of verbose output may be
+    expanded without affecting the diffstat. This is also reflected in
+    the documentation.
+    
+    The configuration option rebase.stat works the same was as merg.stat,
+    but the default is currently false.
+    
+    Signed-off-by: Tor Arne Vestbø <torarnv@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 7d48e9e6f77d336376c1a554eeff0590f77e1ee1
+Author: Marius Storm-Olsen <marius@trolltech.com>
+Date:   Sun Feb 8 15:34:31 2009 +0100
+
+    Move mailmap documentation into separate file
+    
+    Include it directly from git-shortlog.txt, and refer
+    to it from pretty-format.txt.
+    
+    Signed-off-by: Marius Storm-Olsen <marius@trolltech.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit d551a488169aeb2ac09dba781f2ffbecf3425996
+Author: Marius Storm-Olsen <marius@trolltech.com>
+Date:   Sun Feb 8 15:34:27 2009 +0100
+
+    Add mailmap.file as configurational option for mailmap location
+    
+    This allows us to augment the repo mailmap file, and to use
+    mailmap files elsewhere than the repository root. Meaning
+    that the entries in mailmap.file will override the entries
+    in "./.mailmap", should they match.
+    
+    Signed-off-by: Marius Storm-Olsen <marius@trolltech.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 98a4d87b87e9846eafd21ba232cc2b7ba3f718fc
+Author: Boyd Stephen Smith Jr <bss@iguanasuicide.net>
+Date:   Tue Jan 20 21:46:57 2009 -0600
+
+    color-words: Support diff.wordregex config option
+    
+    When diff is invoked with --color-words (w/o =regex), use the regular
+    expression the user has configured as diff.wordregex.
+    
+    diff drivers configured via attributes take precedence over the
+    diff.wordregex-words setting.  If the user wants to change them, they have
+    their own configuration variables.
+    
+    Signed-off-by: Boyd Stephen Smith Jr <bss@iguanasuicide.net>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit ea3594e04184475226109a21e71c539ff5f139fd
+Author: Junio C Hamano <gitster@pobox.com>
+Date:   Wed Aug 20 16:32:15 2008 -0700
+
+    Update draft release notes for 1.6.1
+    
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 84bb2dfd9f4873c9ca19537efe62219b09ec03bf
+Author: Paolo Bonzini <bonzini@gnu.org>
+Date:   Thu Apr 17 13:17:20 2008 +0200
+
+    Add a remote.*.mirror configuration option
+    
+    This patch adds a remote.*.mirror configuration option that,
+    when set, automatically puts git-push in --mirror mode for that
+    remote.
+    
+    Furthermore, the option is set automatically by `git remote
+    add --mirror'.
+    
+    The code in remote.c to parse remote.*.skipdefaultupdate
+    had a subtle problem: a comment in the code indicated that
+    special care was needed for boolean options, but this care was
+    not used in parsing the option.  Since I was touching related
+    code, I did this fix too.
+    
+    [jc: and I further fixed up the "ignore boolean" code.]
+    
+    Signed-off-by: Paolo Bonzini <bonzini@gnu.org>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 8089c85bcba89464b9b2a32fa948ed85eb367e70
+Author: Paolo Bonzini <bonzini@gnu.org>
+Date:   Tue Feb 5 08:04:18 2008 +0100
+
+    git-commit: add a prepare-commit-msg hook
+    
+    The prepare-commit-msg hook is run whenever a "fresh" commit message
+    is prepared, just before it is shown in the editor (if it is).
+    Its purpose is to modify the commit message in-place.
+    
+    It takes one to three parameters.  The first is the name of the file that
+    the commit log message.  The second is the source of the commit message,
+    and can be: "message" (if a -m or -F option was given); "template" (if a
+    -t option was given or the configuration option commit.template is set);
+    "merge" (if the commit is a merge or a .git/MERGE_MSG file exists);
+    "squash" (if a .git/SQUASH_MSG file exists); or "commit", followed by
+    a commit SHA1 as the third parameter (if a -c, -C or --amend option
+    was given).
+    
+    If its exit status is non-zero, git-commit will abort.  The hook is
+    not suppressed by the --no-verify option, so it should not be used
+    as a replacement for the pre-commit hook.
+    
+    The sample prepare-commit-msg comments out the `Conflicts:` part of
+    a merge's commit message; other examples are commented out, including
+    adding a Signed-off-by line at the bottom of the commit messsage,
+    that the user can then edit or discard altogether.
+    
+    Signed-off-by: Paolo Bonzini <bonzini@gnu.org>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 464a8a7a15fc70efbcf56c4569f0f7275a9c76fe
+Author: J. Bruce Fields <bfields@citi.umich.edu>
+Date:   Thu May 24 20:28:14 2007 -0400
+
+    user-manual: edit "ignoring files" for conciseness
+    
+    The immediate motivation for writing this section was to explain the
+    various places ignore patterns could be used.  However, I still think
+    .gitignore is the case most people will want to learn about first.  It
+    also makes it a bit more concrete to introduce ignore patterns in the
+    context of .gitignore first.  And the existance of gitignore(5) relieves
+    the pressure to explain it all here.
+    
+    So, stick to the .gitignore example, with only a brief mention of the
+    others, explain the syntax only by example, and leave the rest to
+    gitignore(5).
+    
+    Signed-off-by: J. Bruce Fields <bfields@citi.umich.edu>
+    Cc: Johan Herland <johan@herland.net>
+
+commit be52a41c4ea02fe7fabfef4ea9af821cdfd69a15
+Author: Alex Riesen <raa.lkml@gmail.com>
+Date:   Wed Aug 1 00:01:17 2007 +0200
+
+    Make verse of git-config manpage more readable
+    
+    Also mention '--file' in FILES.
+    
+    Signed-off-by: Alex Riesen <raa.lkml@gmail.com>
+    Signed-off-by: Junio C Hamano <gitster@pobox.com>
+
+commit 556df5e9c4ddbc481d7a25aef63ee41d9b1b6215
+Author: Junio C Hamano <gitster@pobox.com>
+Date:   Sat Jun 2 19:32:48 2007 -0700
+
+    Release Notes: start preparing for 1.5.3
+    
+    Signed-off-by: Junio C Hamano <junkio@cox.net>
+
+commit 51e7ecf4ecb506fb36cd5933cb7b78fb4b315ac9
+Author: Alex Riesen <raa.lkml@gmail.com>
+Date:   Wed May 23 23:01:29 2007 +0200
+
+    Add a configuration option to control diffstat after merge
+    
+    The diffstat can be controlled either with command-line options
+    (--summary|--no-summary) or with merge.diffstat. The default is
+    left as it was: diffstat is active by default.
+    
+    Signed-off-by: Alex Riesen <raa.lkml@gmail.com>
+    Signed-off-by: Junio C Hamano <junkio@cox.net>
+
+commit 2dc53617a43fda3df12e51e765fe4043935cfc22
+Author: Johan Herland <johan@herland.net>
+Date:   Wed May 16 02:31:40 2007 +0200
+
+    user-manual: Add section on ignoring files
+    
+    The todo list at the end of the user manual says that something must be
+    said about .gitignore. Also, there seems to be a lack of documentation
+    on how to choose between the various types of ignore files (.gitignore
+    vs. .git/info/exclude, etc.).
+    
+    This patch adds a section on ignoring files which try to introduce how
+    to tell git about ignored files, and how the different strategies
+    complement eachother.
+    
+    The syntax of exclude patterns is explained in a simplified manner, with
+    a reference to git-ls-files(1) which already contains a more thorough
+    explanation.
+    
+    Signed-off-by: Johan Herland <johan@herland.net>
+
+commit 3e993bb657daad31d8a7b1ef0a6a9f73bdd5f950
+Author: Shawn O. Pearce <spearce@spearce.org>
+Date:   Tue Mar 20 00:33:41 2007 -0400
+
+    contrib/continuous: a continuous integration build manager
+    
+    This is a simple but powerful continuous integration build system
+    for Git.  It works by receiving push events from repositories
+    through the post-receive hook, aggregates them on a per-branch
+    basis into a first-come-first-serve build queue, and lets a
+    background build daemon perform builds one at a time.
+    
+    Signed-off-by: Shawn O. Pearce <spearce@spearce.org>
+    Signed-off-by: Junio C Hamano <junkio@cox.net>
+
+commit d5cd5de495654ec2454e8c37829c5e1c9f49b66a
+Author: J. Bruce Fields <bfields@citi.umich.edu>
+Date:   Tue Jan 9 00:18:09 2007 -0500
+
+    Documentation: begin discussion of git-remote in user manual
+    
+    Start discussion of git-remote.
+    
+    Signed-off-by: "J. Bruce Fields" <bfields@citi.umich.edu>
+
+commit d19fbc3c171aa71a79b2ff0b654e3064c91628b8
+Author: J. Bruce Fields <bfields@citi.umich.edu>
+Date:   Sun Jan 7 19:23:49 2007 -0500
+
+    Documentation: add git user's manual
+    
+    The goals are:
+    
+            - Readable from beginning to end in order without having read
+              any other git documentation beforehand.
+            - Helpful section names and cross-references, so it's not too
+              hard to skip around some if you need to.
+            - Organized to allow it to grow much larger (unlike the
+              tutorials)
+    
+    It's more liesurely than tutorial.txt, but tries to stay focused on
+    practical how-to stuff.  It adds a discussion of how to resolve merge
+    conflicts, and partial instructions on setting up and dealing with a
+    public repository.
+    
+    I've lifted a little bit from "branching and merging" (e.g., some of the
+    discussion of history diagrams), and could probably steal more if that's
+    OK.  (Similarly anyone should of course feel free to reuse bits of this
+    if any parts seem more useful than the whole.)
+    
+    There's a lot of detail on managing branches and using git-fetch, just
+    because those are essential even to people needing read-only access
+    (e.g., kernel testers).  I think those sections will be much shorter
+    once the new "git remote" command and the disconnected checkouts are
+    taken into account.
+    
+    I do feel bad about adding yet another piece of documentation, but I we
+    need something that goes through all the basics in a logical order, and
+    I wasn't seeing how to grow the tutorials into that.
+    
+    Signed-off-by: "J. Bruce Fields" <bfields@citi.umich.edu>
+
+commit 5773c9f2b28c3af92b7e9c6832536e99ab11cc78
+Author: Junio C Hamano <gitster@pobox.com>
+Date:   Sat Oct 29 14:32:56 2005 -0700
+
+    Documentation updates.
+    
+    Signed-off-by: Junio C Hamano <junkio@cox.net>
+
+commit 1eb446fa9fe66df037b416d2fb3c44cf36250354
+Author: Junio C Hamano <gitster@pobox.com>
+Date:   Wed Aug 31 11:48:41 2005 -0700
+
+    Add Pine 4.63 help from Daniel.
+    
+    Signed-off-by: Junio C Hamano <junkio@cox.net>
