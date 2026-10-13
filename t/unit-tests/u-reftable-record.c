@@ -524,6 +524,41 @@ void test_reftable_record__obj_record_roundtrip(void)
 	reftable_buf_release(&scratch);
 }
 
+void test_reftable_record__obj_record_decode_count_larger_than_record(void)
+{
+	struct reftable_buf key = REFTABLE_BUF_INIT, scratch = REFTABLE_BUF_INIT;
+	struct reftable_record rec = { .type = REFTABLE_BLOCK_TYPE_OBJ };
+	uint8_t buffer[32];
+	struct string_view dest = { .buf = buffer, .len = sizeof(buffer) }, in;
+	int n;
+
+	/*
+	 * A count of offsets that a 32-bit size_t truncates to one,
+	 * followed by two offsets.
+	 */
+	n = put_var_int(&dest, ((uint64_t)1 << 32) + 1);
+	cl_assert_gt_i(n, 0);
+	string_view_consume(&dest, n);
+	n = put_var_int(&dest, 1);
+	cl_assert_gt_i(n, 0);
+	string_view_consume(&dest, n);
+	n = put_var_int(&dest, 1);
+	cl_assert_gt_i(n, 0);
+	string_view_consume(&dest, n);
+
+	in.buf = buffer;
+	in.len = sizeof(buffer) - dest.len;
+
+	cl_assert_equal_i(reftable_buf_addstr(&key, "\x01\x02"), 0);
+	cl_assert_equal_i(reftable_record_decode(&rec, key, 0, in,
+						 REFTABLE_HASH_SIZE_SHA1, &scratch),
+			  REFTABLE_FORMAT_ERROR);
+
+	reftable_record_release(&rec);
+	reftable_buf_release(&key);
+	reftable_buf_release(&scratch);
+}
+
 void test_reftable_record__index_record_comparison(void)
 {
 	struct reftable_record in[3] = {
