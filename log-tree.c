@@ -421,6 +421,23 @@ void format_decorations(struct strbuf *sb,
 	}
 }
 
+static void show_historical_branch(struct rev_info *opt)
+{
+	const char *branch = get_reflog_branch(opt->reflog_info);
+	enum git_colorbool use_color = opt->diffopt.use_color;
+	const char *color_commit, *color_reset;
+
+	if (!branch)
+		return;
+
+	color_commit = diff_get_color(use_color, DIFF_COMMIT);
+	color_reset = decorate_get_color(use_color, DECORATION_NONE);
+	fprintf(opt->diffopt.file, "%s (%s%s%s%s%s)%s",
+		color_commit, color_reset,
+		decorate_get_color(use_color, DECORATION_REF_LOCAL),
+		branch, color_reset, color_commit, color_reset);
+}
+
 void show_decorations(struct rev_info *opt, struct commit *commit)
 {
 	struct strbuf sb = STRBUF_INIT;
@@ -430,6 +447,10 @@ void show_decorations(struct rev_info *opt, struct commit *commit)
 
 		if (slot && *slot)
 			fprintf(opt->diffopt.file, "\t%s", *slot);
+	}
+	if (opt->historical_branch) {
+		show_historical_branch(opt);
+		return;
 	}
 	if (!opt->show_decorations)
 		return;

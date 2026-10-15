@@ -159,6 +159,52 @@ test_expect_success '--operations shows a rebase as one entry' '
 	)
 '
 
+test_expect_success '--historical-branch names the branch of each entry' '
+	(
+		cd operations &&
+
+		cat >expect <<-\EOF &&
+		(topic) HEAD@{0}: rebase (finish): returning to refs/heads/topic
+		(topic) HEAD@{1}: rebase (pick): C
+		(topic) HEAD@{2}: rebase (pick): B
+		(topic) HEAD@{3}: rebase (pick): A
+		(topic) HEAD@{4}: rebase (start): checkout main
+		(topic) HEAD@{5}: checkout: moving from main to topic
+		(main) HEAD@{6}: commit: upstream
+		(main) HEAD@{7}: checkout: moving from topic to main
+		(topic) HEAD@{8}: commit: C
+		(topic) HEAD@{9}: commit: B
+		(topic) HEAD@{10}: commit: A
+		(topic) HEAD@{11}: checkout: moving from main to topic
+		(main) HEAD@{12}: commit (initial): base
+		EOF
+		git reflog --historical-branch >out &&
+		cut -d " " -f 2- out >actual &&
+		test_cmp expect actual
+	)
+'
+
+test_expect_success '--historical-branch takes the place of decorations' '
+	(
+		cd operations &&
+		hash=$(git rev-parse --short HEAD) &&
+		echo "<YELLOW>$hash<RESET><YELLOW> (<RESET><BOLD;GREEN>topic<RESET><YELLOW>)<RESET>" >expect &&
+		git reflog --historical-branch --decorate --color -1 >out &&
+		test_decode_color <out | sed "s/ HEAD@.*//" >actual &&
+		test_cmp expect actual
+	)
+'
+
+test_expect_success '--historical-branch names the ref of other reflogs' '
+	(
+		cd operations &&
+		echo "(main) main@{0}: commit: upstream" >expect &&
+		git reflog -1 main --historical-branch >out &&
+		cut -d " " -f 2- out >actual &&
+		test_cmp expect actual
+	)
+'
+
 test_expect_success '--operations shows a stopped rebase as one entry once it finishes' '
 	set_fake_editor &&
 	(
@@ -231,8 +277,55 @@ test_expect_success '--operations shows a pull --rebase as one entry' '
 	)
 '
 
-test_expect_success '--operations requires --walk-reflogs' '
+test_expect_success '--historical-branch names the current branch when HEAD never switched' '
+	(
+		cd downstream &&
+		echo "(topic)" >expect &&
+		git reflog --historical-branch >out &&
+		cut -d " " -f 2 out | sort -u >actual &&
+		test_cmp expect actual
+	)
+'
+
+test_expect_success '--historical-branch follows a renamed branch' '
+	(
+		cd operations &&
+		test_commit D &&
+		git branch -m topic renamed &&
+		test_commit E &&
+
+		cat >expect <<-\EOF &&
+		(renamed) HEAD@{0}: commit: E
+		(renamed) HEAD@{1}: Branch: renamed refs/heads/topic to refs/heads/renamed
+		(topic) HEAD@{3}: commit: D
+		EOF
+		git reflog --historical-branch -3 >out &&
+		cut -d " " -f 2- out >actual &&
+		test_cmp expect actual
+	)
+'
+
+test_expect_success '--historical-branch shows where HEAD was detached' '
+	(
+		cd operations &&
+		git checkout --detach &&
+		test_commit F &&
+		git checkout renamed &&
+
+		cat >expect <<-EOF &&
+		(renamed) HEAD@{0}: checkout: moving from $(git rev-parse F) to renamed
+		(detached at $(git rev-parse --short F)) HEAD@{1}: commit: F
+		EOF
+		git reflog --historical-branch -2 >out &&
+		cut -d " " -f 2- out >actual &&
+		test_cmp expect actual
+	)
+'
+
+test_expect_success '--operations and --historical-branch require --walk-reflogs' '
 	test_must_fail git log --operations 2>err &&
+	test_grep "requires .--walk-reflogs." err &&
+	test_must_fail git log --historical-branch 2>err &&
 	test_grep "requires .--walk-reflogs." err
 '
 
