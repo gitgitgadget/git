@@ -140,6 +140,23 @@ test_expect_success 'scalar register --no-maintenance' '
 	test_subcommand ! git maintenance unregister --force <no-maint.event
 '
 
+test_expect_success 'scalar disables orphan checks without overriding user configuration' '
+	test_when_finished "scalar unregister orphan-check" &&
+	git init orphan-check &&
+	scalar register --no-maintenance orphan-check &&
+	test_cmp_config -C orphan-check false checkout.orphanedCommitWarning &&
+
+	git -C orphan-check config unset checkout.orphanedCommitWarning &&
+	scalar reconfigure --maintenance=keep orphan-check &&
+	test_cmp_config -C orphan-check false checkout.orphanedCommitWarning &&
+
+	git -C orphan-check config set checkout.orphanedCommitWarning true &&
+	scalar register --no-maintenance orphan-check &&
+	test_cmp_config -C orphan-check true checkout.orphanedCommitWarning &&
+	scalar reconfigure --maintenance=keep orphan-check &&
+	test_cmp_config -C orphan-check true checkout.orphanedCommitWarning
+'
+
 test_expect_success 'set up repository to clone' '
 	test_commit first &&
 	test_commit second &&
@@ -160,6 +177,8 @@ test_expect_success 'scalar clone' '
 	scalar clone "file://$(pwd)" cloned --single-branch &&
 	(
 		cd cloned/src &&
+
+		test_cmp_config false checkout.orphanedCommitWarning &&
 
 		git config --get --global --fixed-value maintenance.repo \
 			"$(pwd)" &&
