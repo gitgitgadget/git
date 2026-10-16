@@ -1,6 +1,5 @@
-#define USE_THE_REPOSITORY_VARIABLE
-
 #include "git-compat-util.h"
+#include "config.h"
 #include "gettext.h"
 #include "hex.h"
 #include "odb.h"
@@ -35,23 +34,24 @@ static int promised_object_cb(const struct object_id *oid UNUSED,
  * objects in non-promisor packs, in which case we'll have to fall back to the
  * rev-list-based connectivity checks. Returns a negative error code on error.
  */
-static int check_connected_promisor(oid_iterate_fn fn,
+static int check_connected_promisor(struct repository *repo,
+				    oid_iterate_fn fn,
 				    void *cb_data,
 				    const struct object_id **oid)
 {
 	struct odb_for_each_object_options opts = {
 		.flags = ODB_FOR_EACH_OBJECT_PROMISOR_ONLY,
-		.prefix_hex_len = the_repository->hash_algo->hexsz,
+		.prefix_hex_len = repo->hash_algo->hexsz,
 	};
 	int err;
 
-	odb_reprepare(the_repository->objects);
+	odb_reprepare(repo->objects);
 	do {
 		bool found = false;
 
 		opts.prefix = *oid;
 
-		err = odb_for_each_object_ext(the_repository->objects, NULL,
+		err = odb_for_each_object_ext(repo->objects, NULL,
 					      promised_object_cb, &found, &opts);
 		if (err < 0)
 			return err;
@@ -67,6 +67,27 @@ static int check_connected_promisor(oid_iterate_fn fn,
 	return 1;
 }
 
+static int incremental_check_applicable(struct repository *repo,
+					struct check_connected_options *opt)
+{
+	const char *algorithm = NULL;
+
+	if (repo_config_get_string_tmp(repo,
+				       "transfer.connectivitycheck",
+				       &algorithm))
+		return 0;
+	if (!strcasecmp(algorithm, "full"))
+		return 0;
+	if (strcasecmp(algorithm, "incremental"))
+		die(_("unknown transfer.connectivityCheck algorithm '%s'"),
+		    algorithm);
+
+	if (opt->is_deepening_fetch)
+		return 0;
+
+	return 1;
+}
+
 /*
  * If we feed all the commits we want to verify to this command
  *
@@ -78,7 +99,8 @@ static int check_connected_promisor(oid_iterate_fn fn,
  *
  * Returns 0 if everything is connected, non-zero otherwise.
  */
-int check_connected(oid_iterate_fn fn, void *cb_data,
+int check_connected(struct repository *repo,
+		    oid_iterate_fn fn, void *cb_data,
 		    struct check_connected_options *opt)
 {
 	struct child_process rev_list = CHILD_PROCESS_INIT;
@@ -101,8 +123,8 @@ int check_connected(oid_iterate_fn fn, void *cb_data,
 		return err;
 	}
 
-	if (repo_has_promisor_remote(the_repository)) {
-		err = check_connected_promisor(fn, cb_data, &oid);
+	if (repo_has_promisor_remote(repo)) {
+		err = check_connected_promisor(repo, fn, cb_data, &oid);
 		if (err) {
 			if (opt->err_fd)
 				close(opt->err_fd);
@@ -119,7 +141,7 @@ int check_connected(oid_iterate_fn fn, void *cb_data,
 	strvec_push(&rev_list.args,"rev-list");
 	strvec_push(&rev_list.args, "--objects");
 	strvec_push(&rev_list.args, "--stdin");
-	if (repo_has_promisor_remote(the_repository))
+	if (repo_has_promisor_remote(repo))
 		strvec_push(&rev_list.args, "--exclude-promisor-objects");
 	if (!opt->is_deepening_fetch) {
 		strvec_push(&rev_list.args, "--not");
@@ -133,6 +155,9 @@ int check_connected(oid_iterate_fn fn, void *cb_data,
 	if (opt->progress)
 		strvec_pushf(&rev_list.args, "--progress=%s",
 			     _("Checking connectivity"));
+	if (incremental_check_applicable(repo, opt))
+		strvec_push(&rev_list.args,
+			    "--verify-trees-incremental");
 
 	rev_list.git_cmd = 1;
 	if (opt->env)
@@ -160,7 +185,7 @@ int check_connected(oid_iterate_fn fn, void *cb_data,
 		strbuf_add(&idx_file, transport->pack_lockfiles.items[0].string,
 			   base_len);
 		strbuf_addstr(&idx_file, ".idx");
-		new_pack = add_packed_git(the_repository, idx_file.buf,
+		new_pack = add_packed_git(repo, idx_file.buf,
 					  idx_file.len, 1);
 		strbuf_release(&idx_file);
 	}
