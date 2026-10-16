@@ -367,7 +367,16 @@ void close_pack(struct packed_git *p)
 
 void unlink_pack_path(const char *pack_name, int force_delete)
 {
-	static const char *exts[] = {".idx", ".pack", ".rev", ".keep", ".bitmap", ".promisor", ".mtimes"};
+	static const char *exts[] = {
+		".idx",
+		".pack",
+		".rev",
+		".keep",
+		".bitmap",
+		".promisor",
+		".mtimes",
+		".unoptimized",
+	};
 	int i;
 	struct strbuf buf = STRBUF_INIT;
 	size_t plen;
@@ -520,6 +529,11 @@ const char *pack_basename(struct packed_git *p)
 	else
 		ret = p->pack_name; /* we only have a base */
 	return ret;
+}
+
+int is_temp_pack_basename(const char *base)
+{
+	return starts_with(base, ".tmp-") || starts_with(base, "tmp_");
 }
 
 /*
@@ -723,10 +737,10 @@ struct packed_git *add_packed_git(struct repository *r, const char *path,
 		return NULL;
 
 	/*
-	 * ".promisor" is long enough to hold any suffix we're adding (and
+	 * ".unoptimized" is long enough to hold any suffix we're adding (and
 	 * the use xsnprintf double-checks that)
 	 */
-	alloc = st_add3(path_len, strlen(".promisor"), 1);
+	alloc = st_add3(path_len, strlen(".unoptimized"), 1);
 	p = alloc_packed_git(r, alloc);
 	memcpy(p->pack_name, path, path_len);
 
@@ -752,6 +766,10 @@ struct packed_git *add_packed_git(struct repository *r, const char *path,
 	xsnprintf(p->pack_name + path_len, alloc - path_len, ".mtimes");
 	if (!access(p->pack_name, F_OK))
 		p->is_cruft = 1;
+
+	xsnprintf(p->pack_name + path_len, alloc - path_len, ".unoptimized");
+	if (!access(p->pack_name, F_OK))
+		p->is_unoptimized = 1;
 
 	xsnprintf(p->pack_name + path_len, alloc - path_len, ".pack");
 	if (stat(p->pack_name, &st) || !S_ISREG(st.st_mode)) {
@@ -1030,12 +1048,12 @@ off_t get_delta_base(struct packed_git *p,
  * the final object lookup), but more expensive for OFS deltas (we
  * have to load the revidx to convert the offset back into a sha1).
  */
-static int get_delta_base_oid(struct packed_git *p,
-			      struct pack_window **w_curs,
-			      off_t curpos,
-			      struct object_id *oid,
-			      enum object_type type,
-			      off_t delta_obj_offset)
+int get_delta_base_oid(struct packed_git *p,
+		       struct pack_window **w_curs,
+		       off_t curpos,
+		       struct object_id *oid,
+		       enum object_type type,
+		       off_t delta_obj_offset)
 {
 	if (type == OBJ_REF_DELTA) {
 		unsigned char *base = use_pack(p, w_curs, curpos, NULL);

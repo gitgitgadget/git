@@ -188,6 +188,67 @@ test_expect_success 'pack-objects with bogus arguments' '
 	test_must_fail git pack-objects --window=0 test-1 blah blah <obj-list
 '
 
+# Echo "delta" or "base" for how object $2 is stored in pack index $1.
+obj_repr () {
+	git verify-pack -v "$1" |
+	awk -v o="$2" '$1 == o {
+		if (NF >= 7 && $7 ~ /^[0-9a-f]+$/)
+			print "delta"
+		else
+			print "base"
+	}'
+}
+
+test_expect_success '--prefer-reused-deltas keeps a delta copy of a duplicated object' '
+	test_when_finished "rm -rf prefer-reused" &&
+	git init prefer-reused &&
+	(
+		cd prefer-reused &&
+
+		# O is a prefix of X (genrandom is deterministic on its
+		# seed), so O deltifies cheaply against X.
+		test-tool genrandom foo 8192 >x.bin &&
+		test-tool genrandom foo 4096 >o.bin &&
+		x=$(git hash-object -w x.bin) &&
+		o=$(git hash-object -w o.bin) &&
+
+		# One pack stores O as a plain base ...
+		echo "$o" |
+			git pack-objects --window=0 .git/objects/pack/pack >base.hash &&
+		# ... another stores O as a delta against X.
+		printf "%s\n%s\n" "$x" "$o" |
+			git pack-objects .git/objects/pack/pack >delta.hash &&
+		git prune-packed &&
+
+		base="pack-$(cat base.hash)" &&
+		delta="pack-$(cat delta.hash)" &&
+
+		# Precondition: the two packs really do disagree on how O
+		# is stored.
+		test "$(obj_repr ".git/objects/pack/$base.idx" "$o")" = base &&
+		test "$(obj_repr ".git/objects/pack/$delta.idx" "$o")" = delta &&
+
+		# Packs are enumerated newest-mtime first, so make the base
+		# pack the newer one to ensure its copy is seen first.
+		test-tool chmtime -200 ".git/objects/pack/$delta.pack" &&
+		printf "%s.pack\n%s.pack\n" "$base" "$delta" >packs.in &&
+
+		# Default: the first-seen (base) copy wins, dropping the delta.
+		git pack-objects --stdin-packs --window=0 out.default \
+			<packs.in >default.hash &&
+		test "$(obj_repr "out.default-$(cat default.hash).idx" "$o")" = base &&
+
+		# With the option, the delta copy is preferred and reused.
+		git pack-objects --stdin-packs --window=0 --prefer-reused-deltas \
+			out.prefer <packs.in >prefer.hash &&
+		test "$(obj_repr "out.prefer-$(cat prefer.hash).idx" "$o")" = delta &&
+
+		# The resulting pack must still be valid (the reused delta
+		# resolves against X, which is included).
+		git verify-pack "out.prefer-$(cat prefer.hash).idx"
+	)
+'
+
 check_unpack () {
 	local packname="$1" &&
 	local object_list="$2" &&

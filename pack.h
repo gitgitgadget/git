@@ -111,6 +111,13 @@ char *index_pack_lockfile(struct odb_source *source, int fd,
 
 struct ref;
 
+/*
+ * Create a pack marker containing msg followed by a newline, or an empty
+ * marker if msg is empty. Leave existing files untouched. Return 1 if
+ * created, 0 if already present; die on other errors.
+ */
+int write_pack_marker_file(struct repository *repo, const char *filename,
+			   const char *msg);
 void write_promisor_file(const char *promisor_name, struct ref **sought, int nr_sought);
 
 char *write_rev_file(struct repository *repo,

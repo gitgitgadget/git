@@ -116,6 +116,15 @@ reachability up to the boundary set by the excluded packs.
 Incompatible with `--revs`, or options that imply `--revs` (such as
 `--all`), with the exception of `--unpacked`, which is compatible.
 
+--emit-input-packs=<file>::
+--emit-input-loose=<file>::
+	Write all local pack basenames or loose object IDs, respectively,
+	one per line, to `<file>` before object enumeration. These snapshots
+	may include inputs not selected for packing and are
+	intended for internal communication with the invoking
+	linkgit:git-repack[1] process, so linkgit:git-pack-aggregate[1] can
+	avoid those inputs.
+
 --cruft::
 	Packs unreachable objects into a separate "cruft" pack, denoted
 	by the existence of a `.mtimes` file. Typically used by `git
@@ -142,6 +151,14 @@ options which imply `--revs`.
 	If specified, objects are eliminated from the cruft pack if they
 	have an mtime older than `<approxidate>`. If unspecified (and
 	given `--cruft`), then no objects are eliminated.
+
+--mark-unoptimized::
+	Write an `.unoptimized` marker file alongside each output pack. The
+	marker signals that objects within the pack have not been fully
+	delta-searched against other objects within the same pack and
+	that future repacking should consider them. Any deltas that do
+	exist within this pack can still be reused, however.
+	Incompatible with `--stdout`.
 
 --window=<n>::
 --depth=<n>::
@@ -245,6 +262,15 @@ depth is 4095.
 	This implies --no-reuse-delta. Useful only in the obscure case where
 	wholesale enforcement of a different compression level on the
 	packed data is desired.
+
+--prefer-reused-deltas::
+--no-prefer-reused-deltas::
+	Only meaningful with `--stdin-packs`. When the same object is
+	present as a base in one included pack and a delta in another,
+	record the delta copy rather than the base. This costs a
+	cheap object-header read per duplicate, and has no effect
+	under `--no-reuse-delta`. Disabled by default; use
+	`--no-prefer-reused-deltas` to keep the first copy encountered.
 
 --compression=<n>::
 	Specifies compression level for newly-compressed data in the
