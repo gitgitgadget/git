@@ -3,14 +3,19 @@
 #include "config.h"
 #include "repository.h"
 #include "environment.h"
+#include "wt-status.h"
 
 
 int cmd_psuh(int argc, const char **argv,
 	     const char *prefix, struct repository *repo)
 
 {
+	struct wt_status status;
 	const char *cfg_name;
 	int i;
+
+	wt_status_prepare(repo, &status);
+	repo_config(repo, git_default_config, &status);
 
 	printf(_("Pony saying hello goes here.\n"));
 
@@ -26,6 +31,8 @@ int cmd_psuh(int argc, const char **argv,
 		printf(_("No name is found in config\n"));
 	else
 		printf(_("Your name: %s\n"), cfg_name);
+
+	printf(_("Your current branch: %s\n"), status.branch);
 
 	return 0;
 
