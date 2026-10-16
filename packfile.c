@@ -471,7 +471,7 @@ static int close_one_pack(struct repository *r)
 	return 0;
 }
 
-static unsigned int get_max_fd_limit(void)
+unsigned int get_max_fd_limit(void)
 {
 #ifdef RLIMIT_NOFILE
 	{

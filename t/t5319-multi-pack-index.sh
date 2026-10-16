@@ -130,7 +130,12 @@ test_expect_success 'corrupt idx reports errors' '
 	test_copy_bytes 1064 <backup-$idx >$objdir/pack/$idx &&
 
 	git -c core.multiPackIndex=true rev-list --objects --all 2>err &&
-	test_grep "index unavailable" err
+	test_grep "index unavailable" err &&
+
+	test_must_fail git multi-pack-index verify 2>err &&
+	test_grep "index unavailable" err &&
+	test_grep "failed to load pack entry" err &&
+	test_grep ! "concurrent maintenance" err
 '
 
 test_expect_success 'add more objects' '
@@ -514,7 +519,11 @@ test_expect_success 'verify invalid chunk offset' '
 
 test_expect_success 'verify missing pack' '
 	corrupt_midx_and_verify $MIDX_BYTE_PACKNAME_ORDER "a" $objdir \
-		"failed to load pack"
+		"failed to load pack in position" &&
+	test_grep "failed to load pack entry" err &&
+	grep "concurrent maintenance" err >hint &&
+	test_line_count = 1 hint &&
+	test_grep "retry after concurrent maintenance completes" hint
 '
 
 test_expect_success 'verify oid fanout out of order' '

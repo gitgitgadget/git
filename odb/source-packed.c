@@ -937,7 +937,15 @@ static int verify_reverse_indices(struct odb_source_packed *source,
 		int load_error = load_pack_revindex_from_disk(e->pack);
 
 		if (load_error < 0) {
-			error(_("unable to load rev-index for pack '%s'"), e->pack->pack_name);
+			if (access(e->pack->pack_name, F_OK) < 0 &&
+			    errno == ENOENT)
+				error(_("pack '%s' disappeared while fsck was "
+					"running; retry after concurrent "
+					"maintenance completes"),
+				      e->pack->pack_name);
+			else
+				error(_("unable to load rev-index for "
+					"pack '%s'"), e->pack->pack_name);
 			res = -1;
 		} else if (!load_error &&
 			   !load_pack_revindex(source->base.odb->repo, e->pack) &&
