@@ -7,12 +7,22 @@
 #include "commit.h"
 #include "pretty.h"
 #include "strbuf.h"
+#include "parse-options.h"
+
+
+static const char * const  psuh_usage[] = {
+	N_("*git psuh [<arg>...]*"),
+	NULL,
+};
 
 
 int cmd_psuh(int argc, const char **argv,
 	     const char *prefix, struct repository *repo)
 
 {
+	struct option options[] = {
+		OPT_END()
+	};
 	struct commit *c = NULL;
 	struct strbuf commitline = STRBUF_INIT;
 	struct wt_status status;
@@ -26,6 +36,8 @@ int cmd_psuh(int argc, const char **argv,
 	printf(_("Pony saying hello goes here.\n"));
 
 	printf(Q_("Your args (there is %d):\n", "Your args (there are %d):\n", argc), argc);
+
+	argc = parse_options(argc, argv, prefix, options, psuh_usage, 0);
 
 	for (i = 0; i < argc; i++)
 		printf("%d: %s\n", i, argv[i]);
