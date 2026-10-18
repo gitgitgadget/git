@@ -149,6 +149,9 @@ include shared.mak
 #
 # Define NO_PTHREADS if you do not have or do not want to use Pthreads.
 #
+# Define USE_POSIX_SPAWN to use posix_spawn() for start_command().  This is
+# currently supported on macOS only.
+#
 # Define NO_PREAD if you have a problem with pread() system call (e.g.
 # cygwin1.dll before v1.5.22).
 #
@@ -888,6 +891,10 @@ TEST_PROGRAMS_NEED_X += test-fake-ssh
 TEST_PROGRAMS_NEED_X += test-tool
 
 TEST_PROGRAMS = $(patsubst %,t/helper/%$X,$(TEST_PROGRAMS_NEED_X))
+
+ifdef USE_POSIX_SPAWN
+TEST_HELPER_LIBS += t/helper/test-fork-interposer.dylib
+endif
 
 # List built-in command $C whose implementation cmd_$C() is not in
 # builtin/$C.o but is linked in as part of some other command.
@@ -2247,6 +2254,10 @@ else
 	EXTLIBS += $(PTHREAD_LIBS)
 endif
 
+ifdef USE_POSIX_SPAWN
+	BASIC_CFLAGS += -DUSE_POSIX_SPAWN
+endif
+
 ifdef HAVE_PATHS_H
 	BASIC_CFLAGS += -DHAVE_PATHS_H
 endif
@@ -3387,6 +3398,7 @@ GIT-BUILD-OPTIONS: FORCE
 		-e "s|@TEST_SHELL_PATH@|\'$(TEST_SHELL_PATH_SQ)\'|" \
 		-e "s|@USE_GETTEXT_SCHEME@|\'$(USE_GETTEXT_SCHEME)\'|" \
 		-e "s|@USE_LIBPCRE2@|\'$(USE_LIBPCRE2)\'|" \
+		-e "s|@USE_POSIX_SPAWN@|\'$(USE_POSIX_SPAWN)\'|" \
 		-e "s|@WITH_BREAKING_CHANGES@|\'$(WITH_BREAKING_CHANGES)\'|" \
 		-e "s|@X@|\'$(X)\'|" \
 		GIT-BUILD-OPTIONS.in >$@+
@@ -3408,7 +3420,7 @@ endif
 
 test_bindir_programs := $(patsubst %,bin-wrappers/%,$(BINDIR_PROGRAMS_NEED_X) $(BINDIR_PROGRAMS_NO_X) $(TEST_PROGRAMS_NEED_X))
 
-all:: $(TEST_PROGRAMS) $(test_bindir_programs) $(UNIT_TEST_PROGS) $(CLAR_TEST_PROG)
+all:: $(TEST_PROGRAMS) $(TEST_HELPER_LIBS) $(test_bindir_programs) $(UNIT_TEST_PROGS) $(CLAR_TEST_PROG)
 
 $(test_bindir_programs): bin-wrappers/%: bin-wrappers/wrap-for-bin.sh
 	$(QUIET_GEN)sed -e '1s|#!.*/sh|#!$(SHELL_PATH_SQ)|' \
@@ -3442,10 +3454,15 @@ perf: all
 
 .PRECIOUS: $(TEST_OBJS)
 
-t/helper/test-tool$X: $(patsubst %,t/helper/%,$(TEST_BUILTINS_OBJS)) $(UNIT_TEST_DIR)/test-lib.o
+t/helper/test-tool$X: $(patsubst %,t/helper/%,$(TEST_BUILTINS_OBJS)) $(UNIT_TEST_DIR)/test-lib.o $(TEST_HELPER_LIBS)
 
 t/helper/test-%$X: t/helper/test-%.o GIT-LDFLAGS $(GITLIBS)
 	$(QUIET_LINK)$(CC) $(ALL_CFLAGS) -o $@ $(ALL_LDFLAGS) $(filter %.o,$^) $(filter %.a,$^) $(LIBS)
+
+ifdef USE_POSIX_SPAWN
+t/helper/test-fork-interposer.dylib: t/helper/test-fork-interposer.c
+	$(QUIET_LINK)$(CC) $(ALL_CFLAGS) -dynamiclib -o $@ $(ALL_LDFLAGS) $<
+endif
 
 check-sha1:: t/helper/test-tool$X
 	t/helper/test-sha1.sh
@@ -3918,7 +3935,7 @@ clean: profile-clean coverage-clean cocciclean
 	$(RM) headless-git.o
 	$(RM) $(LIB_FILE)
 	$(RM) $(ALL_PROGRAMS) $(SCRIPT_LIB) $(BUILT_INS) $(OTHER_PROGRAMS)
-	$(RM) $(TEST_PROGRAMS)
+	$(RM) $(TEST_PROGRAMS) t/helper/test-fork-interposer.dylib
 	$(RM) $(FUZZ_PROGRAMS)
 	$(RM) $(SP_OBJ)
 	$(RM) $(HCC)
