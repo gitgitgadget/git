@@ -1176,6 +1176,7 @@ static struct imap_store *imap_open_store(struct imap_server_conf *srvc, const c
 
 		imap->buf.sock.fd[0] = tunnel.out;
 		imap->buf.sock.fd[1] = tunnel.in;
+		child_process_clear(&tunnel);
 
 		imap_info("OK\n");
 	} else {
