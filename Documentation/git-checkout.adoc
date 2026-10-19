@@ -112,6 +112,19 @@ OPTIONS
 `--quiet`::
 	Quiet, suppress feedback messages.
 
+`--orphaned-commit-warning`::
+`--no-orphaned-commit-warning`::
+	Check for commits left behind when leaving a detached `HEAD` and
+	warn if they are not reachable from any ref or the new `HEAD`.
+	Use `--no-orphaned-commit-warning` to skip this potentially expensive
+	check without suppressing other checkout output. Commits left behind
+	can still be recovered through the `HEAD` reflog while the relevant
+	entries and objects remain available.
++
+The check is enabled by default. These options override
+`checkout.orphanedCommitWarning`. `--quiet` skips the check even when
+`--orphaned-commit-warning` is given.
+
 `--progress`::
 `--no-progress`::
 	Progress status is reported on the standard error stream
