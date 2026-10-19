@@ -34,7 +34,6 @@ setup_url_pushremote () {
 		git checkout -b topic --track origin/main &&
 		git commit --allow-empty -m topic-change &&
 		git config push.default current &&
-		git config status.compareBranches "@{upstream} @{push}" &&
 		git config branch.topic.pushRemote "$fork_url" &&
 		git push
 	)

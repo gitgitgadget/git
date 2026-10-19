@@ -331,19 +331,6 @@ test_expect_success 'status.compareBranches deduplicates when upstream and push 
 	test_cmp expect actual
 '
 
-test_expect_success 'status.compareBranches with only upstream shows only upstream' '
-	test_config -C test status.compareBranches "@{upstream}" &&
-	git -C test checkout main &&
-	git -C test status >actual &&
-	cat >expect <<-EOF &&
-	On branch main
-	Your branch is up to date with ${SQ}origin/main${SQ}.
-
-	nothing to commit, working tree clean
-	EOF
-	test_cmp expect actual
-'
-
 test_expect_success 'status.compareBranches with only push shows only push' '
 	test_config -C test push.default current &&
 	test_config -C test status.compareBranches "@{push}" &&
@@ -361,9 +348,8 @@ test_expect_success 'status.compareBranches with only push shows only push' '
 	test_cmp expect actual
 '
 
-test_expect_success 'status.compareBranches shows ahead of both upstream and push branch' '
+test_expect_success 'status shows ahead of both upstream and push branch by default' '
 	test_config -C test push.default current &&
-	test_config -C test status.compareBranches "@{upstream} @{push}" &&
 	git -C test checkout -b feature3 origin/main &&
 	git -C test push origin HEAD &&
 	(cd test && advance work) &&
@@ -374,6 +360,20 @@ test_expect_success 'status.compareBranches shows ahead of both upstream and pus
 
 	Your branch is ahead of ${SQ}origin/feature3${SQ} by 1 commit.
 	  (use "git push" to publish your local commits)
+
+	nothing to commit, working tree clean
+	EOF
+	test_cmp expect actual
+'
+
+test_expect_success 'status.compareBranches with only upstream shows only upstream' '
+	test_config -C test push.default current &&
+	test_config -C test status.compareBranches "@{upstream}" &&
+	git -C test checkout feature3 &&
+	git -C test status >actual &&
+	cat >expect <<-EOF &&
+	On branch feature3
+	Your branch is ahead of ${SQ}origin/main${SQ} by 1 commit.
 
 	nothing to commit, working tree clean
 	EOF
