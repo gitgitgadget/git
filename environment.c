@@ -57,7 +57,6 @@ char *check_roundtrip_encoding;
 #define OBJECT_CREATION_MODE OBJECT_CREATION_USES_HARDLINKS
 #endif
 int grafts_keep_true_parents;
-unsigned long pack_size_limit_cfg;
 
 #ifndef PROTECT_HFS_DEFAULT
 #define PROTECT_HFS_DEFAULT 0
@@ -728,7 +727,7 @@ int git_default_config(const char *var, const char *value,
 	}
 
 	if (!strcmp(var, "pack.packsizelimit")) {
-		pack_size_limit_cfg = git_config_ulong(var, value, ctx->kvi);
+		cfg->pack_size_limit = git_config_ulong(var, value, ctx->kvi);
 		return 0;
 	}
 
