@@ -36,7 +36,7 @@ expect_tree_entries () {
 	test_cmp expect actual
 }
 
-test_expect_success 'refuses to work with merge commits' '
+test_expect_success 'refuses to split a merge commit' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -49,9 +49,7 @@ test_expect_success 'refuses to work with merge commits' '
 		git switch - &&
 		git merge theirs &&
 		test_must_fail git history split HEAD 2>err &&
-		test_grep "cannot split up merge commit" err &&
-		test_must_fail git history split HEAD~ 2>err &&
-		test_grep "replaying merge commits is not supported yet" err
+		test_grep "cannot split up merge commit" err
 	)
 '
 

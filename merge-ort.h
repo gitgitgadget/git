@@ -87,6 +87,39 @@ struct merge_options {
 	unsigned record_conflict_msgs_as_headers : 1;
 	const char *msg_header_prefix;
 
+	/*
+	 * Conflict-interval side channel for replay-merge. Each strmap,
+	 * when non-NULL, maps a path to a heap-allocated
+	 * `struct xdl_conflict_intervals *`. The caller owns both the
+	 * strmaps and the value pointers.
+	 *
+	 *   out_replay_intervals: populated by the per-path content
+	 *     merge. After ll_merge returns for a path, the recorded
+	 *     intervals are moved into a freshly allocated struct
+	 *     stored under the path. Paths whose inner content merge
+	 *     was clean do not appear; paths whose ll_merge call
+	 *     produced conflict markers (text driver) or returned a
+	 *     non-clean status (binary, custom, union, ours/theirs)
+	 *     do.
+	 *
+	 *   in_replay_orig_intervals, in_replay_side2_intervals:
+	 *     looked up per path during the outer merge and forwarded
+	 *     into ll_merge_options.in_orig_intervals /
+	 *     ll_merge_options.in_side2_intervals so that xdl_merge
+	 *     can detect a conflict in mf2 (side2) that has no
+	 *     counterpart in orig.
+	 *
+	 *     The fast paths in collect_merge_info_callback() and
+	 *     process_entry() that would otherwise take side2's blob
+	 *     verbatim also consult `in_replay_side2_intervals`: a
+	 *     present entry forces the path through the full content
+	 *     merge (or, when the entry was recorded for a non-xdiff
+	 *     driver, surfaces an explicit conflict).
+	 */
+	struct strmap *out_replay_intervals;
+	struct strmap *in_replay_orig_intervals;
+	struct strmap *in_replay_side2_intervals;
+
 	/* internal fields used by the implementation */
 	struct merge_options_internal *priv;
 };

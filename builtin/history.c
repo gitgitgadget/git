@@ -233,15 +233,15 @@ static int parse_ref_action(const struct option *opt, const char *value, int uns
 	return 0;
 }
 
-static int revwalk_contains_merges(struct repository *repo,
-				   const struct strvec *revwalk_args)
+static int revwalk_contains_octopus_merges(struct repository *repo,
+					   const struct strvec *revwalk_args)
 {
 	struct strvec args = STRVEC_INIT;
 	struct rev_info revs;
 	int ret;
 
 	strvec_pushv(&args, revwalk_args->v);
-	strvec_push(&args, "--min-parents=2");
+	strvec_push(&args, "--min-parents=3");
 
 	repo_init_revisions(repo, &revs, NULL);
 
@@ -255,7 +255,7 @@ static int revwalk_contains_merges(struct repository *repo,
 	}
 
 	if (get_revision(&revs)) {
-		ret = error(_("replaying merge commits is not supported yet!"));
+		ret = error(_("replaying octopus merges is not supported"));
 		goto out;
 	}
 
@@ -327,7 +327,7 @@ static int setup_revwalk(struct repository *repo,
 		strvec_push(&args, "HEAD");
 	}
 
-	ret = revwalk_contains_merges(repo, &args);
+	ret = revwalk_contains_octopus_merges(repo, &args);
 	if (ret < 0)
 		goto out;
 
@@ -769,6 +769,9 @@ static int cmd_history_reword(int argc,
 	if (ret < 0) {
 		ret = error(_("failed replaying descendants"));
 		goto out;
+	} else if (ret) {
+		ret = error(_("conflict during replay; some descendants were not rewritten"));
+		goto out;
 	}
 
 	ret = 0;
@@ -1002,6 +1005,9 @@ static int cmd_history_split(int argc,
 				       reflog_msg.buf, dry_run, REPLAY_EMPTY_COMMIT_ABORT);
 	if (ret < 0) {
 		ret = error(_("failed replaying descendants"));
+		goto out;
+	} else if (ret) {
+		ret = error(_("conflict during replay; some descendants were not rewritten"));
 		goto out;
 	}
 

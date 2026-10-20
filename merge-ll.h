@@ -83,6 +83,20 @@ struct ll_merge_options {
 
 	/* Extra xpparam_t flags as defined in xdiff/xdiff.h. */
 	long xdl_opts;
+
+	/*
+	 * Forwarded onto xmparam_t. See xdiff/xdiff.h:s_xmparam.
+	 * `out_intervals`, when set, receives the byte ranges of
+	 * every conflict-marker hunk xdl_merge writes into the
+	 * result buffer. `in_orig_intervals` and
+	 * `in_side2_intervals` request the newly-introduced-conflict
+	 * detection in the outer merge of a replayed merge commit;
+	 * setting `in_side2_intervals` to a non-NULL pointer is the
+	 * opt-in.
+	 */
+	struct xdl_conflict_intervals *out_intervals;
+	struct xdl_conflict_intervals *in_orig_intervals;
+	struct xdl_conflict_intervals *in_side2_intervals;
 };
 
 #define LL_MERGE_OPTIONS_INIT { .conflict_style = -1 }
