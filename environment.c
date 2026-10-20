@@ -57,7 +57,6 @@ char *check_roundtrip_encoding;
 #define OBJECT_CREATION_MODE OBJECT_CREATION_USES_HARDLINKS
 #endif
 int grafts_keep_true_parents;
-unsigned long pack_size_limit_cfg;
 
 #ifndef PROTECT_HFS_DEFAULT
 #define PROTECT_HFS_DEFAULT 0
@@ -728,7 +727,7 @@ int git_default_config(const char *var, const char *value,
 	}
 
 	if (!strcmp(var, "pack.packsizelimit")) {
-		pack_size_limit_cfg = git_config_ulong(var, value, ctx->kvi);
+		cfg->pack_size_limit = git_config_ulong(var, value, ctx->kvi);
 		return 0;
 	}
 
@@ -768,7 +767,6 @@ void repo_config_values_init(struct repo_config_values *cfg)
 	cfg->protect_ntfs = PROTECT_NTFS_DEFAULT;
 	cfg->trust_executable_bit = 1;
 	cfg->has_symlinks = platform_has_symlinks();
-
 
 	/* section "branch" config values */
 	cfg->branch_track = BRANCH_TRACK_REMOTE;
