@@ -256,4 +256,29 @@ test_expect_success 'cherry-pick is unaware of --reference (for now)' '
 	test_grep "^usage: git cherry-pick" actual
 '
 
+# Tests for shallow boundary safeguard
+
+test_expect_success 'setup shallow boundary tests' '
+	git init src &&
+	test_commit -C src A &&
+	test_commit -C src B &&
+	git clone --no-local --depth=1 src shallow-repo
+'
+
+test_expect_success 'revert of shallow boundary commit is refused by default' '
+	test_must_fail git -C shallow-repo revert --no-edit HEAD 2>err &&
+	test_grep "shallow boundary commit" err
+'
+
+test_expect_success 'revert of shallow boundary succeeds with --allow-shallow-boundary' '
+	git -C shallow-repo revert --no-edit --allow-shallow-boundary HEAD
+'
+
+test_expect_success 'revert in non-shallow repo is unaffected' '
+	git init non-shallow &&
+	test_commit -C non-shallow A &&
+	test_commit -C non-shallow B &&
+	git -C non-shallow revert --no-edit HEAD
+'
+
 test_done

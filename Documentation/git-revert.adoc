@@ -8,7 +8,7 @@ git-revert - Revert some existing commits
 SYNOPSIS
 --------
 [verse]
-'git revert' [--[no-]edit] [-n] [-m <parent-number>] [-s] [-S[<keyid>]] <commit>...
+'git revert' [--[no-]edit] [-n] [-m <parent-number>] [-s] [-S[<keyid>]] [--allow-shallow-boundary] <commit>...
 'git revert' (--continue | --skip | --abort | --quit)
 
 DESCRIPTION
@@ -121,6 +121,16 @@ include::rerere-options.adoc[]
 	(cf. linkgit:git-log[1]).  The `revert.reference`
 	configuration variable can be used to enable this option by
 	default.
+
+--allow-shallow-boundary::
+	By default, 'git revert' refuses to revert a commit that is a
+	shallow boundary (i.e. a commit listed in `.git/shallow`),
+	because its true parent history is absent from the clone and
+	reverting it would remove all tracked files. This option
+	overrides that safeguard and allows the revert to proceed.
++
+To restore full history before reverting, use
+`git fetch --unshallow` instead.
 
 
 SEQUENCER SUBCOMMANDS
