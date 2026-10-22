@@ -49,6 +49,7 @@
 #include "rebase-interactive.h"
 #include "reset.h"
 #include "branch.h"
+#include "shallow.h"
 
 #define GIT_REFLOG_ACTION "GIT_REFLOG_ACTION"
 
@@ -2365,6 +2366,19 @@ static enum pick_result do_pick_commit(struct repository *r,
 			return error_dirty_index(r, opts);
 	}
 	discard_index(r->index);
+
+	if (is_repository_shallow(r)) {
+		struct commit_graft *graft = lookup_commit_graft(r, &commit->object.oid);
+		if (graft && graft->nr_parent < 0 && !opts->allow_shallow_boundary) {
+			return error(_("%s: commit %s is a shallow boundary commit.\n"
+				       "Reverting it will remove all tracked files because its\n"
+				       "true parent history is not present in this clone.\n"
+				       "Use --allow-shallow-boundary to override, or\n"
+				       "'git fetch --unshallow' to restore full history first."),
+				     command_to_string(command),
+				     oid_to_hex(&commit->object.oid));
+		}
+	}
 
 	if (!commit->parents)
 		parent = NULL;
