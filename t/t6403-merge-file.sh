@@ -301,6 +301,26 @@ test_expect_success "merge conflicting with --union" '
 	test_cmp expect.txt test.txt
 '
 
+test_expect_success "merge conflicting with --base" '
+	cp backup.txt test.txt &&
+
+	cat >expect.txt <<-\EOF &&
+	Dominus regit me,
+	et nihil mihi deerit.
+	In loco pascuae ibi me collocavit,
+	super aquam refectionis educavit me;
+	animam meam convertit,
+	deduxit me super semitas jusitiae,
+	propter nomen suum.
+	Nam et si ambulavero in medio umbrae mortis,
+	non timebo mala, quoniam tu mecum es:
+	virga tua et baculus tuus ipsa me consolata sunt.
+	EOF
+
+	git merge-file --base test.txt orig.txt new3.txt &&
+	test_cmp expect.txt test.txt
+'
+
 test_expect_success "merge with conflicts, using -L" '
 	cp backup.txt test.txt &&
 

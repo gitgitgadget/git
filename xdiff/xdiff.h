@@ -63,6 +63,7 @@ extern "C" {
 #define XDL_MERGE_FAVOR_OURS 1
 #define XDL_MERGE_FAVOR_THEIRS 2
 #define XDL_MERGE_FAVOR_UNION 3
+#define XDL_MERGE_FAVOR_BASE 4
 
 /* merge output styles */
 #define XDL_MERGE_DIFF3 1
