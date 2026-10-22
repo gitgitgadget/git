@@ -18,6 +18,7 @@
 #include "string-list.h"
 #include "thread-utils.h"
 #include "wildmatch.h"
+#include "write-or-die.h"
 
 static int number_callbacks;
 static int parallel_next(struct child_process *cp,
@@ -439,6 +440,161 @@ static int inherit_handle_child(void)
 	return 0;
 }
 
+static void exit_on_term(int sig UNUSED)
+{
+	_exit(7);
+}
+
+static void return_on_term(int sig UNUSED)
+{
+}
+
+static void unexpected_cleanup(struct child_process *process UNUSED)
+{
+	fprintf(stderr, "unexpected cleanup callback\n");
+}
+
+static int test_terminate(const char *mode)
+{
+	struct child_process child = CHILD_PROCESS_INIT;
+	char ready;
+	int status;
+	int signal_cleanup = !strcmp(mode, "signal") ||
+		!strcmp(mode, "signal-wait");
+
+	if (signal_cleanup)
+		signal(SIGTERM, return_on_term);
+	strvec_pushl(&child.args, "test-tool", "run-command",
+		     "termination-child", mode, NULL);
+	if (!strcmp(mode, "exited"))
+		child.in = -1;
+	child.out = -1;
+	child.clean_on_exit = 1;
+	child.clean_on_exit_handler = unexpected_cleanup;
+	child.wait_after_clean = !strcmp(mode, "signal-wait");
+	if (start_command(&child))
+		return 1;
+	if (read_in_full(child.out, &ready, 1) != 1)
+		die("child did not become ready");
+	close(child.out);
+	if (!strcmp(mode, "reaped")) {
+		if (waitpid(child.pid, &status, 0) != child.pid)
+			die_errno("could not reap child");
+	}
+#ifdef GIT_WINDOWS_NATIVE
+	if (!strcmp(mode, "exited")) {
+		HANDLE process = OpenProcess(SYNCHRONIZE, FALSE, child.pid);
+
+		if (!process)
+			die("could not open child process: %lu",
+			    (unsigned long)GetLastError());
+		write_or_die(child.in, "x", 1);
+		close(child.in);
+		if (WaitForSingleObject(process, 30000) != WAIT_OBJECT_0)
+			die("child did not exit");
+		CloseHandle(process);
+	}
+#endif
+	if (signal_cleanup) {
+		raise(SIGTERM);
+		if (child.wait_after_clean) {
+			child_process_clear(&child);
+			status = 0;
+		} else {
+			status = finish_command(&child);
+		}
+	} else {
+		status = terminate_command(&child, 100);
+	}
+	printf("status=%d args=%"PRIuMAX"\n", status,
+	       (uintmax_t)child.args.nr);
+	return 0;
+}
+
+static int print_pid_and_wait(int argc, const char **argv)
+{
+	int waited_ms = 0;
+
+	if (argc != 2)
+		die("usage: test-tool run-command print-pid-and-wait <path>");
+
+	printf("%"PRIuMAX"\n", (uintmax_t)getpid());
+	fflush(stdout);
+
+	while (access(argv[1], F_OK) < 0) {
+		if (errno != ENOENT)
+			die_errno("could not access '%s'", argv[1]);
+		if (waited_ms >= 30000)
+			die("timed out waiting for '%s'", argv[1]);
+		sleep_millisec(10);
+		waited_ms += 10;
+	}
+
+	return 0;
+}
+
+static int test_pipe_command(const char *mode)
+{
+	struct child_process child = CHILD_PROCESS_INIT;
+	struct strbuf input = STRBUF_INIT;
+	struct strbuf output = STRBUF_INIT;
+	int ret, status = -1, broken_pipe;
+	int legacy = !strcmp(mode, "legacy");
+
+	if (starts_with(mode, "cancel"))
+		signal(SIGTERM, return_on_term);
+	if (legacy)
+		signal(SIGPIPE, SIG_IGN);
+	strvec_pushl(&child.args, "test-tool", "run-command",
+		     "pipe-command-child", mode, NULL);
+	child.clean_on_exit = !legacy;
+	child.quiet_termination = 1;
+	strbuf_addchars(&input, 'x', 16 * 1024 * 1024);
+	if (legacy)
+		ret = pipe_command(&child, input.buf, input.len,
+				   &output, 0, NULL, 0);
+	else
+		ret = pipe_command_with_status(&child, input.buf, input.len,
+					       &output, 0, NULL, 0, &status);
+	broken_pipe = ret < 0 && errno == EPIPE;
+	printf("result=%d status=%d broken-pipe=%d\n",
+	       ret, status, broken_pipe);
+	fwrite_or_die(stdout, output.buf, output.len);
+	strbuf_release(&input);
+	strbuf_release(&output);
+	return 0;
+}
+
+static int pipe_command_child(const char *mode)
+{
+	char ready;
+
+	/* Make sure the parent has started pumping before closing its input. */
+	write_or_die(1, "output\n", 7);
+	if (read_in_full(0, &ready, 1) != 1)
+		die("parent did not send input");
+	if (starts_with(mode, "consume")) {
+		struct strbuf input = STRBUF_INIT;
+
+		if (strbuf_read(&input, 0, 0) < 0)
+			die_errno("could not read input");
+		strbuf_release(&input);
+		return !strcmp(mode, "consume-failure") ? 7 : 0;
+	}
+	if (starts_with(mode, "cancel")) {
+		if (!strcmp(mode, "cancel-failure"))
+			signal(SIGTERM, exit_on_term);
+		if (kill(getppid(), SIGTERM))
+			die_errno("could not signal parent");
+		sleep_millisec(30000);
+		return 1;
+	}
+	close(0);
+	if (!strcmp(mode, "term"))
+		raise(SIGTERM);
+	return !strcmp(mode, "failure") ? 7 : 0;
+}
+
 int cmd__run_command(int argc, const char **argv)
 {
 	struct child_process proc = CHILD_PROCESS_INIT;
@@ -448,8 +604,34 @@ int cmd__run_command(int argc, const char **argv)
 		.data = &proc,
 	};
 
+	if (argc == 3 && !strcmp(argv[1], "terminate"))
+		return test_terminate(argv[2]);
+	if (argc == 3 && !strcmp(argv[1], "pipe-command"))
+		return test_pipe_command(argv[2]);
+	if (argc == 3 && !strcmp(argv[1], "pipe-command-child"))
+		return pipe_command_child(argv[2]);
+	if (argc == 3 && !strcmp(argv[1], "termination-child")) {
+		if (!strcmp(argv[2], "ignore"))
+			signal(SIGTERM, SIG_IGN);
+		else if (!strcmp(argv[2], "exit"))
+			signal(SIGTERM, exit_on_term);
+		write_or_die(1, "r", 1);
+		if (!strcmp(argv[2], "exited")) {
+			char release;
+
+			if (read_in_full(0, &release, 1) != 1)
+				die("parent did not release child");
+			return 7;
+		}
+		if (!strcmp(argv[2], "reaped"))
+			return 0;
+		sleep_millisec(30000);
+		return 1;
+	}
 	if (argc > 1 && !strcmp(argv[1], "testsuite"))
 		return testsuite(argc - 1, argv + 1);
+	if (argc > 1 && !strcmp(argv[1], "print-pid-and-wait"))
+		return print_pid_and_wait(argc - 1, argv + 1);
 	if (!strcmp(argv[1], "inherited-handle"))
 		return inherit_handle(argv[0]);
 	if (!strcmp(argv[1], "inherited-handle-child"))
@@ -484,7 +666,9 @@ int cmd__run_command(int argc, const char **argv)
 		fprintf(stderr, "FAIL %s\n", argv[1]);
 		return 1;
 	}
-	if (!strcmp(argv[1], "run-command")) {
+	if (!strcmp(argv[1], "run-command") ||
+	    !strcmp(argv[1], "quiet-run-command")) {
+		proc.quiet_termination = !strcmp(argv[1], "quiet-run-command");
 		ret = run_command(&proc);
 		goto cleanup;
 	}
