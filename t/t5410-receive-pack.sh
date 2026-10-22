@@ -68,9 +68,11 @@ test_expect_success TEE_DOES_NOT_HANG \
 	# Replay captured git-send-pack(1) output on new empty repository.
 	git init --bare remote.git &&
 	git receive-pack remote.git <out >actual 2>err &&
+	depacketize <actual >actual.raw &&
 
-	test_grep "missing necessary objects" actual &&
-	test_grep "fatal: Failed to traverse parents" err &&
+	test_grep "missing necessary objects" actual.raw &&
+	test_grep "fatal: Failed to traverse parents" actual.raw &&
+	test_must_be_empty err &&
 	test_must_fail git -C remote.git cat-file -e $(git -C repo rev-parse HEAD)
 '
 
