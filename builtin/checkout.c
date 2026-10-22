@@ -36,6 +36,7 @@
 #include "strvec.h"
 #include "submodule.h"
 #include "symlinks.h"
+#include "trace.h"
 #include "trace2.h"
 #include "tree.h"
 #include "tree-walk.h"
@@ -52,6 +53,7 @@ struct checkout_opts {
 	int patch_interhunk_context;
 	int auto_advance;
 	int quiet;
+	int orphaned_commit_warning;
 	int merge;
 	int force;
 	int force_detach;
@@ -100,6 +102,7 @@ struct checkout_opts {
 	.patch_context = -1, \
 	.patch_interhunk_context = -1, \
 	.auto_advance = 1, \
+	.orphaned_commit_warning = 1, \
 }
 
 #define MERGE_WORKING_TREE_UNPACK_FAILED (-2)
@@ -1173,7 +1176,10 @@ static void orphaned_commit_warning(struct commit *old_commit, struct commit *ne
 {
 	struct rev_info revs;
 	struct object *object = &old_commit->object;
+	uint64_t t_begin = getnanotime();
+	uint64_t t_delta_in_ms;
 
+	trace2_region_enter("checkout", "orphaned_commit_warning", the_repository);
 	repo_init_revisions(the_repository, &revs, NULL);
 	setup_revisions(0, NULL, &revs, NULL);
 
@@ -1197,6 +1203,17 @@ static void orphaned_commit_warning(struct commit *old_commit, struct commit *ne
 	/* Clean up objects used, as they will be reused. */
 	repo_clear_commit_marks(the_repository, ALL_REV_FLAGS);
 	release_revisions(&revs);
+	trace2_region_leave("checkout", "orphaned_commit_warning", the_repository);
+
+	t_delta_in_ms = (getnanotime() - t_begin) / 1000000;
+	if (t_delta_in_ms > 2000 ||
+	    git_env_bool("GIT_TEST_CHECKOUT_DELAY_WARNING", 0))
+		advise_if_enabled(ADVICE_CHECKOUT_ORPHANED_COMMIT_WARNING,
+				  _("Checking for orphaned commits took %.2f seconds.\n"
+				    "You can use 'git config set checkout.orphanedCommitWarning false'\n"
+				    "to skip this check, but you will no longer be warned when leaving\n"
+				    "commits behind that are not connected to any of your branches."),
+				  t_delta_in_ms / 1000.0);
 }
 
 static int switch_branches(const struct checkout_opts *opts,
@@ -1295,8 +1312,14 @@ static int switch_branches(const struct checkout_opts *opts,
 		}
 	}
 
-	if (!opts->quiet && !old_branch_info.path && old_branch_info.commit && new_branch_info->commit != old_branch_info.commit)
-		orphaned_commit_warning(old_branch_info.commit, new_branch_info->commit);
+	if (!opts->quiet && !old_branch_info.path && old_branch_info.commit &&
+	    new_branch_info->commit != old_branch_info.commit) {
+		if (opts->orphaned_commit_warning)
+			orphaned_commit_warning(old_branch_info.commit, new_branch_info->commit);
+		else
+			describe_detached_head(_("Previous HEAD position was"),
+					       old_branch_info.commit);
+	}
 
 	if (autostash_res == STASH_APPLY_CONFLICT && !opts->quiet)
 		fputc('\n', stderr);
@@ -1337,6 +1360,10 @@ static int git_checkout_config(const char *var, const char *value,
 	}
 	if (!strcmp(var, "checkout.guess")) {
 		opts->dwim_new_local_branch = git_config_bool(var, value);
+		return 0;
+	}
+	if (!strcmp(var, "checkout.orphanedcommitwarning")) {
+		opts->orphaned_commit_warning = git_config_bool(var, value);
 		return 0;
 	}
 
