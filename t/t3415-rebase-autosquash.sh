@@ -465,9 +465,7 @@ test_expect_success 'abort last squash' '
 		rebase -ki --autosquash HEAD~4 &&
 	: do not finish the squash, but resolve it manually &&
 	git commit --allow-empty --amend -m edited-first &&
-	git rebase --skip &&
-	git show >actual &&
-	test_grep ! first actual
+	test_must_fail git rebase --skip  
 '
 
 test_expect_success 'fixup a fixup' '
@@ -508,6 +506,53 @@ test_expect_success 'pick and fixup respect commit.cleanup' '
 	git -c commit.cleanup=strip rebase -i --autosquash HEAD~3 &&
 	test_commit_message HEAD~1 -m "second commit" &&
 	test_commit_message HEAD -m "something"
+'
+
+test_expect_success 'autosquash refuses to fix up a target skipped after conflict' '
+	test_when_finished "test_might_fail git rebase --abort" &&
+	git reset --hard base &&
+	test_commit target conflict-file target &&
+	target=$(git rev-parse HEAD) &&
+	test_commit middle middle-file middle &&
+	echo fixup >fixup-file &&
+	git add fixup-file &&
+	test_tick &&
+	git commit -m "fixup! target" &&
+	topic=$(git rev-parse HEAD) &&
+	git checkout -B autosquash-empty-conflict-upstream "$target^" &&
+	test_commit upstream conflict-file upstream &&
+	git checkout -B autosquash-empty-conflict-topic "$topic" &&
+	test_must_fail env GIT_SEQUENCE_EDITOR=: \
+		git rebase -i --autosquash \
+			--onto autosquash-empty-conflict-upstream "$target^" >actual 2>&1 &&
+	echo upstream >conflict-file &&
+	git add conflict-file &&
+	test_must_fail git rebase --continue >actual 2>&1 &&
+	test_grep "was not applied" actual &&
+	test_cmp_rev autosquash-empty-conflict-upstream HEAD &&
+	git rebase --abort
+'
+
+test_expect_success 'autosquash refuses to fix up a target already upstream' '
+	test_when_finished "test_might_fail git rebase --abort" &&
+	git reset --hard base &&
+	test_commit target-upstream upstream-file target &&
+	target=$(git rev-parse HEAD) &&
+	test_commit middle-upstream middle-file middle &&
+	echo fixup >fixup-file &&
+	git add fixup-file &&
+	test_tick &&
+	git commit -m "fixup! target-upstream" &&
+	topic=$(git rev-parse HEAD) &&
+	git checkout -B autosquash-already-upstream "$target^" &&
+	test_commit upstream-copy upstream-file target &&
+	git checkout -B autosquash-already-upstream-topic "$topic" &&
+	test_must_fail env GIT_SEQUENCE_EDITOR=: \
+		git rebase -i --autosquash --reapply-cherry-picks --empty=drop \
+			--onto autosquash-already-upstream "$target^" >actual 2>&1 &&
+	test_grep "was not applied" actual &&
+	test_cmp_rev autosquash-already-upstream HEAD &&
+	git rebase --abort
 '
 
 test_done

@@ -144,6 +144,19 @@ static GIT_PATH_FUNC(rebase_path_author_script, "rebase-merge/author-script")
  */
 static GIT_PATH_FUNC(rebase_path_amend, "rebase-merge/amend")
 /*
+ * When a commit before a fixup/squash could not be applied, this file
+ * contains the object name of that commit. The following fixup/squash
+ * command must not be applied to the previous commit instead.
+ */
+static GIT_PATH_FUNC(rebase_path_fixup_target, "rebase-merge/fixup-target")
+/*
+ * When a pick conflicts before a fixup/squash, this file contains HEAD
+ * before the pick was attempted. It lets us tell whether the pick was
+ * actually committed when the rebase is continued.
+ */
+static GIT_PATH_FUNC(rebase_path_fixup_target_head,
+		     "rebase-merge/fixup-target-head")
+/*
  * When we stop at a given patch via the "edit" command, this file contains
  * the commit object name of the corresponding patch.
  */
@@ -5085,6 +5098,24 @@ static int pick_one_commit(struct repository *r,
 	enum pick_result pick_res;
 	struct todo_item *item = todo_list->items + todo_list->current;
 	const char *arg = todo_item_get_arg(todo_list, item);
+	struct strbuf target = STRBUF_INIT;
+
+	if (is_fixup(item->command) &&
+	    file_exists(rebase_path_fixup_target())) {
+		if (!read_oneliner(&target, rebase_path_fixup_target(),
+				   READ_ONELINER_SKIP_IF_EMPTY)) {
+			*reschedule = 1;
+			strbuf_release(&target);
+			return error(_("could not read '%s'"),
+				     rebase_path_fixup_target());
+		}
+		error(_("cannot %s %s: commit %s was not applied"),
+		      command_to_string(item->command),
+		      short_commit_name(r, item->commit), target.buf);
+		strbuf_release(&target);
+		*reschedule = 1;
+		return -1;
+	}
 
 	pick_res = do_pick_commit(r, item, opts, is_final_fixup(todo_list),
 				  check_todo);
@@ -5097,6 +5128,18 @@ static int pick_one_commit(struct repository *r,
 		default:
 			return 0;
 		}
+	if (pick_res == PICK_RESULT_CONFLICTS && !is_fixup(item->command)) {
+		struct object_id head;
+		const char *head_hex;
+
+		if (repo_get_oid(r, "HEAD", &head))
+			oidclr(&head, r->hash_algo);
+		head_hex = oid_to_hex(&head);
+		if (write_message(head_hex, strlen(head_hex),
+				  rebase_path_fixup_target_head(), 1))
+			return error_errno(_("could not write '%s'"),
+					   rebase_path_fixup_target_head());
+	}
 
 	if (pick_res == PICK_RESULT_ERROR) {
 		/* Reschedule */
@@ -5107,6 +5150,16 @@ static int pick_one_commit(struct repository *r,
 		int res = pick_res == PICK_RESULT_CONFLICTS;
 		int to_amend = pick_res != PICK_RESULT_CONFLICTS &&
 				pick_res != PICK_RESULT_DROPPED;
+
+		if (pick_res == PICK_RESULT_OK)
+			unlink(rebase_path_fixup_target());
+		else if (pick_res == PICK_RESULT_DROPPED) {
+			const char *oid = oid_to_hex(&item->commit->object.oid);
+			if (write_message(oid, strlen(oid),
+					  rebase_path_fixup_target(), 0))
+				return error_errno(_("could not write '%s'"),
+						   rebase_path_fixup_target());
+		}
 
 		/*
 		 * NEEDSWORK: Do not record the commit as rewritten when
@@ -5123,10 +5176,19 @@ static int pick_one_commit(struct repository *r,
 		return error_with_patch(r, commit, arg, item->arg_len, opts,
 					res, to_amend);
 	} else if (pick_res == PICK_RESULT_OK) {
+		if (!is_fixup(item->command))
+			unlink(rebase_path_fixup_target());
 		record_in_rewritten(&item->commit->object.oid,
 				    peek_command(todo_list, 1));
 		return 0;
 	} else if (pick_res == PICK_RESULT_DROPPED) {
+		if (!is_fixup(item->command)) {
+			const char *oid = oid_to_hex(&item->commit->object.oid);
+			if (write_message(oid, strlen(oid),
+					  rebase_path_fixup_target(), 0))
+				return error_errno(_("could not write '%s'"),
+						   rebase_path_fixup_target());
+		}
 		if (is_final_fixup(todo_list))
 			flush_rewritten_pending();
 		return 0;
@@ -5242,6 +5304,8 @@ static int pick_commits(struct repository *r,
 		} else if (item->command == TODO_RESET) {
 			if ((res = do_reset(r, arg, item->arg_len, opts)))
 				reschedule = 1;
+			else
+				unlink(rebase_path_fixup_target());
 		} else if (item->command == TODO_MERGE) {
 			if ((res = do_merge(r, item->commit, arg, item->arg_len,
 					    item->flags, &check_todo, opts)) < 0)
@@ -5254,6 +5318,8 @@ static int pick_commits(struct repository *r,
 				return error_with_patch(r, item->commit,
 							arg, item->arg_len,
 							opts, res, 0);
+			if (!res)
+				unlink(rebase_path_fixup_target());
 		} else if (item->command == TODO_UPDATE_REF) {
 			struct strbuf ref = STRBUF_INIT;
 			strbuf_add(&ref, arg, item->arg_len);
@@ -5442,31 +5508,54 @@ static int commit_staged_changes(struct repository *r,
 		goto out;
 	}
 
-	if (file_exists(rebase_path_amend())) {
-		struct object_id head, to_amend;
+	if (file_exists(rebase_path_amend())) {  
+		struct object_id head, to_amend;  
+  
+		if (repo_get_oid(r, "HEAD", &head)) {  
+			ret = error(_("cannot amend non-existing commit"));  
+			goto out;  
+		}  
+  
+		if (!read_oneliner(&rev, rebase_path_amend(), 0)) {  
+			ret = error(_("invalid file: '%s'"), rebase_path_amend());  
+			goto out;  
+		}  
+  
+		if (get_oid_hex(rev.buf, &to_amend)) {  
+			ret = error(_("invalid contents: '%s'"),  
+				    rebase_path_amend());  
+			goto out;  
+		}  
+  
+		if (is_clean && !oideq(&head, &to_amend)) {  
+			struct commit *head_commit = lookup_commit(r, &head);  
+			struct commit *amend_commit = lookup_commit(r, &to_amend);  
+			struct commit_list *list = NULL;  
+  
+			commit_list_insert(amend_commit, &list);  
+  
+			if (!head_commit || !amend_commit ||  
+			    !repo_is_descendant_of(r, head_commit, list)) {  
+				commit_list_free(list);  
+				ret = error(_("fixup target %s is missing from HEAD history; "  
+					      "refusing to continue"), oid_to_hex(&to_amend));  
+				goto out;  
+			}  
+			commit_list_free(list);  
+		}  
+  
+		if (!is_clean && !oideq(&head, &to_amend)) {  
+			ret = error(_("\nYou have uncommitted changes in your "  
+				      "working tree. Please, commit them\n"  
+				      "first and then run 'git rebase "  
+				      "--continue' again."));  
+			goto out;  
+		}
+  
 
-		if (repo_get_oid(r, "HEAD", &head)) {
-			ret = error(_("cannot amend non-existing commit"));
-			goto out;
-		}
 
-		if (!read_oneliner(&rev, rebase_path_amend(), 0)) {
-			ret = error(_("invalid file: '%s'"), rebase_path_amend());
-			goto out;
-		}
+			
 
-		if (get_oid_hex(rev.buf, &to_amend)) {
-			ret = error(_("invalid contents: '%s'"),
-				    rebase_path_amend());
-			goto out;
-		}
-		if (!is_clean && !oideq(&head, &to_amend)) {
-			ret = error(_("\nYou have uncommitted changes in your "
-				      "working tree. Please, commit them\n"
-				      "first and then run 'git rebase "
-				      "--continue' again."));
-			goto out;
-		}
 		/*
 		 * When skipping a failed fixup/squash, we need to edit the
 		 * commit message, the current fixup list and count, and if it
@@ -5622,10 +5711,64 @@ out:
 	return ret;
 }
 
+/*
+ * A conflicted pick before a fixup/squash may have been skipped by the user
+ * (or become empty after resolving the conflicts). In that case, remember
+ * the missing target so the fixup/squash is not applied to the wrong commit.
+ * Return 1 if the pick was skipped, 0 if it was committed, and -1 on error.
+ */
+static int check_fixup_target(struct repository *r)
+{
+	struct strbuf head_buf = STRBUF_INIT, stopped_buf = STRBUF_INIT;
+	struct object_id expected_head, actual_head, stopped;
+	const char *head_path = rebase_path_fixup_target_head();
+	const char *stopped_path = rebase_path_stopped_sha();
+	int ret = -1;
+
+	if (!file_exists(head_path))
+		return 0;
+
+	if (!read_oneliner(&head_buf, head_path, READ_ONELINER_SKIP_IF_EMPTY) ||
+	    get_oid_hex(head_buf.buf, &expected_head)) {
+		error(_("invalid contents: '%s'"), head_path);
+		goto out;
+	}
+
+	if (repo_get_oid(r, "HEAD", &actual_head))
+		oidclr(&actual_head, r->hash_algo);
+
+	if (!oideq(&expected_head, &actual_head)) {
+		/* The commit was resolved and created, so the target is present. */
+		unlink(head_path);
+		unlink(rebase_path_fixup_target());
+		ret = 0;
+		goto out;
+	}
+
+	if (!read_oneliner(&stopped_buf, stopped_path,
+			   READ_ONELINER_SKIP_IF_EMPTY) ||
+	    get_oid_hex(stopped_buf.buf, &stopped)) {
+		error(_("invalid contents: '%s'"), stopped_path);
+		goto out;
+	}
+
+	if (write_message(stopped_buf.buf, stopped_buf.len,
+			   rebase_path_fixup_target(), 1)) {
+		goto out;
+	}
+	unlink(head_path);
+	ret = 1;
+
+out:
+	strbuf_release(&head_buf);
+	strbuf_release(&stopped_buf);
+	return ret;
+}
+
 int sequencer_continue(struct repository *r, struct replay_opts *opts)
 {
 	struct todo_list todo_list = TODO_LIST_INIT;
-	int res;
+	int res, skipped_fixup_target = 0;
 
 	if (read_and_refresh_cache(r, opts))
 		return -1;
@@ -5645,6 +5788,10 @@ int sequencer_continue(struct repository *r, struct replay_opts *opts)
 		}
 
 		if (commit_staged_changes(r, opts, &todo_list)) {
+			res = -1;
+			goto release_todo_list;
+		}
+		if ((skipped_fixup_target = check_fixup_target(r)) < 0) {
 			res = -1;
 			goto release_todo_list;
 		}
@@ -5671,7 +5818,8 @@ int sequencer_continue(struct repository *r, struct replay_opts *opts)
 		struct strbuf buf = STRBUF_INIT;
 		struct object_id oid;
 
-		if (read_oneliner(&buf, rebase_path_stopped_sha(),
+		if (!skipped_fixup_target &&
+		    read_oneliner(&buf, rebase_path_stopped_sha(),
 				  READ_ONELINER_SKIP_IF_EMPTY) &&
 		    !get_oid_hex(buf.buf, &oid))
 			record_in_rewritten(&oid, peek_command(&todo_list, 0));
