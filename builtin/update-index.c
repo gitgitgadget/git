@@ -431,7 +431,7 @@ static int add_cacheinfo(unsigned int mode, const struct object_id *oid,
 	ce->ce_flags = create_ce_flags(stage);
 	ce->ce_namelen = len;
 	ce->ce_mode = create_ce_mode(mode);
-	if (assume_unchanged)
+	if (repo_config_values(the_repository)->assume_unchanged)
 		ce->ce_flags |= CE_VALID;
 	option = allow_add ? ADD_CACHE_OK_TO_ADD : 0;
 	option |= allow_replace ? ADD_CACHE_OK_TO_REPLACE : 0;
