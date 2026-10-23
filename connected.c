@@ -116,6 +116,8 @@ int check_connected(oid_iterate_fn fn, void *cb_data,
 		strvec_push(&rev_list.args, "--shallow-file");
 		strvec_push(&rev_list.args, opt->shallow_file);
 	}
+	/* Check the original objects, like fsck and pack-objects do. */
+	strvec_push(&rev_list.args, "--no-replace-objects");
 	strvec_push(&rev_list.args,"rev-list");
 	strvec_push(&rev_list.args, "--objects");
 	strvec_push(&rev_list.args, "--stdin");
