@@ -546,4 +546,54 @@ test_expect_success '--convert-graft-file' '
 	test_grep "$EMPTY_BLOB $EMPTY_TREE" .git/info/grafts
 '
 
+# The connectivity check after a fetch or push must look at the
+# objects as they are, like fsck, repack and upload-pack do, not at
+# their replacements.  Otherwise a replace ref can hide a missing
+# object and let an incomplete pack in.
+test_expect_success 'setup incomplete bundle hidden by a replacement' '
+	git init conn-src &&
+	test_commit -C conn-src base &&
+	git clone conn-src conn-dst &&
+	echo content >conn-src/file &&
+	git -C conn-src add file &&
+	git -C conn-src commit -m new &&
+	new=$(git -C conn-src rev-parse HEAD) &&
+	new_tree=$(git -C conn-src rev-parse HEAD^{tree}) &&
+	replacement=$(git -C conn-src commit-tree -p HEAD^ \
+		-m replacement HEAD^^{tree}) &&
+
+	# Give the receiving side a complete replacement for the
+	# new commit, before the commit itself arrives.
+	echo $replacement |
+	git -C conn-src pack-objects --stdout >replacement.pack &&
+	git -C conn-dst index-pack --stdin <replacement.pack &&
+	git -C conn-dst update-ref refs/replace/$new $replacement &&
+
+	# A bundle with the new commit and its tree, but not the blob:
+	# keep the header of a real bundle and replace its pack.
+	git -C conn-src branch new &&
+	git -C conn-src bundle create ../full.bundle base..new &&
+	{
+		while read line && test -n "$line"
+		do
+			echo "$line" || return 1
+		done &&
+		echo &&
+		printf "%s\n%s\n" $new $new_tree |
+		git -C conn-src pack-objects --stdout
+	} <full.bundle >incomplete.bundle
+'
+
+test_expect_success 'connectivity check rejects bundle without replacements' '
+	test_must_fail git -C conn-dst --no-replace-objects \
+		fetch ../incomplete.bundle new:new 2>err &&
+	test_grep "did not send all necessary objects" err
+'
+
+test_expect_success 'connectivity check ignores replacements' '
+	test_when_finished "git -C conn-dst update-ref -d refs/heads/new" &&
+	test_must_fail git -C conn-dst fetch ../incomplete.bundle new:new 2>err &&
+	test_grep "did not send all necessary objects" err
+'
+
 test_done
