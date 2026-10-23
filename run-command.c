@@ -18,6 +18,28 @@
 #include "packfile.h"
 #include "compat/nonblock.h"
 
+#ifdef USE_POSIX_SPAWN
+#include <spawn.h>
+#include <AvailabilityMacros.h>
+
+#ifndef __APPLE__
+#error "USE_POSIX_SPAWN currently requires the macOS spawn file actions"
+#endif
+
+static int spawn_add_fchdir(posix_spawn_file_actions_t *actions, int fd)
+{
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= 260000
+	return posix_spawn_file_actions_addfchdir(actions, fd);
+#else
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+	int error = posix_spawn_file_actions_addfchdir_np(actions, fd);
+#pragma clang diagnostic pop
+	return error;
+#endif
+}
+#endif
+
 void child_process_init(struct child_process *child)
 {
 	struct child_process blank = CHILD_PROCESS_INIT;
@@ -309,7 +331,9 @@ static const char **prepare_shell_cmd(struct strvec *out, const char **argv)
 }
 
 #ifndef GIT_WINDOWS_NATIVE
+#ifndef USE_POSIX_SPAWN
 static int child_notifier = -1;
+#endif
 
 enum child_errcode {
 	CHILD_ERR_CHDIR,
@@ -325,6 +349,7 @@ struct child_err {
 	int syserr; /* errno */
 };
 
+#ifndef USE_POSIX_SPAWN
 static void child_die(enum child_errcode err)
 {
 	struct child_err buf;
@@ -373,6 +398,7 @@ static void NORETURN child_die_fn(const char *err UNUSED, va_list params UNUSED)
 	xwrite(2, msg, sizeof(msg) - 1);
 	_exit(2);
 }
+#endif
 
 /* this runs in the parent process */
 static void child_err_spew(struct child_process *cmd, struct child_err *cerr)
@@ -496,6 +522,189 @@ static char **prep_childenv(const char *const *deltaenv)
 	return childenv;
 }
 
+#ifdef USE_POSIX_SPAWN
+static int spawn_add_dup2(posix_spawn_file_actions_t *actions, int from,
+			  int to, unsigned char stdio_touched[3])
+{
+	int error = posix_spawn_file_actions_adddup2(actions, from, to);
+	if (!error && to < 3)
+		stdio_touched[to] = 1;
+	return error;
+}
+
+static int spawn_add_close(posix_spawn_file_actions_t *actions, int fd,
+			   unsigned char stdio_touched[3])
+{
+	int error = posix_spawn_file_actions_addclose(actions, fd);
+	if (!error && fd < 3)
+		stdio_touched[fd] = 1;
+	return error;
+}
+
+static int spawn_add_open(posix_spawn_file_actions_t *actions, int fd,
+			  unsigned char stdio_touched[3])
+{
+	int error = posix_spawn_file_actions_addopen(actions, fd, "/dev/null",
+						     O_RDWR, 0);
+	if (!error && fd < 3)
+		stdio_touched[fd] = 1;
+	return error;
+}
+
+static pid_t spawn_command(const struct child_process *cmd, const char **argv,
+			   char **childenv, int need_in, int fdin[2],
+			   int need_out, int fdout[2],
+			   int need_err, int fderr[2],
+			   enum child_errcode *error_kind)
+{
+	posix_spawn_file_actions_t actions;
+	posix_spawnattr_t attr;
+	const posix_spawnattr_t *attrp = NULL;
+	unsigned char stdio_touched[3] = { 0 };
+	int actions_initialized = 0, attr_initialized = 0;
+	sigset_t signal_mask, signal_defaults;
+	struct sigaction sa;
+	short flags = POSIX_SPAWN_SETSIGMASK | POSIX_SPAWN_SETSIGDEF;
+	int error;
+	pid_t pid = -1;
+	int dir_fd = -1;
+	int sig, fd;
+
+	*error_kind = CHILD_ERR_ERRNO;
+
+#define ADD_SPAWN_ACTION(action) \
+	do { \
+		error = (action); \
+		if (error) \
+			goto done; \
+	} while (0)
+
+	error = posix_spawn_file_actions_init(&actions);
+	if (error)
+		goto done;
+	actions_initialized = 1;
+	error = posix_spawnattr_init(&attr);
+	if (error)
+		goto done;
+	attr_initialized = 1;
+	attrp = &attr;
+
+#ifdef NO_PTHREADS
+	if (sigprocmask(SIG_SETMASK, NULL, &signal_mask) < 0) {
+		error = errno;
+		goto done;
+	}
+#else
+	error = pthread_sigmask(SIG_SETMASK, NULL, &signal_mask);
+	if (error)
+		goto done;
+#endif
+	if (sigemptyset(&signal_defaults) < 0) {
+		error = errno;
+		goto done;
+	}
+	for (sig = 1; sig < NSIG; sig++) {
+		if (!sigaction(sig, NULL, &sa) && sa.sa_handler != SIG_IGN)
+			sigaddset(&signal_defaults, sig);
+	}
+	ADD_SPAWN_ACTION(posix_spawnattr_setsigmask(&attr, &signal_mask));
+	ADD_SPAWN_ACTION(posix_spawnattr_setsigdefault(&attr,
+							 &signal_defaults));
+
+	if (cmd->no_stdin)
+		ADD_SPAWN_ACTION(spawn_add_open(&actions, 0, stdio_touched));
+	else if (need_in) {
+		ADD_SPAWN_ACTION(spawn_add_dup2(&actions, fdin[0], 0,
+						 stdio_touched));
+		ADD_SPAWN_ACTION(spawn_add_close(&actions, fdin[0], stdio_touched));
+		ADD_SPAWN_ACTION(spawn_add_close(&actions, fdin[1], stdio_touched));
+	} else if (cmd->in) {
+		ADD_SPAWN_ACTION(spawn_add_dup2(&actions, cmd->in, 0,
+						 stdio_touched));
+		ADD_SPAWN_ACTION(spawn_add_close(&actions, cmd->in, stdio_touched));
+	}
+
+	if (cmd->no_stderr)
+		ADD_SPAWN_ACTION(spawn_add_open(&actions, 2, stdio_touched));
+	else if (need_err) {
+		ADD_SPAWN_ACTION(spawn_add_dup2(&actions, fderr[1], 2,
+						 stdio_touched));
+		ADD_SPAWN_ACTION(spawn_add_close(&actions, fderr[0], stdio_touched));
+		ADD_SPAWN_ACTION(spawn_add_close(&actions, fderr[1], stdio_touched));
+	} else if (cmd->err > 1) {
+		ADD_SPAWN_ACTION(spawn_add_dup2(&actions, cmd->err, 2,
+						 stdio_touched));
+		ADD_SPAWN_ACTION(spawn_add_close(&actions, cmd->err, stdio_touched));
+	}
+
+	if (cmd->no_stdout)
+		ADD_SPAWN_ACTION(spawn_add_open(&actions, 1, stdio_touched));
+	else if (cmd->stdout_to_stderr)
+		ADD_SPAWN_ACTION(spawn_add_dup2(&actions, 2, 1, stdio_touched));
+	else if (need_out) {
+		ADD_SPAWN_ACTION(spawn_add_dup2(&actions, fdout[1], 1,
+						 stdio_touched));
+		ADD_SPAWN_ACTION(spawn_add_close(&actions, fdout[0], stdio_touched));
+		ADD_SPAWN_ACTION(spawn_add_close(&actions, fdout[1], stdio_touched));
+	} else if (cmd->out > 1) {
+		ADD_SPAWN_ACTION(spawn_add_dup2(&actions, cmd->out, 1,
+						 stdio_touched));
+		ADD_SPAWN_ACTION(spawn_add_close(&actions, cmd->out, stdio_touched));
+	}
+
+	if (cmd->dir) {
+		dir_fd = open(cmd->dir, O_SEARCH | O_CLOEXEC);
+		if (dir_fd < 0) {
+			*error_kind = CHILD_ERR_CHDIR;
+			error = errno;
+			goto done;
+		}
+		ADD_SPAWN_ACTION(posix_spawn_file_actions_addinherit_np(
+					&actions, dir_fd));
+		ADD_SPAWN_ACTION(spawn_add_fchdir(&actions, dir_fd));
+		ADD_SPAWN_ACTION(posix_spawn_file_actions_addclose(&actions,
+							 dir_fd));
+	}
+
+	if (cmd->close_fd_above_stderr) {
+		flags |= POSIX_SPAWN_CLOEXEC_DEFAULT;
+
+		for (fd = 0; fd < 3; fd++) {
+			int fd_flags;
+			if (stdio_touched[fd])
+				continue;
+			fd_flags = fcntl(fd, F_GETFD);
+			if (fd_flags < 0 || (fd_flags & FD_CLOEXEC))
+				continue;
+			ADD_SPAWN_ACTION(posix_spawn_file_actions_addinherit_np(
+					&actions, fd));
+		}
+	}
+	ADD_SPAWN_ACTION(posix_spawnattr_setflags(&attr, flags));
+
+	error = posix_spawn(&pid, argv[1], &actions, attrp,
+			    (char *const *)argv + 1, childenv);
+	if (error == ENOEXEC)
+		error = posix_spawn(&pid, argv[0], &actions, attrp,
+				    (char *const *)argv, childenv);
+	if (error)
+		pid = -1;
+
+done:
+	if (attr_initialized)
+		posix_spawnattr_destroy(&attr);
+	if (actions_initialized)
+		posix_spawn_file_actions_destroy(&actions);
+	if (dir_fd >= 0)
+		close(dir_fd);
+#undef ADD_SPAWN_ACTION
+	if (error)
+		errno = error;
+	return pid;
+}
+#endif
+
+#ifndef USE_POSIX_SPAWN
 struct atfork_state {
 #ifndef NO_PTHREADS
 	int cs;
@@ -545,6 +754,7 @@ static void atfork_parent(struct atfork_state *as)
 		"restoring signal mask");
 #endif
 }
+#endif
 
 #endif /* GIT_WINDOWS_NATIVE */
 
@@ -746,7 +956,37 @@ fail_pipe:
 		odb_close(cmd->odb_to_close);
 
 #ifndef GIT_WINDOWS_NATIVE
+#ifdef USE_POSIX_SPAWN
 {
+	struct strvec argv = STRVEC_INIT;
+	struct child_err spawn_error;
+	char **childenv;
+
+	if (prepare_cmd(&argv, cmd) < 0) {
+		failed_errno = errno;
+		cmd->pid = -1;
+		if (!cmd->silent_exec_failure)
+			error_errno("cannot run %s", cmd->args.v[0]);
+	} else {
+		trace_argv_printf(&argv.v[1], "trace: start_command:");
+		childenv = prep_childenv(cmd->env.v);
+		cmd->pid = spawn_command(cmd, argv.v, childenv,
+					 need_in, fdin, need_out, fdout,
+					 need_err, fderr, &spawn_error.err);
+		failed_errno = errno;
+		if (cmd->pid < 0) {
+			spawn_error.syserr = failed_errno;
+			if (!cmd->silent_exec_failure || failed_errno != ENOENT ||
+			    spawn_error.err == CHILD_ERR_CHDIR)
+				child_err_spew(cmd, &spawn_error);
+		} else if (cmd->clean_on_exit)
+			mark_child_for_cleanup(cmd->pid, cmd);
+		free(childenv);
+	}
+	strvec_clear(&argv);
+}
+#else
+	{
 	int notify_pipe[2];
 	int null_fd = -1;
 	char **childenv;
@@ -905,8 +1145,10 @@ fail_pipe:
 		close(null_fd);
 	strvec_clear(&argv);
 	free(childenv);
-}
 end_of_spawn:
+;
+}
+#endif
 
 #else
 {
