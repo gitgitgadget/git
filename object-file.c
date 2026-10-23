@@ -882,6 +882,8 @@ static int odb_transaction_files_write_object_stream(struct odb_transaction *bas
 								 struct odb_transaction_files,
 								 base);
 	struct transaction_packfile *state = &transaction->packfile;
+	struct repo_config_values *cfg =
+		repo_config_values(the_repository);
 	struct git_hash_ctx ctx;
 	unsigned char obuf[16384];
 	unsigned header_len;
@@ -903,8 +905,8 @@ static int odb_transaction_files_write_object_stream(struct odb_transaction *bas
 	 * the difference between the inflated and on-disk size is limited
 	 * to zlib compression and is sufficient for this check.
 	 */
-	if (state->nr_written && pack_size_limit_cfg &&
-	    pack_size_limit_cfg < state->offset + stream->size) {
+	if (state->nr_written && cfg->pack_size_limit &&
+	    cfg->pack_size_limit < state->offset + stream->size) {
 		flush_packfile_transaction(transaction);
 		odb_reprepare(transaction->base.source->odb);
 	}
