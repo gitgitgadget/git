@@ -145,6 +145,22 @@ test_expect_success 'revert fails if cwd needs to be removed' '
 	test_required_dir_removal git revert undo_fd_conflict
 '
 
+test_expect_success 'bisect does not clean cwd incidentally' '
+	test_when_finished "git bisect reset" &&
+	test_incidental_dir_removal git bisect start df_conflict init
+'
+
+test_expect_success 'bisect fails if cwd needs to be removed' '
+	test_when_finished "git bisect reset" &&
+	test_required_dir_removal git bisect start undo_fd_conflict fd_conflict~1
+'
+
+test_expect_success 'bisect reset does not clean cwd incidentally' '
+	git checkout init &&
+	git bisect start &&
+	test_incidental_dir_removal git bisect reset
+'
+
 test_expect_success 'rm does not clean cwd incidentally' '
 	test_incidental_dir_removal git rm bar/baz.t
 '
