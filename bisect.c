@@ -23,6 +23,7 @@
 #include "odb.h"
 #include "path.h"
 #include "dir.h"
+#include "setup.h"
 
 static struct oid_array good_revs;
 static struct oid_array skipped_revs;
@@ -732,6 +733,23 @@ static int is_expected_rev(const struct object_id *oid)
 	return oideq(oid, &expected_oid);
 }
 
+void bisect_prepare_checkout(struct child_process *cmd)
+{
+	cmd->git_cmd = 1;
+
+	/*
+	 * We run from the top of the working tree, but the user may be
+	 * sitting in a subdirectory that the checkout would remove.
+	 * Run the checkout from there instead so that it knows to keep
+	 * it, like "git checkout" does when run directly.
+	 */
+	if (startup_info->original_cwd) {
+		cmd->dir = startup_info->original_cwd;
+		strvec_pushf(&cmd->env, "%s=%s", GIT_WORK_TREE_ENVIRONMENT,
+			     repo_get_work_tree(the_repository));
+	}
+}
+
 enum bisect_error bisect_checkout(const struct object_id *bisect_rev,
 				  int no_checkout)
 {
@@ -750,7 +768,7 @@ enum bisect_error bisect_checkout(const struct object_id *bisect_rev,
 	} else {
 		struct child_process cmd = CHILD_PROCESS_INIT;
 
-		cmd.git_cmd = 1;
+		bisect_prepare_checkout(&cmd);
 		strvec_pushl(&cmd.args, "checkout", "-q",
 			     oid_to_hex(bisect_rev), "--", NULL);
 		if (run_command(&cmd))
