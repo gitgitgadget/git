@@ -1288,4 +1288,99 @@ test_expect_success 'relative worktree sets extension config' '
 	test_cmp_config -C repo true extensions.relativeworktrees
 '
 
+test_expect_success SYMLINKS 'worktree.sharedFile links files from the primary worktree' '
+	test_when_finished "git worktree remove --force shared-file-wt" &&
+	echo shared-secret >.env &&
+	echo local-secret >.env.local &&
+	test_config worktree.sharedFile .env &&
+	git config --add worktree.sharedFile .env.local &&
+	git worktree add --detach shared-file-wt &&
+	test -L shared-file-wt/.env &&
+	test -L shared-file-wt/.env.local &&
+	test "$(readlink shared-file-wt/.env)" = "$(pwd)/.env" &&
+	test_cmp .env shared-file-wt/.env &&
+	test_cmp .env.local shared-file-wt/.env.local
+'
+
+test_expect_success SYMLINKS 'worktree.sharedFile uses the primary worktree as source' '
+	test_when_finished "git worktree remove --force shared-source-wt" &&
+	test_when_finished "git worktree remove --force existing-shared-source" &&
+	git worktree add --detach existing-shared-source &&
+	echo primary >.env &&
+	echo linked >existing-shared-source/.env &&
+	test_config worktree.sharedFile .env &&
+	git -C existing-shared-source worktree add --detach ../shared-source-wt &&
+	echo primary >expect &&
+	test_cmp expect shared-source-wt/.env
+'
+
+test_expect_success SYMLINKS 'worktree.sharedFile is available to post-checkout hook' '
+	test_when_finished "git worktree remove --force shared-hook-wt" &&
+	test_when_finished "rm -rf .git/hooks" &&
+	echo hook-secret >.env &&
+	test_config worktree.sharedFile .env &&
+	mkdir .git/hooks &&
+	test_hook post-checkout <<-\EOF &&
+	cat .env >hook-env
+	EOF
+	git worktree add --detach shared-hook-wt &&
+	test_cmp .env shared-hook-wt/hook-env
+'
+
+test_expect_success SYMLINKS 'worktree.sharedFile rejects paths outside primary worktree' '
+	test_config worktree.sharedFile ../.env &&
+	test_must_fail git worktree add --detach invalid-shared-file 2>err &&
+	test_grep "invalid value for worktree.sharedFile: ../.env" err &&
+	test_path_is_missing invalid-shared-file
+'
+
+test_expect_success SYMLINKS 'worktree.sharedFile rejects nested paths' '
+	test_config worktree.sharedFile nested/.env &&
+	test_must_fail git worktree add --detach nested-shared-file 2>err &&
+	test_grep "invalid value for worktree.sharedFile: nested/.env" err &&
+	test_path_is_missing nested-shared-file
+'
+
+test_expect_success SYMLINKS 'worktree.sharedFile does not follow source symlinks' '
+	test_when_finished "git worktree remove --force symlink-source-wt" &&
+	test_when_finished "rm -f ../outside-shared-file shared-symlink" &&
+	echo outside >../outside-shared-file &&
+	ln -s ../outside-shared-file shared-symlink &&
+	test_config worktree.sharedFile shared-symlink &&
+	git worktree add --detach symlink-source-wt 2>err &&
+	test_grep "not a regular file" err &&
+	test_path_is_missing symlink-source-wt/shared-symlink
+'
+
+test_expect_success SYMLINKS 'worktree.sharedFile requires symlink support' '
+	echo shared-secret >.env &&
+	test_config worktree.sharedFile .env &&
+	test_config core.symlinks false &&
+	test_must_fail git worktree add --detach no-symlink-wt 2>err &&
+	test_grep "worktree.sharedFile requires symbolic link support" err &&
+	test_path_is_missing no-symlink-wt
+'
+
+test_expect_success SYMLINKS 'worktree.sharedFile works with --no-checkout' '
+	test_when_finished "git worktree remove --force no-checkout-shared-wt" &&
+	echo shared-secret >.env &&
+	test_config worktree.sharedFile .env &&
+	git worktree add --detach --no-checkout no-checkout-shared-wt &&
+	test -L no-checkout-shared-wt/.env &&
+	test_cmp .env no-checkout-shared-wt/.env
+'
+
+test_expect_success SYMLINKS 'worktree.sharedFile does not replace checkout files' '
+	test_when_finished "git worktree remove --force tracked-shared-file" &&
+	echo tracked >shared &&
+	git add shared &&
+	git commit -m shared-file &&
+	echo primary-only >shared &&
+	test_config worktree.sharedFile shared &&
+	git worktree add --detach tracked-shared-file 2>err &&
+	test_grep "not linking shared file.*already exists" err &&
+	test_path_is_file tracked-shared-file/shared &&
+	test ! -L tracked-shared-file/shared
+'
+
 test_done
