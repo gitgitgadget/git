@@ -541,4 +541,58 @@ test_expect_success 'geometric repack works with promisor packs' '
 	)
 '
 
+test_expect_success 'geometric repack ignores in-flight temporary packs' '
+	git init geometric-tmp &&
+	test_when_finished "rm -fr geometric-tmp" &&
+	(
+		cd geometric-tmp &&
+
+		# Build several packs whose sizes do not already form a
+		# geometric progression, so that a --geometric=2 repack
+		# would roll the smaller ones together.
+		for i in 1 2 3 4 5 6
+		do
+			n=$((i * 3)) &&
+			j=0 &&
+			while test $j -lt $n
+			do
+				echo "obj-$i-$j" | git hash-object -w --stdin &&
+				j=$((j + 1)) || return 1
+			done |
+			git pack-objects --window=0 $packdir/pack \
+				>/dev/null || return 1
+		done &&
+		git prune-packed &&
+
+		# The two smallest packs would be rolled up, but temporary packs
+		# must not be selected or deleted while their owner installs them.
+		ls -S $packdir/pack-*.pack | tail -n 2 >small &&
+		for prefix in .tmp-1234- tmp_
+		do
+			read victim &&
+			vb=$(basename "$victim" .pack) &&
+			for e in pack idx rev
+			do
+				from=$packdir/${vb}.$e &&
+				if test -f "$from"
+				then
+					mv "$from" $packdir/${prefix}${vb}.$e ||
+						return 1
+				fi
+			done || return 1
+		done <small &&
+
+		git repack --geometric 2 -d &&
+
+		for prefix in .tmp-1234- tmp_
+		do
+			test_path_is_file $packdir/${prefix}*.pack &&
+			test_path_is_file $packdir/${prefix}*.idx ||
+				return 1
+		done &&
+		ls $packdir/pack-*.pack >remaining &&
+		test_line_count = 1 remaining
+	)
+'
+
 test_done
