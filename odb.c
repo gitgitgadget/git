@@ -183,12 +183,27 @@ static int refs_from_alternate_cb(struct odb_files_dir *alternate,
 				  void *payload)
 {
 	struct strbuf path = STRBUF_INIT;
+	struct strbuf self = STRBUF_INIT;
 	size_t base_len;
 	struct alternate_refs_data *cb = payload;
 
 	if (!strbuf_realpath(&path, alternate->abspath, 0))
 		goto out;
 	if (!strbuf_strip_suffix(&path, "/objects"))
+		goto out;
+
+	/*
+	 * NEEDSWORK: this is a hack, mainly here to measure the cost of
+	 * the bug. Inside an object quarantine, tmp-objdir passes our own
+	 * object directory to child processes as an alternate, so we would
+	 * list our own refs as alternate refs, including the hidden refs
+	 * that the connectivity check of receive-pack deliberately skips.
+	 * Comparing paths papers over that; the quarantine should rather
+	 * tell its children which directory is ours.
+	 */
+	if (cb->repo->commondir &&
+	    strbuf_realpath(&self, cb->repo->commondir, 0) &&
+	    !strcmp(path.buf, self.buf))
 		goto out;
 	base_len = path.len;
 
@@ -202,6 +217,7 @@ static int refs_from_alternate_cb(struct odb_files_dir *alternate,
 
 out:
 	strbuf_release(&path);
+	strbuf_release(&self);
 	return 0;
 }
 
