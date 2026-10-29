@@ -42,7 +42,6 @@ static int pack_compression_seen;
 static int zlib_compression_seen;
 
 int minimum_abbrev = 4, default_abbrev = -1;
-int assume_unchanged;
 char *git_commit_encoding;
 char *git_log_output_encoding;
 int fsync_object_files = -1;
@@ -371,7 +370,7 @@ int git_default_core_config(const char *var, const char *value,
 	}
 
 	if (!strcmp(var, "core.ignorestat")) {
-		assume_unchanged = git_config_bool(var, value);
+		cfg->assume_unchanged = git_config_bool(var, value);
 		return 0;
 	}
 

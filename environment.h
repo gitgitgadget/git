@@ -146,6 +146,7 @@ struct repo_config_values {
 	int protect_hfs;
 	int protect_ntfs;
 	int ignore_case;
+	int assume_unchanged;
 	int trust_executable_bit;
 	int has_symlinks;
 	int use_nanosec;
@@ -242,9 +243,7 @@ int have_git_dir(void);
 
 /* Environment bits from configuration mechanism */
 extern int minimum_abbrev, default_abbrev;
-extern int assume_unchanged;
 extern unsigned long pack_size_limit_cfg;
-
 extern int grafts_keep_true_parents;
 
 const char *get_log_output_encoding(void);
