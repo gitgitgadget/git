@@ -94,9 +94,9 @@ OPTIONS
 	and `--object-only`.
 
 [<path>...]::
-	When paths are given, show them (note that this isn't really raw
-	pathnames, but rather a list of patterns to match).  Otherwise
-	implicitly uses the root level of the tree as the sole path argument.
+	When paths are given, show them. This can be any pathspec, see
+	linkgit:gitpathspecs[7] for details. Otherwise implicitly uses the root
+	level of the tree as the sole path argument.
 
 
 [[OUTPUT_FORMAT]]
