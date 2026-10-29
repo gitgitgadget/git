@@ -10,6 +10,12 @@
 #define GIT_NAMESPACE_ENVIRONMENT "GIT_NAMESPACE"
 #define GIT_WORK_TREE_ENVIRONMENT "GIT_WORK_TREE"
 #define GIT_PREFIX_ENVIRONMENT "GIT_PREFIX"
+/*
+ * Internal, set by "git worktree add" for the checkout it spawns:
+ * absolute path of the primary worktree, whose clean files may be
+ * reflinked instead of being written from the object database.
+ */
+#define GIT_WORKTREE_REFLINK_SOURCE_ENVIRONMENT "GIT_WORKTREE_REFLINK_SOURCE"
 #define DEFAULT_GIT_DIR_ENVIRONMENT ".git"
 #define DB_ENVIRONMENT "GIT_OBJECT_DIRECTORY"
 #define INDEX_ENVIRONMENT "GIT_INDEX_FILE"
