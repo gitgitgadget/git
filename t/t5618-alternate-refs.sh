@@ -58,4 +58,38 @@ test_expect_success 'log --source shows .alternate marker' '
 	test_cmp expect actual
 '
 
+# Our own object directory as an alternate is not a source of alternate
+# refs, but the alternates it brings in with it still are.
+test_expect_success 'own object directory as alternate lists only real alternates' '
+	test_when_finished "rm -rf other-objects" &&
+	mkdir other-objects &&
+	git rev-list --remotes=origin >expect &&
+	GIT_OBJECT_DIRECTORY="$(pwd)/other-objects" \
+	GIT_ALTERNATE_OBJECT_DIRECTORIES="$(pwd)/.git/objects" \
+		git rev-list --alternate-refs >actual &&
+	test_cmp expect actual
+'
+
+# A quarantine is created inside our object directory, so its parent is
+# ourselves, even when that is not under our commondir.
+test_expect_success 'parent of the quarantine is not listed as an alternate' '
+	test_when_finished "rm -rf store.git" &&
+	git init --bare store.git &&
+	git push store.git refs/remotes/origin/one:refs/heads/one &&
+	quarantine="$(pwd)/store.git/objects/tmp_objdir-test" &&
+	mkdir "$quarantine" &&
+
+	git rev-parse origin/one >expect &&
+	GIT_OBJECT_DIRECTORY="$quarantine" \
+	GIT_ALTERNATE_OBJECT_DIRECTORIES="$(pwd)/store.git/objects" \
+		git rev-list --no-walk --alternate-refs --stdin </dev/null >actual &&
+	test_cmp expect actual &&
+
+	GIT_QUARANTINE_PATH="$quarantine" \
+	GIT_OBJECT_DIRECTORY="$quarantine" \
+	GIT_ALTERNATE_OBJECT_DIRECTORIES="$(pwd)/store.git/objects" \
+		git rev-list --no-walk --alternate-refs --stdin </dev/null >actual &&
+	test_must_be_empty actual
+'
+
 test_done

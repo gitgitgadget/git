@@ -3,6 +3,8 @@
 #include "blob.h"
 #include "chdir-notify.h"
 #include "config.h"
+#include "dir.h"
+#include "environment.h"
 #include "gettext.h"
 #include "hex.h"
 #include "lockfile.h"
@@ -73,6 +75,7 @@ static void odb_source_files_free(struct odb_source *source)
 		files->dirs = next;
 	}
 	hashmap_clear(&files->dirs_by_path);
+	free(files->quarantine_path);
 
 	odb_source_release(&files->base);
 	free(files);
@@ -348,6 +351,45 @@ static int read_alternates(const char *object_dir, struct strvec *out)
 	return 0;
 }
 
+/*
+ * Our own object directory is <commondir>/objects, or the parent of
+ * GIT_QUARANTINE_PATH, as an object quarantine is created directly
+ * inside it (see tmp_objdir_create()). Anything else, including a path
+ * that cannot be resolved, is borrowed.
+ */
+static bool is_borrowed_object_dir(struct odb_source_files *files,
+				   const char *path)
+{
+	struct strbuf real = STRBUF_INIT;
+	struct strbuf objdir = STRBUF_INIT;
+	struct strbuf self = STRBUF_INIT;
+	bool ret = true;
+
+	if (!strbuf_realpath(&real, path, 0))
+		goto out;
+
+	strbuf_addf(&objdir, "%s/objects", files->base.odb->repo->commondir);
+	if (strbuf_realpath(&self, objdir.buf, 0) &&
+	    !fspathcmp(real.buf, self.buf)) {
+		ret = false;
+		goto out;
+	}
+
+	if (files->quarantine_path &&
+	    strbuf_realpath(&self, files->quarantine_path, 0)) {
+		strbuf_strip_file_from_path(&self);
+		strbuf_trim_trailing_dir_sep(&self);
+		if (!fspathcmp(real.buf, self.buf))
+			ret = false;
+	}
+
+out:
+	strbuf_release(&real);
+	strbuf_release(&objdir);
+	strbuf_release(&self);
+	return ret;
+}
+
 static void odb_add_alternate_recursively(struct odb_source_files *files,
 					  const char *path,
 					  int depth)
@@ -359,6 +401,7 @@ static void odb_add_alternate_recursively(struct odb_source_files *files,
 		goto out;
 
 	alternate = odb_files_dir_new(files->base.odb, path, false);
+	alternate->borrowed = is_borrowed_object_dir(files, alternate->abspath);
 
 	/* add the alternate entry */
 	*files->dirs_tail = alternate;
@@ -1256,15 +1299,19 @@ struct odb_source_files *odb_source_files_new(struct object_database *odb,
 	struct odb_source_files *files;
 	char *object_dir = NULL;
 	char *alternates = NULL;
+	char *quarantine_path = NULL;
 
 	if (flags & ODB_NEW_HONOR_ENV) {
 		object_dir = xstrdup_or_null(getenv(DB_ENVIRONMENT));
 		alternates = xstrdup_or_null(getenv(ALTERNATE_DB_ENVIRONMENT));
+		quarantine_path =
+			xstrdup_or_null(getenv(GIT_QUARANTINE_ENVIRONMENT));
 	}
 	if (!object_dir)
 		object_dir = xstrfmt("%s/objects", odb->repo->commondir);
 
 	CALLOC_ARRAY(files, 1);
+	files->quarantine_path = quarantine_path;
 	odb_source_init(&files->base, odb, ODB_SOURCE_FILES, object_dir);
 
 	hashmap_init(&files->dirs_by_path, odb_files_dir_by_path_cmp, files, 0);

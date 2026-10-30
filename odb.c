@@ -186,6 +186,9 @@ static int refs_from_alternate_cb(struct odb_files_dir *alternate,
 	size_t base_len;
 	struct alternate_refs_data *cb = payload;
 
+	if (!alternate->borrowed)
+		goto out;
+
 	if (!strbuf_realpath(&path, alternate->abspath, 0))
 		goto out;
 	if (!strbuf_strip_suffix(&path, "/objects"))
