@@ -599,9 +599,15 @@ static void show_submodule_header(struct diff_options *o,
 
 output_header:
 	strbuf_addf(&sb, "Submodule %s ", path);
-	strbuf_add_unique_abbrev(&sb, one, DEFAULT_ABBREV);
+	if (sub)
+		strbuf_repo_add_unique_abbrev(&sb, sub, one, DEFAULT_ABBREV);
+	else
+		strbuf_add_unique_abbrev(&sb, one, DEFAULT_ABBREV);
 	strbuf_addstr(&sb, (fast_backward || fast_forward) ? ".." : "...");
-	strbuf_add_unique_abbrev(&sb, two, DEFAULT_ABBREV);
+	if (sub)
+		strbuf_repo_add_unique_abbrev(&sb, sub, two, DEFAULT_ABBREV);
+	else
+		strbuf_add_unique_abbrev(&sb, two, DEFAULT_ABBREV);
 	if (message)
 		strbuf_addf(&sb, " %s\n", message);
 	else
