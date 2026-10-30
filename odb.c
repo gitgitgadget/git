@@ -2,6 +2,7 @@
 #include "abspath.h"
 #include "commit-graph.h"
 #include "config.h"
+#include "dir.h"
 #include "environment.h"
 #include "gettext.h"
 #include "hashmap.h"
@@ -183,11 +184,28 @@ static int refs_from_alternate_cb(struct odb_files_dir *alternate,
 				  void *payload)
 {
 	struct strbuf path = STRBUF_INIT;
+	struct strbuf self = STRBUF_INIT;
+	const char *quarantine;
 	size_t base_len;
 	struct alternate_refs_data *cb = payload;
 
 	if (!strbuf_realpath(&path, alternate->abspath, 0))
 		goto out;
+
+	/*
+	 * Inside an object quarantine, our own object directory is one of
+	 * our alternates, but its refs are our own refs, not alternate refs.
+	 * The quarantine is created directly inside it, so it is the parent
+	 * of GIT_QUARANTINE_PATH.
+	 */
+	quarantine = getenv(GIT_QUARANTINE_ENVIRONMENT);
+	if (quarantine && strbuf_realpath(&self, quarantine, 0)) {
+		strbuf_strip_file_from_path(&self);
+		strbuf_trim_trailing_dir_sep(&self);
+		if (!fspathcmp(path.buf, self.buf))
+			goto out;
+	}
+
 	if (!strbuf_strip_suffix(&path, "/objects"))
 		goto out;
 	base_len = path.len;
@@ -202,6 +220,7 @@ static int refs_from_alternate_cb(struct odb_files_dir *alternate,
 
 out:
 	strbuf_release(&path);
+	strbuf_release(&self);
 	return 0;
 }
 
