@@ -116,6 +116,9 @@ struct commit *make_virtual_commit(struct repository *repo,
  *
  * merge_bases will be consumed (emptied) so make a copy if you need it.
  *
+ * A non-NULL opt->ancestor supplies the merge-base label, including when
+ * multiple merge bases are consolidated recursively.
+ *
  * NOTE: empirically, the recursive algorithm will perform better if you
  *       pass the merge_bases in the order of oldest commit to the
  *       newest[1][2].

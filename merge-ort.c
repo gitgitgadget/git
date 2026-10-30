@@ -5414,11 +5414,11 @@ static void merge_ort_internal(struct merge_options *opt,
 		tree = lookup_tree(opt->repo, opt->repo->hash_algo->empty_tree);
 		merged_merge_bases = make_virtual_commit(opt->repo, tree,
 							 "ancestor");
-		ancestor_name = "empty tree";
-	} else if (merge_bases) {
-		ancestor_name = "merged common ancestors";
+		ancestor_name = opt->ancestor ? opt->ancestor : "empty tree";
 	} else if (opt->ancestor) {
 		ancestor_name = opt->ancestor;
+	} else if (merge_bases) {
+		ancestor_name = "merged common ancestors";
 	} else {
 		strbuf_add_unique_abbrev(&merge_base_abbrev,
 					 &merged_merge_bases->object.oid,
@@ -5428,7 +5428,7 @@ static void merge_ort_internal(struct merge_options *opt,
 
 	for (next = pop_commit(&merge_bases); next;
 	     next = pop_commit(&merge_bases)) {
-		const char *saved_b1, *saved_b2;
+		const char *saved_b1, *saved_b2, *saved_ancestor;
 		struct commit *prev = merged_merge_bases;
 
 		opt->priv->call_depth++;
@@ -5442,6 +5442,7 @@ static void merge_ort_internal(struct merge_options *opt,
 		 */
 		saved_b1 = opt->branch1;
 		saved_b2 = opt->branch2;
+		saved_ancestor = opt->ancestor;
 		opt->branch1 = "Temporary merge branch 1";
 		opt->branch2 = "Temporary merge branch 2";
 		merge_ort_internal(opt, NULL, prev, next, result);
@@ -5449,6 +5450,7 @@ static void merge_ort_internal(struct merge_options *opt,
 			goto out;
 		opt->branch1 = saved_b1;
 		opt->branch2 = saved_b2;
+		opt->ancestor = saved_ancestor;
 		opt->priv->call_depth--;
 
 		merged_merge_bases = make_virtual_commit(opt->repo,
@@ -5507,14 +5509,6 @@ void merge_incore_recursive(struct merge_options *opt,
 			    struct merge_result *result)
 {
 	trace2_region_enter("merge", "incore_recursive", opt->repo);
-
-	/*
-	 * We set the ancestor label based on the merge_bases...but we
-	 * allow one exception through so that builtin/am can override
-	 * with its constructed fake ancestor.
-	 */
-	assert(opt->ancestor == NULL ||
-	       (merge_bases && !merge_bases->next));
 
 	trace2_region_enter("merge", "merge_start", opt->repo);
 	merge_start(opt, result);
