@@ -19,6 +19,25 @@
 #include "thread-utils.h"
 #include "wildmatch.h"
 
+#ifdef USE_POSIX_SPAWN
+#include <sys/wait.h>
+
+static int fork_interposer_canary(void)
+{
+	pid_t pid = fork();
+
+	if (pid < 0 && errno == ENOSYS)
+		return 0;
+	if (pid < 0)
+		return error_errno("fork interposer canary");
+	if (!pid)
+		_exit(0);
+	if (waitpid(pid, NULL, 0) < 0)
+		return error_errno("waitpid in fork interposer canary");
+	return error("fork interposer is not active");
+}
+#endif
+
 static int number_callbacks;
 static int parallel_next(struct child_process *cp,
 			 struct strbuf *err,
@@ -444,6 +463,8 @@ int cmd__run_command(int argc, const char **argv)
 	struct child_process proc = CHILD_PROCESS_INIT;
 	int jobs;
 	int ret;
+	struct strbuf cwd = STRBUF_INIT;
+	struct strbuf cwd_after = STRBUF_INIT;
 	struct run_process_parallel_opts opts = {
 		.data = &proc,
 	};
@@ -454,6 +475,10 @@ int cmd__run_command(int argc, const char **argv)
 		return inherit_handle(argv[0]);
 	if (!strcmp(argv[1], "inherited-handle-child"))
 		return inherit_handle_child();
+#ifdef USE_POSIX_SPAWN
+	if (argc > 1 && !strcmp(argv[1], "fork-interposer-canary"))
+		return fork_interposer_canary();
+#endif
 
 	if (argc >= 2 && !strcmp(argv[1], "quote-stress-test"))
 		return !!quote_stress_test(argc - 1, argv + 1);
@@ -463,6 +488,26 @@ int cmd__run_command(int argc, const char **argv)
 
 	if (argc < 3)
 		return 1;
+	if (!strcmp(argv[1], "run-command-with-dir")) {
+		if (argc < 5)
+			return 1;
+		proc.dir = argv[2];
+		strvec_push(&proc.env, argv[3]);
+		strvec_pushv(&proc.args, argv + 4);
+		proc.close_fd_above_stderr = 1;
+		if (strbuf_getcwd(&cwd) < 0)
+			die_errno("getcwd");
+		ret = run_command(&proc);
+		if (!ret) {
+			if (strbuf_getcwd(&cwd_after) < 0)
+				die_errno("getcwd");
+			if (strcmp(cwd.buf, cwd_after.buf))
+				die("working directory changed");
+		}
+		strbuf_release(&cwd);
+		strbuf_release(&cwd_after);
+		goto cleanup;
+	}
 	while (!strcmp(argv[1], "env")) {
 		if (!argv[2])
 			die("env specifier without a value");
