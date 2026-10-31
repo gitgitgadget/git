@@ -70,6 +70,13 @@ base-name::
 	outputs.  The objects on the resulting list are packed.
 	Besides revisions, `--not` or `--shallow <SHA-1>` lines are
 	also accepted.
++
+A `--inspect-have <commit>` line supplies the object ID of a commit known
+to the receiver. Before non-bitmap enumeration, its root tree is compared
+with the outgoing tips' root trees to identify additional objects that
+need not be packed, without walking its commit history. Identical
+subtrees and paths found only in the receiver-known trees are skipped.
+This optional inspection is skipped in partial clones.
 
 --unpacked::
 	This implies `--revs`.  When processing the list of

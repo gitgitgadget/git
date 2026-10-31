@@ -1192,6 +1192,9 @@ static int odb_source_files_generate_pack(struct odb_source *source UNUSED,
 	fprintf(in, "--not\n");
 	for (size_t i = 0; i < opts->haves.nr; i++)
 		fprintf(in, "%s\n", oid_to_hex(&opts->haves.oid[i]));
+	for (size_t i = 0; i < opts->haves_to_inspect.nr; i++)
+		fprintf(in, "--inspect-have %s\n",
+			oid_to_hex(&opts->haves_to_inspect.oid[i]));
 	fprintf(in, "\n");
 	fflush(in);
 	if (ferror(in)) {
