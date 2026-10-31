@@ -11,6 +11,7 @@
 #include "builtin.h"
 #include "advice.h"
 #include "config.h"
+#include "date.h"
 #include "lockfile.h"
 #include "cache-tree.h"
 #include "color.h"
@@ -21,6 +22,7 @@
 #include "commit.h"
 #include "add-interactive.h"
 #include "gettext.h"
+#include "ident.h"
 #include "revision.h"
 #include "wt-status.h"
 #include "run-command.h"
@@ -1666,6 +1668,48 @@ struct repository *repo UNUSED)
 	return 0;
 }
 
+static void warn_if_dated_before_parents(struct commit_list *parents)
+{
+	struct ident_split committer;
+	struct strbuf ours = STRBUF_INIT;
+	const char *info;
+	timestamp_t date, newest = 0;
+
+	if (!advice_enabled(ADVICE_CLOCK_SKEW))
+		return;
+
+	info = git_committer_info(IDENT_STRICT);
+	if (split_ident_line(&committer, info, strlen(info)) ||
+	    !committer.date_begin)
+		return;
+	date = parse_timestamp(committer.date_begin, NULL, 10);
+
+	for (; parents; parents = parents->next) {
+		struct commit *parent = parents->item;
+
+		if (repo_parse_commit(the_repository, parent))
+			continue;
+		if (parent->date > newest)
+			newest = parent->date;
+	}
+
+	if (!newest || date >= newest)
+		return;
+
+	strbuf_addstr(&ours, show_date(date, atoi(committer.date_end + 1),
+				       DATE_MODE(ISO8601)));
+
+	advise_if_enabled(ADVICE_CLOCK_SKEW,
+			  _("the new commit is dated %s,\n"
+			    "which is earlier than its parent, dated %s.\n"
+			    "This usually means the system clock is wrong.\n"
+			    "Commands that walk history in date order, such as\n"
+			    "\"git log --since\", may skip commits as a result."),
+			  ours.buf,
+			  show_date(newest, 0, DATE_MODE(ISO8601)));
+	strbuf_release(&ours);
+}
+
 static int git_commit_config(const char *k, const char *v,
 			     const struct config_context *ctx, void *cb)
 {
@@ -1934,6 +1978,8 @@ int cmd_commit(int argc,
 		struct commit_extra_header **tail = &extra;
 		append_merge_tag_headers(parents, &tail);
 	}
+
+	warn_if_dated_before_parents(parents);
 
 	if (commit_tree_extended(sb.buf, sb.len, &the_repository->index->cache_tree->oid,
 				 parents, &oid, author_ident.buf, NULL,
