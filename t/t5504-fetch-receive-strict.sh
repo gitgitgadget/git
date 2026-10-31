@@ -105,8 +105,11 @@ test_expect_success 'push with receive.fsckobjects' '
 	To dst
 	!	refs/heads/main:refs/heads/test	[remote rejected] (unpacker error)
 	EOF
-	test_must_fail git push --porcelain dst main:refs/heads/test >act &&
-	test_cmp exp act
+	test_must_fail git push --porcelain dst main:refs/heads/test >act 2>err &&
+	test_cmp exp act &&
+	missing_oid=$(sed -e s%/%% S) &&
+	test_grep "did not receive expected object $missing_oid" err &&
+	test_grep ! "object of unexpected type" err
 '
 
 test_expect_success 'push with transfer.fsckobjects' '
