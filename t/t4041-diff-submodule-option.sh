@@ -14,7 +14,11 @@ export GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME
 
 . ./test-lib.sh
 
-test_expect_success SHA1 'submodule commit abbreviation uses submodule object database' '
+test_expect_success 'submodule commit abbreviation uses submodule object database' '
+	test_oid_cache <<-EOF &&
+	submodule_commit1_abbrev sha1:0000000000e
+	submodule_commit1_abbrev sha256:24c81a5
+	EOF
 	test_when_finished "rm -rf collision-super" &&
 	git init -q collision-super &&
 	git init -q collision-super/sm1 &&
@@ -27,7 +31,8 @@ test_expect_success SHA1 'submodule commit abbreviation uses submodule object da
 	git -C collision-super update-index --add --cacheinfo 160000,"$commit1",sm1 &&
 	git -C collision-super commit -q -m "Add submodule" &&
 	git -C collision-super diff --submodule=log >actual &&
-	printf "Submodule sm1 0000000000e..%s:\n  > child\n" \
+	printf "Submodule sm1 %s..%s:\n  > child\n" \
+		"$(test_oid submodule_commit1_abbrev)" \
 		"$(git -C collision-super/sm1 rev-parse --short "$commit2")" >expected &&
 	test_cmp expected actual
 '
