@@ -41,6 +41,10 @@ characters.  An empty string as search expression matches all lines.
 
 OPTIONS
 -------
+`<pathspec>...`::
+	Which files to search. For more details about the _<pathspec>_ syntax,
+	see linkgit:gitpathspecs[7].
+
 `--cached`::
 	Instead of searching tracked files in the working tree, search
 	blobs registered in the index file.

@@ -35,6 +35,9 @@ the relevant file selection options.
 
 OPTIONS
 -------
+`<file>...`:: 
+	You can use any pathspec here, see linkgit:gitpathspec[7] for more.
+
 -c::
 --cached::
 	Show all files cached in Git's index, i.e. all tracked files.
@@ -340,6 +343,7 @@ via the `--exclude-from=` option.
 SEE ALSO
 --------
 linkgit:git-read-tree[1], linkgit:gitignore[5]
+linkgit:gitpathspecs[7]
 
 GIT
 ---

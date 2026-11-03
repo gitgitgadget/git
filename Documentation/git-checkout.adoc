@@ -108,6 +108,10 @@ conflicted merge result.
 
 OPTIONS
 -------
+`<pathspec>...`::
+	Which files to update. For more details about the _<pathspec>_ syntax,
+	see linkgit:gitpathspecs[7].
+
 `-q`::
 `--quiet`::
 	Quiet, suppress feedback messages.

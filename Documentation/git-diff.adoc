@@ -126,6 +126,10 @@ do not mean a range as defined in the
 
 OPTIONS
 -------
+`<path>...`::
+	Files to show a diff for. You can use any pathspec here,
+	see linkgit:gitpathspecs[7] for the syntax.
+
 :git-diff: 1
 include::diff-options.adoc[]
 
