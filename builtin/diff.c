@@ -10,6 +10,7 @@
 #include "builtin.h"
 #include "config.h"
 #include "ewah/ewok.h"
+#include "environment.h"
 #include "lockfile.h"
 #include "color.h"
 #include "commit.h"
@@ -522,7 +523,7 @@ int cmd_diff(int argc,
 	 * Otherwise, we are doing the usual "git" diff; set up any
 	 * further defaults that apply to regular diffs.
 	 */
-	rev.diffopt.skip_stat_unmatch = !!diff_auto_refresh_index;
+	rev.diffopt.skip_stat_unmatch = !!repo_diff_auto_refresh_index(the_repository);
 
 	/*
 	 * Default to intent-to-add entries invisible in the
