@@ -100,9 +100,16 @@ test_expect_success 'matched bogus object count' '
 	clear_base &&
 
 	# Unlike above, we should notice early that the .idx is totally
-	# bogus, and not even enumerate its contents.
-	git cat-file --batch-all-objects --batch-check >actual &&
-	test_must_be_empty actual &&
+	# bogus, report failure, and not enumerate its contents.
+	for order in "" --unordered
+	do
+		test_must_fail git cat-file --batch-all-objects \
+			--batch-check $order >actual 2>err &&
+		test_must_be_empty actual &&
+		test_grep "non-monotonic index" err &&
+		test_grep "unable to enumerate all objects" err ||
+		return 1
+	done &&
 
 	# But as before, we can do the same object-access checks.
 	test_must_fail git cat-file blob $object &&
