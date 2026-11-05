@@ -2457,6 +2457,9 @@ int cmd_am(int argc,
 
 	argc = parse_options(argc, argv, prefix, options, usage, 0);
 
+	if (state.no_verify)
+		validate_no_verify(the_repository, "--no-verify");
+
 	if (binary >= 0)
 		fprintf_ln(stderr, _("The -b/--binary option has been a no-op for long time, and\n"
 				"it will be removed. Please do not use it anymore."));
