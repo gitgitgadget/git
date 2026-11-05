@@ -236,13 +236,62 @@ test_expect_success 'remove a repo with uninitialized submodule' '
 	)
 '
 
-test_expect_success 'not remove a repo with initialized submodule' '
+test_expect_success 'remove a clean worktree with per-worktree submodule gitdir' '
 	test_config_global protocol.file.allow always &&
 	(
 		cd withsub &&
 		git worktree add to-remove HEAD &&
 		git -C to-remove submodule update &&
-		test_must_fail git worktree remove to-remove
+		git worktree remove to-remove
+	)
+'
+
+test_expect_success 'not remove a repo with dirty initialized submodule' '
+	test_config_global protocol.file.allow always &&
+	(
+		cd withsub &&
+		git worktree add to-remove-dirty HEAD &&
+		git -C to-remove-dirty submodule update &&
+		echo dirty >to-remove-dirty/sub/dirty-file &&
+		test_must_fail git worktree remove to-remove-dirty &&
+		git worktree remove --force to-remove-dirty
+	)
+'
+
+test_expect_success 'not remove a worktree with mixed per-worktree and legacy submodule gitdirs' '
+	test_config_global protocol.file.allow always &&
+	(
+		cd withsub &&
+		git worktree add mixed-layout HEAD &&
+		git -C mixed-layout submodule update &&
+		# Inject a fake shared submodule repo in modules/ that lacks a
+		# worktrees/mixed-layout/ entry (legacy model).  scan_modules_for_wt_id
+		# finds sub/ (has the entry) and legacy-sub/ (lacks it), returning 0.
+		mkdir -p .git/modules/legacy-sub &&
+		printf "ref: refs/heads/main\n" >.git/modules/legacy-sub/HEAD &&
+		test_must_fail git worktree remove mixed-layout &&
+		# Clean up the injected repo and the worktree.
+		rm -rf .git/modules/legacy-sub &&
+		git worktree remove --force mixed-layout
+	)
+'
+
+test_expect_success 'not remove a worktree whose per-worktree submodule has a legacy nested submodule gitdir' '
+	test_config_global protocol.file.allow always &&
+	(
+		cd withsub &&
+		git worktree add nested-sm HEAD &&
+		git -C nested-sm submodule update &&
+		# Inject a fake nested shared repo inside sub/modules/ that lacks
+		# a worktrees/nested-sm/ entry.  scan_modules_for_wt_id recurses
+		# into sub/modules/ and finds it, forcing rejection.
+		mkdir -p .git/modules/sub/modules/nested &&
+		printf "ref: refs/heads/main\n" \
+			>.git/modules/sub/modules/nested/HEAD &&
+		test_must_fail git worktree remove nested-sm &&
+		# Clean up.
+		rm -rf .git/modules/sub/modules &&
+		git worktree remove --force nested-sm
 	)
 '
 

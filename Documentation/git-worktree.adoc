@@ -10,7 +10,8 @@ SYNOPSIS
 --------
 [synopsis]
 git worktree add [-f] [--detach] [--checkout] [--lock [--reason <string>]]
-		 [--orphan] [(-b | -B) <new-branch>] <path> [<commit-ish>]
+		 [--orphan] [--recurse-submodules]
+		 [(-b | -B) <new-branch>] <path> [<commit-ish>]
 git worktree list [-v | --porcelain [-z]]
 git worktree lock [--reason <string>] <worktree>
 git worktree move <worktree> <new-path>
@@ -212,6 +213,16 @@ To remove a locked worktree, specify `--force` twice.
 	be used to suppress checkout in order to make customizations,
 	such as configuring sparse-checkout. See "Sparse checkout"
 	in linkgit:git-read-tree[1].
+
+`--recurse-submodules`::
+	After the new worktree has been checked out, initialize and update
+	each submodule in it, as if running `git submodule update --init
+	--recursive` from within the new working tree.  Each submodule's
+	gitdir is set up as a linked worktree of the shared submodule
+	repository at `$GIT_DIR/modules/<name>/`, so that the submodule's
+	objects and refs are shared across all worktrees.
++
+Incompatible with `--no-checkout` and `--orphan`.
 
 `--guess-remote`::
 `--no-guess-remote`::
