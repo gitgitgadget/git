@@ -217,7 +217,7 @@ transferring objects between repositories; see linkgit:git-replace[1]
 for a more flexible and robust system to do the same thing.
 
 [[def_hash]]hash::
-	In Git's context, synonym for <<def_object_name,object name>>.
+	In Git's context, synonym for <<def_object_identifier,object ID>>.
 
 [[def_head]]head::
 	A <<def_ref,named reference>> to the <<def_commit,commit>> at the tip of a
@@ -296,16 +296,19 @@ This commit is referred to as a "merge commit", or sometimes just a
 
 [[def_object_database]]object database::
 	Stores a set of "objects", and an individual <<def_object,object>> is
-	identified by its <<def_object_name,object name>>. The objects usually
+	identified by its <<def_object_identifier,object ID>>. The objects usually
 	live in `$GIT_DIR/objects/`.
 
 [[def_object_identifier]]object identifier, object ID, oid::
-	Synonyms for <<def_object_name,object name>>.
-
-[[def_object_name]]object name::
 	The unique identifier of an <<def_object,object>>.  The
 	object name is usually represented by a 40 character
 	hexadecimal string.  Also colloquially called <<def_SHA1,SHA-1>>.
+
+[[def_object_name]]object name::
+	Depending on the context, either an <<def_object_identifier,object ID>>,
+	or a name used to refer to an object, like a branch name or other reference.
+	The meaning of this term has changed over time so it's not always used
+	in a consistent way.
 
 [[def_object_type]]object type::
 	One of the identifiers "<<def_commit_object,commit>>",
@@ -553,7 +556,7 @@ The following pseudorefs are known to Git:
 	to the result.
 
 [[def_ref]]ref::
-	A name that points to an <<def_object_name,object name>> or
+	A name that points to an <<def_object_identifier,object ID>> or
 	another ref (the latter is called a <<def_symref,symbolic ref>>).
 	For convenience, a ref can sometimes be abbreviated when used
 	as an argument to a Git command; see linkgit:gitrevisions[7]
@@ -645,7 +648,8 @@ format. See linkgit:git-reflog[1] for details.
 
 [[def_SHA1]]SHA-1::
 	"Secure Hash Algorithm 1"; a cryptographic hash function.
-	In the context of Git used as a synonym for <<def_object_name,object name>>.
+	In the context of Git used as a synonym for
+	<<def_object_identifier,object ID>>.
 
 [[def_shallow_clone]]shallow clone::
 	Mostly a synonym to <<def_shallow_repository,shallow repository>>
