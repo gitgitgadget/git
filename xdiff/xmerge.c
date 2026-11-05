@@ -26,9 +26,10 @@ typedef struct s_xdmerge {
 	struct s_xdmerge *next;
 	/*
 	 * 0 = conflict,
-	 * 1 = no conflict, take first,
+	 * 1 = no conflict, take first.
 	 * 2 = no conflict, take second.
-	 * 3 = no conflict, take both.
+	 * 3 = no conflict, take both first & second.
+	 * 4 = no conflict, take base.
 	 */
 	int mode;
 	/*
@@ -313,6 +314,13 @@ static int xdl_fill_merge_buffer(xdfenv_t *xe1, const char *name1,
 			if (m->mode & 2)
 				size += xdl_recs_copy(xe2, m->i2, m->chg2, 0, 0,
 						      dest ? dest + size : NULL);
+		} else if (m->mode == XDL_MERGE_FAVOR_BASE) {
+			/* Before conflicting part */
+			size += xdl_recs_copy(xe1, i, m->i1 - i, 0, 0,
+					      dest ? dest + size : NULL);
+			/* Image from merge base */
+			size += xdl_orig_copy(xe1, m->i0, m->chg0, 0, 0,
+					      dest ? dest + size : NULL);
 		} else
 			continue;
 		i = m->i1 + m->chg1;
