@@ -1,6 +1,7 @@
 #ifndef BISECT_H
 #define BISECT_H
 
+struct child_process;
 struct commit_list;
 struct repository;
 struct object_id;
@@ -73,5 +74,11 @@ int bisect_clean_state(void);
 
 enum bisect_error bisect_checkout(const struct object_id *bisect_rev,
 				  int no_checkout);
+
+/*
+ * Prepare "cmd" to run a "git checkout" from the directory the user
+ * started "git bisect" in, so that the checkout does not remove it.
+ */
+void bisect_prepare_checkout(struct child_process *cmd);
 
 #endif

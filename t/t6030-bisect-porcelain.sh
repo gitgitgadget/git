@@ -631,6 +631,20 @@ test_expect_success 'bisect run fails with missing test script' '
 	test_grep ! "is the first '\''bad'\'' commit" my_bisect_log.txt
 '
 
+test_expect_success 'bisect run from a subdirectory runs <cmd> at the top' '
+	test_when_finished "git bisect reset && rmdir subdir" &&
+	write_script test_script.sh <<-\EOF &&
+	! grep Another hello >/dev/null
+	EOF
+	mkdir subdir &&
+	(
+		cd subdir &&
+		git bisect start $HASH4 $HASH1 &&
+		git bisect run ./test_script.sh >../my_bisect_log.txt
+	) &&
+	test_grep "$HASH3 is the first '\''bad'\'' commit" my_bisect_log.txt
+'
+
 # $HASH1 is good, $HASH5 is bad, we skip $HASH3
 # but $HASH4 is good,
 # so we should find $HASH5 as the first bad commit
