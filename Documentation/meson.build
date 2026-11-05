@@ -99,6 +99,7 @@ manpages = {
   'git-name-rev.adoc' : 1,
   'git-notes.adoc' : 1,
   'git-p4.adoc' : 1,
+  'git-pack-aggregate.adoc' : 1,
   'git-pack-objects.adoc' : 1,
   'git-pack-refs.adoc' : 1,
   'git-patch-id.adoc' : 1,
