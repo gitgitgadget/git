@@ -57,7 +57,7 @@ impl ObjectID {
 
     /// Return the algorithm for this object ID.
     ///
-    /// If the algorithm set internally is not valid, this function panics.
+    /// Returns an error if the algorithm set internally is not valid.
     pub fn algo(&self) -> Result<HashAlgorithm, InvalidHashAlgorithm> {
         HashAlgorithm::from_u32(self.algo).ok_or(InvalidHashAlgorithm(self.algo))
     }
@@ -452,6 +452,7 @@ mod tests {
             algo: 0,
         };
 
+        assert_eq!(oid.algo().unwrap_err().0, 0);
         assert_eq!(
             format!("{}", oid),
             format!("{}:invalid-hash-algo-0", "ab".repeat(GIT_MAX_RAWSZ))
