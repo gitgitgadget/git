@@ -2914,6 +2914,30 @@ test_expect_success 'R: blob appears only once' '
 	test 1 = $n
 '
 
+test_expect_success 'R: blobs bigger than threshold are not deltified' '
+	test-tool genrandom base 8192 >base &&
+	{
+		for i in 1 2 3
+		do
+			{ cat base && echo "variant $i"; } >blob &&
+			echo blob &&
+			echo "data $(test_file_size blob)" &&
+			cat blob || return 1
+		done
+	} >input &&
+
+	test_create_repo R2 &&
+	git -C R2 config fastimport.unpackLimit 0 &&
+	git -C R2 fast-import --big-file-threshold=1 <input &&
+	git -C R2 cat-file --batch-all-objects \
+		--batch-check="%(objecttype) %(deltabase)" >actual &&
+	for i in 1 2 3
+	do
+		echo "blob $ZERO_OID" || return 1
+	done >expect &&
+	test_cmp expect actual
+'
+
 ###
 ### series S (mark and path parsing)
 ###
