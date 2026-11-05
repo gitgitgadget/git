@@ -24,4 +24,13 @@ test_expect_success 'do not switch branches with dirty file' '
 	test_grep overwritten err
 '
 
+test_expect_success 'core.ignorestat marks updated paths assume-unchanged' '
+	git reset --hard &&
+	git update-index --no-assume-unchanged file &&
+	test_config core.ignorestat true &&
+	echo changed >file &&
+	git update-index file &&
+	test "$(git ls-files -v file)" = "h file"
+'
+
 test_done
