@@ -4892,12 +4892,76 @@ static int get_object_list_path_walk(struct rev_info *revs)
 	return result;
 }
 
+static void add_have_to_inspect(struct oidset *trees, const char *arg)
+{
+	struct object_id oid;
+	struct commit *commit;
+	struct tree *tree;
+	const char *end;
+
+	if (parse_oid_hex(arg, &oid, &end) || *end)
+		die(_("not an object name '%s'"), arg);
+	if (!odb_has_object(the_repository->objects, &oid, 0))
+		return;
+	commit = lookup_commit_reference_gently(the_repository, &oid, 1);
+	if (!commit)
+		die(_("object %s is not a commit"), arg);
+	tree = repo_get_commit_tree(the_repository, commit);
+	if (tree)
+		oidset_insert(trees, &tree->object.oid);
+}
+
+static void inspect_haves(struct rev_info *revs, struct oidset *trees)
+{
+	struct oidset_iter iter;
+	struct object_id *oid;
+
+	/* Avoid fetching missing trees for this optional optimization. */
+	if (!oidset_size(trees) || repo_has_promisor_remote(revs->repo))
+		return;
+
+	/* Mark receiver-known root trees as uninteresting. */
+	oidset_iter_init(trees, &iter);
+	while ((oid = oidset_iter_next(&iter))) {
+		struct tree *tree = lookup_tree(revs->repo, oid);
+
+		if (tree)
+			tree->object.flags |= UNINTERESTING;
+	}
+
+	/*
+	 * Add outgoing root trees for the same sparse tree marking used by
+	 * mark_edges_uninteresting(). A receiver-known tip on the other side of
+	 * a divergence can be a negative revision without its tree being visited
+	 * by the ordinary walk. Combining its tree with the outgoing trees lets
+	 * us exclude shared objects without walking that tip's commit history.
+	 */
+	for (size_t i = 0; i < revs->pending.nr; i++) {
+		struct object *obj = revs->pending.objects[i].item;
+
+		if (obj->flags & UNINTERESTING)
+			continue;
+		if (obj->type == OBJ_COMMIT) {
+			struct tree *tree = repo_get_commit_tree(revs->repo,
+							(struct commit *)obj);
+
+			if (tree)
+				oidset_insert(trees, &tree->object.oid);
+		} else if (obj->type == OBJ_TREE) {
+			oidset_insert(trees, &obj->oid);
+		}
+	}
+
+	mark_trees_uninteresting_sparse(revs->repo, trees);
+}
+
 static void get_object_list(struct rev_info *revs, struct strvec *argv)
 {
 	struct setup_revision_opt s_r_opt = {
 		.allow_exclude_promisor_objects = 1,
 	};
 	struct repo_config_values *cfg = repo_config_values(the_repository);
+	struct oidset have_trees = OIDSET_INIT;
 	char line[1000];
 	int flags = 0;
 	int save_warning;
@@ -4931,6 +4995,11 @@ static void get_object_list(struct rev_info *revs, struct strvec *argv)
 				use_bitmap_index = 0;
 				continue;
 			}
+			if (starts_with(line, "--inspect-have ")) {
+				add_have_to_inspect(&have_trees, line + 15);
+				write_bitmap_index = 0;
+				continue;
+			}
 			die(_("not a rev '%s'"), line);
 		}
 		if (handle_revision_arg(line, revs, flags, REVARG_CANNOT_BE_FILENAME))
@@ -4939,8 +5008,18 @@ static void get_object_list(struct rev_info *revs, struct strvec *argv)
 
 	cfg->warn_on_object_refname_ambiguity = save_warning;
 
-	if (use_bitmap_index && !get_object_list_from_bitmap(revs))
+	if (use_bitmap_index && !get_object_list_from_bitmap(revs)) {
+		oidset_clear(&have_trees);
 		return;
+	}
+
+	/*
+	 * Limit this inspection to non-bitmap enumeration to avoid extra tree
+	 * reads on the bitmap fast path. Boundary bitmap traversal may still
+	 * include receiver-known objects; that tradeoff is intentional.
+	 */
+	inspect_haves(revs, &have_trees);
+	oidset_clear(&have_trees);
 
 	if (use_delta_islands)
 		load_delta_islands(the_repository, progress);

@@ -704,6 +704,7 @@ void odb_generate_pack_options_release(struct odb_generate_pack_options *opts)
 {
 	oid_array_clear(&opts->wants);
 	oid_array_clear(&opts->haves);
+	oid_array_clear(&opts->haves_to_inspect);
 	oid_array_clear(&opts->shallows);
 }
 

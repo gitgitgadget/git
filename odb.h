@@ -656,6 +656,13 @@ struct odb_generate_pack_options {
 	struct oid_array haves;
 
 	/*
+	 * Receiver-known commit tips whose root trees should be examined
+	 * to identify additional objects that need not be packed. This
+	 * optional inspection does not walk their commit histories.
+	 */
+	struct oid_array haves_to_inspect;
+
+	/*
 	 * The shallow boundary that shall be used when computing object
 	 * reachability. When set, any shallow information of the repository
 	 * itself shall be ignored in favor of these objects.
@@ -739,6 +746,7 @@ struct odb_generate_pack_options {
 #define ODB_GENERATE_PACK_OPTIONS_INIT { \
 	.wants = OID_ARRAY_INIT, \
 	.haves = OID_ARRAY_INIT, \
+	.haves_to_inspect = OID_ARRAY_INIT, \
 	.shallows = OID_ARRAY_INIT, \
 	.pack_fd = -1, \
 }
