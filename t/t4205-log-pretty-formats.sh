@@ -1181,19 +1181,37 @@ test_expect_success EXPENSIVE,SIZE_T_IS_64BIT 'log --pretty with huge commit mes
 	git log -1 --pretty="format:%>(2147483646)%x41%41%>(2147483646)%x41" >/dev/null
 '
 
+# CI EXPERIMENT (not for submission): report wall time, peak memory and
+# paging for each expensive step, on stderr.
+time_step () {
+	echo >&2 "== time_step: $1" &&
+	shift &&
+	if test "$(uname -s)" = Darwin
+	then
+		/usr/bin/time -l "$@"
+	elif test -x /usr/bin/time
+	then
+		/usr/bin/time -v "$@"
+	else
+		"$@"
+	fi
+}
+
 test_expect_success EXPENSIVE,SIZE_T_IS_64BIT 'set up huge commit' '
-	test-tool genzeros 2147483649 | tr "\000" "1" >expect &&
-	huge_commit=$(git commit-tree -F expect HEAD^{tree})
+	time_step "genzeros only" sh -c "test-tool genzeros 2147483649 >zeros" &&
+	time_step "tr only" sh -c "tr \"\\000\" 1 <zeros >expect" &&
+	rm zeros &&
+	huge_commit=$(time_step "commit-tree" git commit-tree -F expect HEAD^{tree})
 '
 
 test_expect_success EXPENSIVE,SIZE_T_IS_64BIT 'log --pretty with huge commit message' '
-	git log -1 --format="%B%<(1)%x30" $huge_commit >actual &&
+	time_step "log %B" git log -1 --format="%B%<(1)%x30" $huge_commit >actual &&
 	echo 0 >>expect &&
-	test_cmp_bin expect actual
+	time_step "cmp" cmp expect actual
 '
 
 test_expect_success EXPENSIVE,SIZE_T_IS_64BIT 'log --pretty with huge commit message does not cause allocation failure' '
-	test_must_fail git log -1 --format="%<(1)%B" $huge_commit 2>error &&
+	time_step "log alloc failure" sh -c "git log -1 --format=\"%<(1)%B\" $huge_commit 2>error; test \$? = 128" &&
 	cat >expect <<-EOF &&
 	fatal: number too large to represent as int on this platform: 2147483649
 	EOF
