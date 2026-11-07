@@ -263,7 +263,7 @@ test_expect_success '--stdin outside of repository (uses default hash)' '
 
 test_expect_success EXPENSIVE,SIZE_T_IS_64BIT \
 		'files over 4GB hash literally' '
-	test-tool genzeros $((5*1024*1024*1024)) >big &&
+	test-tool genbytes NUL $((5*1024*1024*1024)) >big &&
 	test_oid large5GB >expect &&
 	git hash-object --stdin --literally <big >actual &&
 	test_cmp expect actual
@@ -271,7 +271,7 @@ test_expect_success EXPENSIVE,SIZE_T_IS_64BIT \
 
 test_expect_success EXPENSIVE,SIZE_T_IS_64BIT \
 		'files over 4GB hash correctly via --stdin' '
-	{ test -f big || test-tool genzeros $((5*1024*1024*1024)) >big; } &&
+	{ test -f big || test-tool genbytes NUL $((5*1024*1024*1024)) >big; } &&
 	test_oid large5GB >expect &&
 	git hash-object --stdin <big >actual &&
 	test_cmp expect actual
@@ -279,7 +279,7 @@ test_expect_success EXPENSIVE,SIZE_T_IS_64BIT \
 
 test_expect_success EXPENSIVE,SIZE_T_IS_64BIT \
 		'files over 4GB hash correctly' '
-	{ test -f big || test-tool genzeros $((5*1024*1024*1024)) >big; } &&
+	{ test -f big || test-tool genbytes NUL $((5*1024*1024*1024)) >big; } &&
 	test_oid large5GB >expect &&
 	git hash-object -- big >actual &&
 	test_cmp expect actual
@@ -289,7 +289,7 @@ test_expect_success EXPENSIVE,SIZE_T_IS_64BIT \
 # We ensure that cleaning doesn't mangle large files on 64-bit Windows.
 test_expect_success EXPENSIVE,SIZE_T_IS_64BIT \
 		'hash filtered files over 4GB correctly' '
-	{ test -f big || test-tool genzeros $((5*1024*1024*1024)) >big; } &&
+	{ test -f big || test-tool genbytes NUL $((5*1024*1024*1024)) >big; } &&
 	test_oid large5GB >expect &&
 	test_config filter.null-filter.clean "cat" &&
 	echo "big filter=null-filter" >.gitattributes &&

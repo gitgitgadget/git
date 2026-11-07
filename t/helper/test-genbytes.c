@@ -33,6 +33,19 @@ static int generate_bytes(char byte, intmax_t count)
 	return 0;
 }
 
+/*
+ * A NUL byte cannot be passed as an argument, so it is spelled out as
+ * "NUL".  Returns -1 for anything that is not a single byte.
+ */
+static int parse_byte(const char *arg)
+{
+	if (!strcmp(arg, "NUL"))
+		return '\0';
+	if (strlen(arg) == 1)
+		return (unsigned char)arg[0];
+	return -1;
+}
+
 static intmax_t parse_count(int argc, const char **argv, int pos)
 {
 	return pos < argc ? strtoimax(argv[pos], NULL, 0) : -1;
@@ -40,20 +53,12 @@ static intmax_t parse_count(int argc, const char **argv, int pos)
 
 int cmd__genbytes(int argc, const char **argv)
 {
-	if (argc < 2 || argc > 3 || strlen(argv[1]) != 1) {
-		fprintf(stderr, "usage: %s <byte> [<count>]\n", argv[0]);
+	int byte;
+
+	if (argc < 2 || argc > 3 || (byte = parse_byte(argv[1])) < 0) {
+		fprintf(stderr, "usage: %s (<byte> | NUL) [<count>]\n", argv[0]);
 		return 1;
 	}
 
-	return generate_bytes(argv[1][0], parse_count(argc, argv, 2));
-}
-
-int cmd__genzeros(int argc, const char **argv)
-{
-	if (argc > 2) {
-		fprintf(stderr, "usage: %s [<count>]\n", argv[0]);
-		return 1;
-	}
-
-	return generate_bytes('\0', parse_count(argc, argv, 1));
+	return generate_bytes(byte, parse_count(argc, argv, 2));
 }

@@ -35,7 +35,6 @@ static struct test_cmd cmds[] = {
 	{ "fsmonitor-client", cmd__fsmonitor_client },
 	{ "genbytes", cmd__genbytes },
 	{ "genrandom", cmd__genrandom },
-	{ "genzeros", cmd__genzeros },
 	{ "getcwd", cmd__getcwd },
 	{ "hashmap", cmd__hashmap },
 	{ "hash-speed", cmd__hash_speed },
