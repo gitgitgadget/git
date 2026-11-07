@@ -1111,7 +1111,7 @@ test_expect_success 'fsck error on gitattributes with excessive line lengths' '
 '
 
 test_expect_success 'fsck error on gitattributes with excessive size' '
-	blob=$(test-tool genzeros $((100 * 1024 * 1024 + 1)) | git hash-object -w --stdin) &&
+	blob=$(test-tool genbytes NUL $((100 * 1024 * 1024 + 1)) | git hash-object -w --stdin) &&
 	test_when_finished "remove_object $blob" &&
 	tree=$(printf "100644 blob %s\t%s\n" $blob .gitattributes | git mktree) &&
 	test_when_finished "remove_object $tree" &&
@@ -1157,7 +1157,7 @@ test_expect_success 'fsck with blob size equal to core.bigFileThreshold' '
 	git init big-blob-fsck &&
 	(
 		cd big-blob-fsck &&
-		test-tool genzeros 1024 >blob &&
+		test-tool genbytes NUL 1024 >blob &&
 		git add blob &&
 		git commit -m "blob equal to threshold" &&
 		git repack -ad &&
