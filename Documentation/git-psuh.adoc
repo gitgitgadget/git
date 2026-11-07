@@ -1,0 +1,31 @@
+git-psuh(1)
+===========
+
+NAME
+----
+git-psuh - Delight users' typo with a shy horse
+
+
+SYNOPSIS
+--------
+[synopsis]
+git psuh [<arg>...]
+
+DESCRIPTION
+-----------
+Internal metrics indicate this is a command many users expect to be
+present. So, here's an imlpementation to help drive customer 
+satisfaction and engagement: a pony which doubtfully greets the user, 
+or, a Pony Saying "Um, Hello" (PSUH).
+
+OPTIONS[[OPTIONS]]
+------------------
+...
+
+OUTPUT
+------
+...
+
+GIT
+---
+Part of the git[1] suite
