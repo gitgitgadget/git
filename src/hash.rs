@@ -57,7 +57,7 @@ impl ObjectID {
 
     /// Return the algorithm for this object ID.
     ///
-    /// If the algorithm set internally is not valid, this function panics.
+    /// Returns an error if the algorithm set internally is not valid.
     pub fn algo(&self) -> Result<HashAlgorithm, InvalidHashAlgorithm> {
         HashAlgorithm::from_u32(self.algo).ok_or(InvalidHashAlgorithm(self.algo))
     }
@@ -78,13 +78,19 @@ impl ObjectID {
 }
 
 impl Display for ObjectID {
-    /// Format this object ID as a hex object ID.
+    /// Format this object ID as a hex object ID, or mark it if its algorithm is invalid.
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let hash = self.as_slice().unwrap();
+        let hash = match self.as_slice() {
+            Ok(hash) => hash,
+            Err(_) => &self.hash,
+        };
         for x in hash {
             write!(f, "{:02x}", x)?;
         }
-        Ok(())
+        match self.algo() {
+            Ok(_) => Ok(()),
+            Err(e) => write!(f, ":invalid-hash-algo-{}", e.0),
+        }
     }
 }
 
@@ -366,7 +372,7 @@ pub mod c {
 
 #[cfg(test)]
 mod tests {
-    use super::{CryptoDigest, HashAlgorithm, ObjectID};
+    use super::{CryptoDigest, HashAlgorithm, ObjectID, GIT_MAX_RAWSZ};
     use std::io::Write;
 
     fn all_algos() -> &'static [HashAlgorithm] {
@@ -437,6 +443,20 @@ mod tests {
             assert_eq!(format!("{}", oid), *display);
             assert_eq!(format!("{:?}", oid), *debug);
         }
+    }
+
+    #[test]
+    fn invalid_object_ids_format_without_panicking() {
+        let oid = ObjectID {
+            hash: [0xab; GIT_MAX_RAWSZ],
+            algo: 0,
+        };
+
+        assert_eq!(oid.algo().unwrap_err().0, 0);
+        assert_eq!(
+            format!("{}", oid),
+            format!("{}:invalid-hash-algo-0", "ab".repeat(GIT_MAX_RAWSZ))
+        );
     }
 
     #[test]
