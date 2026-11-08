@@ -152,6 +152,13 @@ int repo_has_symlinks(struct repository *repo)
 		: platform_has_symlinks();
 }
 
+int repo_diff_auto_refresh_index(struct repository *repo)
+{
+	return repo->initialized
+		? repo_config_values(repo)->diff_auto_refresh_index
+		: 1;
+}
+
 const char *repo_excludes_file(struct repository *repo)
 {
 	struct repo_config_values *cfg = repo_config_values(repo);
@@ -777,6 +784,9 @@ void repo_config_values_init(struct repo_config_values *cfg)
 	cfg->trust_executable_bit = 1;
 	cfg->has_symlinks = platform_has_symlinks();
 	cfg->use_nanosec = 0;
+
+	/* section "diff" config values */
+	cfg->diff_auto_refresh_index = 1;
 
 	/* section "sparse" config values */
 	cfg->sparse_expect_files_outside_of_patterns = 0;
