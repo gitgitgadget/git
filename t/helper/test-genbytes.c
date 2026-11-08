@@ -49,13 +49,3 @@ int cmd__genbytes(int argc, const char **argv)
 
 	return generate_bytes(hex2chr(argv[1]), parse_count(argc, argv, 2));
 }
-
-int cmd__genzeros(int argc, const char **argv)
-{
-	if (argc > 2) {
-		fprintf(stderr, "usage: %s [<count>]\n", argv[0]);
-		return 1;
-	}
-
-	return generate_bytes('\0', parse_count(argc, argv, 1));
-}
