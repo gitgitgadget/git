@@ -37,6 +37,7 @@
 #include "wildmatch.h"
 #include "strbuf.h"
 #include "url.h"
+#include "worktree.h"
 
 #define OPT_QUIET (1 << 0)
 #define OPT_CACHED (1 << 1)
@@ -507,50 +508,60 @@ static int validate_and_set_submodule_gitdir(struct strbuf *gitdir_path,
 
 static void create_default_gitdir_config(const char *submodule_name)
 {
+	struct worktree *wt = get_current_worktree(the_repository);
+	const char *modules_dir;
+	struct strbuf tmp = STRBUF_INIT;
 	struct strbuf gitdir_path = STRBUF_INIT;
 	struct git_hash_ctx ctx;
 	char hex_name_hash[GIT_MAX_HEXSZ + 1], header[128];
 	unsigned char raw_name_hash[GIT_MAX_RAWSZ];
 	int header_len;
 
-	/* Case 1: try the plain module name */
-	repo_git_path_append(the_repository, &gitdir_path, "modules/%s", submodule_name);
-	if (!validate_and_set_submodule_gitdir(&gitdir_path, submodule_name)) {
-		strbuf_release(&gitdir_path);
-		return;
+	modules_dir = worktree_git_path(wt, "modules/");
+	if (is_absolute_path(modules_dir)) {
+		modules_dir = relative_path(modules_dir, wt->path, &tmp);
 	}
+
+	/* Case 1: try the plain module name */
+	strbuf_addstr(&gitdir_path, modules_dir);
+	strbuf_addstr(&gitdir_path, submodule_name);
+	if (!validate_and_set_submodule_gitdir(&gitdir_path,
+					       submodule_name))
+		goto cleanup;
 
 	/* Case 2.1: Try URI-safe (RFC3986) encoding first, this fixes nested gitdirs */
 	strbuf_reset(&gitdir_path);
-	repo_git_path_append(the_repository, &gitdir_path, "modules/");
+	strbuf_addstr(&gitdir_path, modules_dir);
 	strbuf_addstr_urlencode(&gitdir_path, submodule_name, is_rfc3986_unreserved);
-	if (!validate_and_set_submodule_gitdir(&gitdir_path, submodule_name)) {
-		strbuf_release(&gitdir_path);
-		return;
-	}
+	if (!validate_and_set_submodule_gitdir(&gitdir_path,
+					       submodule_name))
+		goto cleanup;
 
 	/* Case 2.2: Try extended uppercase URI (RFC3986) encoding, to fix case-folding */
 	strbuf_reset(&gitdir_path);
-	repo_git_path_append(the_repository, &gitdir_path, "modules/");
+	strbuf_addstr(&gitdir_path, modules_dir);
 	strbuf_addstr_urlencode(&gitdir_path, submodule_name, is_casefolding_rfc3986_unreserved);
-	if (!validate_and_set_submodule_gitdir(&gitdir_path, submodule_name))
-		return;
+	if (!validate_and_set_submodule_gitdir(&gitdir_path,
+					       submodule_name))
+		goto cleanup;
 
 	/* Case 2.3: Try some derived gitdir names, see if one sticks */
 	for (char c = '0'; c <= '9'; c++) {
 		strbuf_reset(&gitdir_path);
-		repo_git_path_append(the_repository, &gitdir_path, "modules/");
+		strbuf_addstr(&gitdir_path, modules_dir);
 		strbuf_addstr_urlencode(&gitdir_path, submodule_name, is_rfc3986_unreserved);
 		strbuf_addch(&gitdir_path, c);
-		if (!validate_and_set_submodule_gitdir(&gitdir_path, submodule_name))
-			return;
+		if (!validate_and_set_submodule_gitdir(&gitdir_path,
+						       submodule_name))
+			goto cleanup;
 
 		strbuf_reset(&gitdir_path);
-		repo_git_path_append(the_repository, &gitdir_path, "modules/");
+		strbuf_addstr(&gitdir_path, modules_dir);
 		strbuf_addstr_urlencode(&gitdir_path, submodule_name, is_casefolding_rfc3986_unreserved);
 		strbuf_addch(&gitdir_path, c);
-		if (!validate_and_set_submodule_gitdir(&gitdir_path, submodule_name))
-			return;
+		if (!validate_and_set_submodule_gitdir(&gitdir_path,
+						       submodule_name))
+			goto cleanup;
 	}
 
 	/* Case 2.4: If all the above failed, try a hash of the name as a last resort */
@@ -563,17 +574,22 @@ static void create_default_gitdir_config(const char *submodule_name)
 	git_hash_final(raw_name_hash, &ctx);
 	hash_to_hex_algop_r(hex_name_hash, raw_name_hash, the_hash_algo);
 	strbuf_reset(&gitdir_path);
-	repo_git_path_append(the_repository, &gitdir_path, "modules/%s", hex_name_hash);
-	if (!validate_and_set_submodule_gitdir(&gitdir_path, submodule_name)) {
-		strbuf_release(&gitdir_path);
-		return;
-	}
+	strbuf_addstr(&gitdir_path, modules_dir);
+	strbuf_addstr(&gitdir_path, hex_name_hash);
+	if (!validate_and_set_submodule_gitdir(&gitdir_path,
+					       submodule_name))
+		goto cleanup;
 
 	/* Case 3: nothing worked, error out */
 	die(_("failed to set a valid default config for 'submodule.%s.gitdir'. "
 	      "Please ensure it is set, for example by running something like: "
-	      "'git config submodule.%s.gitdir .git/modules/%s'"),
-	    submodule_name, submodule_name, submodule_name);
+	      "'git config submodule.%s.gitdir %s%s'"),
+	    submodule_name, submodule_name, modules_dir, submodule_name);
+
+cleanup:
+	strbuf_release(&gitdir_path);
+	strbuf_release(&tmp);
+	free_worktree(wt);
 }
 
 static void init_submodule(const char *path, const char *prefix,
