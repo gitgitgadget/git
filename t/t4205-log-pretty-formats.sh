@@ -1182,7 +1182,11 @@ test_expect_success EXPENSIVE,SIZE_T_IS_64BIT 'log --pretty with huge commit mes
 '
 
 test_expect_success EXPENSIVE,SIZE_T_IS_64BIT 'set up huge commit' '
-	test-tool genzeros 2147483649 | tr "\000" "1" >expect &&
+	# Do not use "test-tool genzeros | tr" here, as tr(1) is very slow
+	# on macOS for this much data.  Padding in a single printf
+	# conversion is limited to about INT_MAX bytes, so the remaining
+	# zeros are spelled out literally.
+	printf 000000000%02147483640d 0 >expect &&
 	huge_commit=$(git commit-tree -F expect HEAD^{tree})
 '
 
