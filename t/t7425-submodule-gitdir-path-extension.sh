@@ -279,6 +279,25 @@ test_expect_success '`git clone --recurse-submodules` respects init.defaultSubmo
 	)
 '
 
+test_expect_success 'git submodule init make gitdir relative' '
+	test_when_finished "rm -rf repo-clone-init-wt" &&
+	git clone upstream repo-clone-init-wt &&
+	(
+		cd repo-clone-init-wt &&
+		git config core.repositoryformatversion 1 &&
+		git config extensions.submodulePathConfig true &&
+		git worktree add wt &&
+		cd wt &&
+		git submodule init &&
+		git config submodule.sub1.gitdir >actual &&
+		echo "../.git/worktrees/wt/modules/sub1" >expect &&
+		test_cmp expect actual &&
+		git config submodule.sub2.gitdir >actual &&
+		echo "../.git/worktrees/wt/modules/sub2" >expect &&
+		test_cmp expect actual
+	)
+'
+
 test_expect_success 'submodule--helper migrates legacy modules' '
 	(
 		cd upstream &&
