@@ -497,7 +497,7 @@ static int validate_and_set_submodule_gitdir(struct strbuf *gitdir_path,
 		return 0;
 	}
 
-	if (repo_config_set_gently(the_repository, key, gitdir_path->buf)) {
+	if (repo_config_set_worktree_gently(the_repository, key, gitdir_path->buf)) {
 		free(key);
 		return -1;
 	}
@@ -609,15 +609,10 @@ static void init_submodule(const char *path, const char *prefix,
 		die(_("No url found for submodule path '%s' in .gitmodules"),
 			displaypath);
 
-	/*
-	 * NEEDSWORK: In a multi-working-tree world, this needs to be
-	 * set in the per-worktree config.
-	 *
-	 * Set active flag for the submodule being initialized
-	 */
+	/* Set active flag for the submodule being initialized */
 	if (!is_submodule_active(the_repository, path)) {
 		strbuf_addf(&sb, "submodule.%s.active", sub->name);
-		repo_config_set_gently(the_repository, sb.buf, "true");
+		repo_config_set_worktree_gently(the_repository, sb.buf, "true");
 		strbuf_reset(&sb);
 	}
 
@@ -643,7 +638,7 @@ static void init_submodule(const char *path, const char *prefix,
 			free(oldurl);
 		}
 
-		if (repo_config_set_gently(the_repository, sb.buf, url))
+		if (repo_config_set_worktree_gently(the_repository, sb.buf, url))
 			die(_("Failed to register url for submodule path '%s'"),
 			    displaypath);
 		if (!(flags & OPT_QUIET))
@@ -665,7 +660,7 @@ static void init_submodule(const char *path, const char *prefix,
 			upd = submodule_update_type_to_string(sub->update_strategy.type);
 		}
 
-		if (repo_config_set_gently(the_repository, sb.buf, upd))
+		if (repo_config_set_worktree_gently(the_repository, sb.buf, upd))
 			die(_("Failed to register update mode for submodule path '%s'"), displaypath);
 	}
 
@@ -1491,7 +1486,7 @@ static void sync_submodule(const char *path, const char *prefix,
 
 	strbuf_reset(&sb);
 	strbuf_addf(&sb, "submodule.%s.url", sub->name);
-	if (repo_config_set_gently(the_repository, sb.buf, super_config_url))
+	if (repo_config_set_worktree_gently(the_repository, sb.buf, super_config_url))
 		die(_("failed to register url for submodule path '%s'"),
 		      displaypath);
 
@@ -1670,17 +1665,31 @@ static void deinit_submodule(const char *path, const char *prefix,
 
 	/* remove the .git/config entries (unless the user already did it) */
 	if (!capture_command(&cp_config, &sb_config, 0) && sb_config.len) {
+		char *file = the_repository->repository_format_worktree_config ?
+		  repo_git_path(the_repository, "config.worktree") :
+		  repo_git_path(the_repository, "config");
 		char *sub_key = xstrfmt("submodule.%s", sub->name);
 
 		/*
 		 * remove the whole section so we have a clean state when
 		 * the user later decides to init this submodule again
 		 */
-		repo_config_rename_section_in_file(the_repository, NULL, sub_key, NULL);
+		repo_config_rename_section_in_file(the_repository, file, sub_key, NULL);
 		if (!(flags & OPT_QUIET))
 			printf(_("Submodule '%s' (%s) unregistered for path '%s'\n"),
 				 sub->name, sub->url, displaypath);
+		free(file);
 		free(sub_key);
+
+		if (the_repository->repository_format_worktree_config) {
+			char *key = xstrfmt("submodule.%s.active", sub->name);
+
+			repo_config_clear(the_repository);
+			if (is_submodule_active(the_repository, sub->name))
+				repo_config_set_worktree_gently(the_repository,
+								key, "false");
+			free(key);
+		}
 	}
 
 cleanup:
@@ -3580,7 +3589,7 @@ static void configure_added_submodule(struct add_data *add_data)
 	int matched = 0;
 
 	key = xstrfmt("submodule.%s.url", add_data->sm_name);
-	repo_config_set_gently(the_repository, key, add_data->realrepo);
+	repo_config_set_worktree_gently(the_repository, key, add_data->realrepo);
 	free(key);
 
 	add_submod.git_cmd = 1;
@@ -3611,10 +3620,6 @@ static void configure_added_submodule(struct add_data *add_data)
 		die(_("Failed to register submodule '%s'"), add_data->sm_path);
 
 	/*
-	 * NEEDSWORK: In a multi-working-tree world this needs to be
-	 * set in the per-worktree config.
-	 */
-	/*
 	 * NEEDSWORK: In the longer run, we need to get rid of this
 	 * pattern of querying "submodule.active" before calling
 	 * is_submodule_active(), since that function needs to find
@@ -3627,7 +3632,7 @@ static void configure_added_submodule(struct add_data *add_data)
 		 * current configured pathspec, set the submodule's active flag
 		 */
 		key = xstrfmt("submodule.%s.active", add_data->sm_name);
-		repo_config_set_gently(the_repository, key, "true");
+		repo_config_set_worktree_gently(the_repository, key, "true");
 		free(key);
 	} else {
 		for (size_t i = 0; i < values->nr; i++) {
@@ -3639,7 +3644,7 @@ static void configure_added_submodule(struct add_data *add_data)
 		}
 		if (!matched) { /* no pattern matched -> force-enable */
 			key = xstrfmt("submodule.%s.active", add_data->sm_name);
-			repo_config_set_gently(the_repository, key, "true");
+			repo_config_set_worktree_gently(the_repository, key, "true");
 			free(key);
 		}
 	}
