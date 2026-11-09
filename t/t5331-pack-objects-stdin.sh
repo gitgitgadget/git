@@ -34,6 +34,42 @@ test_expect_success 'setup for --stdin-packs tests' '
 	)
 '
 
+test_expect_success 'pack-objects emits local input snapshots' '
+	(
+		cd stdin-packs &&
+		for pack in .git/objects/pack/pack-*.pack
+		do
+			basename "$pack" || return 1
+		done | sort >expect-packs &&
+		find .git/objects/[0-9a-f][0-9a-f] -type f |
+			sed -e "s#^.git/objects/##" -e "s#/##" |
+			sort >expect-loose &&
+		echo stale >actual-packs &&
+		echo stale >actual-loose &&
+		git pack-objects --all \
+			--emit-input-packs=actual-packs \
+			--emit-input-loose=actual-loose generated >hash &&
+		sort actual-packs >actual-packs.sorted &&
+		sort actual-loose >actual-loose.sorted &&
+		test_cmp expect-packs actual-packs.sorted &&
+		test_cmp expect-loose actual-loose.sorted &&
+		test_path_is_missing actual-packs.tmp &&
+		test_path_is_missing actual-loose.tmp
+	)
+'
+
+test_expect_success 'pack-objects reports input snapshot write failures' '
+	(
+		cd stdin-packs &&
+		test_must_fail git pack-objects --all \
+			--emit-input-packs=missing/packs generated 2>err &&
+		test_grep "unable to write.*missing/packs.tmp" err &&
+		test_must_fail git pack-objects --all \
+			--emit-input-loose=missing/loose generated 2>err &&
+		test_grep "unable to write.*missing/loose.tmp" err
+	)
+'
+
 test_expect_success '--stdin-packs with excluded packs' '
 	(
 		cd stdin-packs &&
@@ -42,11 +78,16 @@ test_expect_success '--stdin-packs with excluded packs' '
 		PACK_B="$(basename .git/objects/pack/pack-B-*.pack)" &&
 		PACK_C="$(basename .git/objects/pack/pack-C-*.pack)" &&
 
-		git pack-objects test --stdin-packs <<-EOF &&
+		git pack-objects test --stdin-packs \
+			--emit-input-packs=actual-input <<-EOF &&
 		$PACK_A
 		^$PACK_B
 		$PACK_C
 		EOF
+		printf "%s\n" "$PACK_A" "$PACK_B" "$PACK_C" |
+			sort >expect-input &&
+		sort actual-input >actual-input.sorted &&
+		test_cmp expect-input actual-input.sorted &&
 
 		(
 			git show-index <$(ls .git/objects/pack/pack-A-*.idx) &&
@@ -196,13 +237,20 @@ test_expect_success 'pack-objects --stdin with packfiles from alternate object d
 	git init shared &&
 	test_commit -C shared "shared-objects" &&
 	git -C shared repack -ad &&
+	echo loose-alternate |
+		git -C shared hash-object -w --stdin >alternate-oid &&
 	basename shared/.git/objects/pack/pack-*.pack >packfile &&
 
 	# Set up a repository that is connected to the shared repository. This
 	# repository has no objects on its own, but we still expect to be able
 	# to pack objects from its alternate.
 	git clone --shared shared member &&
-	git -C member pack-objects --stdin-packs generated-pack <packfile &&
+	git -C member pack-objects --stdin-packs \
+		--emit-input-packs=actual-packs \
+		--emit-input-loose=actual-loose \
+		generated-pack <packfile &&
+	test_must_be_empty member/actual-packs &&
+	test_must_be_empty member/actual-loose &&
 	test_cmp shared/.git/objects/pack/pack-*.pack member/generated-pack-*.pack
 '
 
@@ -517,6 +565,80 @@ test_expect_success '--stdin-packs with !-delimited pack without follow' '
 		objects_in_packs $B $C >expect &&
 		objects_in_packs $P >actual &&
 		test_cmp expect actual
+	)
+'
+
+test_expect_success 'setup for --stdin-packs hint walks' '
+	git init hint-walk &&
+	(
+		cd hint-walk &&
+
+		for c in A B C D
+		do
+			test_commit "$c" || return 1
+		done &&
+
+		A="$(echo A | git pack-objects --revs $packdir/pack)" &&
+		B="$(echo A..B | git pack-objects --revs $packdir/pack)" &&
+		C="$(echo B..C | git pack-objects --revs $packdir/pack)" &&
+		D="$(echo C..D | git pack-objects --revs $packdir/pack)" &&
+		git prune-packed &&
+
+		cat >in <<-EOF &&
+		pack-$B.pack
+		^pack-$C.pack
+		pack-$D.pack
+		EOF
+
+		objects_in_packs $B $D >expect-standard &&
+		objects_in_packs $A $B $D >expect-follow
+	)
+'
+
+test_expect_success '--stdin-packs skips rev walk when delta search is off' '
+	(
+		cd hint-walk &&
+
+		# Without =follow, disabling delta search needs no namehash hints.
+		default_pack=$(GIT_TRACE2_EVENT="$(pwd)/walk-default.event" \
+			git pack-objects --stdin-packs pack <in) &&
+		test_grep ! "\"key\":\"stdin_packs_hints\",\"value\":\"0\"" walk-default.event &&
+
+		no_window_pack=$(GIT_TRACE2_EVENT="$(pwd)/walk-window.event" \
+			git pack-objects --stdin-packs --window=0 pack <in) &&
+		test_grep "\"key\":\"stdin_packs_hints\",\"value\":\"0\"" walk-window.event &&
+
+		no_depth_pack=$(GIT_TRACE2_EVENT="$(pwd)/walk-depth.event" \
+			git pack-objects --stdin-packs --depth=0 pack <in) &&
+		test_grep "\"key\":\"stdin_packs_hints\",\"value\":\"0\"" walk-depth.event &&
+
+		packed_objects "pack-$default_pack.idx" >actual &&
+		test_cmp expect-standard actual &&
+		packed_objects "pack-$no_window_pack.idx" >actual &&
+		test_cmp expect-standard actual &&
+		packed_objects "pack-$no_depth_pack.idx" >actual &&
+		test_cmp expect-standard actual
+	)
+'
+
+test_expect_success '--stdin-packs=follow walks even with delta search off' '
+	(
+		cd hint-walk &&
+
+		# Follow mode must still include the reachable objects in pack A.
+		default_pack=$(git pack-objects --stdin-packs=follow pack <in) &&
+		packed_objects "pack-$default_pack.idx" >actual &&
+		test_cmp expect-follow actual &&
+
+		no_window_pack=$(git pack-objects --stdin-packs=follow --window=0 \
+			pack <in) &&
+		packed_objects "pack-$no_window_pack.idx" >actual &&
+		test_cmp expect-follow actual &&
+
+		no_depth_pack=$(git pack-objects --stdin-packs=follow --depth=0 \
+			pack <in) &&
+		packed_objects "pack-$no_depth_pack.idx" >actual &&
+		test_cmp expect-follow actual
 	)
 '
 
