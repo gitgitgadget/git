@@ -235,6 +235,7 @@ gitmailmap                              userinterfaces
 gitmergeconflicts                       guide
 gitmodules                              userinterfaces
 gitnamespaces                           guide
+gitpathspecs                            userinterfaces
 gitprotocol-capabilities                developerinterfaces
 gitprotocol-common                      developerinterfaces
 gitprotocol-http                        developerinterfaces

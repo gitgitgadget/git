@@ -61,6 +61,7 @@ MAN7_TXT += gitglossary.adoc
 MAN7_TXT += gitmergeconflicts.adoc
 MAN7_TXT += gitpacking.adoc
 MAN7_TXT += gitnamespaces.adoc
+MAN7_TXT += gitpathspecs.adoc
 MAN7_TXT += gitremote-helpers.adoc
 MAN7_TXT += gitrevisions.adoc
 MAN7_TXT += gitsubmodules.adoc

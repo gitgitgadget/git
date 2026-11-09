@@ -204,6 +204,7 @@ manpages = {
   'gitpacking.adoc' : 7,
   'gitmergeconflicts.adoc' : 7,
   'gitnamespaces.adoc' : 7,
+  'gitpathspecs.adoc' : 7,
   'gitremote-helpers.adoc' : 7,
   'gitrevisions.adoc' : 7,
   'gitsubmodules.adoc' : 7,
