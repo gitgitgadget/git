@@ -1182,7 +1182,11 @@ test_expect_success EXPENSIVE,SIZE_T_IS_64BIT 'log --pretty with huge commit mes
 '
 
 test_expect_success EXPENSIVE,SIZE_T_IS_64BIT 'set up huge commit' '
-	test-tool genzeros 2147483649 | tr "\000" "1" >expect &&
+	# 3 * 715827883 == 2147483649
+	printf %0715827883d 0 0 0 >expect &&
+	test_file_size expect >size &&
+	echo 2147483649 >size.expect &&
+	test_cmp size.expect size &&
 	huge_commit=$(git commit-tree -F expect HEAD^{tree})
 '
 
