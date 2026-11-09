@@ -34,7 +34,7 @@ int cmd_upload_archive_writer(int argc,
 	if (!enter_repo(the_repository, argv[1], 0))
 		die("'%s' does not appear to be a git repository", argv[1]);
 
-	init_archivers();
+	init_archivers(the_repository);
 
 	/* put received options in sent_argv[] */
 	strvec_push(&sent_argv, "git-upload-archive");

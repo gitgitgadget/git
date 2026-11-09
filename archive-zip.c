@@ -653,7 +653,8 @@ static struct archiver zip_archiver = {
 	.flags = ARCHIVER_WANT_COMPRESSION_LEVELS|ARCHIVER_REMOTE,
 };
 
-void init_zip_archiver(void)
+void init_zip_archiver(struct repository *repo)
 {
+	(void)repo;
 	register_archiver(&zip_archiver);
 }

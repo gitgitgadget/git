@@ -48,9 +48,9 @@ struct archiver {
 };
 void register_archiver(struct archiver *);
 
-void init_tar_archiver(void);
-void init_zip_archiver(void);
-void init_archivers(void);
+void init_tar_archiver(struct repository *repo);
+void init_zip_archiver(struct repository *repo);
+void init_archivers(struct repository *repo);
 
 typedef int (*write_archive_entry_fn_t)(struct archiver_args *args,
 					const struct object_id *oid,
