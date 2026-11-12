@@ -35,100 +35,168 @@
 
 typedef struct s_xdlclass {
 	uint64_t line_hash;
-	struct s_xdlclass *next;
 	const uint8_t *ptr;
 	size_t size;
-	long idx;
 	long len1, len2;
 } xdlclass_t;
 
+/*
+ * A slot holds a class index plus one; zero denotes an empty slot.
+ * Keep hashes in the contiguous class array rather than in each slot.
+ */
+typedef uint32_t xdlslot_t;
+
 typedef struct s_xdlclassifier {
-	unsigned int hbits;
-	long hsize;
-	xdlclass_t **rchash;
-	chastore_t ncha;
-	xdlclass_t **rcrecs;
+	unsigned int tbits;
+	size_t tmask;
+	xdlslot_t *table;
+	xdlclass_t *rcrecs;
 	long alloc;
 	long count;
 	long flags;
 } xdlclassifier_t;
 
 
+#define XDL_CLASS_MAX ((long)0x7ffffffe)
 
+/*
+ * SIZE estimates the record count; TSIZE estimates the number of classes
+ * actually inserted into the table. Both arrays grow when necessary.
+ */
+static int xdl_init_classifier_sized(xdlclassifier_t *cf, long size, long tsize,
+				     long flags) {
+	unsigned int bits;
 
-static int xdl_init_classifier(xdlclassifier_t *cf, long size, long flags) {
 	cf->flags = flags;
+	bits = xdl_hashbits((unsigned int)tsize) + 1;
+	if (bits > 31)
+		bits = 31;
+	cf->tbits = bits;
+	cf->tmask = ((size_t)1 << bits) - 1;
 
-	cf->hbits = xdl_hashbits((unsigned int) size);
-	cf->hsize = 1 << cf->hbits;
-
-	if (xdl_cha_init(&cf->ncha, sizeof(xdlclass_t), size / 4 + 1) < 0) {
-
+	if (!XDL_CALLOC_ARRAY(cf->table, cf->tmask + 1))
 		return -1;
-	}
-	if (!XDL_CALLOC_ARRAY(cf->rchash, cf->hsize)) {
-
-		xdl_cha_free(&cf->ncha);
-		return -1;
-	}
 
 	cf->alloc = size;
 	if (!XDL_ALLOC_ARRAY(cf->rcrecs, cf->alloc)) {
-
-		xdl_free(cf->rchash);
-		xdl_cha_free(&cf->ncha);
+		xdl_free(cf->table);
+		cf->table = NULL;
 		return -1;
 	}
 
 	cf->count = 0;
-
 	return 0;
+}
+
+
+static int xdl_init_classifier(xdlclassifier_t *cf, long size, long flags) {
+	return xdl_init_classifier_sized(cf, size, size, flags);
 }
 
 
 static void xdl_free_classifier(xdlclassifier_t *cf) {
-
 	xdl_free(cf->rcrecs);
-	xdl_free(cf->rchash);
-	xdl_cha_free(&cf->ncha);
+	xdl_free(cf->table);
 }
 
 
-static int xdl_classify_record(unsigned int pass, xdlclassifier_t *cf, xrecord_t *rec,
-			       uint64_t line_hash) {
-	size_t hi;
-	xdlclass_t *rcrec;
+static inline size_t xdl_slot_index(xdlclassifier_t *cf, uint64_t line_hash) {
+	return (size_t)(line_hash >> (64 - cf->tbits));
+}
 
-	hi = XDL_HASHLONG(line_hash, cf->hbits);
-	for (rcrec = cf->rchash[hi]; rcrec; rcrec = rcrec->next)
-		if (rcrec->line_hash == line_hash &&
-				xdl_recmatch((const char *)rcrec->ptr, (long)rcrec->size,
-					(const char *)rec->ptr, (long)rec->size, cf->flags))
-			break;
 
-	if (!rcrec) {
-		if (!(rcrec = xdl_cha_alloc(&cf->ncha))) {
+static int xdl_grow_table(xdlclassifier_t *cf) {
+	xdlslot_t *ntab;
+	unsigned int nbits = cf->tbits + 1;
+	size_t nmask;
+	long i;
 
-			return -1;
-		}
-		rcrec->idx = cf->count++;
-		if (XDL_ALLOC_GROW(cf->rcrecs, cf->count, cf->alloc))
-				return -1;
-		cf->rcrecs[rcrec->idx] = rcrec;
-		rcrec->line_hash = line_hash;
-		rcrec->ptr = rec->ptr;
-		rcrec->size = rec->size;
-		rcrec->len1 = rcrec->len2 = 0;
-		rcrec->next = cf->rchash[hi];
-		cf->rchash[hi] = rcrec;
+	if (nbits > 32 || nbits >= sizeof(size_t) * CHAR_BIT)
+		return -1;
+	nmask = ((size_t)1 << nbits) - 1;
+	if (!XDL_CALLOC_ARRAY(ntab, nmask + 1))
+		return -1;
+
+	cf->tbits = nbits;
+	cf->tmask = nmask;
+	for (i = 0; i < cf->count; i++) {
+		size_t hi = xdl_slot_index(cf, cf->rcrecs[i].line_hash);
+
+		while (ntab[hi])
+			hi = (hi + 1) & nmask;
+		ntab[hi] = (xdlslot_t)(i + 1);
 	}
-
-	(pass == 1) ? rcrec->len1++ : rcrec->len2++;
-
-	rec->minimal_perfect_hash = (size_t)rcrec->idx;
-
+	xdl_free(cf->table);
+	cf->table = ntab;
 	return 0;
 }
+
+
+static inline int xdl_bytes_equal(uint8_t const *a, uint8_t const *b, size_t n) {
+	uint64_t x, y;
+	size_t i;
+
+	if (n < sizeof(uint64_t)) {
+		for (i = 0; i < n; i++)
+			if (a[i] != b[i])
+				return 0;
+		return 1;
+	}
+	for (i = 0; i + sizeof(uint64_t) < n; i += sizeof(uint64_t)) {
+		memcpy(&x, a + i, sizeof(x));
+		memcpy(&y, b + i, sizeof(y));
+		if (x != y)
+			return 0;
+	}
+	memcpy(&x, a + n - sizeof(x), sizeof(x));
+	memcpy(&y, b + n - sizeof(y), sizeof(y));
+	return x == y;
+}
+
+
+static int xdl_classify_record(unsigned int pass, xdlclassifier_t *cf,
+			       xrecord_t *rec, uint64_t line_hash) {
+	size_t hi, mask = cf->tmask;
+	xdlslot_t slot;
+	xdlslot_t *table = cf->table;
+	xdlclass_t *rcrec;
+	long idx;
+
+	hi = xdl_slot_index(cf, line_hash);
+	while ((slot = table[hi])) {
+		rcrec = &cf->rcrecs[slot - 1];
+		if (rcrec->line_hash == line_hash &&
+		    (cf->flags & XDF_WHITESPACE_FLAGS
+		     ? xdl_recmatch((const char *)rcrec->ptr, (long)rcrec->size,
+				    (const char *)rec->ptr, (long)rec->size, cf->flags)
+		     : (rcrec->size == rec->size &&
+			xdl_bytes_equal(rcrec->ptr, rec->ptr, rec->size))))
+			goto found;
+		hi = (hi + 1) & mask;
+	}
+
+	if (cf->count >= XDL_CLASS_MAX)
+		return -1;
+	idx = cf->count++;
+	if (XDL_ALLOC_GROW(cf->rcrecs, cf->count, cf->alloc))
+		return -1;
+	rcrec = &cf->rcrecs[idx];
+	rcrec->line_hash = line_hash;
+	rcrec->ptr = rec->ptr;
+	rcrec->size = rec->size;
+	rcrec->len1 = rcrec->len2 = 0;
+	table[hi] = (xdlslot_t)(idx + 1);
+	if ((size_t)cf->count * 2 > mask + 1 && xdl_grow_table(cf) < 0)
+		return -1;
+
+found:
+	(pass == 1) ? rcrec->len1++ : rcrec->len2++;
+	rec->minimal_perfect_hash = (size_t)(rcrec - cf->rcrecs);
+	return 0;
+}
+
+
+#define XDL_HMUL 0x9e3779b97f4a7c15ULL
 
 
 static void xdl_free_ctx(xdfile_t *xdf)
@@ -158,6 +226,13 @@ static int xdl_prepare_ctx(unsigned int pass, mmfile_t *mf, long narec, xpparam_
 		for (top = blk + bsize; cur < top; ) {
 			prev = cur;
 			hav = xdl_hash_record(&cur, top, xpp->flags);
+			/*
+			 * Slots use the high hash bits. This bijective mix
+			 * preserves equality while distributing short lines.
+			 */
+			hav ^= hav >> 32;
+			hav *= XDL_HMUL;
+			hav ^= hav >> 29;
 			if (XDL_ALLOC_GROW(xdf->recs, (long)xdf->nrec + 1, narec))
 				goto abort;
 			crec = &xdf->recs[xdf->nrec++];
@@ -264,7 +339,6 @@ static bool xdl_clean_mmatch(uint8_t const *action, ptrdiff_t i, ptrdiff_t len) 
  */
 static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xdf2) {
 	ptrdiff_t i, nm, mlim1, mlim2;
-	xdlclass_t *rcrec;
 	uint8_t *action1 = NULL, *action2 = NULL;
 	bool need_min = !!(cf->flags & XDF_NEED_MINIMAL);
 	int ret = 0;
@@ -298,8 +372,7 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 	}
 	for (i = 0; i < len1; i++) {
 		size_t mph1 = xdf1->recs[i + off].minimal_perfect_hash;
-		rcrec = cf->rcrecs[mph1];
-		nm = rcrec ? rcrec->len2 : 0;
+		nm = cf->rcrecs[mph1].len2;
 		if (nm == 0)
 			action1[i] = DISCARD;
 		else if (nm < mlim1)
@@ -318,8 +391,7 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 	}
 	for (i = 0; i < len2; i++) {
 		size_t mph2 = xdf2->recs[i + off].minimal_perfect_hash;
-		rcrec = cf->rcrecs[mph2];
-		nm = rcrec ? rcrec->len1 : 0;
+		nm = cf->rcrecs[mph2].len1;
 		if (nm == 0)
 			action2[i] = DISCARD;
 		else if (nm < mlim2)
