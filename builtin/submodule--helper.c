@@ -37,6 +37,7 @@
 #include "wildmatch.h"
 #include "strbuf.h"
 #include "url.h"
+#include "worktree.h"
 
 #define OPT_QUIET (1 << 0)
 #define OPT_CACHED (1 << 1)
@@ -479,10 +480,41 @@ struct init_cb {
 };
 #define INIT_CB_INIT { 0 }
 
-static int validate_and_set_submodule_gitdir(struct strbuf *gitdir_path,
-					     const char *submodule_name)
+static int validate_submodule_git_dir_with_worktree(const char *gitdir)
 {
-	const char *value;
+	struct strbuf tmp = STRBUF_INIT;
+	struct strbuf submodule = STRBUF_INIT;
+	char *super;
+	int ret = 1;
+
+	if (is_absolute_path(gitdir))
+		strbuf_addstr(&submodule, gitdir);
+	else if (!repo_worktree_path_append(the_repository, &submodule,
+					    "%s", gitdir))
+		return -1;
+
+	if (strbuf_normalize_path(&submodule)) {
+		strbuf_release(&submodule);
+		return -1;
+	}
+
+	super = absolute_pathdup(repo_get_git_dir(the_repository));
+
+	if (starts_with(relative_path(submodule.buf, super, &tmp), "modules/"))
+		ret = 0;
+
+	strbuf_release(&submodule);
+	strbuf_release(&tmp);
+	free(super);
+	return ret;
+}
+
+static int validate_and_set_submodule_gitdir(struct strbuf *gitdir_path,
+					     const char *submodule_name,
+					     struct worktree *wt)
+{
+	const char *value = gitdir_path->buf;
+	char *value_to_free = NULL;
 	char *key;
 
 	if (validate_submodule_git_dir(gitdir_path->buf, submodule_name))
@@ -490,67 +522,119 @@ static int validate_and_set_submodule_gitdir(struct strbuf *gitdir_path,
 
 	key = xstrfmt("submodule.%s.gitdir", submodule_name);
 
-	/* Nothing to do if the config already exists. */
-	if (!repo_config_get_string_tmp(the_repository, key, &value)) {
-		free(key);
-		return 0;
+	if (the_repository->repository_format_worktree_config) {
+		struct config_set cs = { 0 };
+		const char *filename = worktree_git_path(wt, "config.worktree");
+		char *tmp;
+
+		git_configset_init(&cs);
+		git_configset_add_file(&cs, filename);
+
+		/*
+		 * Nothing to do if the config already exists in the config set
+		 * for the current worktree.
+		 */
+		if (!git_configset_get(&cs, key)) {
+			git_configset_clear(&cs);
+			free(key);
+			return 0;
+		}
+
+		git_configset_clear(&cs);
+
+		/*
+		 * If the worktree config does not have this key, check the
+		 * effective value from lower-priority config scopes and copy
+		 * it to the worktree config if it belongs to the current
+		 * worktree.
+		 */
+		if (!repo_config_get_string(the_repository, key, &tmp)) {
+			if (validate_submodule_git_dir_with_worktree(tmp) ||
+			    validate_submodule_git_dir(tmp, submodule_name))
+				free(tmp);
+			else
+				value = value_to_free = tmp;
+		}
+	} else {
+		/* Nothing to do if the config already exists. */
+		if (!repo_config_get_string_tmp(the_repository, key, &value)) {
+			free(key);
+			return 0;
+		}
 	}
 
-	if (repo_config_set_gently(the_repository, key, gitdir_path->buf)) {
+	if (repo_config_set_worktree_gently(the_repository, key, value)) {
 		free(key);
+		free(value_to_free);
 		return -1;
 	}
 
 	free(key);
+	free(value_to_free);
 	return 0;
 }
 
 static void create_default_gitdir_config(const char *submodule_name)
 {
+	struct worktree *wt = get_current_worktree(the_repository);
+	const char *modules_dir;
+	struct strbuf tmp = STRBUF_INIT;
 	struct strbuf gitdir_path = STRBUF_INIT;
 	struct git_hash_ctx ctx;
 	char hex_name_hash[GIT_MAX_HEXSZ + 1], header[128];
 	unsigned char raw_name_hash[GIT_MAX_RAWSZ];
 	int header_len;
 
-	/* Case 1: try the plain module name */
-	repo_git_path_append(the_repository, &gitdir_path, "modules/%s", submodule_name);
-	if (!validate_and_set_submodule_gitdir(&gitdir_path, submodule_name)) {
-		strbuf_release(&gitdir_path);
-		return;
+	modules_dir = worktree_git_path(wt, "modules/");
+	if (is_absolute_path(modules_dir)) {
+		modules_dir = relative_path(modules_dir, wt->path, &tmp);
 	}
+
+	/* Case 1: try the plain module name */
+	strbuf_addstr(&gitdir_path, modules_dir);
+	strbuf_addstr(&gitdir_path, submodule_name);
+	if (!validate_and_set_submodule_gitdir(&gitdir_path,
+					       submodule_name,
+					       wt))
+		goto cleanup;
 
 	/* Case 2.1: Try URI-safe (RFC3986) encoding first, this fixes nested gitdirs */
 	strbuf_reset(&gitdir_path);
-	repo_git_path_append(the_repository, &gitdir_path, "modules/");
+	strbuf_addstr(&gitdir_path, modules_dir);
 	strbuf_addstr_urlencode(&gitdir_path, submodule_name, is_rfc3986_unreserved);
-	if (!validate_and_set_submodule_gitdir(&gitdir_path, submodule_name)) {
-		strbuf_release(&gitdir_path);
-		return;
-	}
+	if (!validate_and_set_submodule_gitdir(&gitdir_path,
+					       submodule_name,
+					       wt))
+		goto cleanup;
 
 	/* Case 2.2: Try extended uppercase URI (RFC3986) encoding, to fix case-folding */
 	strbuf_reset(&gitdir_path);
-	repo_git_path_append(the_repository, &gitdir_path, "modules/");
+	strbuf_addstr(&gitdir_path, modules_dir);
 	strbuf_addstr_urlencode(&gitdir_path, submodule_name, is_casefolding_rfc3986_unreserved);
-	if (!validate_and_set_submodule_gitdir(&gitdir_path, submodule_name))
-		return;
+	if (!validate_and_set_submodule_gitdir(&gitdir_path,
+					       submodule_name,
+					       wt))
+		goto cleanup;
 
 	/* Case 2.3: Try some derived gitdir names, see if one sticks */
 	for (char c = '0'; c <= '9'; c++) {
 		strbuf_reset(&gitdir_path);
-		repo_git_path_append(the_repository, &gitdir_path, "modules/");
+		strbuf_addstr(&gitdir_path, modules_dir);
 		strbuf_addstr_urlencode(&gitdir_path, submodule_name, is_rfc3986_unreserved);
 		strbuf_addch(&gitdir_path, c);
-		if (!validate_and_set_submodule_gitdir(&gitdir_path, submodule_name))
-			return;
+		if (!validate_and_set_submodule_gitdir(&gitdir_path,
+						       submodule_name,
+						       wt))
+			goto cleanup;
 
 		strbuf_reset(&gitdir_path);
-		repo_git_path_append(the_repository, &gitdir_path, "modules/");
+		strbuf_addstr(&gitdir_path, modules_dir);
 		strbuf_addstr_urlencode(&gitdir_path, submodule_name, is_casefolding_rfc3986_unreserved);
 		strbuf_addch(&gitdir_path, c);
-		if (!validate_and_set_submodule_gitdir(&gitdir_path, submodule_name))
-			return;
+		if (!validate_and_set_submodule_gitdir(&gitdir_path,
+						       submodule_name,
+						       wt))
+			goto cleanup;
 	}
 
 	/* Case 2.4: If all the above failed, try a hash of the name as a last resort */
@@ -563,17 +647,23 @@ static void create_default_gitdir_config(const char *submodule_name)
 	git_hash_final(raw_name_hash, &ctx);
 	hash_to_hex_algop_r(hex_name_hash, raw_name_hash, the_hash_algo);
 	strbuf_reset(&gitdir_path);
-	repo_git_path_append(the_repository, &gitdir_path, "modules/%s", hex_name_hash);
-	if (!validate_and_set_submodule_gitdir(&gitdir_path, submodule_name)) {
-		strbuf_release(&gitdir_path);
-		return;
-	}
+	strbuf_addstr(&gitdir_path, modules_dir);
+	strbuf_addstr(&gitdir_path, hex_name_hash);
+	if (!validate_and_set_submodule_gitdir(&gitdir_path,
+					       submodule_name,
+					       wt))
+		goto cleanup;
 
 	/* Case 3: nothing worked, error out */
 	die(_("failed to set a valid default config for 'submodule.%s.gitdir'. "
 	      "Please ensure it is set, for example by running something like: "
-	      "'git config submodule.%s.gitdir .git/modules/%s'"),
-	    submodule_name, submodule_name, submodule_name);
+	      "'git config submodule.%s.gitdir %s%s'"),
+	    submodule_name, submodule_name, modules_dir, submodule_name);
+
+cleanup:
+	strbuf_release(&gitdir_path);
+	strbuf_release(&tmp);
+	free_worktree(wt);
 }
 
 static void init_submodule(const char *path, const char *prefix,
@@ -593,15 +683,10 @@ static void init_submodule(const char *path, const char *prefix,
 		die(_("No url found for submodule path '%s' in .gitmodules"),
 			displaypath);
 
-	/*
-	 * NEEDSWORK: In a multi-working-tree world, this needs to be
-	 * set in the per-worktree config.
-	 *
-	 * Set active flag for the submodule being initialized
-	 */
+	/* Set active flag for the submodule being initialized */
 	if (!is_submodule_active(the_repository, path)) {
 		strbuf_addf(&sb, "submodule.%s.active", sub->name);
-		repo_config_set_gently(the_repository, sb.buf, "true");
+		repo_config_set_worktree_gently(the_repository, sb.buf, "true");
 		strbuf_reset(&sb);
 	}
 
@@ -627,7 +712,7 @@ static void init_submodule(const char *path, const char *prefix,
 			free(oldurl);
 		}
 
-		if (repo_config_set_gently(the_repository, sb.buf, url))
+		if (repo_config_set_worktree_gently(the_repository, sb.buf, url))
 			die(_("Failed to register url for submodule path '%s'"),
 			    displaypath);
 		if (!(flags & OPT_QUIET))
@@ -649,7 +734,7 @@ static void init_submodule(const char *path, const char *prefix,
 			upd = submodule_update_type_to_string(sub->update_strategy.type);
 		}
 
-		if (repo_config_set_gently(the_repository, sb.buf, upd))
+		if (repo_config_set_worktree_gently(the_repository, sb.buf, upd))
 			die(_("Failed to register update mode for submodule path '%s'"), displaypath);
 	}
 
@@ -1475,7 +1560,7 @@ static void sync_submodule(const char *path, const char *prefix,
 
 	strbuf_reset(&sb);
 	strbuf_addf(&sb, "submodule.%s.url", sub->name);
-	if (repo_config_set_gently(the_repository, sb.buf, super_config_url))
+	if (repo_config_set_worktree_gently(the_repository, sb.buf, super_config_url))
 		die(_("failed to register url for submodule path '%s'"),
 		      displaypath);
 
@@ -1654,17 +1739,31 @@ static void deinit_submodule(const char *path, const char *prefix,
 
 	/* remove the .git/config entries (unless the user already did it) */
 	if (!capture_command(&cp_config, &sb_config, 0) && sb_config.len) {
+		char *file = the_repository->repository_format_worktree_config ?
+		  repo_git_path(the_repository, "config.worktree") :
+		  repo_git_path(the_repository, "config");
 		char *sub_key = xstrfmt("submodule.%s", sub->name);
 
 		/*
 		 * remove the whole section so we have a clean state when
 		 * the user later decides to init this submodule again
 		 */
-		repo_config_rename_section_in_file(the_repository, NULL, sub_key, NULL);
+		repo_config_rename_section_in_file(the_repository, file, sub_key, NULL);
 		if (!(flags & OPT_QUIET))
 			printf(_("Submodule '%s' (%s) unregistered for path '%s'\n"),
 				 sub->name, sub->url, displaypath);
+		free(file);
 		free(sub_key);
+
+		if (the_repository->repository_format_worktree_config) {
+			char *key = xstrfmt("submodule.%s.active", sub->name);
+
+			repo_config_clear(the_repository);
+			if (is_submodule_active(the_repository, sub->name))
+				repo_config_set_worktree_gently(the_repository,
+								key, "false");
+			free(key);
+		}
 	}
 
 cleanup:
@@ -3564,7 +3663,7 @@ static void configure_added_submodule(struct add_data *add_data)
 	int matched = 0;
 
 	key = xstrfmt("submodule.%s.url", add_data->sm_name);
-	repo_config_set_gently(the_repository, key, add_data->realrepo);
+	repo_config_set_worktree_gently(the_repository, key, add_data->realrepo);
 	free(key);
 
 	add_submod.git_cmd = 1;
@@ -3595,10 +3694,6 @@ static void configure_added_submodule(struct add_data *add_data)
 		die(_("Failed to register submodule '%s'"), add_data->sm_path);
 
 	/*
-	 * NEEDSWORK: In a multi-working-tree world this needs to be
-	 * set in the per-worktree config.
-	 */
-	/*
 	 * NEEDSWORK: In the longer run, we need to get rid of this
 	 * pattern of querying "submodule.active" before calling
 	 * is_submodule_active(), since that function needs to find
@@ -3611,7 +3706,7 @@ static void configure_added_submodule(struct add_data *add_data)
 		 * current configured pathspec, set the submodule's active flag
 		 */
 		key = xstrfmt("submodule.%s.active", add_data->sm_name);
-		repo_config_set_gently(the_repository, key, "true");
+		repo_config_set_worktree_gently(the_repository, key, "true");
 		free(key);
 	} else {
 		for (size_t i = 0; i < values->nr; i++) {
@@ -3623,7 +3718,7 @@ static void configure_added_submodule(struct add_data *add_data)
 		}
 		if (!matched) { /* no pattern matched -> force-enable */
 			key = xstrfmt("submodule.%s.active", add_data->sm_name);
-			repo_config_set_gently(the_repository, key, "true");
+			repo_config_set_worktree_gently(the_repository, key, "true");
 			free(key);
 		}
 	}
