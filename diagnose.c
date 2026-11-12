@@ -212,7 +212,7 @@ int create_diagnostics_archive(struct repository *r,
 		goto diagnose_cleanup;
 	}
 
-	init_zip_archiver();
+	init_zip_archiver(r);
 	strvec_pushl(&archiver_args, "git-diagnose", "--format=zip", NULL);
 
 	strbuf_reset(&buf);

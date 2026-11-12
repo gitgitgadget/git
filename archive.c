@@ -43,10 +43,10 @@ void register_archiver(struct archiver *ar)
 	archivers[nr_archivers++] = ar;
 }
 
-void init_archivers(void)
+void init_archivers(struct repository *repo)
 {
-	init_tar_archiver();
-	init_zip_archiver();
+	init_tar_archiver(repo);
+	init_zip_archiver(repo);
 }
 
 static void format_subst(const struct commit *commit,
