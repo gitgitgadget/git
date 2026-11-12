@@ -198,6 +198,67 @@ found:
 
 #define XDL_HMUL 0x9e3779b97f4a7c15ULL
 
+static inline uint64_t xdl_hmix(uint64_t h, uint64_t w) {
+	h = (h << 23) | (h >> 41);
+	return (h ^ w) * XDL_HMUL;
+}
+
+/*
+ * Equal byte sequences hash equally regardless of their buffer alignment.
+ * A matching hash is always followed by a byte comparison.
+ */
+static inline uint64_t xdl_hash_line_fast(uint8_t const **data,
+					 uint8_t const *top) {
+	uint8_t const *start = *data, *ptr = start;
+	uint64_t h = 0, w;
+	unsigned int s;
+
+#if defined(__GNUC__) && defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+	while (top - ptr >= 8) {
+		uint64_t x, m;
+
+		memcpy(&w, ptr, 8);
+		x = w ^ 0x0a0a0a0a0a0a0a0aULL;
+		m = (x - 0x0101010101010101ULL) & ~x & 0x8080808080808080ULL;
+		if (m) {
+			unsigned int n = (unsigned int)__builtin_ctzll(m) >> 3;
+
+			if (n)
+				h = xdl_hmix(h, w & (~0ULL >> (64 - 8 * n)));
+			ptr += n;
+			*data = ptr + 1;
+			goto done;
+		}
+		h = xdl_hmix(h, w);
+		ptr += 8;
+	}
+#endif
+	w = 0;
+	s = 0;
+	for (; ptr < top && *ptr != '\n'; ptr++) {
+		w |= (uint64_t)*ptr << s;
+		s += 8;
+		if (s == 64) {
+			h = xdl_hmix(h, w);
+			w = 0;
+			s = 0;
+		}
+	}
+	if (s)
+		h = xdl_hmix(h, w);
+	*data = ptr < top ? ptr + 1 : ptr;
+
+#if defined(__GNUC__) && defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+done:
+#endif
+	h ^= (uint64_t)(ptr - start);
+	h *= XDL_HMUL;
+	h ^= h >> 29;
+	h *= 0xbf58476d1ce4e5b9ULL;
+	h ^= h >> 32;
+	return h;
+}
+
 
 static void xdl_free_ctx(xdfile_t *xdf)
 {
@@ -225,14 +286,19 @@ static int xdl_prepare_ctx(unsigned int pass, mmfile_t *mf, long narec, xpparam_
 	if ((cur = blk = xdl_mmfile_first(mf, &bsize))) {
 		for (top = blk + bsize; cur < top; ) {
 			prev = cur;
-			hav = xdl_hash_record(&cur, top, xpp->flags);
-			/*
-			 * Slots use the high hash bits. This bijective mix
-			 * preserves equality while distributing short lines.
-			 */
-			hav ^= hav >> 32;
-			hav *= XDL_HMUL;
-			hav ^= hav >> 29;
+			if (xpp->flags & XDF_WHITESPACE_FLAGS) {
+				hav = xdl_hash_record_with_whitespace(&cur, top, xpp->flags);
+				/*
+				 * The whitespace hash has weak high bits for
+				 * short lines. This bijective mix preserves
+				 * equality while distributing the table slots.
+				 */
+				hav ^= hav >> 32;
+				hav *= XDL_HMUL;
+				hav ^= hav >> 29;
+			} else {
+				hav = xdl_hash_line_fast(&cur, top);
+			}
 			if (XDL_ALLOC_GROW(xdf->recs, (long)xdf->nrec + 1, narec))
 				goto abort;
 			crec = &xdf->recs[xdf->nrec++];
