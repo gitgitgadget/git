@@ -40,6 +40,29 @@ int xdl_emit_diffrec(char const *rec, long size, char const *pre, long psize,
 		     xdemitcb_t *ecb) {
 	int i = 2;
 	mmfile_t mb[3];
+	char buf[512];
+	static const char nonl[] = "\n\\ No newline at end of file\n";
+
+	/*
+	 * Small records, including an optional no-newline marker, fit in
+	 * one callback buffer. Bound each length before adding them.
+	 */
+	if (size > 0 && psize >= 0 &&
+	    (size_t)psize <= sizeof(buf) - sizeof(nonl) &&
+	    (size_t)size <= sizeof(buf) - sizeof(nonl) - (size_t)psize) {
+		long n = psize;
+
+		memcpy(buf, pre, psize);
+		memcpy(buf + n, rec, size);
+		n += size;
+		if (rec[size - 1] != '\n') {
+			memcpy(buf + n, nonl, sizeof(nonl) - 1);
+			n += sizeof(nonl) - 1;
+		}
+		mb[0].ptr = buf;
+		mb[0].size = n;
+		return ecb->out_line(ecb->priv, mb, 1) < 0 ? -1 : 0;
+	}
 
 	mb[0].ptr = (char *) pre;
 	mb[0].size = psize;
