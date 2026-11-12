@@ -404,26 +404,29 @@ static bool xdl_clean_mmatch(uint8_t const *action, ptrdiff_t i, ptrdiff_t len) 
  * might be potentially discarded if they appear in a run of discardable.
  */
 static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xdf2) {
-	ptrdiff_t i, nm, mlim1, mlim2;
+	ptrdiff_t i, mlim1, mlim2;
 	uint8_t *action1 = NULL, *action2 = NULL;
 	bool need_min = !!(cf->flags & XDF_NEED_MINIMAL);
 	int ret = 0;
 	ptrdiff_t off = xdf1->dstart;
 	ptrdiff_t len1 = xdf1->dend - off + 1;
 	ptrdiff_t len2 = xdf2->dend - off + 1;
+	bool investigate1 = false, investigate2 = false;
 
 	/*
 	 * Create temporary arrays that will help us decide if
-	 * changed[i] should remain false, or become true.
+	 * changed[i] should remain false, or become true. Every slot is
+	 * initialized below, so one allocation serves both sides.
 	 */
-	if (!XDL_CALLOC_ARRAY(action1, len1) ||
-	    !XDL_CALLOC_ARRAY(action2, len2) ||
+	if (len1 > PTRDIFF_MAX - len2 - 1 ||
+	    !XDL_ALLOC_ARRAY(action1, len1 + len2 + 1) ||
 	    !XDL_ALLOC_ARRAY(xdf1->reference_index, len1) ||
 	    !XDL_ALLOC_ARRAY(xdf2->reference_index, len2))
 	{
 		ret = -1;
 		goto cleanup;
 	}
+	action2 = action1 + len1;
 
 	/*
 	 * Initialize temporary arrays with DISCARD, KEEP, or INVESTIGATE.
@@ -436,15 +439,23 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 		if (mlim1 > XDL_MAX_EQLIMIT)
 			mlim1 = XDL_MAX_EQLIMIT;
 	}
-	for (i = 0; i < len1; i++) {
-		size_t mph1 = xdf1->recs[i + off].minimal_perfect_hash;
-		nm = cf->rcrecs[mph1].len2;
-		if (nm == 0)
-			action1[i] = DISCARD;
-		else if (nm < mlim1)
-			action1[i] = KEEP;
-		else /* nm >= mlim1 */
-			action1[i] = INVESTIGATE;
+	{
+		xrecord_t const *recs = xdf1->recs + off;
+
+		for (i = 0; i < len1; i++) {
+			ptrdiff_t nm = cf->rcrecs[recs[i].minimal_perfect_hash].len2;
+			uint8_t action;
+
+			if (!nm)
+				action = DISCARD;
+			else if (nm < mlim1)
+				action = KEEP;
+			else {
+				action = INVESTIGATE;
+				investigate1 = true;
+			}
+			action1[i] = action;
+		}
 	}
 
 	if (need_min) {
@@ -455,66 +466,67 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 		if (mlim2 > XDL_MAX_EQLIMIT)
 			mlim2 = XDL_MAX_EQLIMIT;
 	}
-	for (i = 0; i < len2; i++) {
-		size_t mph2 = xdf2->recs[i + off].minimal_perfect_hash;
-		nm = cf->rcrecs[mph2].len1;
-		if (nm == 0)
-			action2[i] = DISCARD;
-		else if (nm < mlim2)
-			action2[i] = KEEP;
-		else /* nm >= mlim2 */
-			action2[i] = INVESTIGATE;
+	{
+		xrecord_t const *recs = xdf2->recs + off;
+
+		for (i = 0; i < len2; i++) {
+			ptrdiff_t nm = cf->rcrecs[recs[i].minimal_perfect_hash].len1;
+			uint8_t action;
+
+			if (!nm)
+				action = DISCARD;
+			else if (nm < mlim2)
+				action = KEEP;
+			else {
+				action = INVESTIGATE;
+				investigate2 = true;
+			}
+			action2[i] = action;
+		}
 	}
 
 	/*
 	 * Use temporary arrays to decide if changed[i] should remain
 	 * false, or become true.
 	 */
-	xdf1->nreff = 0;
-	for (i = 0; i < len1; i++) {
-		uint8_t action = action1[i];
+	{
+		size_t nreff = 0;
+		size_t *ref = xdf1->reference_index;
+		bool *changed = xdf1->changed + off;
 
-		if (action == INVESTIGATE) {
-			if (!xdl_clean_mmatch(action1, i, len1))
-				action = KEEP;
+		for (i = 0; i < len1; i++) {
+			uint8_t action = action1[i];
+
+			if (investigate1 && action == INVESTIGATE)
+				action = xdl_clean_mmatch(action1, i, len1) ? DISCARD : KEEP;
+			if (action == KEEP)
+				ref[nreff++] = i + off;
 			else
-				action = DISCARD;
+				changed[i] = true;
 		}
-
-		if (action == KEEP) {
-			xdf1->reference_index[xdf1->nreff++] = i + off;
-			/* changed[i] remains false */
-		} else if (action == DISCARD) {
-			xdf1->changed[i + off] = true;
-		} else {
-			BUG("Illegal state for action");
-		}
+		xdf1->nreff = nreff;
 	}
 
-	xdf2->nreff = 0;
-	for (i = 0; i < len2; i++) {
-		uint8_t action = action2[i];
+	{
+		size_t nreff = 0;
+		size_t *ref = xdf2->reference_index;
+		bool *changed = xdf2->changed + off;
 
-		if (action == INVESTIGATE) {
-			if (!xdl_clean_mmatch(action2, i, len2))
-				action = KEEP;
+		for (i = 0; i < len2; i++) {
+			uint8_t action = action2[i];
+
+			if (investigate2 && action == INVESTIGATE)
+				action = xdl_clean_mmatch(action2, i, len2) ? DISCARD : KEEP;
+			if (action == KEEP)
+				ref[nreff++] = i + off;
 			else
-				action = DISCARD;
+				changed[i] = true;
 		}
-
-		if (action == KEEP) {
-			xdf2->reference_index[xdf2->nreff++] = i + off;
-			/* changed[i] remains false */
-		} else if (action == DISCARD) {
-			xdf2->changed[i + off] = true;
-		} else {
-			BUG("Illegal state for action");
-		}
+		xdf2->nreff = nreff;
 	}
 
 cleanup:
 	xdl_free(action1);
-	xdl_free(action2);
 
 	return ret;
 }
