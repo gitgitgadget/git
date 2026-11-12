@@ -264,11 +264,78 @@ static void xdl_free_ctx(xdfile_t *xdf)
 }
 
 
+#define XDL_CMP_BLOCK 256
+
+static size_t xdl_common_prefix_bytes(uint8_t const *a, uint8_t const *b,
+				       size_t n) {
+	size_t i = 0;
+
+	while (i + XDL_CMP_BLOCK <= n &&
+	       !memcmp(a + i, b + i, XDL_CMP_BLOCK))
+		i += XDL_CMP_BLOCK;
+	while (i + sizeof(uint64_t) <= n) {
+		uint64_t x, y;
+
+		memcpy(&x, a + i, sizeof(x));
+		memcpy(&y, b + i, sizeof(y));
+		if (x != y)
+			break;
+		i += sizeof(uint64_t);
+	}
+	while (i < n && a[i] == b[i])
+		i++;
+	return i;
+}
+
+
+static size_t xdl_common_suffix_bytes(uint8_t const *a, uint8_t const *b,
+				       size_t n) {
+	size_t i = 0;
+
+	while (i + XDL_CMP_BLOCK <= n &&
+	       !memcmp(a + n - i - XDL_CMP_BLOCK,
+		       b + n - i - XDL_CMP_BLOCK, XDL_CMP_BLOCK))
+		i += XDL_CMP_BLOCK;
+	while (i + sizeof(uint64_t) <= n) {
+		uint64_t x, y;
+
+		memcpy(&x, a + n - i - sizeof(x), sizeof(x));
+		memcpy(&y, b + n - i - sizeof(y), sizeof(y));
+		if (x != y)
+			break;
+		i += sizeof(uint64_t);
+	}
+	while (i < n && a[n - i - 1] == b[n - i - 1])
+		i++;
+	return i;
+}
+
+
+static int xdl_add_rec(xdfile_t *xdf, long *narec, uint8_t const *ptr,
+		       size_t size, size_t mph) {
+	xrecord_t *crec;
+
+	if (XDL_ALLOC_GROW(xdf->recs, (long)xdf->nrec + 1, *narec))
+		return -1;
+	crec = &xdf->recs[xdf->nrec++];
+	crec->ptr = ptr;
+	crec->size = size;
+	crec->minimal_perfect_hash = mph;
+	return 0;
+}
+
+
+/*
+ * Byte-identical common head/tail records on side two can reuse side
+ * one's classes. Keep their occurrence counts, including when a middle
+ * record shares the same class.
+ */
 static int xdl_prepare_ctx(unsigned int pass, mmfile_t *mf, long narec, xpparam_t const *xpp,
-			   xdlclassifier_t *cf, xdfile_t *xdf) {
+			   xdlclassifier_t *cf, xdfile_t *xdf,
+			   mmfile_t *mfref, xdfile_t const *xdfref) {
 	long bsize;
 	uint64_t hav;
-	uint8_t const *blk, *cur, *top, *prev;
+	uint8_t const *blk, *cur, *top, *prev, *mid_end;
 	xrecord_t *crec;
 
 	xdf->reference_index = NULL;
@@ -280,7 +347,53 @@ static int xdl_prepare_ctx(unsigned int pass, mmfile_t *mf, long narec, xpparam_
 
 	xdf->nrec = 0;
 	if ((cur = blk = xdl_mmfile_first(mf, &bsize))) {
-		for (top = blk + bsize; cur < top; ) {
+		top = blk + bsize;
+		mid_end = top;
+		if (xdfref && xdfref->nrec) {
+			long rsize;
+			uint8_t const *rblk = xdl_mmfile_first(mfref, &rsize);
+			size_t n = (size_t)XDL_MIN(rsize, bsize);
+			size_t d = xdl_common_prefix_bytes(rblk, blk, n);
+			size_t i, hend = 0, l, s1, s2;
+
+			for (i = 0; i < xdfref->nrec; i++) {
+				xrecord_t const *r = &xdfref->recs[i];
+				size_t e = (size_t)(r->ptr - rblk) + r->size;
+
+				if (e > d)
+					break;
+				if (rblk[e - 1] != '\n' && (size_t)bsize != e)
+					break;
+				if (xdl_add_rec(xdf, &narec, blk + (r->ptr - rblk),
+						r->size, r->minimal_perfect_hash) < 0)
+					goto abort;
+				cf->rcrecs[r->minimal_perfect_hash].len2++;
+				hend = e;
+			}
+			cur = blk + hend;
+
+			s1 = (size_t)rsize - hend;
+			s2 = (size_t)bsize - hend;
+			n = XDL_MIN(s1, s2);
+			l = xdl_common_suffix_bytes(rblk + rsize - n,
+						    blk + bsize - n, n);
+			if (l) {
+				size_t t2 = (size_t)bsize - l;
+				size_t t1 = (size_t)rsize - l;
+
+				/* Advance to a line start in both files. */
+				while (t2 < (size_t)bsize &&
+				       !((t2 == hend || blk[t2 - 1] == '\n') &&
+					 (t1 == hend || rblk[t1 - 1] == '\n'))) {
+					t2++;
+					t1++;
+				}
+				if (t2 < (size_t)bsize)
+					mid_end = blk + t2;
+			}
+		}
+
+		for (; cur < mid_end; ) {
 			prev = cur;
 			if (xpp->flags & XDF_WHITESPACE_FLAGS) {
 				hav = xdl_hash_record_with_whitespace(&cur, top, xpp->flags);
@@ -316,6 +429,31 @@ static int xdl_prepare_ctx(unsigned int pass, mmfile_t *mf, long narec, xpparam_
 			crec->size = cur - prev;
 			if (xdl_classify_record(pass, cf, crec, hav) < 0)
 				goto abort;
+		}
+
+		if (cur < top) {
+			long rsize;
+			uint8_t const *rblk = xdl_mmfile_first(mfref, &rsize);
+			uint8_t const *p;
+			size_t ntail = 0, j;
+
+			for (p = cur; p < top; ntail++) {
+				p = memchr(p, '\n', top - p);
+				p = p ? p + 1 : top;
+			}
+			j = xdfref->nrec - ntail;
+			if (ntail > xdfref->nrec ||
+			    xdfref->recs[j].ptr - rblk != rsize - (top - cur))
+				BUG("xdiff: common tail records do not line up");
+			for (; j < xdfref->nrec; j++) {
+				xrecord_t const *r = &xdfref->recs[j];
+
+				if (xdl_add_rec(xdf, &narec, cur, r->size,
+						r->minimal_perfect_hash) < 0)
+					goto abort;
+				cf->rcrecs[r->minimal_perfect_hash].len2++;
+				cur += r->size;
+			}
 		}
 	}
 
@@ -689,7 +827,7 @@ int xdl_prepare_env(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	if (xdl_init_classifier_sized(&cf, enl1 + enl2 + 1, enl1, xpp->flags) < 0)
 		return -1;
 
-	if (xdl_prepare_ctx(1, mf1, enl1, xpp, &cf, &xe->xdf1) < 0) {
+	if (xdl_prepare_ctx(1, mf1, enl1, xpp, &cf, &xe->xdf1, NULL, NULL) < 0) {
 
 		xdl_free_classifier(&cf);
 		return -1;
@@ -707,7 +845,7 @@ int xdl_prepare_env(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 				enl2 = est;
 		}
 	}
-	if (xdl_prepare_ctx(2, mf2, enl2, xpp, &cf, &xe->xdf2) < 0) {
+	if (xdl_prepare_ctx(2, mf2, enl2, xpp, &cf, &xe->xdf2, mf1, &xe->xdf1) < 0) {
 
 		xdl_free_ctx(&xe->xdf1);
 		xdl_free_classifier(&cf);
