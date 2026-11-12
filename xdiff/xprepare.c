@@ -89,6 +89,11 @@ static int xdl_init_classifier_sized(xdlclassifier_t *cf, long size, long tsize,
 }
 
 
+static int xdl_init_classifier(xdlclassifier_t *cf, long size, long flags) {
+	return xdl_init_classifier_sized(cf, size, size, flags);
+}
+
+
 static void xdl_free_classifier(xdlclassifier_t *cf) {
 	xdl_free(cf->rcrecs);
 	xdl_free(cf->table);
@@ -794,6 +799,247 @@ static int xdl_prepare_env_one_empty(mmfile_t *mf1, mmfile_t *mf2,
 }
 
 
+#define XDL_REC_PENDING SIZE_MAX
+
+static uint64_t xdl_line_fingerprint(uint8_t const *p, size_t n) {
+	uint64_t a = 0, b = 0;
+
+	if (n >= 8) {
+		memcpy(&a, p, 8);
+		memcpy(&b, p + n - 8, 8);
+	} else {
+		size_t i;
+
+		for (i = 0; i < n; i++)
+			a = (a << 8) | p[i];
+	}
+	a = (a ^ (b * XDL_HMUL) ^ ((uint64_t)n << 56)) * 0xff51afd7ed558ccdULL;
+	return a ^ (a >> 29);
+}
+
+
+/*
+ * For verbatim Myers diffs, first separate byte-identical head/tail
+ * records from the middle. A fingerprint filter tells us which common
+ * records might also occur in the middle; only those need classification.
+ *
+ * The remaining common pairs receive private class numbers. This is safe
+ * because trimming removes those pairs before cleanup consults the class
+ * counters. Compaction compares a common record only with a changed
+ * record, which necessarily belongs to a middle class.
+ *
+ * Fingerprints are only a negative filter. False positives take the
+ * normal hashing and byte-comparison path; they cannot equate two lines.
+ */
+static int xdl_prepare_myers_records(mmfile_t *mf1, mmfile_t *mf2,
+				     long enl1, long enl2, xpparam_t const *xpp,
+				     xdlclassifier_t *cf, xdfenv_t *xe) {
+	xdfile_t *xdf1 = &xe->xdf1, *xdf2 = &xe->xdf2;
+	long s1, s2;
+	uint8_t const *b1 = xdl_mmfile_first(mf1, &s1);
+	uint8_t const *b2 = xdl_mmfile_first(mf2, &s2);
+	uint8_t const *top1, *top2, *p, *cur, *prev;
+	size_t d, hend, t1, t2, nhead, i, j, nmid1, nmid2, tail1, tail2;
+	uint64_t *bits = NULL;
+	unsigned int fpbits = 0;
+	size_t next;
+
+	xdf1->reference_index = xdf2->reference_index = NULL;
+	xdf1->changed = xdf2->changed = NULL;
+	xdf1->recs = xdf2->recs = NULL;
+	xdf1->nrec = xdf2->nrec = 0;
+
+	if (!XDL_ALLOC_ARRAY(xdf1->recs, enl1) ||
+	    !XDL_ALLOC_ARRAY(xdf2->recs, enl2))
+		return -1;
+	top1 = b1 + s1;
+	top2 = b2 + s2;
+
+	d = xdl_common_prefix_bytes(b1, b2, (size_t)XDL_MIN(s1, s2));
+	hend = 0;
+	for (p = b1; p < top1; ) {
+		uint8_t const *e = memchr(p, '\n', top1 - p);
+		size_t end = e ? (size_t)(e - b1) + 1 : (size_t)s1;
+
+		if (end > d || (!e && (size_t)s2 != end))
+			break;
+		if (xdl_add_rec(xdf1, &enl1, p, b1 + end - p, XDL_REC_PENDING) < 0 ||
+		    xdl_add_rec(xdf2, &enl2, b2 + (p - b1), b1 + end - p,
+				XDL_REC_PENDING) < 0)
+			return -1;
+		hend = end;
+		p = b1 + end;
+	}
+	nhead = xdf1->nrec;
+
+	t1 = (size_t)s1;
+	t2 = (size_t)s2;
+	{
+		size_t n = XDL_MIN((size_t)s1 - hend, (size_t)s2 - hend);
+		size_t l = xdl_common_suffix_bytes(b1 + s1 - n, b2 + s2 - n, n);
+
+		if (l) {
+			size_t u1 = (size_t)s1 - l, u2 = (size_t)s2 - l;
+
+			while (u2 < (size_t)s2 &&
+			       !((u2 == hend || b2[u2 - 1] == '\n') &&
+				 (u1 == hend || b1[u1 - 1] == '\n'))) {
+				u1++;
+				u2++;
+			}
+			if (u2 < (size_t)s2) {
+				t1 = u1;
+				t2 = u2;
+			}
+		}
+	}
+
+	/* Size for middle records; possible common-class matches grow it. */
+	{
+		long est = 1;
+
+		est += (long)((double)enl1 * (t1 - hend) / s1);
+		est += (long)((double)enl2 * (t2 - hend) / s2);
+		if (est < 32)
+			est = 32;
+		if (xdl_init_classifier(cf, est, xpp->flags) < 0)
+			return -1;
+	}
+
+	for (cur = b1 + hend; cur < b1 + t1; ) {
+		uint64_t hav;
+
+		prev = cur;
+		hav = xdl_hash_line_fast(&cur, top1);
+		if (xdl_add_rec(xdf1, &enl1, prev, cur - prev, 0) < 0 ||
+		    xdl_classify_record(1, cf, &xdf1->recs[xdf1->nrec - 1], hav) < 0)
+			return -1;
+	}
+	nmid1 = xdf1->nrec - nhead;
+	for (cur = b2 + hend; cur < b2 + t2; ) {
+		uint64_t hav;
+
+		prev = cur;
+		hav = xdl_hash_line_fast(&cur, top2);
+		if (xdl_add_rec(xdf2, &enl2, prev, cur - prev, 0) < 0 ||
+		    xdl_classify_record(2, cf, &xdf2->recs[xdf2->nrec - 1], hav) < 0)
+			return -1;
+	}
+	nmid2 = xdf2->nrec - nhead;
+
+	tail1 = xdf1->nrec;
+	tail2 = xdf2->nrec;
+	for (p = b1 + t1; p < top1; ) {
+		uint8_t const *e = memchr(p, '\n', top1 - p);
+		uint8_t const *end = e ? e + 1 : top1;
+
+		if (xdl_add_rec(xdf1, &enl1, p, end - p, XDL_REC_PENDING) < 0 ||
+		    xdl_add_rec(xdf2, &enl2, b2 + t2 + (p - (b1 + t1)),
+				end - p, XDL_REC_PENDING) < 0)
+			return -1;
+		p = end;
+	}
+
+	if (nmid1 + nmid2) {
+		size_t nmid = nmid1 + nmid2;
+		size_t want = nmid < ((size_t)1 << 26) ?
+			nmid * 16 : (size_t)1 << 30;
+
+		for (fpbits = 10;
+		     fpbits < 30 && ((size_t)1 << fpbits) < want;
+		     fpbits++)
+			; /* Keep the filter bounded even for very large inputs. */
+		if (!XDL_CALLOC_ARRAY(bits, ((size_t)1 << fpbits) / 64))
+			return -1;
+		for (i = nhead; i < tail1; i++) {
+			uint64_t h = xdl_line_fingerprint(xdf1->recs[i].ptr,
+							 xdf1->recs[i].size) >> (64 - fpbits);
+
+			bits[h >> 6] |= (uint64_t)1 << (h & 63);
+		}
+		for (i = nhead; i < tail2; i++) {
+			uint64_t h = xdl_line_fingerprint(xdf2->recs[i].ptr,
+							 xdf2->recs[i].size) >> (64 - fpbits);
+
+			bits[h >> 6] |= (uint64_t)1 << (h & 63);
+		}
+	}
+
+	/* Classify any common pair that might share a middle class. */
+	for (i = 0, j = 0; i < xdf1->nrec; i++, j++) {
+		xrecord_t *r1, *r2;
+
+		if (i == nhead) {
+			i = tail1;
+			j = tail2;
+			if (i >= xdf1->nrec)
+				break;
+		}
+		r1 = &xdf1->recs[i];
+		r2 = &xdf2->recs[j];
+		if (bits) {
+			uint64_t h = xdl_line_fingerprint(r1->ptr, r1->size) >> (64 - fpbits);
+
+			if (bits[h >> 6] & ((uint64_t)1 << (h & 63))) {
+				uint8_t const *q = r1->ptr;
+				uint64_t hav = xdl_hash_line_fast(&q, top1);
+
+				if (xdl_classify_record(1, cf, r1, hav) < 0)
+					goto abort;
+				cf->rcrecs[r1->minimal_perfect_hash].len2++;
+				r2->minimal_perfect_hash = r1->minimal_perfect_hash;
+			}
+		}
+	}
+
+	next = (size_t)cf->count;
+	for (i = 0, j = 0; i < xdf1->nrec; i++, j++) {
+		if (i == nhead) {
+			i = tail1;
+			j = tail2;
+			if (i >= xdf1->nrec)
+				break;
+		}
+		if (xdf1->recs[i].minimal_perfect_hash == XDL_REC_PENDING) {
+			xdf1->recs[i].minimal_perfect_hash = next;
+			xdf2->recs[j].minimal_perfect_hash = next++;
+		}
+	}
+	xdl_free(bits);
+	bits = NULL;
+
+	if (!XDL_CALLOC_ARRAY(xdf1->changed, xdf1->nrec + 2))
+		return -1;
+	xdf1->changed += 1;
+	if (!XDL_CALLOC_ARRAY(xdf2->changed, xdf2->nrec + 2))
+		return -1;
+	xdf2->changed += 1;
+	xdf1->nreff = xdf2->nreff = 0;
+	xdf1->dstart = xdf2->dstart = 0;
+	xdf1->dend = xdf1->nrec - 1;
+	xdf2->dend = xdf2->nrec - 1;
+	return 0;
+
+abort:
+	xdl_free(bits);
+	return -1;
+}
+
+
+static int xdl_prepare_myers_verbatim(mmfile_t *mf1, mmfile_t *mf2,
+				      long enl1, long enl2, xpparam_t const *xpp,
+				      xdlclassifier_t *cf, xdfenv_t *xe) {
+	if (xdl_prepare_myers_records(mf1, mf2, enl1, enl2, xpp, cf, xe) < 0) {
+		xdl_free_ctx(&xe->xdf1);
+		xdl_free_ctx(&xe->xdf2);
+		xe->xdf1.recs = xe->xdf2.recs = NULL;
+		xe->xdf1.changed = xe->xdf2.changed = NULL;
+		return -1;
+	}
+	return 0;
+}
+
+
 int xdl_prepare_env(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 		    xdfenv_t *xe) {
 	long enl1, enl2, sample;
@@ -823,6 +1069,22 @@ int xdl_prepare_env(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 
 	if (xdl_mmfile_size(mf1) <= 0 || xdl_mmfile_size(mf2) <= 0)
 		return xdl_prepare_env_one_empty(mf1, mf2, enl1, enl2, xpp, xe);
+
+	if (!(XDF_DIFF_ALG(xpp->flags) & (XDF_PATIENCE_DIFF | XDF_HISTOGRAM_DIFF)) &&
+	    !(xpp->flags & XDF_WHITESPACE_FLAGS)) {
+		if (xdl_prepare_myers_verbatim(mf1, mf2, enl1, enl2, xpp, &cf, xe) < 0) {
+			xdl_free_classifier(&cf);
+			return -1;
+		}
+		if (xdl_optimize_ctxs(&cf, &xe->xdf1, &xe->xdf2) < 0) {
+			xdl_free_ctx(&xe->xdf2);
+			xdl_free_ctx(&xe->xdf1);
+			xdl_free_classifier(&cf);
+			return -1;
+		}
+		xdl_free_classifier(&cf);
+		return 0;
+	}
 
 	if (xdl_init_classifier_sized(&cf, enl1 + enl2 + 1, enl1, xpp->flags) < 0)
 		return -1;
