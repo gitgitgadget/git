@@ -97,7 +97,7 @@ int cmd_archive(int argc,
 	argc = parse_options(argc, argv, prefix, local_opts, NULL,
 			     PARSE_OPT_KEEP_ALL);
 
-	init_archivers();
+	init_archivers(repo);
 
 	if (output)
 		create_output_file(output);
