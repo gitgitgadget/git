@@ -270,49 +270,44 @@ static int xdl_recs_cmp_flat(xdmyers_t const *mc,
 			     xdfile_t *xdf2, long off2, long lim2,
 			     long *kvdf, long *kvdb, int need_min,
 			     xdalgoenv_t *xenv) {
-
-	/*
-	 * Shrink the box by walking through each diagonal snake (SW and NE).
-	 */
-	for (; off1 < lim1 && off2 < lim2 && mc->ha1[off1] == mc->ha2[off2]; off1++, off2++);
-	for (; off1 < lim1 && off2 < lim2 && mc->ha1[lim1 - 1] == mc->ha2[lim2 - 1]; lim1--, lim2--);
-
-	/*
-	 * If one dimension is empty, then all records on the other one must
-	 * be obviously changed.
-	 */
-	if (off1 == lim1) {
-		for (; off2 < lim2; off2++)
-			xdf2->changed[xdf2->reference_index[off2]] = true;
-	} else if (off2 == lim2) {
-		for (; off1 < lim1; off1++)
-			xdf1->changed[xdf1->reference_index[off1]] = true;
-	} else {
+	for (;;) {
 		xdpsplit_t spl;
+
+		for (; off1 < lim1 && off2 < lim2 &&
+		       mc->ha1[off1] == mc->ha2[off2]; off1++, off2++)
+			;
+		for (; off1 < lim1 && off2 < lim2 &&
+		       mc->ha1[lim1 - 1] == mc->ha2[lim2 - 1]; lim1--, lim2--)
+			;
+
+		if (off1 == lim1) {
+			for (; off2 < lim2; off2++)
+				xdf2->changed[xdf2->reference_index[off2]] = true;
+			return 0;
+		}
+		if (off2 == lim2) {
+			for (; off1 < lim1; off1++)
+				xdf1->changed[xdf1->reference_index[off1]] = true;
+			return 0;
+		}
 		spl.i1 = spl.i2 = 0;
 
-		/*
-		 * Divide ...
-		 */
 		if (xdl_split(mc, off1, lim1, off2, lim2, kvdf, kvdb,
-			      need_min, &spl, xenv) < 0) {
-
+			      need_min, &spl, xenv) < 0)
 			return -1;
-		}
 
 		/*
-		 * ... et Impera.
+		 * Preserve the recursive traversal order, but handle the
+		 * second half by looping rather than adding a stack frame.
 		 */
-		if (xdl_recs_cmp_flat(mc, xdf1, off1, spl.i1, xdf2, off2, spl.i2,
-				      kvdf, kvdb, spl.min_lo, xenv) < 0 ||
-		    xdl_recs_cmp_flat(mc, xdf1, spl.i1, lim1, xdf2, spl.i2, lim2,
-				      kvdf, kvdb, spl.min_hi, xenv) < 0) {
-
+		if (xdl_recs_cmp_flat(mc, xdf1, off1, spl.i1,
+				      xdf2, off2, spl.i2,
+				      kvdf, kvdb, spl.min_lo, xenv) < 0)
 			return -1;
-		}
+		off1 = spl.i1;
+		off2 = spl.i2;
+		need_min = spl.min_hi;
 	}
-
-	return 0;
 }
 
 
