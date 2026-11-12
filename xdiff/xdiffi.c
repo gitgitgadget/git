@@ -22,10 +22,13 @@
 
 #include "xinclude.h"
 
-static size_t get_hash(xdfile_t *xdf, long index)
-{
-	return xdf->recs[xdf->reference_index[index]].minimal_perfect_hash;
-}
+/*
+ * Contiguous copies of the class indexes participating in the search.
+ * Comparisons no longer need reference_index followed by a record lookup.
+ */
+typedef struct s_xdmyers {
+	size_t const *ha1, *ha2;
+} xdmyers_t;
 
 #define XDL_MAX_COST_MIN 256
 #define XDL_HEUR_MIN_COST 256
@@ -47,8 +50,8 @@ typedef struct s_xdpsplit {
  * using this algorithm, so a little bit of heuristic is needed to cut the
  * search and to return a suboptimal point.
  */
-static long xdl_split(xdfile_t *xdf1, long off1, long lim1,
-		      xdfile_t *xdf2, long off2, long lim2,
+static long xdl_split(xdmyers_t const *mc, long off1, long lim1,
+		      long off2, long lim2,
 		      long *kvdf, long *kvdb, int need_min, xdpsplit_t *spl,
 		      xdalgoenv_t *xenv) {
 	long dmin = off1 - lim2, dmax = lim1 - off2;
@@ -92,7 +95,7 @@ static long xdl_split(xdfile_t *xdf1, long off1, long lim1,
 				i1 = kvdf[d + 1];
 			prev1 = i1;
 			i2 = i1 - d;
-			for (; i1 < lim1 && i2 < lim2 && get_hash(xdf1, i1) == get_hash(xdf2, i2); i1++, i2++);
+			for (; i1 < lim1 && i2 < lim2 && mc->ha1[i1] == mc->ha2[i2]; i1++, i2++);
 			if (i1 - prev1 > xenv->snake_cnt)
 				got_snake = 1;
 			kvdf[d] = i1;
@@ -129,7 +132,7 @@ static long xdl_split(xdfile_t *xdf1, long off1, long lim1,
 				i1 = kvdb[d + 1] - 1;
 			prev1 = i1;
 			i2 = i1 - d;
-			for (; i1 > off1 && i2 > off2 && get_hash(xdf1, i1 - 1) == get_hash(xdf2, i2 - 1); i1--, i2--);
+			for (; i1 > off1 && i2 > off2 && mc->ha1[i1 - 1] == mc->ha2[i2 - 1]; i1--, i2--);
 			if (prev1 - i1 > xenv->snake_cnt)
 				got_snake = 1;
 			kvdb[d] = i1;
@@ -164,7 +167,7 @@ static long xdl_split(xdfile_t *xdf1, long off1, long lim1,
 				if (v > XDL_K_HEUR * ec && v > best &&
 				    off1 + xenv->snake_cnt <= i1 && i1 < lim1 &&
 				    off2 + xenv->snake_cnt <= i2 && i2 < lim2) {
-					for (k = 1; get_hash(xdf1, i1 - k) == get_hash(xdf2, i2 - k); k++)
+					for (k = 1; mc->ha1[i1 - k] == mc->ha2[i2 - k]; k++)
 						if (k == xenv->snake_cnt) {
 							best = v;
 							spl->i1 = i1;
@@ -188,7 +191,7 @@ static long xdl_split(xdfile_t *xdf1, long off1, long lim1,
 				if (v > XDL_K_HEUR * ec && v > best &&
 				    off1 < i1 && i1 <= lim1 - xenv->snake_cnt &&
 				    off2 < i2 && i2 <= lim2 - xenv->snake_cnt) {
-					for (k = 0; get_hash(xdf1, i1 + k) == get_hash(xdf2, i2 + k); k++)
+					for (k = 0; mc->ha1[i1 + k] == mc->ha2[i2 + k]; k++)
 						if (k == xenv->snake_cnt - 1) {
 							best = v;
 							spl->i1 = i1;
@@ -262,15 +265,17 @@ static long xdl_split(xdfile_t *xdf1, long off1, long lim1,
  * sub-boxes by calling the box splitting function. Note that the real job
  * (marking changed lines) is done in the two boundary reaching checks.
  */
-int xdl_recs_cmp(xdfile_t *xdf1, long off1, long lim1,
-		 xdfile_t *xdf2, long off2, long lim2,
-		 long *kvdf, long *kvdb, int need_min, xdalgoenv_t *xenv) {
+static int xdl_recs_cmp_flat(xdmyers_t const *mc,
+			     xdfile_t *xdf1, long off1, long lim1,
+			     xdfile_t *xdf2, long off2, long lim2,
+			     long *kvdf, long *kvdb, int need_min,
+			     xdalgoenv_t *xenv) {
 
 	/*
 	 * Shrink the box by walking through each diagonal snake (SW and NE).
 	 */
-	for (; off1 < lim1 && off2 < lim2 && get_hash(xdf1, off1) == get_hash(xdf2, off2); off1++, off2++);
-	for (; off1 < lim1 && off2 < lim2 && get_hash(xdf1, lim1 - 1) == get_hash(xdf2, lim2 - 1); lim1--, lim2--);
+	for (; off1 < lim1 && off2 < lim2 && mc->ha1[off1] == mc->ha2[off2]; off1++, off2++);
+	for (; off1 < lim1 && off2 < lim2 && mc->ha1[lim1 - 1] == mc->ha2[lim2 - 1]; lim1--, lim2--);
 
 	/*
 	 * If one dimension is empty, then all records on the other one must
@@ -289,7 +294,7 @@ int xdl_recs_cmp(xdfile_t *xdf1, long off1, long lim1,
 		/*
 		 * Divide ...
 		 */
-		if (xdl_split(xdf1, off1, lim1, xdf2, off2, lim2, kvdf, kvdb,
+		if (xdl_split(mc, off1, lim1, off2, lim2, kvdf, kvdb,
 			      need_min, &spl, xenv) < 0) {
 
 			return -1;
@@ -298,16 +303,52 @@ int xdl_recs_cmp(xdfile_t *xdf1, long off1, long lim1,
 		/*
 		 * ... et Impera.
 		 */
-		if (xdl_recs_cmp(xdf1, off1, spl.i1, xdf2, off2, spl.i2,
-				 kvdf, kvdb, spl.min_lo, xenv) < 0 ||
-		    xdl_recs_cmp(xdf1, spl.i1, lim1, xdf2, spl.i2, lim2,
-				 kvdf, kvdb, spl.min_hi, xenv) < 0) {
+		if (xdl_recs_cmp_flat(mc, xdf1, off1, spl.i1, xdf2, off2, spl.i2,
+				      kvdf, kvdb, spl.min_lo, xenv) < 0 ||
+		    xdl_recs_cmp_flat(mc, xdf1, spl.i1, lim1, xdf2, spl.i2, lim2,
+				      kvdf, kvdb, spl.min_hi, xenv) < 0) {
 
 			return -1;
 		}
 	}
 
 	return 0;
+}
+
+
+static size_t *xdl_gather_hashes(xdfile_t *xdf, long off, long lim)
+{
+	size_t *ha;
+	long i;
+
+	if (!XDL_ALLOC_ARRAY(ha, lim > 0 ? lim : 1))
+		return NULL;
+	for (i = off; i < lim; i++)
+		ha[i] = xdf->recs[xdf->reference_index[i]].minimal_perfect_hash;
+	return ha;
+}
+
+
+int xdl_recs_cmp(xdfile_t *xdf1, long off1, long lim1,
+		 xdfile_t *xdf2, long off2, long lim2,
+		 long *kvdf, long *kvdb, int need_min, xdalgoenv_t *xenv) {
+	xdmyers_t mc;
+	size_t *ha1, *ha2;
+	int res;
+
+	if (!(ha1 = xdl_gather_hashes(xdf1, off1, lim1)))
+		return -1;
+	if (!(ha2 = xdl_gather_hashes(xdf2, off2, lim2))) {
+		xdl_free(ha1);
+		return -1;
+	}
+	mc.ha1 = ha1;
+	mc.ha2 = ha2;
+	res = xdl_recs_cmp_flat(&mc, xdf1, off1, lim1, xdf2, off2, lim2,
+				kvdf, kvdb, need_min, xenv);
+	xdl_free(ha2);
+	xdl_free(ha1);
+	return res;
 }
 
 
