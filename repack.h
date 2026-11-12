@@ -41,6 +41,7 @@ void repack_remove_redundant_pack(struct repository *repo, const char *dir_name,
 struct write_pack_opts {
 	struct pack_objects_args *po_args;
 	const char *destination;
+	bool loose;
 	const char *packdir;
 	const char *packtmp;
 };

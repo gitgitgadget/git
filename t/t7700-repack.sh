@@ -489,6 +489,136 @@ test_expect_success '--filter-to stores filtered out objects' '
 	test "$blob_content" = "content1"
 '
 
+test_expect_success '--filter-to-loose writes filtered out objects loose' '
+	rm -rf loose-work loose-src.git loose-dst.git &&
+	git init --bare loose-dst.git &&
+	git init loose-work &&
+	test_commit -C loose-work base file1 content1 &&
+	git clone --bare loose-work loose-src.git &&
+	git -C loose-src.git repack -a -d &&
+
+	blob=$(git -C loose-src.git rev-parse HEAD:file1) &&
+	git -C loose-src.git -c repack.writebitmaps=false repack -a -d \
+		--filter=blob:none --filter-to-loose=../loose-dst.git/objects &&
+
+	test_path_is_file loose-dst.git/objects/$(test_oid_to_path $blob) &&
+	find loose-dst.git/objects/pack -name "*.pack" >actual-packs &&
+	test_must_be_empty actual-packs &&
+	test_must_fail git -C loose-src.git cat-file -e $blob &&
+
+	echo $(pwd)/loose-dst.git/objects >loose-src.git/objects/info/alternates &&
+	echo content1 >expect &&
+	git -C loose-src.git cat-file blob $blob >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success '--filter-to-loose writes objects that also exist in the source' '
+	rm -rf loose-work loose-src.git loose-dst.git &&
+	git init --bare loose-dst.git &&
+	git init loose-work &&
+	test_commit -C loose-work base file1 content1 &&
+	git clone --bare loose-work loose-src.git &&
+	git -C loose-src.git repack -a -d &&
+
+	blob=$(git -C loose-src.git rev-parse HEAD:file1) &&
+	git -C loose-src.git -c repack.writebitmaps=false repack -a -d \
+		--filter=blob:none --filter-to-loose=../loose-dst.git/objects &&
+
+	test_path_is_file loose-dst.git/objects/$(test_oid_to_path $blob)
+'
+
+# Create loose-work/loose-src.git/loose-dst.git; $big is a 2k blob on
+# refs/heads/big in loose-src.git, packed unless $1 is "loose".
+setup_loose_src () {
+	rm -rf loose-work loose-src.git loose-dst.git &&
+	git init --bare loose-dst.git &&
+	git init loose-work &&
+	test_commit -C loose-work base small small &&
+	git clone --bare loose-work loose-src.git &&
+
+	big=$(test-tool genrandom big 2k | git -C loose-src.git hash-object -w --stdin) &&
+	tree=$(printf "100644 blob %s\tbig\n" $big | git -C loose-src.git mktree) &&
+	commit=$(git -C loose-src.git commit-tree -m big $tree) &&
+	git -C loose-src.git update-ref refs/heads/big $commit &&
+
+	if test "$1" != loose
+	then
+		git -C loose-src.git repack -a -d
+	fi
+}
+
+test_expect_success '--filter-to-loose failure to write leaves the source intact' '
+	setup_loose_src &&
+	>not-a-dir &&
+
+	ls loose-src.git/objects/pack/*.pack >packs-before &&
+	test_must_fail git -C loose-src.git -c repack.writebitmaps=false \
+		repack -a -d --filter=blob:limit=1k \
+		--filter-to-loose=../not-a-dir &&
+
+	ls loose-src.git/objects/pack/*.pack >packs-after &&
+	test_cmp packs-before packs-after &&
+
+	find loose-src.git/objects/pack -name ".tmp-*" >tmp-leftovers &&
+	test_must_be_empty tmp-leftovers &&
+	git -C loose-src.git cat-file -e $big
+'
+
+test_expect_success '--filter-to-loose does not move objects from kept packs' '
+	setup_loose_src &&
+
+	for p in loose-src.git/objects/pack/pack-*.pack
+	do
+		>${p%.pack}.keep || return 1
+	done &&
+
+	git -C loose-src.git -c repack.writebitmaps=false repack -a -d \
+		--filter=blob:limit=1k --filter-to-loose=../loose-dst.git/objects &&
+
+	test_path_is_missing loose-dst.git/objects/$(test_oid_to_path $big) &&
+	git -C loose-src.git cat-file -e $big
+'
+
+test_expect_success '--filter-to-loose leaves unreachable objects in cruft packs alone' '
+	setup_loose_src loose &&
+	git -C loose-src.git update-ref -d refs/heads/big &&
+	git -C loose-src.git repack --cruft -d &&
+
+	git -C loose-src.git -c repack.writebitmaps=false repack -a -d --cruft \
+		--filter=blob:limit=1k --filter-to-loose=../loose-dst.git/objects &&
+
+	test_path_is_missing loose-dst.git/objects/$(test_oid_to_path $big) &&
+	git -C loose-src.git cat-file -e $big
+'
+
+test_expect_success '--filter-to-loose output survives gc and prune of the source' '
+	setup_loose_src &&
+
+	git -C loose-src.git -c repack.writebitmaps=false repack -a -d \
+		--filter=blob:limit=1k --filter-to-loose=../loose-dst.git/objects &&
+
+	echo $(pwd)/loose-dst.git/objects >loose-src.git/objects/info/alternates &&
+	git -C loose-src.git gc --prune=now &&
+	git -C loose-src.git prune --expire=now &&
+
+	git -C loose-src.git fsck &&
+	git -C loose-src.git cat-file -e $big &&
+	test_path_is_file loose-dst.git/objects/$(test_oid_to_path $big)
+'
+
+test_expect_success '--filter-to-loose requires --filter, rejects --filter-to and --max-pack-size' '
+	test_must_fail git -C bare.git repack -a --filter-to-loose=../x 2>err &&
+	test_grep "can only be used along with" err &&
+
+	test_must_fail git -C bare.git repack -a --filter=blob:none \
+		--filter-to=../y --filter-to-loose=../x 2>err &&
+	test_grep "cannot be used together" err &&
+
+	test_must_fail git -C bare.git repack -a --filter=blob:none \
+		--filter-to-loose=../x --max-pack-size=1M 2>err &&
+	test_grep "cannot be used together" err
+'
+
 test_expect_success '--filter works with --max-pack-size' '
 	rm -rf filtered.git &&
 	git init --bare filtered.git &&

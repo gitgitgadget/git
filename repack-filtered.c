@@ -9,19 +9,40 @@
 #include "list-objects-filter.h"
 #include "odb.h"
 #include "promisor-remote.h"
+#include "sigchain.h"
+
+static void start_unpack_objects(struct child_process *unpack,
+				 const char *objdir)
+{
+	strvec_push(&unpack->args, "unpack-objects");
+	strvec_push(&unpack->args, "-q");
+	strvec_pushf(&unpack->env, "GIT_OBJECT_DIRECTORY=%s", objdir);
+	strvec_push(&unpack->env, "GIT_ALTERNATE_OBJECT_DIRECTORIES");
+	unpack->git_cmd = 1;
+	unpack->in = -1;
+	if (start_command(unpack))
+		die(_("could not start unpack-objects for '%s'"), objdir);
+}
 
 int write_filtered_pack(const struct write_pack_opts *opts,
 			struct existing_packs *existing,
 			struct string_list *names)
 {
 	struct child_process cmd = CHILD_PROCESS_INIT;
+	struct child_process unpack = CHILD_PROCESS_INIT;
 	struct string_list_item *item;
 	FILE *in;
 	int ret;
 	const char *caret;
 	const char *pack_prefix = write_pack_opts_pack_prefix(opts);
 
-	prepare_pack_objects(&cmd, opts->po_args, opts->destination);
+	if (opts->loose) {
+		sigchain_push(SIGPIPE, SIG_IGN);
+		start_unpack_objects(&unpack, opts->destination);
+		prepare_pack_objects(&cmd, opts->po_args, "--stdout");
+	} else {
+		prepare_pack_objects(&cmd, opts->po_args, opts->destination);
+	}
 
 	strvec_push(&cmd.args, "--stdin-packs");
 
@@ -29,10 +50,18 @@ int write_filtered_pack(const struct write_pack_opts *opts,
 		strvec_pushf(&cmd.args, "--keep-pack=%s", item->string);
 
 	cmd.in = -1;
+	if (opts->loose)
+		cmd.out = unpack.in;
 
 	ret = start_command(&cmd);
-	if (ret)
+	if (ret) {
+		if (opts->loose) {
+			close(unpack.in);
+			finish_command(&unpack);
+			sigchain_pop(SIGPIPE);
+		}
 		return ret;
+	}
 
 	/*
 	 * Here 'names' contains only the pack(s) that were just
@@ -51,6 +80,17 @@ int write_filtered_pack(const struct write_pack_opts *opts,
 	for_each_string_list_item(item, &existing->kept_packs)
 		fprintf(in, "%s%s.pack\n", caret, item->string);
 	fclose(in);
+
+	if (opts->loose) {
+		ret = finish_command(&cmd);
+		if (finish_command(&unpack))
+			ret = -1;
+		sigchain_pop(SIGPIPE);
+		if (ret)
+			ret = error(_("failed to write filtered out objects to '%s'"),
+				    opts->destination);
+		return ret;
+	}
 
 	return finish_pack_objects_cmd(existing->repo->hash_algo, opts, &cmd,
 				       names);

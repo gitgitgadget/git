@@ -41,7 +41,7 @@ static const char *const git_repack_usage[] = {
 	N_("git repack [-a] [-A] [-d] [-f] [-F] [-l] [-n] [-q] [-b] [-m]\n"
 	   "[--window=<n>] [--depth=<n>] [--threads=<n>] [--keep-pack=<pack-name>]\n"
 	   "[--write-midx[=<mode>]] [--name-hash-version=<n>] [--path-walk]\n"
-	   "[--filter=<filter-spec>] [--drop-filtered [--dry-run]]"),
+	   "[--filter=<filter-spec> [--filter-to-loose=<dir>]] [--drop-filtered [--dry-run]]"),
 	NULL
 };
 
@@ -182,6 +182,7 @@ int cmd_repack(int argc,
 	const char *cruft_expiration = NULL;
 	const char *expire_to = NULL;
 	const char *filter_to = NULL;
+	const char *filter_to_loose = NULL;
 	const char *opt_window = NULL;
 	const char *opt_window_memory = NULL;
 	const char *opt_depth = NULL;
@@ -257,6 +258,8 @@ int cmd_repack(int argc,
 			   N_("pack prefix to store a pack containing pruned objects")),
 		OPT_STRING(0, "filter-to", &filter_to, N_("dir"),
 			   N_("pack prefix to store a pack containing filtered out objects")),
+		OPT_STRING(0, "filter-to-loose", &filter_to_loose, N_("dir"),
+			   N_("object directory to write filtered out objects into as loose objects")),
 		OPT_BOOL(0, "drop-filtered", &drop_filtered,
 				N_("delete filtered out objects (requires --filter)")),
 		OPT_BOOL(0, "dry-run", &dry_run,
@@ -282,8 +285,16 @@ int cmd_repack(int argc,
 	po_args.depth = xstrdup_or_null(opt_depth);
 	po_args.threads = xstrdup_or_null(opt_threads);
 
-	die_for_incompatible_opt2(drop_filtered, "--drop-filtered",
-		!!filter_to, "--filter-to");
+	die_for_incompatible_opt3(drop_filtered, "--drop-filtered",
+			!!filter_to, "--filter-to",
+			!!filter_to_loose, "--filter-to-loose");
+	die_for_incompatible_opt2(!!filter_to, "--filter-to",
+			!!filter_to_loose, "--filter-to-loose");
+	die_for_incompatible_opt2(!!filter_to_loose, "--filter-to-loose",
+			!!po_args.max_pack_size, "--max-pack-size");
+
+	if (filter_to_loose)
+		filter_to = filter_to_loose;
 
 	if (dry_run && !drop_filtered)
 		die(_("--dry-run only takes effect with --drop-filtered"));
@@ -553,7 +564,8 @@ int cmd_repack(int argc,
 		strvec_pushf(&cmd.args, "--filter=%s",
 			     expand_list_objects_filter_spec(&po_args.filter_options));
 	else if (filter_to)
-		die(_("option '%s' can only be used along with '%s'"), "--filter-to", "--filter");
+		die(_("option '%s' can only be used along with '%s'"),
+		    filter_to_loose ? "--filter-to-loose" : "--filter-to", "--filter");
 
 	if (geometry.split_factor)
 		cmd.in = -1;
@@ -698,6 +710,7 @@ int cmd_repack(int argc,
 		struct write_pack_opts opts = {
 			.po_args = &po_args,
 			.destination = filter_to,
+			.loose = !!filter_to_loose,
 			.packdir = packdir,
 			.packtmp = packtmp,
 		};
