@@ -258,7 +258,8 @@ done:
 static void xdl_free_ctx(xdfile_t *xdf)
 {
 	xdl_free(xdf->reference_index);
-	xdl_free(xdf->changed - 1);
+	if (xdf->changed)
+		xdl_free(xdf->changed - 1);
 	xdl_free(xdf->recs);
 }
 
@@ -326,6 +327,50 @@ static int xdl_prepare_ctx(unsigned int pass, mmfile_t *mf, long narec, xpparam_
 	xdf->dstart = 0;
 	xdf->dend = xdf->nrec - 1;
 
+	return 0;
+
+abort:
+	xdl_free_ctx(xdf);
+	return -1;
+}
+
+
+/*
+ * With an empty peer, no equivalence class can be consulted. Only split
+ * the nonempty input into the same newline-delimited records as usual.
+ */
+static int xdl_prepare_ctx_unmatched(mmfile_t *mf, long narec, xdfile_t *xdf) {
+	long bsize;
+	uint8_t const *blk, *cur, *top, *eol;
+	xrecord_t *crec;
+
+	xdf->reference_index = NULL;
+	xdf->changed = NULL;
+	xdf->recs = NULL;
+
+	if (!XDL_ALLOC_ARRAY(xdf->recs, narec))
+		goto abort;
+
+	xdf->nrec = 0;
+	if ((cur = blk = xdl_mmfile_first(mf, &bsize))) {
+		for (top = blk + bsize; cur < top; ) {
+			eol = memchr(cur, '\n', top - cur);
+			if (XDL_ALLOC_GROW(xdf->recs, (long)xdf->nrec + 1, narec))
+				goto abort;
+			crec = &xdf->recs[xdf->nrec++];
+			crec->ptr = cur;
+			cur = eol ? eol + 1 : top;
+			crec->size = cur - crec->ptr;
+			crec->minimal_perfect_hash = 0;
+		}
+	}
+
+	if (!XDL_CALLOC_ARRAY(xdf->changed, xdf->nrec + 2))
+		goto abort;
+	xdf->changed += 1;
+	xdf->nreff = 0;
+	xdf->dstart = 0;
+	xdf->dend = xdf->nrec - 1;
 	return 0;
 
 abort:
@@ -581,6 +626,36 @@ static int xdl_optimize_ctxs(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xdf2
 	return 0;
 }
 
+
+static int xdl_prepare_env_one_empty(mmfile_t *mf1, mmfile_t *mf2,
+				     long enl1, long enl2,
+				     xpparam_t const *xpp, xdfenv_t *xe) {
+	long i;
+
+	if (xdl_prepare_ctx_unmatched(mf1, enl1, &xe->xdf1) < 0)
+		return -1;
+	if (xdl_prepare_ctx_unmatched(mf2, enl2, &xe->xdf2) < 0) {
+		xdl_free_ctx(&xe->xdf1);
+		return -1;
+	}
+
+	if (XDF_DIFF_ALG(xpp->flags) != XDF_PATIENCE_DIFF &&
+	    XDF_DIFF_ALG(xpp->flags) != XDF_HISTOGRAM_DIFF) {
+		if (!XDL_ALLOC_ARRAY(xe->xdf1.reference_index, xe->xdf1.nrec) ||
+		    !XDL_ALLOC_ARRAY(xe->xdf2.reference_index, xe->xdf2.nrec)) {
+			xdl_free_ctx(&xe->xdf2);
+			xdl_free_ctx(&xe->xdf1);
+			return -1;
+		}
+		for (i = 0; i < (long)xe->xdf1.nrec; i++)
+			xe->xdf1.changed[i] = true;
+		for (i = 0; i < (long)xe->xdf2.nrec; i++)
+			xe->xdf2.changed[i] = true;
+	}
+	return 0;
+}
+
+
 int xdl_prepare_env(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 		    xdfenv_t *xe) {
 	long enl1, enl2, sample;
@@ -607,6 +682,9 @@ int xdl_prepare_env(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 		else
 			enl2 = xdl_guess_lines(mf2, sample) + 1;
 	}
+
+	if (xdl_mmfile_size(mf1) <= 0 || xdl_mmfile_size(mf2) <= 0)
+		return xdl_prepare_env_one_empty(mf1, mf2, enl1, enl2, xpp, xe);
 
 	if (xdl_init_classifier_sized(&cf, enl1 + enl2 + 1, enl1, xpp->flags) < 0)
 		return -1;
