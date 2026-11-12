@@ -89,11 +89,6 @@ static int xdl_init_classifier_sized(xdlclassifier_t *cf, long size, long tsize,
 }
 
 
-static int xdl_init_classifier(xdlclassifier_t *cf, long size, long flags) {
-	return xdl_init_classifier_sized(cf, size, size, flags);
-}
-
-
 static void xdl_free_classifier(xdlclassifier_t *cf) {
 	xdl_free(cf->rcrecs);
 	xdl_free(cf->table);
@@ -299,8 +294,22 @@ static int xdl_prepare_ctx(unsigned int pass, mmfile_t *mf, long narec, xpparam_
 			} else {
 				hav = xdl_hash_line_fast(&cur, top);
 			}
-			if (XDL_ALLOC_GROW(xdf->recs, (long)xdf->nrec + 1, narec))
-				goto abort;
+			if ((long)xdf->nrec + 1 > narec) {
+				long want = (long)xdf->nrec + 1;
+				long used = (long)(cur - blk);
+
+				/* Extrapolate from bytes already consumed. */
+				if (used > 0 && want <= LONG_MAX / bsize) {
+					long est = want * bsize / used;
+
+					if (est <= LONG_MAX - est / 32 - 16)
+						est += est / 32 + 16;
+					if (est > want)
+						want = est;
+				}
+				if (XDL_ALLOC_GROW(xdf->recs, want, narec))
+					goto abort;
+			}
 			crec = &xdf->recs[xdf->nrec++];
 			crec->ptr = prev;
 			crec->size = cur - prev;
@@ -580,25 +589,45 @@ int xdl_prepare_env(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	memset(&cf, 0, sizeof(cf));
 
 	/*
-	 * For histogram diff, we can afford a smaller sample size and
-	 * thus a poorer estimate of the number of lines, as the hash
-	 * table (rhash) won't be filled up/grown. The number of lines
-	 * (nrecs) will be updated correctly anyway by
-	 * xdl_prepare_ctx().
+	 * Estimates only control allocations, not record boundaries.
+	 * Both the record array and classifier can grow when necessary.
 	 */
 	sample = (XDF_DIFF_ALG(xpp->flags) == XDF_HISTOGRAM_DIFF
 		  ? XDL_GUESS_NLINES2 : XDL_GUESS_NLINES1);
 
 	enl1 = xdl_guess_lines(mf1, sample) + 1;
-	enl2 = xdl_guess_lines(mf2, sample) + 1;
+	{
+		long sz1 = xdl_mmfile_size(mf1), sz2 = xdl_mmfile_size(mf2);
 
-	if (xdl_init_classifier(&cf, enl1 + enl2 + 1, xpp->flags) < 0)
+		if (sz1 > 0 && sz2 > 0 &&
+		    sz1 <= LONG_MAX / 4 && sz2 <= LONG_MAX / 4 &&
+		    sz2 <= 4 * sz1 && sz1 <= 4 * sz2 &&
+		    sz2 <= LONG_MAX / enl1)
+			enl2 = enl1 * sz2 / sz1 + 1;
+		else
+			enl2 = xdl_guess_lines(mf2, sample) + 1;
+	}
+
+	if (xdl_init_classifier_sized(&cf, enl1 + enl2 + 1, enl1, xpp->flags) < 0)
 		return -1;
 
 	if (xdl_prepare_ctx(1, mf1, enl1, xpp, &cf, &xe->xdf1) < 0) {
 
 		xdl_free_classifier(&cf);
 		return -1;
+	}
+	if (xe->xdf1.nrec && xdl_mmfile_size(mf1) > 0) {
+		long sz1 = xdl_mmfile_size(mf1), sz2 = xdl_mmfile_size(mf2);
+		long nr1 = (long)xe->xdf1.nrec;
+
+		if (sz2 <= LONG_MAX / nr1) {
+			long est = nr1 * sz2 / sz1;
+
+			if (est <= LONG_MAX - est / 32 - 16)
+				est += est / 32 + 16;
+			if (est > enl2)
+				enl2 = est;
+		}
 	}
 	if (xdl_prepare_ctx(2, mf2, enl2, xpp, &cf, &xe->xdf2) < 0) {
 
