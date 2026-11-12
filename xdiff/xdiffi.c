@@ -834,6 +834,79 @@ static inline uint64_t load_changed8(const bool *p)
 	return w;
 }
 
+/* Return the first changed index in [from, lim), or lim. */
+static long next_changed(const bool *changed, long from, long lim)
+{
+	long i = from;
+
+	while (sizeof(bool) == 1 && lim - i >= 8 &&
+	       !load_changed8(changed + i))
+		i += 8;
+	while (i < lim && !changed[i])
+		i++;
+	return i;
+}
+
+/*
+ * Return the k-th (k >= 1) unchanged index after from. The false sentinel
+ * at changed[lim] bounds the search.
+ */
+static long kth_unchanged_after(const bool *changed, long from, long k, long lim)
+{
+	long i = from + 1;
+
+	while (i <= lim) {
+		if (sizeof(bool) == 1 && lim - i >= 8) {
+			uint64_t w = load_changed8(changed + i);
+			long zeros = 8 - (long)((w * 0x0101010101010101ULL) >> 56);
+
+			if (zeros < k) {
+				k -= zeros;
+				i += 8;
+				continue;
+			}
+		}
+		if (!changed[i] && !--k)
+			return i;
+		i++;
+	}
+	return lim;
+}
+
+/*
+ * Advance an empty group and its counterpart as repeated group_next()
+ * calls would. Stop before the next non-empty group, or at end of file.
+ */
+static void skip_empty_groups(xdfile_t *xdf, struct xdlgroup *g,
+			      xdfile_t *xdfo, struct xdlgroup *go)
+{
+	long nrec = (long)xdf->nrec, nreco = (long)xdfo->nrec;
+	long p = g->end, q, k, prev, e;
+
+	if (p >= nrec)
+		return;
+	q = next_changed(xdf->changed, p + 1, nrec);
+	if (q >= nrec)
+		q = nrec + 1; /* changed[nrec] is a false sentinel */
+	k = q - 1 - p;
+	if (k <= 0)
+		return;
+
+	/*
+	 * Each group_next() moves end to the next unchanged index, and
+	 * start to the previous end plus one.
+	 */
+	if (k > nreco - go->end)
+		return; /* let group_next() report the broken sync */
+	prev = k > 1 ?
+		kth_unchanged_after(xdfo->changed, go->end, k - 1, nreco) :
+		go->end;
+	e = kth_unchanged_after(xdfo->changed, prev, 1, nreco);
+	go->start = prev + 1;
+	go->end = e;
+	g->start = g->end = q - 1;
+}
+
 /*
  * Move back and forward change groups for a consistent and pretty diff output.
  * This also helps in finding joinable change groups and reducing the diff
@@ -852,8 +925,10 @@ int xdl_change_compact(xdfile_t *xdf, xdfile_t *xdfo, long flags) {
 		/*
 		 * If the group is empty in the to-be-compacted file, skip it:
 		 */
-		if (g.end == g.start)
+		if (g.end == g.start) {
+			skip_empty_groups(xdf, &g, xdfo, &go);
 			goto next;
+		}
 
 		g_orig = g;
 
