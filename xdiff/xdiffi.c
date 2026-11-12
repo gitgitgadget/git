@@ -822,6 +822,19 @@ static int group_slide_up(xdfile_t *xdf, struct xdlgroup *g)
 }
 
 /*
+ * changed[] holds bool values (0 or 1), so a word is zero iff all of its
+ * lines are unchanged, and the sum of its bytes counts changed lines.
+ * Callers use these word operations only when bool occupies one byte.
+ */
+static inline uint64_t load_changed8(const bool *p)
+{
+	uint64_t w;
+
+	memcpy(&w, p, sizeof(w));
+	return w;
+}
+
+/*
  * Move back and forward change groups for a consistent and pretty diff output.
  * This also helps in finding joinable change groups and reducing the diff
  * size.
@@ -1016,7 +1029,14 @@ int xdl_build_script(xdfenv_t *xe, xdchange_t **xscr) {
 	/*
 	 * Trivial. Collects "groups" of changes and creates an edit script.
 	 */
-	for (i1 = xe->xdf1.nrec, i2 = xe->xdf2.nrec; i1 >= 0 || i2 >= 0; i1--, i2--)
+	for (i1 = xe->xdf1.nrec, i2 = xe->xdf2.nrec; i1 >= 0 || i2 >= 0; i1--, i2--) {
+		/* Skip lines unchanged on both sides, eight at a time. */
+		while (sizeof(bool) == 1 && i1 >= 8 && i2 >= 8 &&
+		       !load_changed8(changed1 + i1 - 8) &&
+		       !load_changed8(changed2 + i2 - 8)) {
+			i1 -= 8;
+			i2 -= 8;
+		}
 		if (changed1[i1 - 1] || changed2[i2 - 1]) {
 			for (l1 = i1; changed1[i1 - 1]; i1--);
 			for (l2 = i2; changed2[i2 - 1]; i2--);
@@ -1027,6 +1047,7 @@ int xdl_build_script(xdfenv_t *xe, xdchange_t **xscr) {
 			}
 			cscr = xch;
 		}
+	}
 
 	*xscr = cscr;
 
