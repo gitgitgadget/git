@@ -81,15 +81,15 @@ static void generate_revert_message(struct strbuf *msg,
 	repo_unuse_commit_buffer(repo, commit, message);
 }
 
+/* Takes ownership of parents and preserves their order. */
 static struct commit *create_commit(struct repository *repo,
 				    struct tree *tree,
 				    struct commit *based_on,
-				    struct commit *parent,
+				    struct commit_list *parents,
 				    enum replay_mode mode)
 {
 	struct object_id ret;
 	struct object *obj = NULL;
-	struct commit_list *parents = NULL;
 	char *author = NULL;
 	char *sign_commit = NULL; /* FIXME: cli users might want to sign again */
 	struct commit_extra_header *extra = NULL;
@@ -100,7 +100,6 @@ static struct commit *create_commit(struct repository *repo,
 	const char *orig_message = NULL;
 	const char *exclude_gpgsig[] = { "gpgsig", "gpgsig-sha256", NULL };
 
-	commit_list_insert(parent, &parents);
 	extra = read_commit_extra_headers(based_on, exclude_gpgsig);
 	if (mode == REPLAY_MODE_REVERT) {
 		generate_revert_message(&msg, based_on, repo);
@@ -291,6 +290,7 @@ static struct commit *pick_regular_commit(struct repository *repo,
 					  enum replay_empty_commit_action empty)
 {
 	struct tree *pickme_tree, *base_tree, *replayed_base_tree;
+	struct commit_list *parents = NULL;
 
 	if (pickme->parents)
 		base_tree = repo_get_commit_tree(repo, pickme->parents->item);
@@ -361,7 +361,8 @@ static struct commit *pick_regular_commit(struct repository *repo,
 		}
 	}
 
-	return create_commit(repo, result->tree, pickme, replayed_base, mode);
+	commit_list_insert(replayed_base, &parents);
+	return create_commit(repo, result->tree, pickme, parents, mode);
 }
 
 void replay_result_release(struct replay_result *result)
