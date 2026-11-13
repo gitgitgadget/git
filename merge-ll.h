@@ -86,6 +86,8 @@ struct ll_merge_options {
 
 	/* Forwarded to xmparam_t; see xdiff/xdiff.h. */
 	struct xdl_conflict_intervals *out_intervals;
+	const struct xdl_conflict_intervals *in_orig_intervals;
+	const struct xdl_conflict_intervals *in_side2_intervals;
 };
 
 #define LL_MERGE_OPTIONS_INIT { .conflict_style = -1 }

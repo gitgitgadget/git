@@ -1378,9 +1378,12 @@ static int collect_merge_info_callback(int n,
 	 * If side1 matches mbase and all three paths are present and are
 	 * files, then we can use side2 as the resolution.  We cannot
 	 * necessarily do so this for trees, because there may be rename
-	 * destinations within side2.
+	 * destinations within side2.  Recorded side2 conflicts still need
+	 * normal entry processing.
 	 */
-	if (side1_matches_mbase && filemask == 0x07) {
+	if (side1_matches_mbase && filemask == 0x07 &&
+	    (!opt->in_replay_side2_intervals ||
+	     !strmap_get(opt->in_replay_side2_intervals, fullpath))) {
 		/* use side2 version as resolution */
 		if (setup_path_info(opt, &pi, dirname, info->pathlen, fullpath,
 				    names, names+2, side2_null, 0,
@@ -1451,8 +1454,12 @@ static int collect_merge_info_callback(int n,
 			ci->match_mask = (7 - dirmask);
 			side = dirmask / 2;
 		}
+		/* Recorded side2 conflicts must be visited individually. */
 		if (renames->dir_rename_mask != 0x07 &&
 		    side != MERGE_BASE &&
+		    (side != MERGE_SIDE2 ||
+		     !opt->in_replay_side2_intervals ||
+		     strmap_empty(opt->in_replay_side2_intervals)) &&
 		    renames->deferred[side].trivial_merges_okay &&
 		    !strset_contains(&renames->deferred[side].target_dirs,
 				     pi.string)) {
@@ -2128,6 +2135,14 @@ static int merge_3way(struct merge_options *opt,
 	ll_opts.conflict_style = opt->conflict_style;
 	if (opt->out_replay_intervals && !opt->priv->call_depth)
 		ll_opts.out_intervals = &out_intervals;
+	if (opt->in_replay_orig_intervals)
+		ll_opts.in_orig_intervals =
+			strmap_get(opt->in_replay_orig_intervals,
+				   pathnames[MERGE_BASE]);
+	if (opt->in_replay_side2_intervals)
+		ll_opts.in_side2_intervals =
+			strmap_get(opt->in_replay_side2_intervals,
+				   pathnames[MERGE_SIDE2]);
 
 	if (opt->priv->call_depth) {
 		ll_opts.virtual_ancestor = 1;
@@ -2220,6 +2235,9 @@ static int handle_content_merge(struct merge_options *opt,
 	 * rename/add conflicts.
 	 */
 	int clean = 1;
+	int side2_unresolved = opt->in_replay_side2_intervals &&
+		strmap_get(opt->in_replay_side2_intervals,
+			   pathnames[MERGE_SIDE2]);
 
 	/*
 	 * handle_content_merge() needs both files to be of the same type, i.e.
@@ -2259,8 +2277,10 @@ static int handle_content_merge(struct merge_options *opt,
 	 * be unnecessary due to the fact that match_mask is often
 	 * setup and already handled, renames don't always take care
 	 * of that.
+	 * A base-matching side1 does not resolve a recorded side2 conflict.
 	 */
-	if (oideq(&a->oid, &b->oid) || oideq(&a->oid, &o->oid))
+	if (oideq(&a->oid, &b->oid) ||
+	    (oideq(&a->oid, &o->oid) && !side2_unresolved))
 		oidcpy(&result->oid, &b->oid);
 	else if (oideq(&b->oid, &o->oid))
 		oidcpy(&result->oid, &a->oid);
@@ -4095,6 +4115,21 @@ static int write_completed_directory(struct merge_options *opt,
 	return ret;
 }
 
+static void preserve_replay_conflict(struct merge_options *opt,
+				     const char *path,
+				     struct conflict_info *ci)
+{
+	if (!ci->merged.clean || ci->merged.is_null ||
+	    !opt->in_replay_side2_intervals ||
+	    !strmap_get(opt->in_replay_side2_intervals,
+			ci->pathnames[MERGE_SIDE2]))
+		return;
+
+	ci->merged.clean = 0;
+	path_msg(opt, CONFLICT_CONTENTS, 0, path, NULL, NULL, NULL,
+		 _("CONFLICT (content): Merge conflict in %s"), path);
+}
+
 /* Per entry merge function */
 static int process_entry(struct merge_options *opt,
 			 const char *path,
@@ -4242,6 +4277,8 @@ static int process_entry(struct merge_options *opt,
 			assert(othermask == 2 || othermask == 4);
 			assert(ci->merged.is_null ==
 			       (ci->filemask == ci->match_mask));
+			if (side == MERGE_SIDE2)
+				preserve_replay_conflict(opt, path, ci);
 		}
 	} else if (ci->filemask >= 6 &&
 		   (S_IFMT & ci->stages[1].mode) !=
@@ -4445,6 +4482,8 @@ static int process_entry(struct merge_options *opt,
 		ci->merged.result.mode = ci->stages[side].mode;
 		oidcpy(&ci->merged.result.oid, &ci->stages[side].oid);
 		ci->merged.clean = !ci->df_conflict && !ci->path_conflict;
+		if (side == MERGE_SIDE2)
+			preserve_replay_conflict(opt, path, ci);
 	} else if (ci->filemask == 1) {
 		/* Deleted on both sides */
 		ci->merged.is_null = 1;

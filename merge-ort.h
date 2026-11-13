@@ -93,6 +93,13 @@ struct merge_options {
 	 * The caller owns the map and its values.
 	 */
 	struct strmap *out_replay_intervals;
+	/*
+	 * Input maps use input-tree paths, including after a rename.
+	 * A side2 entry identifies an unresolved path; shortcuts must not
+	 * silently take it as a resolution.
+	 */
+	struct strmap *in_replay_orig_intervals;
+	struct strmap *in_replay_side2_intervals;
 
 	/* internal fields used by the implementation */
 	struct merge_options_internal *priv;
