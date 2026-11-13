@@ -24,6 +24,13 @@ instead get update commands that can be piped to `git update-ref --stdin`
 
 THIS COMMAND IS EXPERIMENTAL. THE BEHAVIOR MAY CHANGE.
 
+Two-parent merges retain recorded conflict resolutions and merge-only
+edits. Replay reapplies those textual changes; it does not infer them
+for newly introduced code. Octopus merges and reverting merge commits
+are not supported.
+See link:technical/replay-design.html[the replay design] for the
+algorithm and its limitations.
+
 OPTIONS
 -------
 

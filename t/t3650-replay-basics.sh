@@ -114,10 +114,14 @@ test_expect_success 'cannot advance target ... ordering would be ill-defined' '
 	test_cmp expect actual
 '
 
-test_expect_success 'replaying merge commits is not supported yet' '
-	echo "fatal: replaying merge commits is not supported yet!" >expect &&
-	test_must_fail git replay --advance=main main..topic-with-merge 2>actual &&
-	test_cmp expect actual
+test_expect_success 'replaying a two-parent merge preserves its topology' '
+	git replay --ref-action=print --advance=main \
+		main..topic-with-merge >result &&
+	test_line_count = 1 result &&
+	new_tip=$(cut -d " " -f 3 result) &&
+	test_cmp_rev "$new_tip^1~2" main &&
+	test_cmp_rev "$new_tip^2~2" "$new_tip^1" &&
+	test_cmp_rev "$new_tip^{tree}" "$new_tip^2^{tree}"
 '
 
 test_expect_success 'replaying octopus merges is not supported' '

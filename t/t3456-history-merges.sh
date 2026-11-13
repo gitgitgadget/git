@@ -7,7 +7,7 @@ export GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME
 
 . ./test-lib.sh
 
-test_expect_failure 'preserves resolutions; does not extrapolate' '
+test_expect_success 'preserves resolutions; does not extrapolate' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -56,7 +56,7 @@ build_resolution_merge () {
 
 for style in merge diff3
 do
-	test_expect_failure "previously resolved conflicts with $style" '
+	test_expect_success "previously resolved conflicts with $style" '
 		test_when_finished "rm -rf repo" &&
 		git init repo &&
 		(
@@ -90,7 +90,7 @@ build_diverging_conflicts () {
 	EOF
 }
 
-test_expect_failure 'newly introduced conflict in a replayed merge' '
+test_expect_success 'newly introduced conflict in a replayed merge' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -120,7 +120,7 @@ build_new_conflict_binary () {
 	EOF
 }
 
-test_expect_failure 'newly introduced binary conflict is reported' '
+test_expect_success 'newly introduced binary conflict is reported' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -153,7 +153,7 @@ do
 	main) path=dir/a ;;
 	renamed) path=renamed/a ;;
 	esac
-	test_expect_failure "new inner conflicts are reported in $path" '
+	test_expect_success "new inner conflicts are reported in $path" '
 		test_when_finished "rm -rf repo" &&
 		git init repo &&
 		(
@@ -167,7 +167,7 @@ do
 	'
 done
 
-test_expect_failure 'changed original conflict inputs prevent replay' '
+test_expect_success 'changed original conflict inputs prevent replay' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -191,7 +191,7 @@ test_expect_failure 'changed original conflict inputs prevent replay' '
 	)
 '
 
-test_expect_failure 'new modify/delete conflicts prevent replay' '
+test_expect_success 'new modify/delete conflicts prevent replay' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -216,7 +216,7 @@ test_expect_failure 'new modify/delete conflicts prevent replay' '
 	)
 '
 
-test_expect_failure 'a new copy of an old conflict prevents replay' '
+test_expect_success 'a new copy of an old conflict prevents replay' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -242,7 +242,7 @@ test_expect_failure 'a new copy of an old conflict prevents replay' '
 	)
 '
 
-test_expect_failure 'an obsolete resolution does not prevent replay' '
+test_expect_success 'an obsolete resolution does not prevent replay' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -266,11 +266,13 @@ test_expect_failure 'an obsolete resolution does not prevent replay' '
 			--ancestry-path C..main >out &&
 		test_line_count = 1 out &&
 		new_tip=$(cut -d " " -f 3 out) &&
+		test_cmp_rev "$new_tip^1" B &&
+		test_cmp_rev "$new_tip^2" X &&
 		test_cmp_rev "$new_tip:a" X:a
 	)
 '
 
-test_expect_failure 'literal conflict marker text is retained' '
+test_expect_success 'literal conflict marker text is retained' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -319,7 +321,7 @@ build_criss_cross () {
 	EOF
 }
 
-test_expect_failure 'virtual-base conflicts do not become replay conflicts' '
+test_expect_success 'virtual-base conflicts do not become replay conflicts' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -334,7 +336,7 @@ test_expect_failure 'virtual-base conflicts do not become replay conflicts' '
 	)
 '
 
-test_expect_failure 'diff3 resolution survives a changed merge-base count' '
+test_expect_success 'diff3 resolution survives a changed merge-base count' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(

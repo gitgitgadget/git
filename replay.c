@@ -1,6 +1,7 @@
 #define USE_THE_REPOSITORY_VARIABLE
 
 #include "git-compat-util.h"
+#include "commit-reach.h"
 #include "environment.h"
 #include "hex.h"
 #include "merge-ort.h"
@@ -11,6 +12,7 @@
 #include "sequencer.h"
 #include "strmap.h"
 #include "tree.h"
+#include "xdiff/xdiff.h"
 
 /*
  * We technically need USE_THE_REPOSITORY_VARIABLE for DEFAULT_ABBREV, but
@@ -365,6 +367,121 @@ static struct commit *pick_regular_commit(struct repository *repo,
 	return create_commit(repo, result->tree, pickme, parents, mode);
 }
 
+static void release_replay_intervals_strmap(struct strmap *map)
+{
+	struct hashmap_iter iter;
+	struct strmap_entry *entry;
+
+	strmap_for_each_entry(map, &iter, entry) {
+		struct xdl_conflict_intervals *intervals = entry->value;
+
+		xdl_conflict_intervals_release(intervals);
+		free(intervals);
+	}
+	strmap_clear(map, 0);
+}
+
+/*
+ * Reapply a merge's manual changes with a three-way merge of
+ * R (automatic original merge), O (recorded tree) and
+ * N (automatic rewritten merge), using R as the base.
+ * See Documentation/technical/replay-design.adoc.
+ */
+static struct commit *pick_merge_commit(struct repository *repo,
+					struct commit *pickme,
+					struct commit *replayed_parent1,
+					struct commit *replayed_parent2,
+					struct merge_options *merge_opt,
+					struct merge_result *result)
+{
+	struct commit *parent1 = pickme->parents->item;
+	struct commit *parent2 = pickme->parents->next->item;
+	struct merge_options remerge_opt = { 0 }, new_merge_opt = { 0 };
+	struct merge_result remerge_res = { 0 }, new_merge_res = { 0 };
+	struct commit_list *parent_bases = NULL, *replayed_bases = NULL;
+	struct commit_list *parents = NULL;
+	struct commit *picked = NULL;
+	struct strmap r_intervals = STRMAP_INIT, n_intervals = STRMAP_INIT;
+	struct strmap *saved_orig_in, *saved_side2_in;
+	char *ancestor_name = NULL;
+
+	/* Identical labels make reusable conflict blocks byte-identical. */
+	init_basic_merge_options(&remerge_opt, repo);
+	remerge_opt.show_rename_progress = 0;
+	remerge_opt.branch1 = "ours";
+	remerge_opt.branch2 = "theirs";
+	remerge_opt.ancestor = "merge base";
+	remerge_opt.out_replay_intervals = &r_intervals;
+	if (repo_get_merge_bases(repo, parent1, parent2, &parent_bases) < 0) {
+		result->clean = -1;
+		goto out;
+	}
+	merge_incore_recursive(&remerge_opt, parent_bases,
+			       parent1, parent2, &remerge_res);
+	parent_bases = NULL; /* consumed by merge_incore_recursive */
+	if (remerge_res.clean < 0) {
+		result->clean = remerge_res.clean;
+		goto out;
+	}
+
+	init_basic_merge_options(&new_merge_opt, repo);
+	new_merge_opt.show_rename_progress = 0;
+	new_merge_opt.branch1 = "ours";
+	new_merge_opt.branch2 = "theirs";
+	new_merge_opt.ancestor = "merge base";
+	new_merge_opt.out_replay_intervals = &n_intervals;
+	if (repo_get_merge_bases(repo, replayed_parent1, replayed_parent2,
+				 &replayed_bases) < 0) {
+		result->clean = -1;
+		goto out;
+	}
+	merge_incore_recursive(&new_merge_opt, replayed_bases,
+			       replayed_parent1, replayed_parent2,
+			       &new_merge_res);
+	replayed_bases = NULL; /* consumed by merge_incore_recursive */
+	if (new_merge_res.clean < 0) {
+		result->clean = new_merge_res.clean;
+		goto out;
+	}
+
+	ancestor_name = xstrfmt("auto-remerge of %s",
+				oid_to_hex(&pickme->object.oid));
+	merge_opt->ancestor = ancestor_name;
+	merge_opt->branch1 = short_commit_name(repo, pickme);
+	merge_opt->branch2 = "merge of replayed parents";
+	saved_orig_in = merge_opt->in_replay_orig_intervals;
+	saved_side2_in = merge_opt->in_replay_side2_intervals;
+	merge_opt->in_replay_orig_intervals = &r_intervals;
+	merge_opt->in_replay_side2_intervals = &n_intervals;
+	merge_incore_nonrecursive(merge_opt, remerge_res.tree,
+				  repo_get_commit_tree(repo, pickme),
+				  new_merge_res.tree, result);
+	merge_opt->ancestor = NULL;
+	merge_opt->branch1 = NULL;
+	merge_opt->branch2 = NULL;
+	merge_opt->in_replay_orig_intervals = saved_orig_in;
+	merge_opt->in_replay_side2_intervals = saved_side2_in;
+	if (result->clean <= 0)
+		goto out;
+
+	commit_list_insert(replayed_parent2, &parents);
+	commit_list_insert(replayed_parent1, &parents);
+	picked = create_commit(repo, result->tree, pickme, parents,
+			       REPLAY_MODE_PICK);
+	if (!picked)
+		result->clean = -1;
+
+out:
+	free(ancestor_name);
+	commit_list_free(parent_bases);
+	commit_list_free(replayed_bases);
+	merge_finalize(&remerge_opt, &remerge_res);
+	merge_finalize(&new_merge_opt, &new_merge_res);
+	release_replay_intervals_strmap(&r_intervals);
+	release_replay_intervals_strmap(&n_intervals);
+	return picked;
+}
+
 void replay_result_release(struct replay_result *result)
 {
 	for (size_t i = 0; i < result->updates_nr; i++)
@@ -484,9 +601,7 @@ int replay_revisions(struct rev_info *revs,
 				goto out;
 			}
 		}
-		if (is_merge) {
-			if (!opts->linearize)
-				die(_("replaying merge commits is not supported yet!"));
+		if (opts->linearize && is_merge) {
 			/*
 			 * Drop the merge commit: do not pick it, leave
 			 * `last_commit` unchanged, and fall through to the
@@ -496,6 +611,15 @@ int replay_revisions(struct rev_info *revs,
 			 * - the next replayed commit uses `last_commit` as its
 			 *   `base`.
 			 */
+		} else if (is_merge) {
+			struct commit *p1 = commit->parents->item;
+			struct commit *p2 = commit->parents->next->item;
+
+			p1 = get_mapped_commit(replayed_commits, p1, p1);
+			p2 = get_mapped_commit(replayed_commits, p2, p2);
+			last_commit = pick_merge_commit(revs->repo, commit,
+							p1, p2,
+							&merge_opt, &result);
 		} else {
 			/*
 			 * Decide where to replay this commit onto.
