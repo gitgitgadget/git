@@ -183,6 +183,7 @@ int cmd_repack(int argc,
 	const char *expire_to = NULL;
 	const char *filter_to = NULL;
 	const char *filter_to_loose = NULL;
+	struct oidset moved_loose = OIDSET_INIT;
 	const char *opt_window = NULL;
 	const char *opt_window_memory = NULL;
 	const char *opt_depth = NULL;
@@ -721,6 +722,14 @@ int cmd_repack(int argc,
 		ret = write_filtered_pack(&opts, &existing, &names);
 		if (ret)
 			goto cleanup;
+
+		if (filter_to_loose) {
+			ret = move_loose_filtered_objects(repo,
+					&po_args.filter_options, filter_to,
+					&moved_loose);
+			if (ret)
+				goto cleanup;
+		}
 	}
 
 	string_list_sort(&names);
@@ -777,6 +786,7 @@ int cmd_repack(int argc,
 		if (show_progress)
 			opts |= PRUNE_PACKED_VERBOSE;
 		prune_packed_objects(repo, opts);
+		remove_moved_loose_objects(repo, &moved_loose);
 
 		if (!keep_unreachable &&
 		    (!(pack_everything & LOOSEN_UNREACHABLE) ||
@@ -801,6 +811,7 @@ cleanup:
 	string_list_clear(&keep_pack_list, 0);
 	string_list_clear(&names, 1);
 	oidset_clear(&drop_oids);
+	oidset_clear(&moved_loose);
 	existing_packs_release(&existing);
 	pack_geometry_release(&geometry);
 	pack_objects_args_release(&po_args);

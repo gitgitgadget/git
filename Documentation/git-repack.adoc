@@ -191,6 +191,10 @@ depth is 4095.
 	not rewritten. All objects are written before any existing
 	pack is removed.
 
+	Loose objects in this repository that the filter excludes are
+	copied to `<dir>` as well, and with `-d` the source copies are
+	removed once everything has been written.
+
 --drop-filtered::
 	Delete the local objects that match the `--filter` specification
 	instead of keeping them in a separate packfile, reclaiming the

@@ -547,6 +547,44 @@ setup_loose_src () {
 	fi
 }
 
+test_expect_success '--filter-to-loose copies loose filtered out blobs, and -d removes the source copy' '
+	setup_loose_src loose &&
+	test_path_is_file loose-src.git/objects/$(test_oid_to_path $big) &&
+
+	# without -d the source copy is left alone
+	git -C loose-src.git -c repack.writebitmaps=false repack -a \
+		--filter=blob:limit=1k --filter-to-loose=../loose-dst.git/objects &&
+	test_path_is_file loose-dst.git/objects/$(test_oid_to_path $big) &&
+	test_path_is_file loose-src.git/objects/$(test_oid_to_path $big) &&
+
+	# with -d it is removed from the source after being copied
+	rm -rf loose-dst.git/objects/$(dirname $(test_oid_to_path $big)) &&
+	git -C loose-src.git -c repack.writebitmaps=false repack -a -d \
+		--filter=blob:limit=1k --filter-to-loose=../loose-dst.git/objects &&
+	test_path_is_file loose-dst.git/objects/$(test_oid_to_path $big) &&
+	test_path_is_missing loose-src.git/objects/$(test_oid_to_path $big) &&
+	echo $(pwd)/loose-dst.git/objects >loose-src.git/objects/info/alternates &&
+	git -C loose-src.git cat-file -e $big
+'
+
+test_expect_success '--filter-to-loose leaves an identical existing destination object alone' '
+	setup_loose_src &&
+
+	test-tool genrandom big 2k |
+	GIT_OBJECT_DIRECTORY=loose-dst.git/objects git hash-object -w --stdin &&
+
+	path=loose-dst.git/objects/$(test_oid_to_path $big) &&
+	test_path_is_file $path &&
+
+	ls -i $path >before &&
+	git -C loose-src.git -c repack.writebitmaps=false repack -a -d \
+		--filter=blob:limit=1k --filter-to-loose=../loose-dst.git/objects &&
+
+	ls -i $path >after &&
+	test_cmp before after &&
+	git -C loose-dst.git fsck
+'
+
 test_expect_success '--filter-to-loose failure to write leaves the source intact' '
 	setup_loose_src &&
 	>not-a-dir &&
@@ -561,6 +599,27 @@ test_expect_success '--filter-to-loose failure to write leaves the source intact
 
 	find loose-src.git/objects/pack -name ".tmp-*" >tmp-leftovers &&
 	test_must_be_empty tmp-leftovers &&
+	git -C loose-src.git cat-file -e $big
+'
+
+test_expect_success '--filter-to-loose failure to copy a loose object leaves the source intact' '
+	setup_loose_src loose &&
+	path=$(test_oid_to_path $big) &&
+	>loose-dst.git/objects/$(dirname $path) &&
+
+	find loose-src.git/objects/pack -name "*.pack" | sort >packs-before &&
+	test_must_fail git -C loose-src.git -c repack.writebitmaps=false \
+		repack -a -d --filter=blob:limit=1k \
+		--filter-to-loose=../loose-dst.git/objects 2>err &&
+
+	test_grep "unable to create leading directories" err &&
+	find loose-src.git/objects/pack -name "*.pack" | sort >packs-after &&
+	test_cmp packs-before packs-after &&
+
+	find loose-src.git/objects/pack -name ".tmp-*" >tmp-leftovers &&
+	test_must_be_empty tmp-leftovers &&
+
+	test_path_is_file loose-src.git/objects/$path &&
 	git -C loose-src.git cat-file -e $big
 '
 
