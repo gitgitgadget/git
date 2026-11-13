@@ -191,4 +191,29 @@ test_expect_failure 'changed original conflict inputs prevent replay' '
 	)
 '
 
+test_expect_failure 'new modify/delete conflicts prevent replay' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test-tool historian <<-\EOF &&
+		# Both original merge trees omit f; the new parent changes it.
+		blob f0 v0
+		blob f1 v1
+		blob g g
+		blob h h
+		commit B0 main B0 f:f0 g:g
+		commit A main A parent=B0 f:f0 g:g
+		commit P1 main P1 parent=A f:f0 g:g h:h
+		commit P2 side P2 parent=B0 g:g
+		commit M main M parent=P1 parent=P2 g:g h:h
+		commit X target X parent=A f:f1 g:g
+		EOF
+		test_must_fail git replay --ref-action=print --onto X \
+			--ancestry-path A..main >out 2>err &&
+		test_grep CONFLICT out &&
+		test_grep "Merge conflict in f" out
+	)
+'
+
 test_done
