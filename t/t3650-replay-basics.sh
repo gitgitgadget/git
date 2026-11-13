@@ -120,6 +120,19 @@ test_expect_success 'replaying merge commits is not supported yet' '
 	test_cmp expect actual
 '
 
+test_expect_success 'replaying octopus merges is not supported' '
+	octopus=$(git commit-tree -m octopus main^{tree} \
+		-p main -p topic1 -p topic4) &&
+	test_must_fail git replay --onto main "main..$octopus" 2>err &&
+	test_grep "replaying octopus merges is not supported" err
+'
+
+test_expect_success 'reverting a merge is not supported' '
+	test_must_fail git replay --revert=main \
+		topic4..topic-with-merge 2>err &&
+	test_grep "reverting merge commits is not supported" err
+'
+
 test_expect_success 'using replay to rebase two branches, one on top of other' '
 	git replay --ref-action=print --onto main topic1..topic2 >result &&
 

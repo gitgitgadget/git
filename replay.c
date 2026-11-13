@@ -470,8 +470,21 @@ int replay_revisions(struct rev_info *revs,
 
 	while ((commit = get_revision(revs))) {
 		const struct name_decoration *decoration;
+		int is_merge = commit->parents && commit->parents->next;
 
-		if (commit->parents && commit->parents->next) {
+		if (!opts->linearize && is_merge) {
+			if (commit->parents->next->next) {
+				ret = error(_("replaying octopus merges "
+					      "is not supported"));
+				goto out;
+			}
+			if (mode == REPLAY_MODE_REVERT) {
+				ret = error(_("reverting merge commits "
+					      "is not supported"));
+				goto out;
+			}
+		}
+		if (is_merge) {
 			if (!opts->linearize)
 				die(_("replaying merge commits is not supported yet!"));
 			/*
