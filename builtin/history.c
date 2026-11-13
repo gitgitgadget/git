@@ -480,8 +480,10 @@ static int handle_reference_updates(struct rev_info *revs,
 
 	ret = compute_pending_ref_updates(revs, action, original, rewritten,
 					  empty, &result);
-	if (ret)
+	if (ret) {
+		ret = -1;
 		goto out;
+	}
 
 	ret = apply_pending_ref_updates(revs->repo, &result, reflog_msg, dry_run);
 

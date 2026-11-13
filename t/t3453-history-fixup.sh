@@ -677,4 +677,21 @@ test_expect_success '--empty=abort errors out when a descendant becomes empty du
 	)
 '
 
+test_expect_success 'fails when replaying a descendant conflicts' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test_commit base file base &&
+		test_commit change file changed &&
+		test_commit restore file base &&
+		echo fixed >file &&
+		git add file &&
+		git refs list >refs-before &&
+		test_must_fail git history fixup base &&
+		git refs list >refs-after &&
+		test_cmp refs-before refs-after
+	)
+'
+
 test_done
