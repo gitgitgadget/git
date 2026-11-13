@@ -448,6 +448,26 @@ int replay_revisions(struct rev_info *revs,
 	merge_opt.show_rename_progress = 0;
 	last_commit = onto;
 	replayed_commits = kh_init_oid_map();
+	/*
+	 * Merge replay preserves other excluded parents, but boundaries
+	 * need their replacement. Explicit --boundary commits are replayed.
+	 */
+	if (mode == REPLAY_MODE_PICK && !revs->boundary) {
+		for (size_t i = 0; i < revs->cmdline.nr; i++) {
+			struct rev_cmdline_entry *e = &revs->cmdline.rev[i];
+			struct commit *boundary;
+
+			if (!(e->flags & BOTTOM))
+				continue;
+			boundary = lookup_commit_reference_gently(
+				revs->repo, &e->item->oid, 1);
+			if (!boundary ||
+			    get_mapped_commit(replayed_commits, boundary, NULL))
+				continue;
+			put_mapped_commit(replayed_commits, boundary, onto);
+		}
+	}
+
 	while ((commit = get_revision(revs))) {
 		const struct name_decoration *decoration;
 

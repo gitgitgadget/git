@@ -141,6 +141,13 @@ test_expect_success 'using replay on bare repo to rebase two branches, one on to
 	test_cmp expect result-bare
 '
 
+test_expect_success 'can replay a range with explicit boundary commits' '
+	git replay --ref-action=print --onto main B..topic1 >expect &&
+	git replay --ref-action=print --onto main --boundary \
+		B..topic1 >actual &&
+	test_cmp expect actual
+'
+
 test_expect_success 'using replay to rebase with a conflict' '
 	test_expect_code 1 git replay --onto topic1 B..conflict >actual &&
 	test_grep -F "CONFLICT (add/add): Merge conflict in C.t" actual
