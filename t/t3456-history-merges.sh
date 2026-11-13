@@ -242,4 +242,110 @@ test_expect_failure 'a new copy of an old conflict prevents replay' '
 	)
 '
 
+test_expect_failure 'an obsolete resolution does not prevent replay' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test-tool historian <<-\EOF &&
+		# X includes the recorded resolution and adds another line.
+		blob a L1 L2 L3 L4
+		blob b L1 L2 _3 L4
+		blob c L1 L2 +3 L4
+		blob m _1 L2 _3 L4
+		blob d L1 L2 +3 L4 L5
+		blob x _1 L2 _3 L4 L5
+		commit A main A a:a
+		commit B side B parent=A a:b
+		commit C main C parent=A a:c
+		commit M main M parent=B parent=C a:m
+		commit D target D parent=C a:d
+		commit X target X parent=D a:x
+		EOF
+		git replay --ref-action=print --onto X \
+			--ancestry-path C..main >out &&
+		test_line_count = 1 out &&
+		new_tip=$(cut -d " " -f 3 out) &&
+		test_cmp_rev "$new_tip:a" X:a
+	)
+'
+
+test_expect_failure 'literal conflict marker text is retained' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test-tool historian <<-\EOF &&
+		blob a L1 L2 L3
+		blob c L1 L2 _3
+		blob d _1 L2 +3
+		blob m _1 L2 M3
+		blob markers "<<<<<<< ours" x "=======" y ">>>>>>> theirs"
+		commit A main A a:a
+		commit B main B parent=A a:a
+		commit C main C parent=B a:c
+		commit D feature D parent=A a:d
+		commit M main M parent=C parent=D a:m
+		commit E target E parent=A a:a doc/markers:markers
+		EOF
+		git replay --ref-action=print --onto E \
+			--ancestry-path B..main >out &&
+		test_line_count = 1 out &&
+		new_tip=$(cut -d " " -f 3 out) &&
+		test_cmp_rev "$new_tip:doc/markers" E:doc/markers
+	)
+'
+
+build_criss_cross () {
+	test-tool historian <<-\EOF
+	blob a0 base
+	blob al left
+	blob ar right
+	blob am manual
+	blob b0 1 base 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17
+	blob bl 1 left 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17
+	blob br 1 right 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17
+	blob bd 1 resolved 3 4 5 6 7 8 first 10 11 12 13 14 15 16 17
+	blob be 1 resolved 3 4 5 6 7 8 9 10 11 12 13 14 15 16 second
+	blob bm 1 resolved 3 4 5 6 7 8 first 10 11 12 13 14 15 16 second
+	commit A main A a:a0 b:b0
+	commit B left B parent=A a:a0 b:bl
+	commit C right C parent=A a:a0 b:br
+	commit D main D parent=B parent=C a:al b:bd
+	commit E side E parent=C parent=B a:ar b:be
+	commit M main M parent=D parent=E a:am b:bm
+	commit P rebased P parent=D a:al b:be
+	commit Q simple Q parent=B a:al b:bd
+	EOF
+}
+
+test_expect_failure 'virtual-base conflicts do not become replay conflicts' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		build_criss_cross &&
+		git replay --ref-action=print --onto P \
+			--ancestry-path D..main >out &&
+		test_line_count = 1 out &&
+		new_tip=$(cut -d " " -f 3 out) &&
+		test_cmp_rev "$new_tip:a" M:a &&
+		test_cmp_rev "$new_tip:b" E:b
+	)
+'
+
+test_expect_failure 'diff3 resolution survives a changed merge-base count' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		build_criss_cross &&
+		git -c merge.conflictStyle=diff3 replay --ref-action=print \
+			--onto Q --ancestry-path D..main >out &&
+		test_line_count = 1 out &&
+		new_tip=$(cut -d " " -f 3 out) &&
+		test_cmp_rev "$new_tip^{tree}" M^{tree}
+	)
+'
+
 test_done
