@@ -767,6 +767,37 @@ int xdl_merge(mmfile_t *orig, mmfile_t *mf1, mmfile_t *mf2,
 				      &xe2, xscr2,
 				      xmp, result);
 	}
+
+	/* Unmatched input blocks can survive the merge as ordinary text. */
+	if (status >= 0 && xmp->in_side2_intervals) {
+		const struct xdl_conflict_intervals *oi =
+			xmp->in_orig_intervals;
+		const struct xdl_conflict_intervals *si =
+			xmp->in_side2_intervals;
+		long i, j, next_orig = 0;
+
+		for (i = 0; i < si->nr; i++) {
+			const struct xdl_conflict_interval *s = &si->items[i];
+			long len = s->end - s->start;
+			int matched = 0;
+
+			for (j = next_orig; oi && j < oi->nr; j++) {
+				const struct xdl_conflict_interval *o =
+					&oi->items[j];
+
+				if (o->end - o->start != len)
+					continue;
+				if (!memcmp(orig->ptr + o->start,
+					    mf2->ptr + s->start, len)) {
+					next_orig = j + 1;
+					matched = 1;
+					break;
+				}
+			}
+			if (!matched)
+				status++;
+		}
+	}
  out:
 	xdl_free_script(xscr1);
 	xdl_free_script(xscr2);

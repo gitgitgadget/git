@@ -157,6 +157,12 @@ typedef struct s_xmparam {
 	const char *file2;	/* label for mf2 */
 	/* Optional conflict-marker byte ranges in the output buffer. */
 	struct xdl_conflict_intervals *out_intervals;
+	/*
+	 * Count recorded mf2 blocks without a byte-equal, in-order,
+	 * one-to-one match in orig as extra conflicts. NULL side2 opts out.
+	 */
+	const struct xdl_conflict_intervals *in_orig_intervals;
+	const struct xdl_conflict_intervals *in_side2_intervals;
 } xmparam_t;
 
 #define DEFAULT_CONFLICT_MARKER_SIZE 7
