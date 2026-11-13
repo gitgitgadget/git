@@ -419,4 +419,55 @@ test_expect_failure 'merge-only semantic edit is preserved' '
 	)
 '
 
+test_expect_failure 'octopus merge in the rewrite path is rejected' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test-tool historian <<-\EOF &&
+		blob a x
+		commit A main A a:a
+		commit B b1 B parent=A a:a
+		commit C b2 C parent=A a:a
+		commit D b3 D parent=A a:a
+		commit O main O parent=A parent=B parent=C parent=D a:a
+		EOF
+		test_must_fail git -c core.editor=true history reword \
+			--dry-run A 2>err &&
+		test_grep octopus err
+	)
+'
+
+test_expect_failure 'out-of-range first merge parent is preserved' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test-tool historian <<-\EOF &&
+		# O stays outside the rewrite range; R is rewritten.
+		blob x X
+		blob o O
+		blob a A
+		blob r R
+		blob t T
+		blob m M
+		blob top marker
+		commit X main X a:x
+		commit O side O parent=X a:o
+		commit A main A parent=X a:a
+		commit R main R parent=A a:r
+		commit T off T parent=R a:t s:top
+		commit M main M parent=O parent=R a:m s:top
+		EOF
+		reword_to AA A &&
+		test_cmp_rev ! main M &&
+		test_cmp_rev main^ O &&
+		test_cmp_rev ! main^2 R &&
+		test_cmp_rev main^2^{tree} R^{tree} &&
+		test_cmp_rev main^{tree} M^{tree} &&
+		test_cmp_rev side O &&
+		test_cmp_rev ! off T
+	)
+'
+
 test_done
