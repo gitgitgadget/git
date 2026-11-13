@@ -526,6 +526,7 @@ int replay_revisions(struct rev_info *revs,
 	}
 
 	if (!result.clean) {
+		merge_display_update_messages(&merge_opt, 0, &result);
 		ret = 1;
 		goto out;
 	}

@@ -125,7 +125,7 @@ OUTPUT
 By default, or with `--ref-action=update`, this command produces no output on
 success, as refs are updated directly using an atomic transaction.
 
-When using `--ref-action=print`, the output is usable as input to
+When using `--ref-action=print`, successful output is usable as input to
 `git update-ref --stdin`. It is of the form:
 
 	update refs/heads/branch1 ${NEW_branch1_HASH} ${OLD_branch1_HASH}
@@ -138,8 +138,8 @@ the shape of the history being replayed.  When using `--advance` or
 it can be one or more (rebasing multiple branches simultaneously is
 supported).
 
-There is no stderr output on conflicts; see the <<exit-status,EXIT
-STATUS>> section below.
+On conflicts, diagnostics are written to stdout and no refs are updated;
+see the <<exit-status,EXIT STATUS>> section below.
 
 [[exit-status]]
 EXIT STATUS

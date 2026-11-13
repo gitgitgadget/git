@@ -142,7 +142,8 @@ test_expect_success 'using replay on bare repo to rebase two branches, one on to
 '
 
 test_expect_success 'using replay to rebase with a conflict' '
-	test_expect_code 1 git replay --onto topic1 B..conflict
+	test_expect_code 1 git replay --onto topic1 B..conflict >actual &&
+	test_grep -F "CONFLICT (add/add): Merge conflict in C.t" actual
 '
 
 test_expect_success 'using replay on bare repo to rebase with a conflict' '
