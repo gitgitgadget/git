@@ -216,4 +216,30 @@ test_expect_failure 'new modify/delete conflicts prevent replay' '
 	)
 '
 
+test_expect_failure 'a new copy of an old conflict prevents replay' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test-tool historian <<-\EOF &&
+		# The rewrite adds a second byte-identical conflict block.
+		blob a0 x foo=1 s1 s2 s3 s4 s5 foo=1 w
+		blob c x foo=2 s1 s2 s3 s4 s5 foo=1 w
+		blob d x foo=3 s1 s2 s3 s4 s5 foo=3 w
+		blob m x foo=4 s1 s2 s3 s4 s5 foo=3 w
+		blob e x foo=1 s1 s2 s3 s4 s5 foo=2 w
+		commit A main A a:a0
+		commit B main B parent=A a:a0
+		commit C main C parent=B a:c
+		commit D feature D parent=A a:d
+		commit M main M parent=C parent=D a:m
+		commit E target E parent=A a:e
+		EOF
+		test_must_fail git replay --ref-action=print --onto E \
+			--ancestry-path B..main >out 2>err &&
+		test_grep "CONFLICT (content)" out &&
+		test_grep "Merge conflict in a" out
+	)
+'
+
 test_done
