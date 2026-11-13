@@ -87,6 +87,13 @@ struct merge_options {
 	unsigned record_conflict_msgs_as_headers : 1;
 	const char *msg_header_prefix;
 
+	/*
+	 * Optional output map: path -> allocated xdl_conflict_intervals.
+	 * An empty entry records an unresolved path without marker ranges.
+	 * The caller owns the map and its values.
+	 */
+	struct strmap *out_replay_intervals;
+
 	/* internal fields used by the implementation */
 	struct merge_options_internal *priv;
 };

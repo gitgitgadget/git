@@ -2115,6 +2115,7 @@ static int merge_3way(struct merge_options *opt,
 {
 	mmfile_t orig, src1, src2;
 	struct ll_merge_options ll_opts = LL_MERGE_OPTIONS_INIT;
+	struct xdl_conflict_intervals out_intervals = { 0 };
 	char *base, *name1, *name2;
 	enum ll_merge_result merge_status;
 
@@ -2125,6 +2126,8 @@ static int merge_3way(struct merge_options *opt,
 	ll_opts.extra_marker_size = extra_marker_size;
 	ll_opts.xdl_opts = opt->xdl_opts;
 	ll_opts.conflict_style = opt->conflict_style;
+	if (opt->out_replay_intervals && !opt->priv->call_depth)
+		ll_opts.out_intervals = &out_intervals;
 
 	if (opt->priv->call_depth) {
 		ll_opts.virtual_ancestor = 1;
@@ -2166,6 +2169,23 @@ static int merge_3way(struct merge_options *opt,
 			 path, NULL, NULL, NULL,
 			 "warning: Cannot merge binary files: %s (%s vs. %s)",
 			 path, name1, name2);
+
+	if (opt->out_replay_intervals && !opt->priv->call_depth) {
+		struct xdl_conflict_intervals *stored =
+			strmap_get(opt->out_replay_intervals, path);
+
+		if (stored) {
+			xdl_conflict_intervals_release(stored);
+			strmap_remove(opt->out_replay_intervals, path, 1);
+		}
+		if (out_intervals.nr) {
+			stored = xmalloc(sizeof(*stored));
+			*stored = out_intervals;
+			strmap_put(opt->out_replay_intervals, path, stored);
+			out_intervals.items = NULL;
+		}
+	}
+	xdl_conflict_intervals_release(&out_intervals);
 
 	free(base);
 	free(name1);
@@ -5302,6 +5322,21 @@ redo:
 		}
 		/* existence of conflicted entries implies unclean */
 		result->clean &= strmap_empty(&opt->priv->conflicted);
+		if (opt->out_replay_intervals && !opt->priv->call_depth) {
+			struct hashmap_iter iter;
+			struct strmap_entry *entry;
+
+			strmap_for_each_entry(&opt->priv->conflicted,
+					      &iter, entry) {
+				if (!strmap_contains(opt->out_replay_intervals,
+						     entry->key)) {
+					struct xdl_conflict_intervals *empty =
+						xcalloc(1, sizeof(*empty));
+					strmap_put(opt->out_replay_intervals,
+						    entry->key, empty);
+				}
+			}
+		}
 	}
 	if (!opt->priv->call_depth || result->clean < 0)
 		move_opt_priv_to_result_priv(opt, result);
