@@ -41,6 +41,7 @@ void repack_remove_redundant_pack(struct repository *repo, const char *dir_name,
 struct write_pack_opts {
 	struct pack_objects_args *po_args;
 	const char *destination;
+	bool loose;
 	const char *packdir;
 	const char *packtmp;
 };
@@ -166,6 +167,19 @@ int repack_write_midx(struct repack_write_midx_opts *opts);
 int write_filtered_pack(const struct write_pack_opts *opts,
 			struct existing_packs *existing,
 			struct string_list *names);
+
+/*
+ * Copy loose objects that the filter excludes into the loose-object store
+ * at `dest_objdir`, recording them in `moved`.
+ */
+int move_loose_filtered_objects(struct repository *repo,
+				const struct list_objects_filter_options *filter,
+				const char *dest_objdir,
+				struct oidset *moved);
+
+/* Delete the source copies of objects copied by move_loose_filtered_objects. */
+void remove_moved_loose_objects(struct repository *repo,
+				const struct oidset *moved);
 
 int enumerate_promisor_blobs(struct repository *repo,
 			     const struct list_objects_filter_options *filter,
