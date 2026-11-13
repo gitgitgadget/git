@@ -197,12 +197,14 @@ static int fill_conflict_hunk(xdfenv_t *xe1, const char *name1,
 			      xdfenv_t *xe2, const char *name2,
 			      const char *name3,
 			      int size, int i, int style,
-			      xdmerge_t *m, char *dest, int marker_size)
+			      xdmerge_t *m, char *dest, int marker_size,
+			      struct xdl_conflict_intervals *intervals)
 {
 	int marker1_size = (name1 && *name1 ? strlen(name1) + 1 : 0);
 	int marker2_size = (name2 && *name2 ? strlen(name2) + 1 : 0);
 	int marker3_size = (name3 && *name3 ? strlen(name3) + 1 : 0);
 	int needs_cr = is_cr_needed(xe1, xe2, m);
+	int block_start;
 
 	if (marker_size <= 0)
 		marker_size = DEFAULT_CONFLICT_MARKER_SIZE;
@@ -210,6 +212,7 @@ static int fill_conflict_hunk(xdfenv_t *xe1, const char *name1,
 	/* Before conflicting part */
 	size += xdl_recs_copy(xe1, i, m->i1 - i, 0, 0,
 			      dest ? dest + size : NULL);
+	block_start = size;
 
 	if (!dest) {
 		size += marker_size + 1 + needs_cr + marker1_size;
@@ -277,6 +280,11 @@ static int fill_conflict_hunk(xdfenv_t *xe1, const char *name1,
 			dest[size++] = '\r';
 		dest[size++] = '\n';
 	}
+	if (dest && intervals) {
+		intervals->items[intervals->nr].start = block_start;
+		intervals->items[intervals->nr].end = size;
+		intervals->nr++;
+	}
 	return size;
 }
 
@@ -285,7 +293,8 @@ static int xdl_fill_merge_buffer(xdfenv_t *xe1, const char *name1,
 				 const char *ancestor_name,
 				 int favor,
 				 xdmerge_t *m, char *dest, int style,
-				 int marker_size)
+				 int marker_size,
+				 struct xdl_conflict_intervals *intervals)
 {
 	int size, i;
 
@@ -297,7 +306,7 @@ static int xdl_fill_merge_buffer(xdfenv_t *xe1, const char *name1,
 			size = fill_conflict_hunk(xe1, name1, xe2, name2,
 						  ancestor_name,
 						  size, i, style, m, dest,
-						  marker_size);
+						  marker_size, intervals);
 		else if (m->mode & 3) {
 			/* Before conflicting part */
 			size += xdl_recs_copy(xe1, i, m->i1 - i, 0, 0,
@@ -664,21 +673,50 @@ static int xdl_do_merge(xdfenv_t *xe1, xdchange_t *xscr1,
 	/* output */
 	if (result) {
 		int marker_size = xmp->marker_size;
+		struct xdl_conflict_intervals *intervals = xmp->out_intervals;
 		int size = xdl_fill_merge_buffer(xe1, name1, xe2, name2,
 						 ancestor_name,
 						 favor, changes, NULL, style,
-						 marker_size);
+						 marker_size, NULL);
 		result->ptr = xdl_malloc(size);
 		if (!result->ptr) {
 			xdl_cleanup_merge(changes);
 			return -1;
 		}
 		result->size = size;
+		if (intervals) {
+			xdmerge_t *p;
+			long n_conflicts = 0;
+
+			for (p = changes; p; p = p->next)
+				if (p->mode == 0)
+					n_conflicts++;
+			if (n_conflicts > 0 &&
+			    XDL_ALLOC_GROW(intervals->items, n_conflicts,
+					   intervals->alloc)) {
+				xdl_free(result->ptr);
+				result->ptr = NULL;
+				result->size = 0;
+				xdl_cleanup_merge(changes);
+				return -1;
+			}
+		}
 		xdl_fill_merge_buffer(xe1, name1, xe2, name2,
 				      ancestor_name, favor, changes,
-				      result->ptr, style, marker_size);
+				      result->ptr, style, marker_size,
+				      intervals);
 	}
 	return xdl_cleanup_merge(changes);
+}
+
+void xdl_conflict_intervals_release(struct xdl_conflict_intervals *intervals)
+{
+	if (!intervals)
+		return;
+	xdl_free(intervals->items);
+	intervals->items = NULL;
+	intervals->nr = 0;
+	intervals->alloc = 0;
 }
 
 int xdl_merge(mmfile_t *orig, mmfile_t *mf1, mmfile_t *mf2,
@@ -691,6 +729,8 @@ int xdl_merge(mmfile_t *orig, mmfile_t *mf1, mmfile_t *mf2,
 
 	result->ptr = NULL;
 	result->size = 0;
+	if (xmp->out_intervals)
+		xmp->out_intervals->nr = 0;
 
 	if (xdl_do_diff(orig, mf1, xpp, &xe1) < 0)
 		return -1;

@@ -125,6 +125,27 @@ long xdl_mmfile_size(mmfile_t *mmf);
 int xdl_diff(mmfile_t *mf1, mmfile_t *mf2, xpparam_t const *xpp,
 	     xdemitconf_t const *xecfg, xdemitcb_t *ecb);
 
+/*
+ * Byte range [start, end) of a complete conflict-marker block,
+ * including both marker lines and the closing line's newline.
+ */
+struct xdl_conflict_interval {
+	long start;
+	long end;
+};
+
+/*
+ * Ranges in output order. Initialize all-zero and release with
+ * xdl_conflict_intervals_release().
+ */
+struct xdl_conflict_intervals {
+	struct xdl_conflict_interval *items;
+	long nr;
+	long alloc;
+};
+
+void xdl_conflict_intervals_release(struct xdl_conflict_intervals *intervals);
+
 typedef struct s_xmparam {
 	xpparam_t xpp;
 	int marker_size;
@@ -134,6 +155,8 @@ typedef struct s_xmparam {
 	const char *ancestor;	/* label for orig */
 	const char *file1;	/* label for mf1 */
 	const char *file2;	/* label for mf2 */
+	/* Optional conflict-marker byte ranges in the output buffer. */
+	struct xdl_conflict_intervals *out_intervals;
 } xmparam_t;
 
 #define DEFAULT_CONFLICT_MARKER_SIZE 7
