@@ -73,4 +73,122 @@ do
 	'
 done
 
+build_diverging_conflicts () {
+	test-tool historian <<-\EOF
+	# M resolves line 3, but the new parent also conflicts on line 5.
+	blob a L1 L2 L3 L4 L5
+	blob c L1 L2 _3 L4 L5
+	blob d _1 L2 +3 L4 _5
+	blob m _1 L2 M3 L4 _5
+	blob e L1 L2 L3 L4 +5
+	commit A main A a:a
+	commit B main B parent=A a:a
+	commit C main C parent=B a:c
+	commit D feature D parent=A a:d
+	commit M main M parent=C parent=D a:m
+	commit E target E parent=A a:e
+	EOF
+}
+
+test_expect_failure 'newly introduced conflict in a replayed merge' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		build_diverging_conflicts &&
+		test_must_fail git replay --ref-action=print --branches \
+			--onto E --ancestry-path B..M >out 2>err &&
+		test_grep "CONFLICT (content)" out &&
+		test_grep "Merge conflict in a" out
+	)
+'
+
+build_new_conflict_binary () {
+	test-tool historian <<-\EOF
+	blob attrs "* -merge"
+	blob bo original
+	blob bd dee
+	blob be ehh
+	blob mo original
+	blob mc changed
+	commit A main A .gitattributes:attrs bin:bo misc:mo
+	commit B main B parent=A .gitattributes:attrs bin:bo misc:mo
+	commit C main C parent=B .gitattributes:attrs bin:bo misc:mc
+	commit D feature D parent=A .gitattributes:attrs bin:bd misc:mo
+	commit M main M parent=C parent=D .gitattributes:attrs bin:bd misc:mc
+	commit E target E parent=A .gitattributes:attrs bin:be misc:mo
+	EOF
+}
+
+test_expect_failure 'newly introduced binary conflict is reported' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		build_new_conflict_binary &&
+		test_must_fail git replay --ref-action=print --branches \
+			--onto E --ancestry-path B..M >out 2>err &&
+		test_grep "CONFLICT (content)" out &&
+		test_grep "Merge conflict in bin" out
+	)
+'
+
+build_inner_conflicts () {
+	test-tool historian <<-\EOF
+	blob a0 base
+	blob a1 side
+	blob a2 onto
+	commit A main A dir/a:a0
+	commit C main C parent=A dir/a:a0 misc:a0
+	commit D side D parent=A dir/a:a1
+	commit M main M parent=C parent=D dir/a:a1 misc:a0
+	commit R renamed R parent=C parent=D renamed/a:a1 misc:a0
+	commit E target E parent=A dir/a:a2
+	EOF
+}
+
+for branch in main renamed
+do
+	case $branch in
+	main) path=dir/a ;;
+	renamed) path=renamed/a ;;
+	esac
+	test_expect_failure "new inner conflicts are reported in $path" '
+		test_when_finished "rm -rf repo" &&
+		git init repo &&
+		(
+			cd repo &&
+			build_inner_conflicts &&
+			test_must_fail git replay --ref-action=print --onto E \
+				--ancestry-path "C..$branch" >out 2>err &&
+			test_grep "CONFLICT (content)" out &&
+			test_grep "Merge conflict in $path" out
+		)
+	'
+done
+
+test_expect_failure 'changed original conflict inputs prevent replay' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test-tool historian <<-\EOF &&
+		blob a0 base
+		blob al left
+		blob ar right
+		blob am manual
+		blob af updated
+		commit A main A a:a0
+		commit B main B parent=A a:al
+		commit C side C parent=A a:ar
+		commit M main M parent=B parent=C a:am
+		commit F target F parent=B a:af
+		EOF
+		test_must_fail git replay --ref-action=print --onto F \
+			--ancestry-path B..main >out 2>err &&
+		test_grep "CONFLICT (content)" out &&
+		test_grep "Merge conflict in a" out
+	)
+'
+
 test_done
