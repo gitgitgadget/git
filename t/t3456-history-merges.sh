@@ -348,4 +348,75 @@ test_expect_failure 'diff3 resolution survives a changed merge-base count' '
 	)
 '
 
+reword_to () {
+	GIT_EDITOR="echo \"$1\" >" git history reword "$2"
+}
+
+test_expect_failure 'clean merge keeps its topology and content' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test-tool historian <<-\EOF &&
+		blob a shared
+		blob g guarded
+		blob h host
+		commit A main A a:a
+		commit B topic B parent=A a:a g:g
+		commit C main C parent=A a:a h:h
+		commit M main "Merge topic" parent=C parent=B a:a g:g h:h
+		EOF
+		reword_to AA A &&
+		test_cmp_rev ! HEAD M &&
+		test_cmp_rev HEAD^{tree} M^{tree} &&
+		test_cmp_rev HEAD^1^{tree} M^1^{tree} &&
+		test_cmp_rev HEAD^2^{tree} M^2^{tree} &&
+		echo "Merge topic" >expect &&
+		git log -1 --format=%s HEAD >actual &&
+		test_cmp expect actual
+	)
+'
+
+test_expect_failure 'manual textual merge resolution is preserved' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test-tool historian <<-\EOF &&
+		blob a0 line1 line2 line3
+		blob al line1 line2-main line3
+		blob ar line1 line2-topic line3
+		blob am line1 line2-merged-by-hand line3
+		commit A main A a:a0
+		commit B topic B parent=A a:ar
+		commit C main C parent=A a:al
+		commit M main M parent=C parent=B a:am
+		EOF
+		reword_to AA A &&
+		test_cmp_rev ! HEAD M &&
+		test_cmp_rev HEAD:a M:a
+	)
+'
+
+test_expect_failure 'merge-only semantic edit is preserved' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test-tool historian <<-\EOF &&
+		blob a0 line1 line2 line3 line4 line5
+		blob al line1 line2-main line3 line4 line5
+		blob ar line1 line2-topic line3 line4 line5
+		blob am line1 line2-merged line3 line4 line5-touched
+		commit A main A a:a0
+		commit B topic B parent=A a:ar
+		commit C main C parent=A a:al
+		commit M main M parent=C parent=B a:am
+		EOF
+		reword_to AA A &&
+		test_cmp_rev ! HEAD M &&
+		test_cmp_rev HEAD:a M:a
+	)
+'
+
 test_done
