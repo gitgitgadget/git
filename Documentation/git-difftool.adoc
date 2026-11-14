@@ -21,9 +21,14 @@ OPTIONS
 -------
 `-d`::
 `--dir-diff`::
+`--no-dir-diff`::
 	Copy the modified files to a temporary location and perform
 	a directory diff on them. This mode never prompts before
 	launching the diff tool.
++
+`--no-dir-diff` compares the files one at a time, overriding
+`difftool.dirDiff`. The default is taken from `difftool.dirDiff`,
+or is `--no-dir-diff` if it is unset.
 
 `-y`::
 `--no-prompt`::
