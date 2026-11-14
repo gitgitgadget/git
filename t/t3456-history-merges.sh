@@ -44,6 +44,7 @@ build_resolution_merge () {
 	blob m L1 L2 M3
 	blob b old-b
 	blob e new-b
+	# Changing b prevents the shortcut from bypassing the inner merges.
 	commit R main R a:a b:b
 	commit A main A parent=R a:a b:b
 	commit B main B parent=A a:a b:b
@@ -478,6 +479,58 @@ test_expect_success 'out-of-range first merge parent is preserved' '
 		test_cmp_rev main^{tree} M^{tree} &&
 		test_cmp_rev side O &&
 		test_cmp_rev ! off T
+	)
+'
+
+test_expect_success 'unchanged parents do not hide a changed base' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test-tool historian <<-\EOF &&
+		blob a0 base
+		blob al left
+		blob ar right
+		blob am manual
+		commit A main A a:a0
+		commit B topic B parent=A a:al
+		commit A2 onto A2 parent=A a:al
+		commit C side C parent=A2 a:ar
+		commit M main M parent=B parent=C a:am
+		EOF
+		test_must_fail git replay --ref-action=print --onto A2 \
+			--ancestry-path B..main >out 2>err &&
+		test_grep "CONFLICT (content)" out &&
+		test_grep "Merge conflict in a" out &&
+		test_cmp_rev main M
+	)
+'
+
+test_expect_success 'unchanged base trees do not hide recursive conflicts' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		test-tool historian <<-\EOF &&
+		blob a0 base
+		blob al left
+		blob ar right
+		commit A main A a:a0
+		commit B2 lower-left B2 parent=A a:al
+		commit C2 lower-right C2 parent=A a:ar
+		commit X center X parent=B2 parent=C2 a:al
+		commit B old-left B parent=X a:al
+		commit C old-right C parent=X a:ar
+		commit D main D parent=B parent=C a:ar
+		commit E side E parent=C parent=B a:al
+		commit M main M parent=D parent=E a:al
+		commit P target P parent=B2 parent=C2 a:ar
+		EOF
+		test_must_fail git replay --ref-action=print --onto P \
+			--ancestry-path D..main >out 2>err &&
+		test_grep "CONFLICT (content)" out &&
+		test_grep "Merge conflict in a" out &&
+		test_cmp_rev main M
 	)
 '
 

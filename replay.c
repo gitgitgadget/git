@@ -404,6 +404,38 @@ static struct commit *pick_merge_commit(struct repository *repo,
 	struct strmap r_intervals = STRMAP_INIT, n_intervals = STRMAP_INIT;
 	struct strmap *saved_orig_in, *saved_side2_in;
 	char *ancestor_name = NULL;
+	struct tree *tree;
+	int bases_match;
+
+	if (repo_get_merge_bases(repo, parent1, parent2, &parent_bases) < 0 ||
+	    repo_get_merge_bases(repo, replayed_parent1, replayed_parent2,
+				 &replayed_bases) < 0) {
+		result->clean = -1;
+		goto out;
+	}
+
+	/*
+	 * Tree-same parents can merge differently over changed bases.
+	 * Multiple bases also require comparing their recursive ancestry.
+	 */
+	bases_match = !parent_bases && !replayed_bases;
+	if (parent_bases && replayed_bases &&
+	    !parent_bases->next && !replayed_bases->next) {
+		struct tree *old = repo_get_commit_tree(
+			repo, parent_bases->item);
+		struct tree *new = repo_get_commit_tree(
+			repo, replayed_bases->item);
+
+		bases_match = oideq(&old->object.oid, &new->object.oid);
+	}
+	if (bases_match &&
+	    oideq(&repo_get_commit_tree(repo, parent1)->object.oid,
+		  &repo_get_commit_tree(repo, replayed_parent1)->object.oid) &&
+	    oideq(&repo_get_commit_tree(repo, parent2)->object.oid,
+		  &repo_get_commit_tree(repo, replayed_parent2)->object.oid)) {
+		tree = repo_get_commit_tree(repo, pickme);
+		goto create;
+	}
 
 	/* Identical labels make reusable conflict blocks byte-identical. */
 	init_basic_merge_options(&remerge_opt, repo);
@@ -412,10 +444,6 @@ static struct commit *pick_merge_commit(struct repository *repo,
 	remerge_opt.branch2 = "theirs";
 	remerge_opt.ancestor = "merge base";
 	remerge_opt.out_replay_intervals = &r_intervals;
-	if (repo_get_merge_bases(repo, parent1, parent2, &parent_bases) < 0) {
-		result->clean = -1;
-		goto out;
-	}
 	merge_incore_recursive(&remerge_opt, parent_bases,
 			       parent1, parent2, &remerge_res);
 	parent_bases = NULL; /* consumed by merge_incore_recursive */
@@ -430,11 +458,6 @@ static struct commit *pick_merge_commit(struct repository *repo,
 	new_merge_opt.branch2 = "theirs";
 	new_merge_opt.ancestor = "merge base";
 	new_merge_opt.out_replay_intervals = &n_intervals;
-	if (repo_get_merge_bases(repo, replayed_parent1, replayed_parent2,
-				 &replayed_bases) < 0) {
-		result->clean = -1;
-		goto out;
-	}
 	merge_incore_recursive(&new_merge_opt, replayed_bases,
 			       replayed_parent1, replayed_parent2,
 			       &new_merge_res);
@@ -464,9 +487,11 @@ static struct commit *pick_merge_commit(struct repository *repo,
 	if (result->clean <= 0)
 		goto out;
 
+	tree = result->tree;
+create:
 	commit_list_insert(replayed_parent2, &parents);
 	commit_list_insert(replayed_parent1, &parents);
-	picked = create_commit(repo, result->tree, pickme, parents,
+	picked = create_commit(repo, tree, pickme, parents,
 			       REPLAY_MODE_PICK);
 	if (!picked)
 		result->clean = -1;
