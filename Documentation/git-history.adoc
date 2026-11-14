@@ -44,16 +44,21 @@ at once.
 LIMITATIONS
 -----------
 
-This command does not (yet) replay merge commits onto the rewritten
-history: if a commit that would be replayed is a merge, the operation is
-rejected, and you should use linkgit:git-rebase[1] with the
-`--rebase-merges` flag instead. The `squash` subcommand can still fold merges
-that lie inside the selected range, subject to the restrictions below.
+When replaying a two-parent merge, `git history` retains its recorded
+conflict resolutions and merge-only edits. Octopus merges, which have
+more than two parents, are rejected.
+The `squash` subcommand can still fold merges inside the selected range,
+subject to the restrictions below.
 
-Furthermore, the command does not support operations that can result in merge
-conflicts. This limitation is by design as history rewrites are not intended to
-be stateful operations. The limitation can be lifted once (if) Git learns about
-first-class conflicts.
+Replay preserves recorded textual edits, but does not extrapolate them
+to newly introduced code. A resolution already incorporated into the
+rewritten history needs no manual work. Changes that still conflict with
+the recorded resolution, or new merge conflicts, prevent replay.
+
+`git history` is stateless: it aborts on replay conflicts rather than
+leaving an in-progress operation to resume. There is no `--continue`.
+Use linkgit:git-rebase[1] with `--rebase-merges` when replaying the merges
+requires interactive conflict resolution.
 
 When using `fixup` with `--empty=drop`, dropping the root commit is not yet
 supported. Likewise, `drop` cannot remove the root commit or a merge commit.

@@ -99,7 +99,16 @@ test_expect_success 'newly introduced conflict in a replayed merge' '
 		test_must_fail git replay --ref-action=print --branches \
 			--onto E --ancestry-path B..M >out 2>err &&
 		test_grep "CONFLICT (content)" out &&
-		test_grep "Merge conflict in a" out
+		test_grep "Merge conflict in a" out &&
+		git read-tree -mu HEAD &&
+		git switch -c fixup-target B &&
+		git show E:a >a &&
+		git add a &&
+		git for-each-ref >refs-before &&
+		test_must_fail git history fixup B >fixup-out 2>err &&
+		test_grep "CONFLICT (content)" fixup-out &&
+		git for-each-ref >refs-after &&
+		test_cmp refs-before refs-after
 	)
 '
 
@@ -354,7 +363,7 @@ reword_to () {
 	GIT_EDITOR="echo \"$1\" >" git history reword "$2"
 }
 
-test_expect_failure 'clean merge keeps its topology and content' '
+test_expect_success 'clean merge keeps its topology and content' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -379,7 +388,7 @@ test_expect_failure 'clean merge keeps its topology and content' '
 	)
 '
 
-test_expect_failure 'manual textual merge resolution is preserved' '
+test_expect_success 'manual textual merge resolution is preserved' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -400,7 +409,7 @@ test_expect_failure 'manual textual merge resolution is preserved' '
 	)
 '
 
-test_expect_failure 'merge-only semantic edit is preserved' '
+test_expect_success 'merge-only semantic edit is preserved' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -421,7 +430,7 @@ test_expect_failure 'merge-only semantic edit is preserved' '
 	)
 '
 
-test_expect_failure 'octopus merge in the rewrite path is rejected' '
+test_expect_success 'octopus merge in the rewrite path is rejected' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -440,7 +449,7 @@ test_expect_failure 'octopus merge in the rewrite path is rejected' '
 	)
 '
 
-test_expect_failure 'out-of-range first merge parent is preserved' '
+test_expect_success 'out-of-range first merge parent is preserved' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(

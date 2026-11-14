@@ -842,7 +842,7 @@ test_expect_success 'refuses an octopus merge with an arm forked before the base
 	test_cmp_rev "$merged" HEAD
 '
 
-test_expect_success 'refuses when a descendant above the range is a merge' '
+test_expect_success 'replays a descendant merge above the squash range' '
 	git reset --hard start &&
 	main=$(git symbolic-ref --short HEAD) &&
 	test_commit --no-tag desc-one file b &&
@@ -856,9 +856,12 @@ test_expect_success 'refuses when a descendant above the range is a merge' '
 	git branch -D desc-above &&
 	head_before=$(git rev-parse HEAD) &&
 
-	test_must_fail git history squash --no-edit start..desc-tip 2>err &&
-	test_grep "merge commits is not supported" err &&
-	test_cmp_rev "$head_before" HEAD
+	git history squash --no-edit start..desc-tip &&
+	test_cmp_rev HEAD^{tree} "$head_before^{tree}" &&
+	test_cmp_rev HEAD~2^{tree} desc-tip^{tree} &&
+	test_cmp_rev HEAD~2 HEAD^2^ &&
+	test_cmp_rev HEAD~3 start^0 &&
+	check_commit_count start..HEAD 4
 '
 
 test_expect_success 'refuses to fold a range a ref points into at a merge' '

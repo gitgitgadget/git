@@ -171,7 +171,7 @@ test_expect_success 'refuses to drop a merge commit' '
 	)
 '
 
-test_expect_success 'refuses when descendants contain a merge commit' '
+test_expect_success 'replays descendants containing a merge commit' '
 	test_when_finished "rm -rf repo" &&
 	git init repo &&
 	(
@@ -184,9 +184,16 @@ test_expect_success 'refuses when descendants contain a merge commit' '
 		test_commit theirs &&
 		git switch - &&
 		git merge theirs &&
+		head_before=$(git rev-parse HEAD) &&
 
-		test_must_fail git history drop middle 2>err &&
-		test_grep "replaying merge commits is not supported yet" err
+		git history drop middle &&
+		git diff --name-status "$head_before" HEAD >actual &&
+		printf "D\tmiddle.t\n" >expect &&
+		test_cmp expect actual &&
+		test_cmp_rev HEAD^^ base^0 &&
+		test_cmp_rev HEAD^2^ base^0 &&
+		test_cmp_rev branch HEAD^2 &&
+		test_path_is_missing middle.t
 	)
 '
 
