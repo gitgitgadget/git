@@ -1,0 +1,439 @@
+Replay design notes
+===================
+:toc:
+
+Rewriting a history should preserve the changes recorded in its merge
+commits, not just their parent structure. Those changes can include
+conflict resolutions and other edits that cannot be recovered simply by
+merging the parents again.
+
+This document describes the design of replay, including how to carry
+those changes onto rewritten parents without hiding new conflicts.
+It also explains why the replay machinery is separate from worktree
+updates and interactive conflict resolution. See linkgit:git-replay[1]
+for the command-line interface; the ideas under "Further work" are not
+part of that interface.
+
+== Quick Overview
+
+`git replay` rewrites a selected range without updating the working tree
+or the index. By default, it updates the selected references atomically
+when replay succeeds. With `--ref-action=print`, it prints the proposed
+updates instead, leaving the references untouched too.
+
+It differs from rebase in that it:
+
+* Works for branches that aren't checked out
+* Works in a bare repository
+* Can replay multiple branches simultaneously (with or without common
+    history in the range being replayed)
+* Preserves relative topology, including two-parent merges
+* Focuses on performance
+
+Replay can be thought of as a patch-based analogue to the snapshot-based
+fast-export and fast-import tools.
+
+
+== Intro via examples
+
+=== Basics -- rebasing
+
+Since `git replay` can work in bare repositories or for branches that
+are not checked out, there is no implicit assumption that HEAD is part
+of what is being replayed nor that it is the target for where to
+replay commits.  These have to be specified separately:
+
+    $ git replay --ref-action=print --onto target origin/main..mybranch
+    update refs/heads/mybranch ${NEW_mybranch_HASH} ${OLD_mybranch_HASH}
+
+This creates new commits, with the tip represented by
+`${NEW_mybranch_HASH}`, without updating references to use them. The
+successful output is suitable as input to `git update-ref --stdin`.
+Omit `--ref-action=print` to apply the updates directly instead.
+
+
+=== Basics -- cherry-picking
+
+If you want to cherry-pick rather than rebase, just change one flag:
+
+    $ git replay --ref-action=print --advance target origin/main..mybranch
+    update refs/heads/target ${NEW_target_HASH} ${OLD_target_HASH}
+
+With both --onto and --advance, the range of commits represented by
+origin/main..mybranch are being replayed on top of target, the only
+question is whether mybranch or target is updated to reflect the newly
+replayed commits.
+
+
+=== Scaling up -- rebasing a stack of branches
+
+What if you have a stack of branches, one depending upon another, and
+you'd really like to rebase the whole set?
+
+    $ git replay --ref-action=print --contained \
+        --onto origin/main origin/main..tipbranch
+    update refs/heads/branch1 ${NEW_branch1_HASH} ${OLD_branch1_HASH}
+    update refs/heads/branch2 ${NEW_branch2_HASH} ${OLD_branch2_HASH}
+    update refs/heads/tipbranch ${NEW_tipbranch_HASH} ${OLD_tipbranch_HASH}
+
+So much nicer than trying to run N separate rebases, each of which
+involves a different <ONTO> and <UPSTREAM> and forces you to first
+check out each branch in turn.
+
+
+=== Scaling up -- generic ranges
+
+When calling `git replay`, one can use more generic range expressions than
+just a simple `A..B`:
+
+    $ git replay --ref-action=print --onto origin/main \
+        ^base branch1 branch2 branch3
+    update refs/heads/branch1 ${NEW_branch1_HASH} ${OLD_branch1_HASH}
+    update refs/heads/branch2 ${NEW_branch2_HASH} ${OLD_branch2_HASH}
+    update refs/heads/branch3 ${NEW_branch3_HASH} ${OLD_branch3_HASH}
+
+This will simultaneously rebase branch1, branch2, and branch3 -- all
+commits they have since base, playing them on top of origin/main.
+These three branches may have commits on top of base that they have in
+common (in which case, their rebased versions will also share common
+history), but they do not need to share any history being replayed.
+
+The choice of a replayed commit's parents follows three rules:
+
+* A parent that has been replayed is replaced by its rewritten commit.
+* An explicitly excluded boundary is replaced by `--onto`.
+* Other parents outside the selected range retain their original commits.
+
+For example, to replay merge M after rewriting only its first parent,
+with HEAD pointing to that parent's replacement, use:
+
+    $ git replay --ref-action=print --onto HEAD ^M^1 M --ancestry-path
+
+Using `M^!` instead excludes both parents explicitly, mapping both to
+`--onto`. It does not mean "replace only the first parent". Reverting
+commits follows different rules: the new revert commits form a chain
+on the requested branch.
+
+
+=== Scaling up -- replaying merges
+
+If the range contains two-parent merges, replay retains them rather
+than dropping them. Unlike recreating a merge from its parents, replay
+carries over the changes made in the original merge relative to an
+automatic merge. See below under
+"Preserving topology, replaying merges".
+
+
+=== Scaling up -- thickets of branches
+
+Interactive replay is a possible extension, not an available option.
+One use case would be to redo the merges in seen, perhaps reordering or
+dropping some of them. The original design sketched this as:
+
+    $ git replay --interactive --onto next --first-parent next..seen
+    update refs/heads/seen ${NEW_seen_HASH} ${OLD_seen_HASH}
+
+What if we want to update $TOPIC branch and then update seen to include the
+updates to the $TOPIC branch?
+
+    $ git replay --interactive --onto next --first-parent next..seen $TOPIC
+
+The second example would replay the commits in $TOPIC on top of next
+too, which probably is not wanted. We may want the commits in
+"--first-parent next..seen" to be replayed on top of current next
+while the commits in the base of $TOPIC we want to keep the same
+parent. A future interface would need a way to express that distinction.
+Rebase's `no-rebase-cousins` mode addresses a related problem.
+
+
+== Reasons for diverging from cherry-pick & rebase
+
+There are multiple reasons to diverge from the defaults in cherry-pick and
+rebase.
+
+=== Server side needs
+
+* Both cherry-pick and rebase, via the sequencer, are tied
+    to updating the working tree, index, some refs, and a lot of
+    control files with every commit replayed, and invoke
+    hooks[1] that can be hard to avoid for backward compatibility
+    reasons (at least, that's been brought up a few times on the
+    list).
+
+* cherry-pick and rebase both fork various subprocesses
+    unnecessarily, but somewhat intrinsically in part to ensure the
+    same hooks are called that old scripted implementations would
+    have called.
+
+* "Dry run" behavior, where there are no updates to worktree, index,
+    or even refs might be important.
+
+* Should not assume users only want to operate on HEAD (see next
+    section)
+
+=== Decapitate HEAD-centric assumptions
+
+* cherry-pick forces commits to be played on top of HEAD; inflexible.
+
+* rebase assumes the range of commits to be replayed is
+    upstream..HEAD by default, though it allows one to replay
+    upstream..otherbranch -- but it still forcibly and needlessly
+    checks out otherbranch before starting to replay things.
+
+* Assuming HEAD is involved severely limits replaying multiple
+    (possibly divergent) branches.
+
+* Once you stop assuming HEAD has a certain meaning, there's not
+    much reason to have two separate commands anymore (except for the
+    funny extra not-necessarily-compatible options both have gained
+    over time).
+
+* (Micro issue: Assuming HEAD is involved also makes it harder for
+    new users to learn what rebase means and does; it makes command
+    lines hard to parse.  Not sure I want to harp on this too much, as
+    I have a suspicion I might be creating a tool for experts with
+    complicated use cases, but it's a minor quibble.)
+
+=== Performance
+
+* Comparisons with jj[2] helped motivate the original work on replay.
+
+* An early measurement[3] found a simple 4-patch series in linux.git took
+    53 seconds to rebase.  Switching to ort dropped it to 16 seconds.
+    However, only 11 *milliseconds* were needed to do
+    the actual merges.  That means almost *all* the time (>99%) was
+    overhead. These are historical measurements, not timings for current
+    Git, but they illustrate why avoiding overhead matters:
+
+** Do not spend a preliminary walk checking cherry-pick equivalence.
+
+** Avoid extra revision walks just to find fast-forward opportunities.
+
+** avoid updating working tree, index, refs, reflogs, and control
+      structures except when needed (e.g. hitting a conflict, or operation
+      finished)
+
+* Other performance ideas, not all implemented:
+
+** single-file control structures instead of directory of files
+
+** avoid forking subprocesses unless explicitly requested by a future
+      execution, strategy or hook option. In particular, do not invoke
+      `git commit` or `git merge` for each replayed commit.
+
+** Sanitize hooks:
+
+*** dispense with all per-commit hooks for sure (pre-commit,
+        post-commit, post-checkout).
+
+*** a hook called once per rewrite needs a contract that can describe
+        multiple updated branches, rather than repeated calls to a
+        single-branch pre-rebase hook.
+
+*** post-rewrite hook might make sense, but fast-import got
+        exempted, and I think of replay like a patch-based analogue
+        to the snapshot-based fast-import.
+
+** When not running server side, resolve conflicts in a sparse-cone
+      sparse-index worktree to reduce number of files written to a
+      working tree.  (See below as well)
+
+** [High risk of possible premature optimization] Avoid large
+      numbers of newly created loose objects, when replaying large
+      numbers of commits.  Two possibilities: (1) Consider using
+      tmp-objdir and pack objects from the tmp-objdir at end of
+      exercise, (2) Lift code from git-fast-import to immediately
+      stuff new objects into a pack?
+
+=== Multiple branches and non-checked out branches
+
+* Leaving the working tree and index untouched allows stateless replay
+    even when they are dirty. A caller that does update them must still
+    protect local changes before installing a result.
+
+* Also, if we are operating locally on a non-checked out branch and
+    hit a conflict, a future stateful mode should provide a way to resolve
+    it without interfering with the user's work on their current branch.
+
+** Idea: new worktree with sparse cone + sparse index checkout,
+      containing only files in the root directory, and whatever is
+      necessary to get the conflicts
+
+** Companion to above idea: control structures should be written to
+      $GIT_COMMON_DIR/replay-${worktree}, so users can have multiple
+      replay sessions, and so we know which worktrees are associated
+      with which replay operations.
+
+Reference [1]: link:https://lore.kernel.org/git/pull.749.v3.git.git.1586044818132.gitgitgadget%40gmail.com/[Hook compatibility discussion]
+
+Reference [2]: https://github.com/martinvonz/jj/discussions/49
+
+Reference [3]: link:https://lore.kernel.org/git/CABPp-BE48=97k_3tnNqXPjSEfA163F8hoE+HY0Zvz1SWB2B8EA%40mail.gmail.com/[Rebase performance measurements]
+
+
+== Preserving topology, replaying merges
+
+Replaying a two-parent merge must preserve both its ordered parents and
+the changes made in the merge itself. Those changes can be described by
+comparing the recorded merge with an automatic merge of its original
+parents. Replay combines three trees:
+
+* R: automatic remerge of the original parents, accepting conflicts
+* O: the original recorded merge tree
+* N: automatic merge of the rewritten parents, accepting conflicts
+
+The outer, non-recursive merge uses R as its base, O as side 1, and N as
+side 2. Comparing R with O roughly corresponds to
+`git show --remerge-diff $oldmerge`: it isolates the author's contribution
+on top of the automatic merge. The outer merge carries that contribution
+onto N. Merely recreating the merge would produce N without that
+contribution.
+
+The original discussion[4] called these trees pre-M, M, and N.
+
+=== Recognizing reusable resolutions
+
+The inner merges may be unclean: their conflict-marker text is a valid
+input to the outer merge. Only an actual error prevents computing these
+intermediate trees.
+
+Unchanged conflicts in R and N need byte-identical markers so the outer
+merge can reuse their resolution from O. Both inner merges therefore use
+the same branch labels and a fixed ancestor label. Fixing the ancestor
+label matters for diff3 as well as for recursive consolidation of
+multiple merge bases.
+
+O can also contain literal marker-looking text, for example in a file
+documenting conflicts. Searching for marker bytes cannot distinguish it
+from an unresolved conflict, so replay needs metadata from the inner
+merges rather than a scan of their result blobs.
+
+=== Detecting new conflicts
+
+An ordinary outer merge can report a clean result while copying a new
+conflict block from N as if it were ordinary text. Each inner content
+merge therefore records the byte ranges of the conflict blocks it
+produces. Only its final, top-level output is recorded: offsets in a
+temporary virtual-ancestor buffer do not describe the tree passed to
+the outer merge.
+
+The outer merge checks N's recorded blocks against R's. A block without
+a byte-equal, in-order match is an additional conflict, even if the
+ordinary content merge succeeded. Each block in R can explain at most
+one block in N; otherwise a second identical conflict could pass
+unnoticed.
+
+The same information must survive the shortcuts that would otherwise
+adopt N's file or directory without merging its contents. Under renames,
+metadata follows the input paths, not just the final output path.
+
+An old resolution may become unnecessary because the new history already
+contains it. That need not force a conflict. Conversely, if the original
+conflict inputs change, applying the old resolution may itself conflict.
+The outer result can retain still-useful parts of O while reporting the
+remaining conflict; it does not unconditionally discard O in favor of N.
+
+=== Conflicts without marker blocks
+
+Binary, modify/delete, mode, and other non-textual conflicts need to be
+recorded too. A present per-path record with no byte ranges identifies an
+unresolved path whose conflict is not represented by textual markers.
+In particular, a path present only in N may still be a modify/delete
+conflict, not a clean addition.
+
+The final unresolved-path map supplies these records, including paths
+that did not need a content merge. Any shortcut consuming N must
+preserve that unresolved status.
+
+=== Exposing conflicts to a stateful caller
+
+Stateless replay stops on conflicts without updating refs, the worktree
+or the index. A stateful caller, such as rebase, also needs to present
+the conflict inputs and let the user continue after resolving them.
+
+When a path is unresolved both between the rewritten parents and in the
+outer replay, the index needs the fresh-parent merge's real base, ours,
+and theirs blobs. Installing N's marker-filled output as a parent stage
+would substitute a merge result for an input and can hide conflict hunks
+from ordinary combined `git diff`.
+
+The outer tree still provides the worktree contents, including reusable
+parts of the old resolution. For conflicts arising only in the outer
+merge, the index instead retains that merge's own R/O/N inputs.
+
+`git show --remerge-diff $oldmerge` remains a useful way to inspect the
+original resolution when resolving a replay conflict.
+
+=== Limits and possible refinements
+
+This design preserves recorded textual changes; it does not infer a
+symbol-level intention for newly introduced code. Octopus replay and
+reverting merge commits are outside the two-parent model. Deliberately
+linearizing a history is a different operation, which drops merges.
+
+The original notes also proposed treating each inner conflict block as
+an indivisible unit in the outer content merge. Recording byte ranges
+does not implement that special merging mode. Choosing a different
+presentation when an old conflict disappears, or falling back to N
+while offering R/O as resolution hints, remain possible refinements.
+
+Likewise, comparing the original and new base/ours/theirs mode-and-object
+triplets could improve reuse of non-textual resolutions. That is distinct
+from recording an unresolved path and must not be assumed merely because
+its final blob matches.
+
+The proposed `XDL_MERGE_FAVOR_BASE` mode[5] for avoiding nested conflicts
+in recursive merges is another possible extension, not a prerequisite
+that this design assumes already exists.
+
+Reference [4]: link:https://lore.kernel.org/git/CABPp-BHp+d62dCyAaJfh1cZ8xVpGyb97mZryd02aCOX=Qn=Ltw%40mail.gmail.com/[Original merge-replay discussion]
+
+Reference [5]: link:https://lore.kernel.org/git/CABPp-BF2KnktDTtTfp=hRS36HN-xYC8=P1eYcqaBhJvAJcTCAw%40mail.gmail.com/[Base-favoring merge proposal]
+
+
+== Further work
+
+`git replay` reports conflicts and leaves references unchanged. It has no
+interactive mode or resumable operation. The following ideas go beyond
+that stateless interface:
+
+* --interactive support (needed for resumability)
+** extend todo_item & friends to support:
+      play <merge-hash> relative to <label or secondary hash>
+      update-ref
+** maybe:
+*** use 'play' instead of 'pick'
+*** drop 'merge'
+** new make_replay_script() (similar to make_script_with_merges())
+      using new "play" & "update-ref"
+* resumability when replaying commits locally
+** update (current) worktree with conflicts
+** save needed metadata as single INI file
+*** completed todo_list steps
+*** next todo_list steps
+*** ref-updates so far
+*** commit mappings
+*** flag settings
+* refinements to non-trivial merge replay
+** reuse of non-textual resolutions using mode-and-object triplets
+** indivisible conflict blocks in the outer content merge
+** the XDL_MERGE_FAVOR_BASE idea
+* resolving conflicts in sparse-index worktrees with maximal sparsity
+* when commit being replayed is being replayed on top of exact same parent,
+    just use commit as-is.  (Enable fast-forward w/o the can_fast_forward()
+    penalty.)
+* Nice touches
+** Only assume refs/heads/ stuff are wanted to be updated, so that
+      `git replay origin/main..$TOPIC` works as shorthand for
+      `git replay --onto origin/main origin/main..$TOPIC`
+** rewrite commit hashes referenced in commit messages when replaying
+      (much like filter-repo does)
+* More tests
+* Figure out what to do with server-side and conflicts
+
+
+== Origins
+
+This document is based on Elijah Newren's original replay design notes:
+
+https://github.com/newren/git/blob/6483cdc91ca5/replay-design-notes.txt

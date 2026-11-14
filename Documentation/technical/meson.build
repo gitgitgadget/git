@@ -25,6 +25,7 @@ articles = [
   'racy-git.adoc',
   'reftable.adoc',
   'remembering-renames.adoc',
+  'replay-design.adoc',
   'repository-version.adoc',
   'rerere.adoc',
   'scalar.adoc',
