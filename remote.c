@@ -556,6 +556,10 @@ static int handle_config(const char *key, const char *value,
 		else
 			error(_("more than one uploadpack given, using the first"));
 	} else if (!strcmp(subkey, "tagopt")) {
+		if (!value) {
+			warning(_("missing value for '%s'"), key);
+			return 0;
+		}
 		if (!strcmp(value, "--no-tags"))
 			remote->fetch_tags = -1;
 		else if (!strcmp(value, "--tags"))
@@ -2205,8 +2209,11 @@ int get_remote_group(const char *key, const char *value,
 			    void *priv)
 {
 	struct remote_group_data *g = priv;
+	const char *group;
 
-	if (skip_prefix(key, "remotes.", &key) && !strcmp(key, g->name)) {
+	if (skip_prefix(key, "remotes.", &group) && !strcmp(group, g->name)) {
+		if (!value)
+			return config_error_nonbool(key);
 		/* split list by white space */
 		while (*value) {
 			size_t wordlen = strcspn(value, " \t\n");
