@@ -3874,6 +3874,7 @@ static int read_one_entry_quick(const struct object_id *oid, struct strbuf *base
 void overlay_tree_on_index(struct index_state *istate,
 			   const char *tree_name, const char *prefix)
 {
+	struct repository *repo = istate->repo;
 	struct tree *tree;
 	struct object_id oid;
 	struct pathspec pathspec;
@@ -3882,9 +3883,9 @@ void overlay_tree_on_index(struct index_state *istate,
 	read_tree_fn_t fn = NULL;
 	int err;
 
-	if (repo_get_oid(the_repository, tree_name, &oid))
+	if (repo_get_oid(repo, tree_name, &oid))
 		die("tree-ish %s not found.", tree_name);
-	tree = repo_parse_tree_indirect(the_repository, &oid);
+	tree = repo_parse_tree_indirect(repo, &oid);
 	if (!tree)
 		die("bad tree-ish %s", tree_name);
 
@@ -3919,7 +3920,7 @@ void overlay_tree_on_index(struct index_state *istate,
 
 	if (!fn)
 		fn = read_one_entry_quick;
-	err = read_tree(the_repository, tree, &pathspec, fn, istate);
+	err = read_tree(repo, tree, &pathspec, fn, istate);
 	clear_pathspec(&pathspec);
 	if (err)
 		die("unable to read tree entries %s", tree_name);
