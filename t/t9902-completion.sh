@@ -2589,6 +2589,7 @@ test_expect_success 'double dash "git checkout"' '
 	--detach Z
 	--track Z
 	--orphan=Z
+	--orphaned-commit-warning Z
 	--ours Z
 	--theirs Z
 	--merge Z
