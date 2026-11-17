@@ -269,6 +269,16 @@ test_expect_success 'allow skipping commit but not abort for a new history' '
 	test_cmp expect advice
 '
 
+test_expect_success 'cannot abort a cherry-pick sequence on a new history' '
+	pristine_detach initial &&
+	git checkout --orphan new_disconnected_seq &&
+	git reset --hard &&
+	test_must_fail git cherry-pick base..anotherpick &&
+	test_must_fail git cherry-pick --abort 2>advice &&
+	test_grep "cannot abort from a branch yet to be born" advice &&
+	test_must_fail git rev-parse --verify HEAD
+'
+
 test_expect_success 'allow skipping stopped cherry-pick because of untracked file modifications' '
 	test_when_finished "rm unrelated" &&
 	pristine_detach initial &&
