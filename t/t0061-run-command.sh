@@ -7,6 +7,20 @@ test_description='Test run command'
 
 . ./test-lib.sh
 
+if test -n "$USE_POSIX_SPAWN" && test -z "$GIT_TEST_INSTALLED"
+then
+	test_set_prereq POSIX_SPAWN
+	DYLD_INSERT_LIBRARIES="$GIT_BUILD_DIR/t/helper/test-fork-interposer.dylib${DYLD_INSERT_LIBRARIES:+:$DYLD_INSERT_LIBRARIES}"
+	export DYLD_INSERT_LIBRARIES
+	# macOS strips DYLD_* from shell wrappers, so exercise the binaries directly.
+	PATH="$GIT_BUILD_DIR:$GIT_BUILD_DIR/t/helper:$PATH"
+	export PATH
+fi
+
+test_expect_success POSIX_SPAWN 'fork interposer is active' '
+	test-tool run-command fork-interposer-canary
+'
+
 cat >hello-script <<-EOF
 	#!$SHELL_PATH
 	cat hello-script
@@ -33,6 +47,21 @@ test_expect_success 'run_command can run a command' '
 
 	test_cmp hello-script actual &&
 	test_must_be_empty err
+'
+
+test_expect_success 'run_command preserves environment and working directory' '
+	mkdir child &&
+	test_when_finished "chmod 755 child && rm -rf child check-env.sh" &&
+	: >child/child-marker &&
+	write_script check-env.sh <<-\EOF &&
+	test -f child-marker &&
+	printf "%s\\n" "$GIT_SPAWN_TEST"
+	EOF
+	chmod 111 child &&
+	echo spawn-ok >expect &&
+	test-tool run-command run-command-with-dir child GIT_SPAWN_TEST=spawn-ok \
+		"$SHELL_PATH" ../check-env.sh >actual &&
+	test_cmp expect actual
 '
 
 
