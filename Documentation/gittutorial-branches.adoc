@@ -1,0 +1,940 @@
+gittutorial-branches(7)
+=======================
+
+NAME
+----
+gittutorial-branches - How to use branches
+
+DESCRIPTION
+-----------
+
+This is part of a 2-part series on Git for beginners:
+
+- Part 1 (linkgit:gittutorial[7]): Introduction to commits and `git push`
+- Part 2 (you are here): Introduction to branches
+
+Meet some example Git users
+---------------------------
+
+To start, we're going to introduce a few imaginary people who are learning
+to use Git branches for the first time. This is because people use
+branches differently in different situations, so it might be useful for
+you to think about which is closest to your situation.
+
+1. Abdul is making his first contribution to Python, a large open
+   source project.
+2. Betsy is a Go developer for a social media website which has 100
+   other software developers. All of her changes need to be reviewed by a
+   coworker before they're released.
+3. Carmen and Daniela are building a website for their local cat
+   shelter. They're the only two people on the project.
+4. Emilia is using Git on her own to write her PhD thesis with LaTeX.
+
+Why use branches?
+-----------------
+
+Branches are a tool to organize your work and collaborate. For example,
+if you're working on a website, you might be working on multiple
+unrelated changes at the same time, like:
+
+* an update to the FAQ
+* making the website faster
+* adding a translation into Bengali
+
+With branches, you can work on each change at its own pace without them
+interfering with each other.
+
+The "tree" mental model of branches
+-----------------------------------
+
+A useful mental model for Git branches is a tree where the "trunk"
+is the main branch, and there are other branches branching "off" of
+main.
+
+Each of the branches branching off has only a few commits of their own.
+When you finish working on a branch, you can merge its commits back into
+the main branch. This is where the metaphor starts to break down: in a
+real tree, branches that branch off from the trunk don't merge back in
+later, but in Git they can.
+
+For example, here's an ASCII art diagram of a Git repository. The most
+recent commits are at the top. The main branch is in the center and the
+others come off the sides.
+
+---------
+  \ |
+   \| /
+    |/
+    |
+    |
+    |
+---------
+
+This mental model doesn't represent every single thing you can do with
+Git branches, but you can go a long way with it.
+
+[NOTE]
+When the Git documentation uses the word "tree", it means something more
+like "directory tree of files", which is a completely different concept.
+If you want some jargon: the computer science term for "a tree where the
+branches can come back together" is "directed acyclic graph".
+
+The main branch
+---------------
+
+When you run `git init`, Git creates a default branch. Usually this is
+called `main` or `master`. Git mostly doesn't treat this branch in any
+special way (you could even delete that branch if you really want!),
+but for most people using Git this branch does have a special meaning.
+For example:
+
+* In an open source project like Python, the "main" branch might have
+  changes that the maintainers have approved to be in a future release
+* A website's "main" branch might be deployed to the server every time
+  it's updated
+* A PhD student's "main" branch might have the latest version of their
+  PhD thesis
+
+When joining a new project, it's important to understand how that
+project uses its main branch.
+
+In this tutorial we'll call this branch `main`.
+
+Some important facts about Git commits
+--------------------------------------
+
+Before explaining how branches work, here are some important facts about
+Git commits.
+
+**Every commit has an ID**. The ID is made of the numbers 0-9 and letters
+a-f, for example `501584c1bf29ab88e815c09ffb99c887da81241c`. You can
+find the current commit's ID by running `git log`: it's on the first
+line. In this tutorial you're going to see a lot of "short" commit IDs
+(for example `501584c`), which are the first 7 characters or so of the
+commit ID.
+
+**Commits never change**. If you have a commit ID, then the files,
+author, and history of that commit with that ID will never change in any
+way. This is one of Git's biggest strengths, but it also has drawbacks.
+It guarantees that if you have a commit's ID then you can always get
+back its exact contents, but it also makes it difficult to change old
+commits. For example, if someone changes their email address and wants
+to update it on their old commits, it can be very disruptive. You'd need
+to replace all the old commits with new commits with a different email
+address.
+
+**Every commit has a parent** (except the first commit).
+This means that if you have a commit ID, you can follow the pointers to
+the commit's parent(s) to get the whole history of the project up to that
+point.
+
+See linkgit:gitdatamodel[7] for more about how Git represents commits.
+
+
+How Git represents branches
+---------------------------
+
+Even though the way people think about the "main" branch and other
+branches is quite different (one is the "trunk", the others "branch off"
+of main), Git represents all branches in the same way.
+
+Git stores branches as a name and a commit ID. They're stored in the
+`.git` directory in your local Git repository, for example:
+
+----
+main: 37634fd
+add-fruits: cd4bb48
+----
+
+At first, this might seem totally unrelated to the "tree" mental model
+we talked about before. But because every commit has a reference to its
+parent, Git can follow the links from a commit to its parent to get the
+structure (the "tree") of the whole repository.
+
+For example, in this ASCII diagram, the commit below a commit is its
+parent:
+
+-------
+  * cd4bb48 (latest 'add-fruits' commit) Add fruit list
+ /
+* 37634fd (latest 'main' commit) Another update to README.md
+* e9c0b17 Update README.md
+* 2e018a5 Initial commit
+-------
+
+Branches are very cheap to create: when you create a new branch, Git
+just needs to store one commit ID. But this also means that we don't
+always know the history of how a branch evolved over time. For example
+`Another update to README.md` could originally have been created on a
+different branch that was deleted after merging it into `main`.
+
+The practical part
+------------------
+
+Now let's talk about how to actually use branches.
+
+This tutorial is from the point of view of someone who's using branches
+to organize their own work, because it's simpler. There are some
+examples at the end of how this might change if you're using Git to
+collaborate, like one of the example users at the beginning.
+
+Step 1: Create an empty repository with two commits
+---------------------------------------------------
+
+Before we start working with branches, we need a Git repository to work
+with.
+
+First, create an empty directory, move into it, and start a new Git repository:
+
+----
+mkdir myproject
+cd myproject
+git init
+----
+
+Then open your text editor and create a file called `README.md`, with
+these contents:
+
+-----
+This is an example file.
+It has two lines.
+-----
+
+Then add the file and commit it, by running these commands:
+
+----
+git add README.md
+git commit -m "Initial commit"
+----
+
+Next, edit README.md and make another commit, like this:
+
+----
+git commit -am "Update README.md"
+----
+
+`git commit -am` commits the current version of all files that Git is
+tracking.
+
+Now we're set up and we can start creating branches.
+
+Step 2: Find your current branch
+--------------------------------
+
+In Git, you normally have a "current branch". You can see your current
+branch by running `git status`. It's usually on the first line, like this:
+
+----
+$ git status
+
+On branch main
+----
+
+Step 3: Look at the commits on your current branch
+--------------------------------------------------
+
+Run this command to get a list of all commits on your current
+branch.
+
+
+----
+git log --oneline
+----
+
+The output should look something like this, though with
+different commit IDs:
+
+----
+e9c0b17 (HEAD -> main) Update README.md
+2e018a5 Initial commit
+----
+
+In this tutorial, we're going to use `git log --oneline` over and over
+again to visualize our branch. If you have a Git GUI installed, its
+visualization might be easier to read.
+See <<guis,GUI tools>> for a list of GUIs.
+
+[[read_oneline]]
+How to read `git log --oneline`'s output
+----------------------------------------
+
+In `git log`'s output, the latest commit is at the top.
+Here's an example of what the output might look like:
+
+----
+e9c0b17 (HEAD -> main) Update README.md
+2e018a5 Initial commit
+----
+
+Each line has 3 parts:
+
+1. The commit ID (like `e9c0b17`)
+2. Optional extra info (like `(HEAD -> main)`). Git calls this a "decoration".
+3. The commit message (like `Update README.md`)
+
+We're only going to talk about 2 kinds of decorations here:
+`(main)` and `(HEAD -> main)`. Here's how to read each of them:
+
+- `e9c0b17 (main)` means that `e9c0b17` is the latest commit on the `main` branch.
+- `e9c0b17 (HEAD -> main)` means that `e9c0b17` is the latest commit on
+  the `main` branch, AND that `main` is the current branch.
+
+[NOTE]
+`HEAD` is a special file in the `.git` directory where Git stores the
+name of your current branch. So you can read `HEAD -> main` as "current
+branch is main".
+
+Step 4: Make another commit
+---------------------------
+
+When you make a new commit, Git updates your current branch to point
+at that commit. Right now, `git log --oneline` looks like this, because
+we've made 2 commits:
+
+----
+e9c0b17 (HEAD -> main) Update README.md
+2e018a5 Initial commit
+----
+
+Now make a third commit, by editing `README.md` again, and running this command:
+
+----
+git commit -am "Another update to README.md"
+----
+
+Now run `git log --oneline` again to see how our branch looks now.
+
+----
+37634fd (HEAD -> main) Another update to README.md
+e9c0b17 Update README.md
+2e018a5 Initial commit
+----
+
+This shows us that the latest commit on the `main` branch is now
+"Another update to README.md".
+
+Step 5: Create a branch
+-----------------------
+
+Here's how to create a new branch and make a commit on it. We're going
+to create a branch called `add-fruits` that adds a list of fruits.
+
+First, create the branch and switch to it, by running this command:
+
+----
+git switch -c add-fruits
+----
+
+The `-c` flag stands for "create". You should see the output:
+
+----
+Switched to a new branch 'add-fruits'
+----
+
+Now, in your text editor, create a new file called `fruits.txt` with
+some fruits in it. Then add it and commit, like this:
+
+----
+git add fruits.txt
+git commit -m "Add fruit list"
+----
+
+Run `git log --oneline` again to get a list of all the commits on the
+current branch.
+
+----
+cd4bb48 (HEAD -> add-fruits) Add fruit list
+37634fd (main) Another update to README.md
+e9c0b17 Update README.md
+2e018a5 Initial commit
+----
+
+See <<read_oneline,How to read `git log --oneline`'s output>> above for
+an explanation of how to interpret this output.
+
+To summarize, this tells us that there's been 1 commit ("Add fruit list")
+since our `add-fruits` branch split off from the `main` branch.
+
+Step 6: Get a list of all branches
+----------------------------------
+
+You can get a list of all branches by running this command:
+
+----
+git branch
+----
+
+The output should look like this:
+
+----
+* add-fruits
+  main
+----
+
+This says that you have 2 branches (`main` and `add-fruits`). The one
+with the `*` next to it is the current branch.
+
+Step 7: Switch branches
+-----------------------
+
+Change your current branch to `main` by running:
+
+----
+git switch main
+----
+
+This command:
+
+1. Updates the files in your working directory to match the `main` branch.
+   For example, if `main` is at the commit `aa33bb`, then `git switch main`
+   will give you the files from the commit `aa33bb`.
+2. Sets your current branch to `main`, so that any new commits
+   you make will be on that branch
+
+
+Run `ls`. You should see that the new `fruits.txt` file you created is gone:
+
+-----
+$ git switch main
+$ ls
+README.md
+-----
+
+Of course, `fruits.txt` is not actually gone: it's stored in the `.git`
+directory and we can switch back to the `add-fruits` branch to get it
+back.
+
+Run `git switch add-fruits` to switch back to the `add-fruits`
+branch, and run `ls` again. The `fruits.txt` file should reappear:
+
+-----
+$ git switch add-fruits
+$ ls
+fruits.txt
+README.md
+-----
+
+Step 8: Create another branch
+-----------------------------
+
+Now create a second branch called `add-animals`. We're creating two
+branches to show what the process of working on multiple changes at the
+same time looks like.
+
+First, switch back to the `main` branch. This is important because
+normally when you start a new branch, you'll start it from the
+current `main`.
+
+We normally start from `main` because if you create a branch called `two`
+while on the `one` branch, merging `two` into `main` will also
+merge `one`. Starting from `main` keeps all the branches separate.
+
+-----
+git switch main
+-----
+
+Then create a branch called `add-animals`.
+
+-----
+git switch -c add-animals
+-----
+
+Now create a file named `animals.txt` with some animal names in it, add
+it, and commit it.
+
+-----
+git add animals.txt
+git commit -m "Add animal list"
+-----
+
+Step 9: Look at our branches and commits
+----------------------------------------
+
+In Git it's extremely useful to be able to visualize your branches.
+There are many GUIs built by the community which can do this, but in
+this tutorial we're going to use the command line because it's the only
+interface we can guarantee everyone reading the tutorial has.
+
+Run this command to show all branches and commits:
+
+-----
+git log --oneline --graph --all
+-----
+
+The output should look like this:
+
+-----
+* 1ceb7b4 (HEAD -> add-animals) Add animal list
+| * cd4bb48 (add-fruits) Add fruit list
+|/
+* 37634fd (main) Another update to README.md
+* e9c0b17 Update README.md
+* 2e018a5 Initial commit
+-----
+
+How to read `git log --graph`'s output
+--------------------------------------
+
+`git log --oneline --graph --all` prints out a text-based visualization
+of all your Git branches and their history.
+
+This isn't the best visualization, but to use branches well you need
+some way to get this information, and it's the only visualization the
+command line Git interface has. Almost every Git GUI will have another
+visualization you can use.
+
+Here's some example output:
+
+-----
+* 1ceb7b4 (HEAD -> add-animals) Add animal list
+| * cd4bb48 (add-fruits) Add fruit list
+|/
+* 37634fd (main) Another update to README.md
+* e9c0b17 Update README.md
+* 2e018a5 Initial commit
+-----
+
+How to read this:
+
+* Every `*` is a commit
+* As usual with `git log`, the latest commit is at the top
+* The `|` and `/` are ASCII art lines that Git uses to show
+  what the parents of a commit are. Here they're showing that `37634fd`
+  is the parent of both `cd4bb48` and `1ceb7b4`.
+
+See <<read_oneline,How to read `git log --oneline`'s output>> above for
+how to read the decorations like `(main)` or `(HEAD -> add-animals)`.
+
+Overall this shows that the `add-animals` and `add-fruits` branches have
+both added one new commit since they split off from the `main` branch.
+
+Step 10: Merge the `add-animals` branch into `main`
+---------------------------------------------------
+
+Now imagine that you're done with your work on the `add-animals` branch, and
+you're ready to bring that work onto your `main` branch.
+
+Right now `add-animals` is one commit "ahead" of the `main` branch.
+To bring all the work in `add-animals` into `main`, we can just move
+`main` forward to match the `add-animals` branch.
+
+This is the simplest possible situation when trying to bring the work
+from one branch into another branch, and Git calls it a **fast-forward
+merge**.
+
+Merge `add-animals` into the main branch by running these two commands:
+
+----
+git switch main
+git merge add-animals
+----
+
+The output should look like this:
+
+----
+Updating 37634fd..1ceb7b4
+Fast-forward
+ animals.txt | 1 +
+ 1 file changed, 1 insertion(+)
+ create mode 100644 animals.txt
+----
+
+The `Fast-forward` output means that this was a fast-forward merge.
+
+Step 11: Delete the `add-animals` branch
+----------------------------------------
+
+Now that you've integrated `add-animals` branch into `main`, you can
+safely delete it. Delete the branch by running this command. `-d` stands
+for "delete":
+
+-----
+git branch -d add-animals
+-----
+
+Running this is safe: it'll refuse to delete any branch that hasn't
+already been integrated into the current branch.
+
+It's useful to delete branches after they've been merged because it
+stops them from cluttering up your branch list (from `git branch`).
+
+Step 12: Look at our branches and commits again
+-----------------------------------------------
+
+Now that we've made some changes, run this command to show all branches
+and commits again:
+
+-----
+git log --oneline --graph --all
+-----
+
+The output should look like this:
+
+-----
+* cd4bb48 (add-fruits) Add fruit list
+| * 1ceb7b4 (HEAD -> main) Add animal list
+|/
+* 37634fd Another update to README.md
+* e9c0b17 Update README.md
+* 2e018a5 Initial commit
+-----
+
+Step 13: Merge the `add-fruits` branch into `main`
+--------------------------------------------------
+
+The output from the last step shows that we still have an `add-fruits`
+branch that's branched off a previous version of the `main` branch.
+
+In this situation where `main` and `add-fruits` both have new commits,
+we say that the two branches have "diverged". Having diverged branches
+is very common when working together on a team, because usually on a
+large team many people are making commits at the same time.
+
+If two branches have diverged, you still use the command `git merge`
+to combine them, but it does something different from our previous merge
+in Step 10.
+
+Now run `git merge` to see what happens:
+
+----
+git merge --no-edit add-fruits
+----
+
+The `--no-edit` option tells `git merge` to use the default commit
+message. Normally `git merge` will open a text editor to ask you to
+write a commit message, but we're skipping that step here.
+
+You should see the output:
+
+----
+Merge made by the 'ort' strategy.
+ fruits.txt | 1 +
+ 1 file changed, 1 insertion(+)
+ create mode 100644 fruits.txt
+----
+
+Once the branch is merged, delete it by running:
+
+----
+git branch -d add-fruits
+----
+
+To see what `git merge` did, run `git log --oneline --graph` again.
+
+----
+*   e3c630d (HEAD -> main) Merge branch 'add-fruits'
+|\
+| * cd4bb48 Add fruit list
+* | 1ceb7b4 Add animal list
+|/
+* 37634fd Another update to README.md
+* e9c0b17 Update README.md
+* 2e018a5 Initial commit
+----
+
+Here you can see that it created a new commit `e3c630d`. This commit
+looks different from the other commits because it has two parents:
+cd4bb48 ("Add fruit list") and 1ceb7b4 ("Add animal list"). This kind
+of commit with two parents is called a "merge commit".
+
+Note: merge conflicts
+---------------------
+
+Git has an automatic merge algorithm to combine the code from two
+branches. In the example from Step 13, it's simple: one side added
+`fruits.txt` and the other side added `animals.txt`, so the merge adds
+both files.
+
+But if the two branches both edited the same lines of the same files,
+Git will ask you to decide how to handle it. This is called a "merge
+conflict".
+
+See linkgit:gitmergeconflicts[7] (`git help mergeconflicts`) for a
+guide to handling merge conflicts.
+
+3 ways to think about branches
+------------------------------
+
+In Git there are always 3 ways to think about a branch, and different
+commands will treat a branch in different ways. For example, let's look
+at the earlier setup again with the `add-fruits` branch. It has a `main`
+branch with 3 commits on it, and an `add-fruits` branch with one commit.
+
+-----
+  * cd4bb48 (add-fruits) Add fruit list
+ /
+* 37634fd (main) Another update to README.md
+* e9c0b17 Update README.md
+* 2e018a5 Initial commit
+-----
+
+We can think of the `add-fruits` branch as:
+
+1. Just the 1 commit that "branched off" of the `main` branch (`cd4bb48`).
+2. The full history of the branch since the beginning of the repository,
+   including all the commits on `main` (4 commits in this case).
+   For example, `git log add-fruits` will show you the full history.
+3. Just the latest commit on that branch.
+   For example, `git show add-fruits` will show you the latest commit.
+
+How to use branches to collaborate: it depends
+----------------------------------------------
+
+There are lots of ways to use branches to collaborate with other people.
+We don't have space for a full guide to collaborating with Git here, but
+after a very quick introduction to `git pull`, we'll give examples of
+how each of our characters from the beginning might use branches.
+
+In these examples we're going to use `git push`, `git pull`, `git
+clone`, and `git remote add`. For a basic introduction to `git push` and
+`git remote add`, see Step 14 of linkgit:gittutorial[7].
+
+Using `git pull`: the basics
+----------------------------
+
+Here's the simplest way to use `git pull`.
+
+When you use `git clone` to clone a repository, it checks out a branch
+by default. The branch it checks out is usually the "main" branch.
+This is the one exception to "Git mostly doesn't treat the main branch
+in any special way". Technically the repository's owner can set the
+default branch to anything, but normally they'll set it to the main
+branch.
+
+-------
+git clone https://example.com/example.git
+-------
+
+After cloning a repository, you can run `git pull` while on the main
+branch to update it with the latest version, like this:
+
+-------
+git switch main
+git pull
+-------
+
+This is all you need to know about `git pull` to understand these
+examples.
+
+Example: Emilia the PhD student
+-------------------------------
+
+Emilia is writing her PhD thesis. She follows the steps from
+linkgit:gittutorial[7] to set up a Git repository on the Internet so
+that she can back up her work.
+
+To back up her work after making a commit, she runs:
+
+----
+git push origin main
+----
+
+Sometimes, she creates a branch to make an experimental change she's not
+sure that she's going to keep, like `rewrite-chapter-5`.
+
+She does this by running:
+
+----
+git switch -c rewrite-chapter-5
+----
+
+If she decides that the experimental change should be merged, she merges
+it into `main` like this:
+
+----
+git switch main
+git merge rewrite-chapter-5
+----
+
+Or if she decides the rewrite of chapter 5 was a bad idea, she can
+delete the branch:
+
+----
+git branch -D rewrite-chapter-5
+----
+
+Example: Abdul the open source contributor
+------------------------------------------
+
+Abdul is contributing to an open source project for the first time.
+
+First, he finds the official Git repository for the project and clones
+it, like this:
+
+----
+git clone https://example.com/project/project
+----
+
+He doesn't have permission to push changes directly to that
+project, so he creates his own copy of the repository at
+https://example.com/abdul/project.
+
+Then he adds that repository as a second remote, like this:
+
+----
+git remote add abdul https://example.com/abdul/project
+----
+
+Before starting work on his branch, he makes sure that he has the
+latest version of the `main` branch using `git pull`, like this:
+
+----
+git switch main
+git pull
+----
+
+Then he creates a new branch, like this:
+
+----
+git switch -c new-feature
+----
+
+Once he's done with his branch, he pushes the branch to his Git
+repository, like this:
+
+----
+git push abdul new-feature
+----
+
+Then he goes through the open source project's process to submit his
+branch for review.
+
+Example: Betsy the corporate employee
+-------------------------------------
+
+On her first day of work, she clones the company's Git repository by
+running:
+
+----
+git clone git@example.com:company/project
+----
+
+She has access to push new branches to this repository with her work,
+but their system doesn't allow pushing to the `main` branch directly.
+
+Before starting work on her new feature, she makes sure that she has the
+latest version of the `main` branch using `git pull`, like this:
+
+----
+git switch main
+git pull
+----
+
+Then she creates a new branch, like this:
+
+----
+git switch -c new-feature
+----
+
+Once she's done with her branch, she pushes the branch to the company
+Git repository, like this:
+
+----
+git push origin new-feature
+----
+
+Then she goes through her company's process for getting branches merged.
+
+Example: Daniela and Carmen with the cat shelter website
+--------------------------------------------------------
+
+Daniela and Carmen create a Git repository for their cat shelter website.
+
+They both clone it onto their computer like this:
+
+----
+git clone git@example.com:cat-shelter/kitties.git
+----
+
+They decide to work together by just pushing all of their commits to the
+`main` branch, without using any other branches.
+
+When Daniela wants to do work, she first runs `git pull` on the main
+branch, like this:
+
+----
+git pull
+----
+
+She also checks in with Carmen to make sure they won't be working on
+the same files. Then she works on her changes. Then, before pushing her
+changes, she runs this command to merge any changes Carmen has made.
+
+----
+git pull --no-rebase
+----
+
+We don't have space for a full introduction to linkgit:git-pull[1]
+here, but `git pull` fetches Carmen's changes and merges them into the
+current branch. The `--no-rebase` flag tells Git to use `git merge` to
+do the merge.
+
+Then she pushes her changes with:
+
+----
+git push
+----
+
+Tip: put your current branch in your shell prompt
+-------------------------------------------------
+
+Accidentally doing a Git operation on the wrong branch can be really
+annoying to undo. Because of this, it's extremely useful in Git to
+always know what your current branch is.
+
+To help with this, Git comes with a shell script called `git-prompt.sh`
+that has instructions for how to make sure your current Git branch is
+always in your shell prompt. If it's not already on your machine, you can
+find it in the https://github.com/git/git/blob/master/contrib/completion/git-prompt.sh[official Git repository here].
+There are also many shell plugins to do this.
+
+For example, if you're on the `main` branch, this can make your shell
+prompt look like this:
+
+----
+[user@host myproject (main)]$
+----
+
+[[guis]]
+GUI tools
+---------
+
+Here are a few open source GUI tools. All of them work on Linux, Mac,
+and Windows unless otherwise mentioned:
+
+- `gitk` and `git gui` both come with Git. `git gui` focuses on making
+  commits and `gitk` visualizes the project's history.
+  See linkgit:gitk[1] and linkgit:git-gui[1] for more info, and
+  https://git-scm.com/install/ for install instructions.
+- TortoiseGit (https://tortoisegit.org/) for Windows
+- GitUp (https://gitup.co/) for Mac
+
+Interactive terminal UIs:
+
+- LazyGit (https://github.com/jesseduffield/lazygit)
+- tig (https://jonas.github.io/tig/)
+
+Many text editors have Git integrations, for example:
+
+- Magit (https://magit.vc/) for Emacs
+- Fugitive (https://github.com/tpope/vim-fugitive) for Vim
+- Many IDEs (VS Code, Eclipse, JetBrains, etc) have built-in Git
+  integrations. This can be a good option if you're already using one
+  of them.
+
+Where to learn more
+-------------------
+
+- When merging two branches, there can be a conflict if both sides
+  edited the same lines of a file. linkgit:gitmergeconflicts[7]
+  (or `git help mergeconflicts`) is a guide to handling merge conflicts.
+- The UPSTREAM BRANCHES section in linkgit:git-pull[1] explains how to
+  configure where `git push` or `git pull` will push or pull from.
+- Some teams prefer to use linkgit:git-rebase[1] and a fast-forward
+  merge to combine branches instead of using merge commits.
+- linkgit:gitdatamodel[7] explains how Git represents branches and
+  commits.
+
+GIT
+---
+Part of the linkgit:git[1] suite
