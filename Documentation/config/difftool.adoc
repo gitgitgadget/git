@@ -37,6 +37,14 @@ See the `--trust-exit-code` option in linkgit:git-difftool[1] for more details.
 `difftool.prompt`::
 	Prompt before each invocation of the diff tool.
 
+`difftool.dirDiff`::
+	Set `true` to perform a directory diff by default (equivalent to
+	specifying the `--dir-diff` argument). The default is `false`.
+	The `-d`/`--dir-diff` and `--no-dir-diff` arguments override
+	this setting. It is ignored when `--no-index` is given.
++
+See the `--dir-diff` option in linkgit:git-difftool[1] for more details.
+
 `difftool.guiDefault`::
 	Set `true` to use the `diff.guitool` by default (equivalent to specifying
 	the `--gui` argument), or `auto` to select `diff.guitool` or `diff.tool`

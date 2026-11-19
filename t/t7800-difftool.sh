@@ -513,6 +513,90 @@ run_dir_diff_test 'difftool --dir-diff' '
 	grep "^file$" output
 '
 
+test_expect_success 'setup difftool.dirDiff tests' '
+	write_script .git/report-mode.sh <<-\EOF &&
+	if test -d "$1"
+	then
+		echo dir
+	else
+		echo file
+	fi
+	EOF
+	echo dir >expect-dir &&
+	echo file >expect-file
+'
+
+# Runs difftool with the given arguments, and checks that it ran in the
+# expected mode: "dir" for a directory diff, "file" for one per file.
+difftool_mode_is () {
+	mode=$1 &&
+	shift &&
+	git difftool --no-prompt --extcmd .git/report-mode.sh "$@" branch >output &&
+	sort -u output >actual &&
+	test_cmp expect-$mode actual
+}
+
+test_expect_success 'difftool defaults to file mode without difftool.dirDiff' '
+	difftool_mode_is file
+'
+
+for scope in local global
+do
+	if test $scope = global
+	then
+		config=test_config_global
+	else
+		config=test_config
+	fi
+
+	test_expect_success "$scope difftool.dirDiff = true selects dir-diff mode" '
+		$config difftool.dirDiff true &&
+		difftool_mode_is dir
+	'
+
+	test_expect_success "$scope difftool.dirDiff = false selects file mode" '
+		$config difftool.dirDiff false &&
+		difftool_mode_is file
+	'
+
+	test_expect_success "$scope difftool.dirDiff = true is overridden by --no-dir-diff" '
+		$config difftool.dirDiff true &&
+		difftool_mode_is file --no-dir-diff
+	'
+
+	test_expect_success "$scope difftool.dirDiff = false is overridden by -d" '
+		$config difftool.dirDiff false &&
+		difftool_mode_is dir -d
+	'
+
+	test_expect_success "$scope difftool.dirDiff = false is overridden by --dir-diff" '
+		$config difftool.dirDiff false &&
+		difftool_mode_is dir --dir-diff
+	'
+done
+
+test_expect_success 'local difftool.dirDiff overrides global' '
+	test_config_global difftool.dirDiff true &&
+	test_config difftool.dirDiff false &&
+	difftool_mode_is file &&
+	test_config_global difftool.dirDiff false &&
+	test_config difftool.dirDiff true &&
+	difftool_mode_is dir
+'
+
+test_expect_success 'difftool.dirDiff from the command line' '
+	git -c difftool.dirDiff=true difftool --no-prompt \
+		--extcmd .git/report-mode.sh branch >output &&
+	sort -u output >actual &&
+	test_cmp expect-dir actual
+'
+
+test_expect_success 'last of -d and --no-dir-diff wins over difftool.dirDiff' '
+	test_config difftool.dirDiff true &&
+	difftool_mode_is dir --no-dir-diff -d &&
+	difftool_mode_is file -d --no-dir-diff
+'
+
 run_dir_diff_test 'difftool --dir-diff avoids repeated slashes in TMPDIR' '
 	TMPDIR="${TMPDIR:-/tmp}////" \
 		git difftool --dir-diff $symlinks --extcmd echo branch >output &&
@@ -887,6 +971,22 @@ test_expect_success 'outside worktree' '
 		difftool --no-prompt --no-index ../1 ../2 >actual &&
 	echo "../1 ../2" >expect &&
 	test_cmp expect actual
+'
+
+test_expect_success 'difftool.dirDiff does not apply to --no-index' '
+	echo 1 >1 &&
+	echo 2 >2 &&
+	test_expect_code 1 nongit git \
+		-c diff.tool=echo -c difftool.echo.cmd="echo \$LOCAL \$REMOTE" \
+		-c difftool.dirDiff=true \
+		difftool --no-prompt --no-index ../1 ../2 >actual &&
+	echo "../1 ../2" >expect &&
+	test_cmp expect actual
+'
+
+test_expect_success 'difftool --dir-diff --no-index still fails' '
+	test_must_fail git difftool --dir-diff --no-index 1 2 2>err &&
+	test_grep "cannot be used together" err
 '
 
 test_expect_success 'difftool --gui, --tool and --extcmd are mutually exclusive' '

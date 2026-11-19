@@ -44,6 +44,7 @@ struct difftool_options {
 	int has_symlinks;
 	int symlinks;
 	int trust_exit_code;
+	int dir_diff;
 };
 
 static int difftool_config(const char *var, const char *value,
@@ -52,6 +53,10 @@ static int difftool_config(const char *var, const char *value,
 	struct difftool_options *dt_options = (struct difftool_options *)cb;
 	if (!strcmp(var, "difftool.trustexitcode")) {
 		dt_options->trust_exit_code = git_config_bool(var, value);
+		return 0;
+	}
+	if (!strcmp(var, "difftool.dirdiff")) {
+		dt_options->dir_diff = git_config_bool(var, value);
 		return 0;
 	}
 	if (!strcmp(var, "core.symlinks")) {
@@ -719,12 +724,13 @@ int cmd_difftool(int argc,
 		 const char *prefix,
 		 struct repository *repo)
 {
-	int use_gui_tool = -1, dir_diff = 0, prompt = -1, tool_help = 0, no_index = 0;
+	int use_gui_tool = -1, dir_diff = -1, prompt = -1, tool_help = 0, no_index = 0;
 	static char *difftool_cmd = NULL, *extcmd = NULL;
 	struct difftool_options dt_options = {
 		.has_symlinks = 1,
 		.symlinks = 1,
-		.trust_exit_code = 0
+		.trust_exit_code = 0,
+		.dir_diff = 0
 	};
 	struct option builtin_difftool_options[] = {
 		OPT_BOOL('g', "gui", &use_gui_tool,
@@ -762,6 +768,14 @@ int cmd_difftool(int argc,
 
 	if (tool_help)
 		return print_tool_help();
+
+	/*
+	 * An explicit -d/--dir-diff or --no-dir-diff wins over
+	 * difftool.dirDiff.  The configured default does not apply to
+	 * --no-index, which cannot be combined with directory diff mode.
+	 */
+	if (dir_diff < 0)
+		dir_diff = no_index ? 0 : dt_options.dir_diff;
 
 	if (!no_index && !startup_info->have_repository)
 		die(_("difftool requires worktree or --no-index"));
