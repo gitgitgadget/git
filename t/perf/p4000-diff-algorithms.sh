@@ -18,6 +18,16 @@ test_perf 'log -p -3000 (Myers)' '
 	git log -p -3000 >/dev/null
 '
 
+test_expect_success 'prepare revisions for Myers shortstat' '
+	git rev-list --no-merges --max-count=8192 HEAD >commits
+'
+
+test_perf 'diff-tree --shortstat (Myers)' '
+	git diff-tree --stdin -r --root --no-renames --no-ext-diff \
+		--no-textconv --no-color --diff-algorithm=myers --shortstat \
+		<commits >/dev/null
+'
+
 test_perf 'log -p -3000 --histogram' '
 	git log -p -3000 --histogram >/dev/null
 '

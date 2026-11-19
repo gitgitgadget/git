@@ -368,4 +368,78 @@ test_expect_success 'diff-files: --no-indent-heuristic overrides config' '
 	git checkout -f main
 '
 
+for prefix in 1 7 8 9 15 16 17
+do
+	test_expect_success "unchanged spans preserve insertion and deletion positions at $prefix" '
+		test_seq 1 "$prefix" >prefix &&
+		test_seq 100 180 >suffix &&
+		cat prefix suffix >before.txt &&
+		{
+			cat prefix &&
+			echo inserted &&
+			cat suffix
+		} >after.txt &&
+		printf "@@ -%s,0 +%s @@\n+inserted\n" \
+			"$prefix" "$((prefix + 1))" >expect &&
+		test_expect_code 1 git diff --no-index --diff-algorithm=myers \
+			--unified=0 before.txt after.txt >output &&
+		sed -n "/^@@/,\$p" output >actual &&
+		test_cmp expect actual &&
+		printf "@@ -%s +%s,0 @@\n-inserted\n" \
+			"$((prefix + 1))" "$prefix" >expect &&
+		test_expect_code 1 git diff --no-index --diff-algorithm=myers \
+			--unified=0 after.txt before.txt >output &&
+		sed -n "/^@@/,\$p" output >actual &&
+		test_cmp expect actual
+	'
+done
+
+test_expect_success 'common records that also occur in the middle retain their classes' '
+	cat >before.txt <<-\EOF &&
+	anchor
+	shared
+	changed-before
+	shared
+	end
+	EOF
+	cat >after.txt <<-\EOF &&
+	anchor
+	shared
+	shared
+	shared
+	end
+	EOF
+	cat >expect <<-\EOF &&
+	@@ -3 +3 @@ shared
+	-changed-before
+	+shared
+	EOF
+	test_expect_code 1 git diff --no-index --diff-algorithm=myers \
+		--no-indent-heuristic --unified=0 before.txt after.txt >output &&
+	sed -n "/^@@/,\$p" output >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'matching line fingerprints do not equate different middle bytes' '
+	cat >before.txt <<-\EOF &&
+	abcdefghAAAAAAAAAAAAAAAAtuvwxyz
+	abcdefghBBBBBBBBBBBBBBBBtuvwxyz
+	abcdefghAAAAAAAAAAAAAAAAtuvwxyz
+	EOF
+	cat >after.txt <<-\EOF &&
+	abcdefghAAAAAAAAAAAAAAAAtuvwxyz
+	abcdefghCCCCCCCCCCCCCCCCtuvwxyz
+	abcdefghAAAAAAAAAAAAAAAAtuvwxyz
+	EOF
+	cat >expect <<-\EOF &&
+	@@ -2 +2 @@ abcdefghAAAAAAAAAAAAAAAAtuvwxyz
+	-abcdefghBBBBBBBBBBBBBBBBtuvwxyz
+	+abcdefghCCCCCCCCCCCCCCCCtuvwxyz
+	EOF
+	test_expect_code 1 git diff --no-index --diff-algorithm=myers \
+		--no-indent-heuristic --unified=0 before.txt after.txt >output &&
+	sed -n "/^@@/,\$p" output >actual &&
+	test_cmp expect actual
+'
+
 test_done

@@ -23,13 +23,52 @@
 #include "xinclude.h"
 
 
-static int xdl_emit_record(xdfile_t *xdf, long ri, char const *pre, xdemitcb_t *ecb)
+/*
+ * Batch complete diff lines without changing their order or bytes.
+ * Flush before headers, exceptional records and the final return.
+ */
+struct xdl_emit_buf {
+	size_t n;
+	char buf[16384];
+};
+
+static int xdl_emit_flush(struct xdl_emit_buf *eb, xdemitcb_t *ecb)
 {
-	xrecord_t *rec = &xdf->recs[ri];
+	mmfile_t mb;
 
-	if (xdl_emit_diffrec((char const *)rec->ptr, (long)rec->size, pre, strlen(pre), ecb) < 0)
+	if (!eb->n)
+		return 0;
+	mb.ptr = eb->buf;
+	mb.size = eb->n;
+	eb->n = 0;
+	if (ecb->out_line(ecb->priv, &mb, 1) < 0)
 		return -1;
+	return 0;
+}
 
+
+static int xdl_emit_records(struct xdl_emit_buf *eb, xdfile_t *xdf,
+			    long s, long e, char pre, xdemitcb_t *ecb)
+{
+	for (; s < e; s++) {
+		xrecord_t *rec = &xdf->recs[s];
+		size_t size = rec->size;
+
+		if (!size || rec->ptr[size - 1] != '\n' ||
+		    size >= sizeof(eb->buf)) {
+			if (xdl_emit_flush(eb, ecb) < 0 ||
+			    xdl_emit_diffrec((char const *)rec->ptr, (long)size,
+					     &pre, 1, ecb) < 0)
+				return -1;
+			continue;
+		}
+		if (eb->n + size + 1 > sizeof(eb->buf) &&
+		    xdl_emit_flush(eb, ecb) < 0)
+			return -1;
+		eb->buf[eb->n++] = pre;
+		memcpy(eb->buf + eb->n, rec->ptr, size);
+		eb->n += size;
+	}
 	return 0;
 }
 
@@ -172,6 +211,9 @@ int xdl_emit_diff(xdfenv_t *xe, xdchange_t *xscr, xdemitcb_t *ecb,
 	xdchange_t *xch, *xche;
 	long funclineprev = -1;
 	struct func_line func_line = { 0 };
+	struct xdl_emit_buf eb;
+
+	eb.n = 0;
 
 	for (xch = xscr; xch; xch = xche->next) {
 		xdchange_t *xchp = xch;
@@ -280,6 +322,8 @@ pre_context_calculation:
 				      s1 - 1, funclineprev);
 			funclineprev = s1 - 1;
 		}
+		if (xdl_emit_flush(&eb, ecb) < 0)
+			return -1;
 		if (!(xecfg->flags & XDL_EMIT_NO_HUNK_HDR) &&
 		    xdl_emit_hunk_hdr(s1 + 1, e1 - s1, s2 + 1, e2 - s2,
 				      func_line.buf, func_line.len, ecb) < 0)
@@ -288,31 +332,33 @@ pre_context_calculation:
 		/*
 		 * Emit pre-context.
 		 */
-		for (; s2 < xch->i2; s2++)
-			if (xdl_emit_record(&xe->xdf2, s2, " ", ecb) < 0)
-				return -1;
+		if (xdl_emit_records(&eb, &xe->xdf2, s2, xch->i2, ' ', ecb) < 0)
+			return -1;
 
 		for (s1 = xch->i1, s2 = xch->i2;; xch = xch->next) {
 			/*
 			 * Merge previous with current change atom.
 			 */
-			for (; s1 < xch->i1 && s2 < xch->i2; s1++, s2++)
-				if (xdl_emit_record(&xe->xdf2, s2, " ", ecb) < 0)
+			if (s1 < xch->i1 && s2 < xch->i2) {
+				long k = XDL_MIN(xch->i1 - s1, xch->i2 - s2);
+
+				if (xdl_emit_records(&eb, &xe->xdf2, s2, s2 + k, ' ', ecb) < 0)
 					return -1;
+			}
 
 			/*
 			 * Removes lines from the first file.
 			 */
-			for (s1 = xch->i1; s1 < xch->i1 + xch->chg1; s1++)
-				if (xdl_emit_record(&xe->xdf1, s1, "-", ecb) < 0)
-					return -1;
+			if (xdl_emit_records(&eb, &xe->xdf1, xch->i1,
+					     xch->i1 + xch->chg1, '-', ecb) < 0)
+				return -1;
 
 			/*
 			 * Adds lines from the second file.
 			 */
-			for (s2 = xch->i2; s2 < xch->i2 + xch->chg2; s2++)
-				if (xdl_emit_record(&xe->xdf2, s2, "+", ecb) < 0)
-					return -1;
+			if (xdl_emit_records(&eb, &xe->xdf2, xch->i2,
+					     xch->i2 + xch->chg2, '+', ecb) < 0)
+				return -1;
 
 			if (xch == xche)
 				break;
@@ -323,10 +369,10 @@ pre_context_calculation:
 		/*
 		 * Emit post-context.
 		 */
-		for (s2 = xche->i2 + xche->chg2; s2 < e2; s2++)
-			if (xdl_emit_record(&xe->xdf2, s2, " ", ecb) < 0)
-				return -1;
+		if (xdl_emit_records(&eb, &xe->xdf2, xche->i2 + xche->chg2,
+				     e2, ' ', ecb) < 0)
+			return -1;
 	}
 
-	return 0;
+	return xdl_emit_flush(&eb, ecb);
 }
