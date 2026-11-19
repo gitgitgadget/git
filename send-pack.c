@@ -42,17 +42,18 @@ int option_parse_push_signed(const struct option *opt,
 	die("bad %s argument: %s", opt->long_name, arg);
 }
 
-static void append_negative_object(struct repository *r,
-				   struct oid_array *haves,
-				   const struct object_id *oid)
+static int append_negative_object(struct repository *r,
+				  struct oid_array *haves,
+				  const struct object_id *oid)
 {
 	/*
 	 * The remote end may have advertised objects that we do not have in
 	 * our object database. Skip those, as we cannot use them as boundary.
 	 */
 	if (!odb_has_object(r->objects, oid, 0))
-		return;
+		return 0;
 	oid_array_append(haves, oid);
+	return 1;
 }
 
 /*
@@ -89,8 +90,25 @@ static int pack_objects(struct repository *r,
 		append_negative_object(r, &opts.haves, &negotiated->oid[i]);
 
 	while (refs) {
-		if (!is_null_oid(&refs->old_oid))
-			append_negative_object(r, &opts.haves, &refs->old_oid);
+		if (!is_null_oid(&refs->old_oid)) {
+			int added = append_negative_object(r, &opts.haves,
+							   &refs->old_oid);
+
+			/*
+			 * For forced pushes, inspect the old tip's tree to
+			 * avoid sending objects the receiver already has.
+			 * Shallow thin-pack pushes already inspect negative
+			 * tips via --objects-edge-aggressive. Limit this
+			 * optimization to branches because --inspect-have
+			 * requires commits, while other refs may legitimately
+			 * point to trees or blobs.
+			 */
+			if (added && refs->forced_update && !opts.shallow &&
+			    starts_with(refs->name, "refs/heads/") &&
+			    (refs->status == REF_STATUS_OK ||
+			     refs->status == REF_STATUS_EXPECTING_REPORT))
+				oid_array_append(&opts.haves_to_inspect, &refs->old_oid);
+		}
 		if (!is_null_oid(&refs->new_oid))
 			oid_array_append(&opts.wants, &refs->new_oid);
 		refs = refs->next;
