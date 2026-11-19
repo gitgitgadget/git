@@ -21,8 +21,10 @@ my $BORING = qr/$COLOR|\s/;
 
 my @removed;
 my @added;
+my @context;
 my $in_hunk;
 my $graph_indent = 0;
+my $range_diff;
 
 our $line_cb = sub { print @_ };
 our $flush_cb = sub { local $| = 1 };
@@ -72,10 +74,20 @@ sub handle_line {
 		# queued.
 		flush();
 		$graph_indent = visible_width($graph_prefix);
+		$range_diff = 0;
+
+	# match a range-diff commit pair header like "1:  abc1234 ! 1:  def5678";
+	# the diff-of-diffs that follows is indented by 4 columns, which we
+	# strip just like a graph prefix
+	} elsif (/^$COLOR*\s*(?:-+|\d+):\s+(?:-+|[0-9a-f]+)$BORING*[<>=!]$BORING*(?:-+|\d+):/) {
+		flush();
+		$graph_indent = 4;
+		$range_diff = 1;
 
 	} elsif ($graph_indent) {
 		if (length($_) < $graph_indent) {
 			$graph_indent = 0;
+			$range_diff = 0;
 		} else {
 			$_ = visible_substr($_, $graph_indent);
 		}
@@ -83,13 +95,21 @@ sub handle_line {
 
 	if (!$in_hunk) {
 		$line_cb->($orig);
-		$in_hunk = /^$COLOR*\@\@ /;
+		$in_hunk = /^$COLOR*\@\@$COLOR* /;
 	}
 	elsif (/^$COLOR*-/) {
+		flush() if @context;
 		push @removed, $orig;
 	}
 	elsif (/^$COLOR*\+/) {
+		flush() if @context;
 		push @added, $orig;
+	}
+	# in range-diff output, an unchanged line of the inner diff may still be
+	# part of an inner removed/added pair
+	elsif ($range_diff && /^$COLOR* $COLOR*[-+]/) {
+		flush() if @removed || @added;
+		push @context, $orig;
 	}
 	else {
 		flush();
@@ -114,8 +134,34 @@ sub flush {
 	# Flush any queued hunk (this can happen when there is no trailing
 	# context in the final diff of the input).
 	show_hunk(\@removed, \@added);
+	show_inner(\@context);
 	@removed = ();
 	@added = ();
+	@context = ();
+}
+
+# In range-diff output, lines with the same outer marker can still form a
+# removed/added pair in the inner diff, e.g. "+-old" and "++new". Pair those
+# up among the given lines, which all share one outer marker.
+sub show_inner {
+	my (@rm, @add);
+	for my $line (@{$_[0]}) {
+		local $_ = visible_substr($line, $graph_indent);
+		if (/^$COLOR*[-+ ]$COLOR*-/) {
+			if (@add) {
+				show_hunk(\@rm, \@add, 1);
+				@rm = @add = ();
+			}
+			push @rm, $line;
+		} elsif (/^$COLOR*[-+ ]$COLOR*\+/) {
+			push @add, $line;
+		} else {
+			show_hunk(\@rm, \@add, 1);
+			@rm = @add = ();
+			$line_cb->($line);
+		}
+	}
+	show_hunk(\@rm, \@add, 1);
 }
 
 sub highlight_stdin {
@@ -149,20 +195,23 @@ sub color_config {
 }
 
 sub show_hunk {
-	my ($a, $b) = @_;
+	my ($a, $b, $inner) = @_;
 
 	# If one side is empty, then there is nothing to compare or highlight.
-	if (!@$a || !@$b) {
-		$line_cb->(@$a, @$b);
-		return;
-	}
-
+	#
 	# If we have mismatched numbers of lines on each side, we could try to
 	# be clever and match up similar lines. But for now we are simple and
 	# stupid, and only handle multi-line hunks that remove and add the same
 	# number of lines.
-	if (@$a != @$b) {
-		$line_cb->(@$a, @$b);
+	#
+	# For range-diff, fall back to pairing lines within the inner diff.
+	if (!@$a || !@$b || @$a != @$b) {
+		if ($range_diff && !$inner) {
+			show_inner($a);
+			show_inner($b);
+		} else {
+			$line_cb->(@$a, @$b);
+		}
 		return;
 	}
 
@@ -319,8 +368,14 @@ sub is_pair_interesting {
 	my $suffix_a = join('', @$a[($sa+1)..$#$a]);
 	my $suffix_b = join('', @$b[($sb+1)..$#$b]);
 
-	return visible_substr($prefix_a, $graph_indent) !~ /^$COLOR*-$BORING*$/ ||
-	       visible_substr($prefix_b, $graph_indent) !~ /^$COLOR*\+$BORING*$/ ||
+	# range-diff lines carry two markers (outer and inner); either may be
+	# the one that makes this a removed/added pair
+	my ($rm, $add) = $range_diff ?
+		(qr/-$COLOR*[-+ ]|[-+ ]$COLOR*-/, qr/\+$COLOR*[-+ ]|[-+ ]$COLOR*\+/) :
+		(qr/-/, qr/\+/);
+
+	return visible_substr($prefix_a, $graph_indent) !~ /^$COLOR*(?:$rm)$BORING*$/ ||
+	       visible_substr($prefix_b, $graph_indent) !~ /^$COLOR*(?:$add)$BORING*$/ ||
 	       $suffix_a !~ /^$BORING*$/ ||
 	       $suffix_b !~ /^$BORING*$/;
 }

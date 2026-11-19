@@ -378,4 +378,67 @@ test_expect_success 'configure normal/highlight colors' '
 	EOF
 '
 
+dh_range_diff_setup () {
+	git checkout --orphan rd-base &&
+	git rm -rf --cached . >/dev/null &&
+	test_write_lines 1 2 3 4 5 6 >file &&
+	git add file &&
+	git commit -m base &&
+
+	git checkout -b rd-v1 &&
+	test_write_lines 1 "2 x" 3 4 5 6 >file &&
+	git commit -a -m change &&
+
+	git checkout -b rd-v2 rd-base &&
+	test_write_lines 1 "2 x" 3 "4 old" 5 6 >file &&
+	git commit -a -m change &&
+
+	git checkout -b rd-v3 rd-base &&
+	test_write_lines 1 "2 x" 3 "4 new" 5 6 >file &&
+	git commit -a -m change
+}
+
+test_expect_success 'diff-highlight highlights range-diff pair across versions' '
+	dh_range_diff_setup &&
+	git range-diff --creation-factor=999 rd-base rd-v2 rd-v3 |
+		"$DIFF_HIGHLIGHT" >actual.raw &&
+	sed -n "/^ *@@ file/,\$p" actual.raw | test_decode_color >actual &&
+	cat >expect <<-\EOF &&
+	    @@ file
+	     +2 x
+	      3
+	     -4
+	    -+4 <REVERSE>old<NOREVERSE>
+	    ++4 <REVERSE>new<NOREVERSE>
+	      5
+	      6
+	EOF
+	test_cmp expect actual
+'
+
+test_expect_success 'diff-highlight highlights range-diff pair within one version' '
+	git range-diff --creation-factor=999 rd-base rd-v1 rd-v2 |
+		"$DIFF_HIGHLIGHT" >actual.raw &&
+	sed -n "/^ *@@ file/,\$p" actual.raw | test_decode_color >actual &&
+	cat >expect <<-\EOF &&
+	    @@ file
+	     -2<REVERSE><NOREVERSE>
+	     +2<REVERSE> x<NOREVERSE>
+	      3
+	    - 4
+	    +-4<REVERSE><NOREVERSE>
+	    ++4<REVERSE> old<NOREVERSE>
+	      5
+	    + 6
+	EOF
+	test_cmp expect actual
+'
+
+test_expect_success 'diff-highlight highlights colored range-diff' '
+	git range-diff --color --creation-factor=999 rd-base rd-v2 rd-v3 |
+		"$DIFF_HIGHLIGHT" | test_decode_color >actual &&
+	grep "+4 <REVERSE>old<NOREVERSE>" actual &&
+	grep "+4 <REVERSE>new<NOREVERSE>" actual
+'
+
 test_done
