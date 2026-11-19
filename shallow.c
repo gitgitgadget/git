@@ -659,9 +659,19 @@ static void paint_down(struct paint_info *info, const struct object_id *oid,
 		if (c->object.flags & BOTTOM)
 			continue;
 
-		if (repo_parse_commit(the_repository, c))
-			die("unable to parse commit %s",
-			    oid_to_hex(&c->object.oid));
+		if (repo_parse_commit_gently(the_repository, c, 1)) {
+			/*
+			 * remove_nonexistent_theirs_shallow() may have
+			 * dropped a missing boundary, leaving it unmarked
+			 * as BOTTOM. Let the connectivity check reject a
+			 * missing commit, but still die on a corrupt one.
+			 */
+			if (odb_has_object(the_repository->objects,
+					   &c->object.oid, 0))
+				die("unable to parse commit %s",
+				    oid_to_hex(&c->object.oid));
+			continue;
+		}
 
 		for (p = c->parents; p; p = p->next) {
 			if (p->item->object.flags & SEEN)

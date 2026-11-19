@@ -233,8 +233,13 @@ static int check_object(struct object *obj, enum object_type type,
 	if (!(obj->flags & FLAG_OPEN)) {
 		size_t size;
 		int type = odb_read_object_info(the_repository->objects, &obj->oid, &size);
-		if (type != obj->type || type <= 0)
-			die("object of unexpected type");
+		if (type <= 0)
+			die(_("did not receive expected object %s"),
+			    oid_to_hex(&obj->oid));
+		if (type != obj->type)
+			die(_("object %s: expected type %s, found %s"),
+			    oid_to_hex(&obj->oid),
+			    type_name(obj->type), type_name(type));
 		obj->flags |= FLAG_WRITTEN;
 		return 0;
 	}
