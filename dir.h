@@ -182,6 +182,8 @@ struct untracked_cache_dir {
 	/* all data except 'dirs' in this struct are good */
 	unsigned int valid : 1;
 	unsigned int recurse : 1;
+	/* Recomputed after fsmonitor refresh; not saved in the index. */
+	unsigned int valid_empty : 1;
 	/* null object ID means this directory does not have .gitignore */
 	struct object_id exclude_oid;
 	char name[FLEX_ARRAY];
