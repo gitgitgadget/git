@@ -531,11 +531,15 @@ void init_tar_archiver(void)
 	int i;
 	register_archiver(&tar_archiver);
 
+	/* Set built-in defaults first so user config can override them */
 	tar_filter_config("tar.tgz.command", internal_gzip_command, NULL);
 	tar_filter_config("tar.tgz.remote", "true", NULL);
 	tar_filter_config("tar.tar.gz.command", internal_gzip_command, NULL);
 	tar_filter_config("tar.tar.gz.remote", "true", NULL);
+
+	/* Load repository config so user settings override the defaults above */
 	repo_config(the_repository, git_tar_config, NULL);
+
 	for (i = 0; i < nr_tar_filters; i++) {
 		/* omit any filters that never had a command configured */
 		if (tar_filters[i]->filter_command)
