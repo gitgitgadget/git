@@ -159,6 +159,9 @@ struct repo_config_values {
 	int use_nanosec;
 	unsigned int max_ce_namelen;
 
+	/* section "diff" config values */
+	int diff_auto_refresh_index;
+
 	/* section "sparse" config values */
 	int sparse_expect_files_outside_of_patterns;
 
@@ -211,6 +214,8 @@ int repo_ignore_case(struct repository *repo);
 int repo_trust_executable_bit(struct repository *repo);
 
 int repo_has_symlinks(struct repository *repo);
+
+int repo_diff_auto_refresh_index(struct repository *repo);
 
 const char *repo_excludes_file(struct repository *repo);
 

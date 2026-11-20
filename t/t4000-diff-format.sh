@@ -122,4 +122,14 @@ do
 	'
 done
 
+test_expect_success 'diff.autorefreshindex can be set to false' '
+	test_config diff.autorefreshindex false &&
+	git diff-files
+'
+
+test_expect_success 'diff.autorefreshindex can be set to true' '
+	test_config diff.autorefreshindex true &&
+	git diff-files
+'
+
 test_done
