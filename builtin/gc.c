@@ -781,6 +781,7 @@ static int maintenance_opt_schedule(const struct option *opt, const char *arg,
 struct cg_auto_data {
 	int num_not_in_graph;
 	int limit;
+	struct commit_graph *graph;
 };
 
 static int dfs_on_ref(const struct reference *ref, void *cb_data)
@@ -792,8 +793,20 @@ static int dfs_on_ref(const struct reference *ref, void *cb_data)
 	struct commit_list *stack = NULL;
 	struct commit *commit;
 
-	if (!reference_get_peeled_oid(the_repository, ref, &peeled))
+	/*
+	 * A commit in the graph has all its ancestors there too, so it
+	 * adds nothing to the count.  Finding it there avoids peeling and
+	 * reading the object.
+	 */
+	if (commit_graph_contains(data->graph, ref->oid))
+		return 0;
+
+	if (!reference_get_peeled_oid(the_repository, ref, &peeled)) {
+		/* a tag: check what it points to the same way */
+		if (commit_graph_contains(data->graph, &peeled))
+			return 0;
 		maybe_peeled = &peeled;
+	}
 	if (odb_read_object_info(the_repository->objects, maybe_peeled, NULL) != OBJ_COMMIT)
 		return 0;
 
@@ -855,6 +868,7 @@ static int should_write_commit_graph(struct gc_config *cfg UNUSED)
 	if (data.limit < 0)
 		return 1;
 
+	data.graph = prepare_commit_graph(the_repository);
 	result = refs_for_each_ref(get_main_ref_store(the_repository),
 				   dfs_on_ref, &data);
 

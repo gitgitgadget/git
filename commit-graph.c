@@ -1060,6 +1060,14 @@ struct commit *lookup_commit_in_graph(struct repository *repo, const struct obje
 	return commit;
 }
 
+int commit_graph_contains(struct commit_graph *g,
+			  const struct object_id *oid)
+{
+	uint32_t pos;
+
+	return g && search_commit_pos_in_graph(oid, g, &pos);
+}
+
 static int parse_commit_in_graph_one(struct commit_graph *g,
 				     struct commit *item)
 {
@@ -1893,6 +1901,7 @@ struct refs_cb_data {
 	struct repository *repo;
 	struct oidset *commits;
 	struct progress *progress;
+	struct commit_graph *graph;
 };
 
 static int add_ref_to_set(const struct reference *ref, void *cb_data)
@@ -1900,10 +1909,27 @@ static int add_ref_to_set(const struct reference *ref, void *cb_data)
 	const struct object_id *maybe_peeled = ref->oid;
 	struct object_id peeled;
 	struct refs_cb_data *data = (struct refs_cb_data *)cb_data;
+	bool is_commit = false;
 
-	if (!reference_get_peeled_oid(data->repo, ref, &peeled))
-		maybe_peeled = &peeled;
-	if (odb_read_object_info(data->repo->objects, maybe_peeled, NULL) == OBJ_COMMIT)
+	/*
+	 * Only commits are stored in a commit-graph, so a ref found there
+	 * points to a commit and needs neither peeling nor an object read.
+	 * For a tag, check what it points to the same way, and only then
+	 * fall back to reading the object.
+	 */
+	if (commit_graph_contains(data->graph, ref->oid)) {
+		is_commit = true;
+	} else {
+		if (!reference_get_peeled_oid(data->repo, ref, &peeled)) {
+			maybe_peeled = &peeled;
+			is_commit = commit_graph_contains(data->graph, &peeled);
+		}
+		if (!is_commit)
+			is_commit = odb_read_object_info(data->repo->objects,
+							 maybe_peeled, NULL) == OBJ_COMMIT;
+	}
+
+	if (is_commit)
 		oidset_insert(data->commits, maybe_peeled);
 
 	display_progress(data->progress, oidset_size(data->commits));
@@ -1917,6 +1943,7 @@ static void fill_oids_from_reachable(struct write_commit_graph_context *ctx,
 	struct refs_cb_data data = {
 		.repo = ctx->r,
 		.commits = commits,
+		.graph = prepare_commit_graph(ctx->r),
 	};
 
 	if (ctx->opts->flags & COMMIT_GRAPH_WRITE_PROGRESS)
