@@ -388,6 +388,52 @@ test_expect_success UNTRACKED_CACHE 'untracked cache is checked after a trivial 
 	)
 '
 
+for response in trivial failed
+do
+	test_expect_success UNTRACKED_CACHE,!MINGW "stale check-only directories invalidate parents after a $response response" '
+		test_when_finished "rm -rf stale-$response" &&
+		git init stale-$response &&
+		(
+			cd stale-$response &&
+			mkdir -p parent/three/deep &&
+			>parent/keep &&
+			>parent/three/deep/tracked &&
+			git add parent &&
+			git commit -m initial &&
+			git rm --cached parent/three/deep/tracked &&
+			git config core.untrackedCache true &&
+			git config status.showUntrackedFiles normal &&
+			git config core.fsmonitor "$TEST_DIRECTORY/t7519/fsmonitor-none" &&
+			git config core.fsmonitorHookVersion 1 &&
+			test-tool chmtime =1000000000 . parent parent/three parent/three/deep &&
+			cat >../expect <<-\EOF &&
+			D  parent/three/deep/tracked
+			?? parent/three/
+			EOF
+			git status --porcelain >../actual &&
+			test_cmp ../expect ../actual &&
+
+			# Change only the check-only directory after caching it.
+			# Write the index without scanning untracked files.
+			test-tool chmtime +60 parent/three &&
+			if test "$response" = trivial
+			then
+				hook_version=1
+			else
+				# fsmonitor-all fails for version 2.
+				hook_version=2
+			fi &&
+			git -c core.fsmonitor="$TEST_DIRECTORY/t7519/fsmonitor-all" \
+				-c core.fsmonitorHookVersion=$hook_version \
+				update-index --force-write-index &&
+			git status --porcelain >../actual &&
+			test_cmp ../expect ../actual &&
+			git status --porcelain >../actual &&
+			test_cmp ../expect ../actual
+		)
+	'
+done
+
 # test that splitting the index doesn't interfere
 test_expect_success 'splitting the index results in the same state' '
 	write_integration_script &&
