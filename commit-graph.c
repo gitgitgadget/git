@@ -1060,6 +1060,14 @@ struct commit *lookup_commit_in_graph(struct repository *repo, const struct obje
 	return commit;
 }
 
+int commit_graph_contains(struct commit_graph *g,
+			  const struct object_id *oid)
+{
+	uint32_t pos;
+
+	return g && search_commit_pos_in_graph(oid, g, &pos);
+}
+
 static int parse_commit_in_graph_one(struct commit_graph *g,
 				     struct commit *item)
 {

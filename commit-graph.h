@@ -72,6 +72,12 @@ struct commit_graph *repo_find_commit_pos_in_graph(struct repository *r,
 struct commit *lookup_commit_in_graph(struct repository *repo, const struct object_id *id);
 
 /*
+ * Return whether "oid" is in the commit-graph "g", regardless of whether
+ * the object database has it.  Returns 0 if "g" is NULL.
+ */
+int commit_graph_contains(struct commit_graph *g, const struct object_id *oid);
+
+/*
  * It is possible that we loaded commit contents from the commit buffer,
  * but we also want to ensure the commit-graph content is correctly
  * checked and filled. Fill the graph_pos and generation members of
