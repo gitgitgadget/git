@@ -59,7 +59,7 @@ one of these things:
 
    git rebase --skip
 
-See linkgit:gitmergeconflicts[7] (or `git help mergeconflicts`)
+See linkguide:mergeconflicts[]
 for a full guide to handling merge conflicts.
 
 If you don't specify an `<upstream>` to rebase onto, the upstream configured in

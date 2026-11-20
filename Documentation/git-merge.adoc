@@ -49,8 +49,8 @@ a log message from the user describing the changes. Before the operation,
 A merge stops if there's a conflict that cannot be resolved
 automatically or if `--no-commit` was provided when initiating the
 merge. At that point you can run `git merge --abort` or `git merge
---continue`. See linkgit:gitmergeconflicts[7]
-(or `git help mergeconflicts`) for a guide to handling merge conflicts.
+--continue`. See linkguide:mergeconflicts[]
+for a guide to handling merge conflicts.
 
 `git merge --abort` will abort the merge process and try to reconstruct
 the pre-merge state. However, if there were uncommitted changes when the

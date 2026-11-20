@@ -35,7 +35,7 @@ When a merge conflict happens:
    conflict markers `<<<<<<<` and `>>>>>>>`.
 5. No other modifications are made.
 
-See linkgit:gitmergeconflicts[7] (or `git help mergeconflicts`)
+See linkguide:mergeconflicts[]
 for a guide to handling merge conflicts.
 
 OPTIONS
