@@ -745,6 +745,22 @@ test_expect_success 'D: verify file6' '
 	test_cmp expect actual
 '
 
+test_expect_success 'D: fail on inline data cut off at end of input' '
+	cat >input <<-INPUT_END &&
+	commit refs/heads/D-inline-eof
+	committer $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL> $GIT_COMMITTER_DATE
+	data <<COMMIT
+	inline data cut off
+	COMMIT
+
+	M 644 inline file
+	INPUT_END
+
+	test_must_fail git fast-import <input 2>err &&
+	test_grep "expected ${SQ}data n${SQ} command" err &&
+	test_must_fail git rev-parse --verify -q refs/heads/D-inline-eof
+'
+
 ###
 ### series E
 ###
