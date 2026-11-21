@@ -331,6 +331,10 @@ or bad, you can bisect by issuing the command:
 [synopsis]
 git bisect run <cmd> [<arg>...]
 
+_<cmd>_ is run from the top-level directory of the working tree, even
+when `git bisect run` is started from a subdirectory, so a relative
+path to a script is taken relative to the top-level directory.
+
 Note that _<cmd>_ run with _<arg>_  should exit
 with code 0 if the current source code is good/old, and exit with a
 code between 1 and 127 (inclusive), except 125, if the current source
