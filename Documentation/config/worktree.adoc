@@ -18,3 +18,16 @@
 Note that setting `worktree.useRelativePaths` to "`true`" implies enabling the
 `extensions.relativeWorktrees` config (see linkgit:git-config[1]),
 thus making it incompatible with older versions of Git.
+
+`worktree.sharedFile`::
+	Specify a file at the root of the primary worktree to create as a
+	symbolic link in each new linked worktree. This is useful for ignored
+	configuration files which should be shared by all worktrees. Paths
+	containing directory separators are rejected. The variable may be
+	specified more than once to share multiple files.
++
+The source must be a regular file, not a symbolic link. Missing or non-regular
+sources are skipped with a warning. Git does not overwrite a path populated by
+checkout, and warns instead. Shared files are linked before the `post-checkout`
+hook runs. The symbolic link uses the absolute source path. Worktree creation
+fails when symbolic links are disabled.
