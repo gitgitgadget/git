@@ -363,6 +363,9 @@ static void copy_filtered_worktree_config(const char *worktree_git_dir)
 	if (file_exists(from_file)) {
 		struct config_set cs = { { 0 } };
 		int bare;
+		struct string_list keys = STRING_LIST_INIT_DUP;
+		struct string_list_item *item;
+		int i;
 
 		if (safe_create_leading_directories(the_repository, to_file) ||
 			copy_file(the_repository, to_file, from_file, 0666)) {
@@ -385,6 +388,26 @@ static void copy_filtered_worktree_config(const char *worktree_git_dir)
 						       "core.worktree", NULL, NULL))
 			error(_("failed to unset '%s' in '%s'"),
 				"core.worktree", to_file);
+
+		/* unset "submodule.*.gitdir" */
+		for (i = 0; i < cs.list.nr; i++) {
+			const char *var = cs.list.items[i].e->key;
+			const char *subsection, *key;
+			size_t subsection_len;
+
+			if (!parse_config_key(var, "submodule",
+					      &subsection, &subsection_len, &key) &&
+			    subsection && !strcmp(key, "gitdir"))
+				string_list_insert(&keys, var);
+		}
+		for_each_string_list_item(item, &keys) {
+			if (repo_config_set_in_file_gently(the_repository,
+							   to_file, item->string,
+							   NULL, NULL))
+				error(_("failed to unset '%s' in '%s'"),
+				      item->string, to_file);
+		}
+		string_list_clear(&keys, 0);
 
 		git_configset_clear(&cs);
 	}
