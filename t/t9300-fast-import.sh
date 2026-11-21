@@ -745,6 +745,40 @@ test_expect_success 'D: verify file6' '
 	test_cmp expect actual
 '
 
+test_expect_success 'D: fail on inline data cut off at end of input' '
+	cat >input <<-INPUT_END &&
+	commit refs/heads/D-inline-eof
+	committer $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL> $GIT_COMMITTER_DATE
+	data <<COMMIT
+	inline data cut off
+	COMMIT
+
+	M 644 inline file
+	INPUT_END
+
+	test_must_fail git fast-import <input 2>err &&
+	test_grep "expected ${SQ}data n${SQ} command" err &&
+	test_must_fail git rev-parse --verify -q refs/heads/D-inline-eof
+'
+
+test_expect_success 'D: fail on unterminated cat-blob after inline M at end of input' '
+	blob=$(echo hello | git hash-object -w --stdin) &&
+	cat >input <<-INPUT_END &&
+	commit refs/heads/D-inline-cat-blob-eof
+	committer $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL> $GIT_COMMITTER_DATE
+	data <<COMMIT
+	inline data cut off after cat-blob
+	COMMIT
+
+	M 644 inline file
+	INPUT_END
+	printf "cat-blob %s" "$blob" >>input &&
+
+	test_must_fail git fast-import <input >out 2>err &&
+	test_grep "expected ${SQ}data n${SQ} command" err &&
+	test_must_fail git rev-parse --verify -q refs/heads/D-inline-cat-blob-eof
+'
+
 ###
 ### series E
 ###
