@@ -2456,8 +2456,9 @@ static void file_change_m(struct fast_import_state *state,
 		if (S_ISDIR(mode))
 			die(_("directories cannot be specified 'inline': %s"),
 				command_buf.buf);
-		while (read_next_command(state) != EOF) {
+		for (;;) {
 			const char *v;
+			read_next_command(state);
 			if (skip_prefix(command_buf.buf, "cat-blob ", &v))
 				parse_cat_blob(state, v);
 			else {
