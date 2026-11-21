@@ -91,4 +91,133 @@ test_expect_success 'unsetting core.worktree does not prevent running commands d
 	git -C main/.git/worktrees/checkout-recurse/modules/sub log
 '
 
+test_expect_success 'submodule config in worktree config' '
+	test_when_finished "rm -rf wt-config" &&
+	git clone "$base_path/origin/main" wt-config &&
+	(
+		cd wt-config &&
+		git config extensions.worktreeConfig true &&
+		git worktree add wt &&
+		cat .git/config >.git/expect-config &&
+
+		git submodule update --init &&
+		test_cmp .git/expect-config .git/config &&
+		echo "true" >expect &&
+		git config --worktree submodule.sub.active >actual &&
+		test_cmp expect actual &&
+		echo "$base_path/origin/sub" >expect &&
+		git config --worktree submodule.sub.url >actual &&
+		test_cmp expect actual &&
+
+		git submodule deinit sub &&
+		test_cmp .git/expect-config .git/config &&
+		test_must_be_empty .git/config.worktree &&
+
+		git submodule add ../sub sub2 &&
+		test_cmp .git/expect-config .git/config &&
+		echo "true" >expect &&
+		git config --worktree submodule.sub2.active >actual &&
+		test_cmp expect actual &&
+		echo "$base_path/origin/sub" >expect &&
+		git config --worktree submodule.sub2.url >actual &&
+		test_cmp expect actual &&
+
+		git config --file=.gitmodules submodule.sub2.url new_url &&
+		git submodule sync &&
+		test_cmp .git/expect-config .git/config &&
+		echo "new_url" >expect &&
+		git config --worktree submodule.sub2.url >actual &&
+		test_cmp expect actual &&
+
+		cd wt &&
+
+		git submodule update --init &&
+		test_cmp ../.git/expect-config ../.git/config &&
+		echo "true" >expect &&
+		git config --worktree submodule.sub.active >actual &&
+		test_cmp expect actual &&
+		echo "$base_path/origin/sub" >expect &&
+		git config --worktree submodule.sub.url >actual &&
+		test_cmp expect actual &&
+
+		git submodule deinit sub &&
+		test_cmp ../.git/expect-config ../.git/config &&
+		test_must_be_empty ../.git/worktrees/wt/config.worktree &&
+
+		git submodule add ../sub sub2 &&
+		test_cmp ../.git/expect-config ../.git/config &&
+		echo "true" >expect &&
+		git config --worktree submodule.sub2.active >actual &&
+		test_cmp expect actual &&
+		echo "$base_path/origin/sub" >expect &&
+		git config --worktree submodule.sub2.url >actual &&
+		test_cmp expect actual &&
+
+		git config --file=.gitmodules submodule.sub2.url new_url &&
+		git submodule sync &&
+		test_cmp ../.git/expect-config ../.git/config &&
+		echo "new_url" >expect &&
+		git config --worktree submodule.sub2.url >actual &&
+		test_cmp expect actual
+	)
+'
+
+test_expect_success 'deinit overwrites active config' '
+	test_when_finished "rm -rf repo-wt-config" &&
+	git clone "$base_path/origin/main" repo-wt-config &&
+	(
+		cd repo-wt-config &&
+		git submodule update --init &&
+		git config extensions.worktreeConfig true &&
+		git worktree add wt &&
+		cat .git/config >.git/expect-config &&
+
+		git submodule deinit sub &&
+		test_cmp .git/expect-config .git/config &&
+		echo "false" >expect &&
+		git config --worktree submodule.sub.active >actual &&
+		test_cmp expect actual &&
+
+		cd wt &&
+
+		git submodule deinit sub &&
+		test_cmp ../.git/expect-config ../.git/config &&
+		echo "false" >expect &&
+		git config --worktree submodule.sub.active >actual &&
+		test_cmp expect actual
+	)
+'
+
+test_expect_success 'do not copy gitdir in config.worktree' '
+	test_when_finished "rm -rf copy-wt-config" &&
+	git clone "$base_path/origin/main" copy-wt-config &&
+	(
+		cd copy-wt-config &&
+		git config core.repositoryformatversion 1 &&
+		git config extensions.submodulePathConfig true &&
+		git config extensions.worktreeConfig true &&
+
+		git submodule update --init &&
+		echo "true" >expect &&
+		git config --worktree submodule.sub.active >actual &&
+		test_cmp expect actual &&
+		echo "$base_path/origin/sub" >expect &&
+		git config --worktree submodule.sub.url >actual &&
+		test_cmp expect actual &&
+		echo ".git/modules/sub" >expect &&
+		git config --worktree submodule.sub.gitdir >actual &&
+		test_cmp expect actual &&
+
+		git worktree add wt &&
+		cd wt &&
+		echo "true" >expect &&
+		git config --worktree submodule.sub.active >actual &&
+		test_cmp expect actual &&
+		echo "$base_path/origin/sub" >expect &&
+		git config --worktree submodule.sub.url >actual &&
+		test_cmp expect actual &&
+		test_must_fail git config --worktree submodule.sub.gitdir
+	)
+'
+
 test_done

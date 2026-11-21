@@ -78,6 +78,55 @@ test_expect_success 'gitdir config path is relative for both absolute and relati
 	)
 '
 
+test_expect_success 'gitdir for the main worktree is stored in worktree config' '
+	test_when_finished "rm -rf relative-cfg-path-test-main" &&
+	git init -b main relative-cfg-path-test-main &&
+	(
+		cd relative-cfg-path-test-main &&
+		git config core.repositoryformatversion 1 &&
+		git config extensions.submodulePathConfig true &&
+		git config extensions.worktreeConfig true &&
+
+		# Test with absolute URL
+		git submodule add "$TRASH_DIRECTORY/new-sub" sub-abs &&
+		git config --worktree submodule.sub-abs.gitdir >actual &&
+		echo ".git/modules/sub-abs" >expect &&
+		test_cmp expect actual &&
+
+		# Test with relative URL
+		git submodule add ../new-sub sub-rel &&
+		git config --worktree submodule.sub-rel.gitdir >actual &&
+		echo ".git/modules/sub-rel" >expect &&
+		test_cmp expect actual
+	)
+'
+
+test_expect_success 'gitdir for a linked worktree is stored in worktree config' '
+	test_when_finished "rm -rf relative-cfg-path-test-wt" &&
+	git init -b main relative-cfg-path-test-wt &&
+	(
+		cd relative-cfg-path-test-wt &&
+		git config core.repositoryformatversion 1 &&
+		git config extensions.submodulePathConfig true &&
+		git config extensions.worktreeConfig true &&
+
+		git worktree add wt &&
+		cd wt &&
+
+		# Test with absolute URL
+		git submodule add "$TRASH_DIRECTORY/new-sub" sub-abs &&
+		git config --worktree submodule.sub-abs.gitdir >actual &&
+		echo "../.git/worktrees/wt/modules/sub-abs" >expect &&
+		test_cmp expect actual &&
+
+		# Test with relative URL
+		git submodule add ../../new-sub sub-rel &&
+		git config --worktree submodule.sub-rel.gitdir >actual &&
+		echo "../.git/worktrees/wt/modules/sub-rel" >expect &&
+		test_cmp expect actual
+	)
+'
+
 test_expect_success 'clone from repo with both legacy and new-style submodules' '
 	git clone --recurse-submodules main cloned-non-extension &&
 	(
