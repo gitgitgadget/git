@@ -906,10 +906,15 @@ test_expect_success 'explicit pull should update tracking' '
 	)
 '
 
-test_expect_success 'explicit --refmap is allowed only with command-line refspec' '
+test_expect_success '--refmap without command-line refspec replaces where remote.*.fetch stores' '
 	(
 		cd three &&
-		test_must_fail git fetch --refmap="*:refs/remotes/none/*"
+		git update-ref refs/remotes/origin/main base-origin-main &&
+		o=$(git rev-parse --verify refs/remotes/origin/main) &&
+		git fetch --refmap="refs/heads/*:refs/remotes/none/*" origin &&
+		n=$(git rev-parse --verify refs/remotes/origin/main) &&
+		test "$o" = "$n" &&
+		git rev-parse --verify refs/remotes/none/main
 	)
 '
 

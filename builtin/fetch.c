@@ -291,6 +291,14 @@ static void map_refs_without_dst(const struct ref *ref_map,
 	free_refs(unmapped);
 }
 
+static void drop_destinations(struct ref *ref_map)
+{
+	for (struct ref *rm = ref_map; rm; rm = rm->next) {
+		free_one_ref(rm->peer_ref);
+		rm->peer_ref = NULL;
+	}
+}
+
 static void create_fetch_oidset(struct ref **head, struct oidset *out)
 {
 	struct ref *rm = *head;
@@ -585,8 +593,6 @@ static struct ref *get_ref_map(struct remote *remote,
 			for (i = 0; i < remote->fetch.nr; i++)
 				get_fetch_map(ref_map, &remote->fetch.items[i],
 					      &oref_tail, 1);
-	} else if (refmap.nr) {
-		die("--refmap option is only meaningful with command-line refspec(s)");
 	} else {
 		/* Use the defaults */
 		struct branch *branch = branch_get(NULL);
@@ -620,6 +626,11 @@ static struct ref *get_ref_map(struct remote *remote,
 				die(_("couldn't find remote ref HEAD"));
 			ref_map->fetch_head_status = FETCH_HEAD_MERGE;
 			tail = &ref_map->next;
+		}
+
+		if (refmap.nr) {
+			drop_destinations(ref_map);
+			map_refs_without_dst(ref_map, &refmap, &oref_tail);
 		}
 	}
 
