@@ -766,4 +766,109 @@ test_expect_success '--path-walk thin pack' '
 	git -C server index-pack --fix-thin --stdin <out.pack
 '
 
+test_expect_success 'path-walk chunk hints find a same-path base outside the window' '
+	test_when_finished "rm -rf cdc" &&
+	mkdir cdc &&
+	(
+		cd cdc &&
+		git init source &&
+
+		# Distinct sizes sort the unrelated versions between the two
+		# related ones. Exclude their fill bytes from the common data.
+		test-tool genrandom "cdc common" 5m >raw &&
+		tr "abcd" "efgh" <raw >common &&
+		{
+			cat common &&
+			test-tool genzeros 327680
+		} >source/asset &&
+		git -C source add asset &&
+		git -C source commit -m base &&
+		base=$(git -C source rev-parse HEAD:asset) &&
+		extra=262144 &&
+		for fill in a b c d
+		do
+			test-tool genzeros $((5 * 1024 * 1024 + extra)) >zeros &&
+			tr "\000" "$fill" <zeros >source/asset &&
+			git -C source commit -am "unrelated $fill" || return 1
+			extra=$((extra - 65536))
+		done &&
+		{
+			printf "version prefix" &&
+			cat common
+		} >source/asset &&
+		git -C source commit -am target &&
+		target=$(git -C source rev-parse HEAD:asset) &&
+		git -C source rev-parse HEAD >revs &&
+
+		git -C source -c pack.pathWalkUseChunkHints=false pack-objects \
+			--stdout --revs --path-walk --window=3 --threads=1 <revs >stock.pack &&
+		git init --bare stock &&
+		git -C stock index-pack --strict --stdin <stock.pack &&
+		git verify-pack -v stock/objects/pack/*.idx >stock.objects &&
+		test_grep -E "^$target blob +[0-9]+ [0-9]+ [0-9]+$" stock.objects &&
+
+		git -C source -c pack.pathWalkUseChunkHints=true pack-objects \
+			--stdout --revs --path-walk --window=3 --threads=1 <revs >hinted.pack &&
+		git init --bare hinted &&
+		git -C hinted index-pack --strict --stdin <hinted.pack &&
+		git verify-pack -v hinted/objects/pack/*.idx >hinted.objects &&
+		test_grep -E "^$target blob +[0-9]+ [0-9]+ [0-9]+ [0-9]+ $base$" hinted.objects &&
+		git -C hinted cat-file blob "$target" >actual &&
+		test_cmp_bin source/asset actual &&
+
+		git -C source -c pack.pathWalkUseChunkHints=false pack-objects \
+			--stdout --revs --path-walk --window=3 --threads=1 \
+			--window-memory=1g <revs >limited-stock.pack &&
+		git -C source -c pack.pathWalkUseChunkHints=true pack-objects \
+			--stdout --revs --path-walk --window=3 --threads=1 \
+			--window-memory=1g <revs >limited-hinted.pack &&
+		test_cmp_bin limited-stock.pack limited-hinted.pack &&
+
+		# Keep a partial match in the regular window. It can produce
+		# a delta, but not one as small as the older nearly exact base.
+		{
+			dd if=common bs=1048576 count=3 &&
+			test-tool genrandom "cdc weak base" 2129920
+		} >source/asset &&
+		git -C source commit -am "weak base" &&
+		weak=$(git -C source rev-parse HEAD:asset) &&
+		git -C source rev-parse HEAD >revs &&
+		git -C source -c pack.pathWalkUseChunkHints=false pack-objects \
+			--stdout --revs --path-walk --window=3 --threads=1 <revs >weak-stock.pack &&
+		git -C stock index-pack --strict --stdin <weak-stock.pack >weak-stock.hash &&
+		stock_id=$(sed "s/^pack[ 	]*//" weak-stock.hash) &&
+		git verify-pack -v "stock/objects/pack/pack-$stock_id.idx" >weak-stock.objects &&
+		test_grep -E "^$target blob +[0-9]+ [0-9]+ [0-9]+ [0-9]+ $weak$" weak-stock.objects &&
+		git -C source -c pack.pathWalkUseChunkHints=true pack-objects \
+			--stdout --revs --path-walk --window=3 --threads=1 <revs >weak-hinted.pack &&
+		git -C hinted index-pack --strict --stdin <weak-hinted.pack >weak-hinted.hash &&
+		hinted_id=$(sed "s/^pack[ 	]*//" weak-hinted.hash) &&
+		git verify-pack -v "hinted/objects/pack/pack-$hinted_id.idx" >weak-hinted.objects &&
+		test_grep -E "^$target blob +[0-9]+ [0-9]+ [0-9]+ [0-9]+ $base$" weak-hinted.objects &&
+
+		# Put the archived base and target in one pack, leaving the
+		# ordinary window able to read and try loose candidates.
+		git -C source rev-parse HEAD^ >revs &&
+		printf "%s\n" "$base" "$target" >objects &&
+		(cd source && git pack-objects --window=0 .git/objects/pack/pack <../objects) &&
+		git -C source prune-packed &&
+		GIT_TRACE_BARE=1 GIT_TRACE_PACK_ACCESS="$PWD/packed-stock.trace" \
+			git -C source -c pack.pathWalkUseChunkHints=false pack-objects \
+			--stdout --revs --path-walk --window=3 --threads=1 <revs >packed-stock.pack &&
+		GIT_TRACE_BARE=1 GIT_TRACE_PACK_ACCESS="$PWD/packed-hinted.trace" \
+			git -C source -c pack.pathWalkUseChunkHints=true pack-objects \
+			--stdout --revs --path-walk --window=3 --threads=1 <revs >packed-hinted.pack &&
+		test_cmp packed-stock.trace packed-hinted.trace &&
+		test_cmp_bin packed-stock.pack packed-hinted.pack &&
+
+		git -C source -c pack.pathWalkUseChunkHints=true pack-objects \
+			--stdout --revs --path-walk --window=3 --threads=1 \
+			--no-reuse-delta <revs >recomputed.pack &&
+		git -C hinted index-pack --strict --stdin <recomputed.pack >recomputed.hash &&
+		recomputed_id=$(sed "s/^pack[ 	]*//" recomputed.hash) &&
+		git verify-pack -v "hinted/objects/pack/pack-$recomputed_id.idx" >recomputed.objects &&
+		test_grep -E "^$target blob +[0-9]+ [0-9]+ [0-9]+ [0-9]+ $base$" recomputed.objects
+	)
+'
+
 test_done

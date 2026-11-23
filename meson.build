@@ -444,6 +444,7 @@ libgit_sources = [
   'oidtree.c',
   'pack-bitmap-write.c',
   'pack-bitmap.c',
+  'pack-cdc.c',
   'pack-check.c',
   'pack-mtimes.c',
   'pack-objects.c',

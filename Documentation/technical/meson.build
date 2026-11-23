@@ -17,6 +17,7 @@ articles = [
   'large-object-promisors.adoc',
   'long-running-process-protocol.adoc',
   'multi-pack-index.adoc',
+  'pack-chunk-hints.adoc',
   'packfile-uri.adoc',
   'pack-heuristics.adoc',
   'paint-down-to-common.adoc',

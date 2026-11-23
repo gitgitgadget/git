@@ -1,0 +1,70 @@
+= Chunk hints for path-walk packing
+
+The delta search in linkgit:git-pack-objects[1] considers bases in a
+sliding window. A similar version of a large blob can leave that window
+before Git reaches the target. Widening the window keeps more unpacked
+objects and delta indexes in memory and compares more pairs. Chunk hints
+let Git try one base outside the window without keeping its data or
+delta index.
+
+== Collecting fingerprints
+
+Path-walk groups objects by path. Hints are local to one such group and
+are not used by the later global search. The order within a group is
+the delta search order, not the order of commits in the history.
+
+When an eligible blob leaves the window, Git fingerprints it only if
+the ordinary search already read its bytes. Hints cover blobs from
+4 MiB to 64 MiB and do not save preferred bases. Git retains one
+fingerprint set per evicted blob, up to 16 blobs for the current path.
+That limits how many eligible bases Git remembers, not how many chunks
+each set can hold. Git evicts the least recent set as it adds another and
+releases them all when it finishes that path.
+
+Git uses a rolling Gear hash to choose content-defined chunk boundaries.
+A shift in the file need not shift every later boundary, as it would
+with fixed-size chunks. The chunker looks for cuts between 16 KiB and
+256 KiB, with a looser cut criterion starting at 64 KiB. The last
+chunk may be shorter.
+
+Each entry contains a 64-bit FNV-1a fingerprint of the entire chunk
+and the chunk's length. The Gear table and cut masks are constants.
+Git updates both hashes in the same scan where it looks for a cut.
+It sorts the entries and removes duplicates, so repeated chunks do not
+inflate the score. The set does not preserve offsets, order, or
+repetition counts. It cannot reconstruct a blob and is not written to
+disk or sent to a peer.
+
+== Trying a hinted base
+
+The normal search runs first. If it finds a delta no larger than one
+eighth of the target before compression, Git skips the hint. Otherwise,
+if the target bytes are already loaded, Git can compare the target's
+fingerprint set against the retained bases. It screens out bases based
+on delta depth, islands, and the ordinary reuse rules before scoring.
+
+The score is the sum of the lengths of distinct matching chunks. Git
+tries at most one candidate, and only if its score exceeds one quarter
+of the target size. Equal scores favor the more recently evicted base.
+
+Git reloads that base from the local object database without fetching
+missing objects. If that read fails, or the normal byte-level delta
+matcher rejects the candidate, Git keeps the result of the normal
+search. Fingerprint collisions can change which base Git tries, but
+cannot cause it to copy mismatched bytes.
+
+== Cost and compatibility
+
+Hints cost a fingerprint pass over eligible evicted blobs, plus a
+possible base reread. The retained fingerprints and one temporary
+fingerprint set use at most about 1.1 MiB per worker on a typical 64-bit
+build. This does not include rereading a base or building its delta
+index. Rereading a packed base may require reconstructing an on-disk
+delta chain larger than the base itself.
+For that reason Git skips hints when a nonzero window-memory limit
+is set. Hints are off by default; see `pack.pathWalkUseChunkHints`
+in linkgit:git-config[1].
+
+Hints only help choose a base. Git still writes an ordinary delta
+against one base in the existing linkgit:gitformat-pack[5] format.
+The reader does not need to know about the chunker or fingerprints.
