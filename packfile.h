@@ -293,11 +293,13 @@ off_t find_pack_entry_one(const struct object_id *oid, struct packed_git *);
 int packfile_fill_entry(struct packed_git *p,
 			const struct object_id *oid,
 			struct pack_entry *e,
-			struct packed_git **bad_pack);
+			struct packed_git **bad_pack,
+			const struct packed_read_context *read);
 
 int is_pack_valid(struct packed_git *);
 void *unpack_entry(struct repository *r, struct packed_git *, off_t,
-		   enum object_type *, size_t *);
+		   enum object_type *, size_t *, enum object_info_flags,
+		   struct packed_read_context *);
 size_t unpack_object_header_buffer(const unsigned char *buf, size_t len,
 				   enum object_type *type, size_t *sizep);
 size_t get_size_from_delta(struct packed_git *, struct pack_window **, off_t);
@@ -325,9 +327,14 @@ int packed_object_info(struct odb_source_packed *source,
 		       off_t offset, struct object_info *);
 int packed_object_info_with_index_pos(struct odb_source_packed *source,
 				      struct packed_git *p, off_t obj_offset,
-				      uint32_t *maybe_index_pos, struct object_info *oi);
+				      uint32_t *maybe_index_pos, struct object_info *oi,
+				      enum object_info_flags flags);
 
 void mark_bad_packed_object(struct packed_git *, const struct object_id *);
+int packed_read_failed(const struct packed_read_context *, const struct packed_git *,
+		       const struct object_id *);
+void record_packed_read_failure(struct packed_read_context *, struct packed_git *,
+				const struct object_id *);
 
 int has_object_pack(struct repository *r, const struct object_id *oid);
 int has_object_kept_pack(struct repository *r, const struct object_id *oid,

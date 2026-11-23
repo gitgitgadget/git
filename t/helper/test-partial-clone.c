@@ -32,15 +32,35 @@ static void object_info(const char *gitdir, const char *oid_hex)
 	repo_clear(&r);
 }
 
+static void retry_object_info(const char *oid_hex)
+{
+	struct object_id oid;
+	enum object_type type;
+	struct object_info oi = { .typep = &type };
+	struct object_database *odb = the_repository->objects;
+
+	if (get_oid_hex(oid_hex, &oid))
+		die("could not parse oid");
+	if (!odb_read_object_info_extended(odb, &oid, &oi,
+					   OBJECT_INFO_LOOKUP_REPLACE |
+					   OBJECT_INFO_SKIP_FETCH_OBJECT))
+		die("unexpected success without fetching");
+	if (odb_read_object_info_extended(odb, &oid, &oi,
+					  OBJECT_INFO_LOOKUP_REPLACE))
+		die("could not retry object with fetching enabled");
+	puts(type_name(type));
+}
+
 int cmd__partial_clone(int argc, const char **argv)
 {
 	setup_git_directory(the_repository);
 
-	if (argc < 4)
+	if (argc < 2)
 		die("too few arguments");
-
-	if (!strcmp(argv[1], "object-info"))
+	if (argc == 4 && !strcmp(argv[1], "object-info"))
 		object_info(argv[2], argv[3]);
+	else if (argc == 3 && !strcmp(argv[1], "retry-object-info"))
+		retry_object_info(argv[2]);
 	else
 		die("invalid argument '%s'", argv[1]);
 

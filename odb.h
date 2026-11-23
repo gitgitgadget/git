@@ -321,6 +321,13 @@ struct odb_source_info {
 	} u;
 };
 
+struct packed_read_failure;
+
+struct packed_read_context {
+	struct packed_read_failure *failures;
+	size_t nr, alloc;
+};
+
 /*
  * The object info contains the query and response that is to be used for
  * functions that end up reading object information. Callers are expected to
@@ -365,6 +372,9 @@ struct object_info {
 	 * or multiple times in the same source.
 	 */
 	struct odb_source_info *source_infop;
+
+	/* Internal: packed copies excluded for the current no-fetch lookup. */
+	struct packed_read_context *packed_read;
 
 	/*
 	 * object-info protocol specific. Set by the protocol when the remote

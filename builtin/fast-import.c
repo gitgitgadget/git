@@ -1284,7 +1284,8 @@ static void *gfi_unpack_entry(
 		 */
 		p->pack_size = pack_size + the_hash_algo->rawsz;
 	}
-	data = unpack_entry(the_repository, p, oe->idx.offset, &type, &size_st);
+	data = unpack_entry(the_repository, p, oe->idx.offset, &type, &size_st,
+			    0, NULL);
 	if (sizep)
 		*sizep = cast_size_t_to_ulong(size_st);
 	return data;
