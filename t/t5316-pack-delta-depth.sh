@@ -121,4 +121,41 @@ test_expect_success 'negative depth disables deltas' '
 	test_cmp expect actual
 '
 
+test_expect_success '--path-walk accounts for deltas from both searches' '
+	git init path-depth &&
+	(
+		cd path-depth &&
+		mkdir a z &&
+		# Use a common suffix so the global search groups both paths.
+		file=longsamefilename1234567.z &&
+		test-tool genrandom depth 262144 >content &&
+		{
+			cat content &&
+			printf "first"
+		} >"a/$file" &&
+		{
+			cat content &&
+			printf "larger base"
+		} >"z/$file" &&
+		git add a z &&
+		git commit -m base &&
+		base=$(git rev-parse "HEAD:a/$file") &&
+		{
+			printf "shifted" &&
+			test-tool genrandom depth 258048
+		} >"a/$file" &&
+		git commit -am update &&
+		updated=$(git rev-parse "HEAD:a/$file") &&
+
+		pack=$(git pack-objects --all --path-walk --depth=1 \
+			--name-hash-version=1 --threads=1 --no-reuse-delta \
+			--no-reuse-object pack </dev/null) &&
+		max_chain "pack-$pack.pack" >actual &&
+		echo 1 >expect &&
+		test_cmp expect actual &&
+		git verify-pack -v "pack-$pack.idx" >entries &&
+		test_grep "^$updated .* 1 $base$" entries
+	)
+'
+
 test_done

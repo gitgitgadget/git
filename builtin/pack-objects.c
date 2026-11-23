@@ -987,6 +987,32 @@ static void compute_layer_order(struct object_entry **wo, unsigned int *wo_end)
 	}
 }
 
+static void rebuild_delta_children(void)
+{
+	struct object_entry *objects = to_pack.objects;
+	unsigned int i;
+
+	for (i = 0; i < to_pack.nr_objects; i++) {
+		SET_DELTA_CHILD(&objects[i], NULL);
+		SET_DELTA_SIBLING(&objects[i], NULL);
+	}
+
+	/* External bases are roots but can have children as well. */
+	for (i = 0; i < to_pack.nr_ext; i++)
+		SET_DELTA_CHILD(&to_pack.ext_bases[i], NULL);
+
+	/* Link each base's children in the original recency order. */
+	for (i = to_pack.nr_objects; i > 0;) {
+		struct object_entry *entry = &objects[--i];
+		struct object_entry *base = DELTA(entry);
+
+		if (!base)
+			continue;
+		entry->delta_sibling_idx = base->delta_child_idx;
+		SET_DELTA_CHILD(base, entry);
+	}
+}
+
 static struct object_entry **compute_write_order(void)
 {
 	uint32_t max_layers = 1;
@@ -998,23 +1024,8 @@ static struct object_entry **compute_write_order(void)
 	for (i = 0; i < to_pack.nr_objects; i++) {
 		objects[i].tagged = 0;
 		objects[i].filled = 0;
-		SET_DELTA_CHILD(&objects[i], NULL);
-		SET_DELTA_SIBLING(&objects[i], NULL);
 	}
-
-	/*
-	 * Fully connect delta_child/delta_sibling network.
-	 * Make sure delta_sibling is sorted in the original
-	 * recency order.
-	 */
-	for (i = to_pack.nr_objects; i > 0;) {
-		struct object_entry *e = &objects[--i];
-		if (!DELTA(e))
-			continue;
-		/* Mark me as the first child */
-		e->delta_sibling_idx = DELTA(e)->delta_child_idx;
-		SET_DELTA_CHILD(DELTA(e), e);
-	}
+	rebuild_delta_children();
 
 	/*
 	 * Mark objects that are at the tip of tags.
@@ -3648,9 +3659,15 @@ static void prepare_pack(int window, int depth)
 	if (!to_pack.nr_objects || !window || !depth)
 		return;
 
-	if (path_walk)
+	if (path_walk) {
 		ll_find_deltas_by_region(to_pack.objects, to_pack.regions,
 					 0, to_pack.nr_regions);
+		/*
+		 * The remaining search may deltify a base from the path
+		 * pass. Account for its children when limiting its depth.
+		 */
+		rebuild_delta_children();
+	}
 
 	ALLOC_ARRAY(delta_list, to_pack.nr_objects);
 	nr_deltas = n = 0;
