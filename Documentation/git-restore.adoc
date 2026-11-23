@@ -98,7 +98,7 @@ in linkgit:git-checkout[1] for details.
 `--ignore-unmerged`::
 	When restoring files on the working tree from the index, do
 	not abort the operation if there are unmerged entries and
-	neither `--ours`, `--theirs`, `--merge` or `--conflict` is
+	none of `--ours`, `--theirs`, `--merge`, or `--conflict` are
 	specified. Unmerged paths on the working tree are left alone.
 
 `--ignore-skip-worktree-bits`::
