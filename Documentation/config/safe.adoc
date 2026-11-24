@@ -115,8 +115,17 @@ value.
 +
 Repositories on the local filesystem, including those accessed via
 `file://` URLs, are not subject to this check. Neither are remote
-helpers (see linkgit:gitremote-helpers[7]), as Git cannot know which
-hosts they connect to; use `protocol.allow` to restrict them instead.
-For `ssh`, the host checked is the one named in the remote URL, before
-any aliasing performed by the SSH client's own configuration. Proxies,
-e.g. those configured via `core.gitProxy`, are not checked.
+helpers (see linkgit:gitremote-helpers[7]) other than Git's own helpers
+for `http`, `https`, `ftp` and `ftps`, as Git cannot know which hosts
+they connect to; use `protocol.allow` to restrict them instead. For
+`ssh`, the host checked is the one named in the remote URL, before any
+aliasing performed by the SSH client's own configuration. Proxies,
+e.g. those configured via `http.proxy` or `core.gitProxy`, are not
+checked.
++
+For HTTP(S), the host of each redirect (see `http.followRedirects`) and
+of each `http-alternates` entry is checked as well, before Git connects
+or sends any request to it. If Git was built with, or is running
+against, a libcurl older than 7.80.0, it cannot check every request
+that follows a redirect, and so does not follow redirects at all when
+`safe.host` limits the allowed hosts.

@@ -68,6 +68,12 @@ void step_active_slots(void);
 void http_init(struct remote *remote, const char *url,
 	       int proactive_auth);
 void http_cleanup(void);
+
+/*
+ * Returns 1 if safe.host allows connecting to the host named in "url",
+ * or 0 otherwise, in which case an error is reported unless "quiet".
+ */
+int http_is_url_allowed(const char *url, int quiet);
 struct curl_slist *http_copy_default_headers(void);
 
 extern long int git_curl_ipresolve;
