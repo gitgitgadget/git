@@ -8,6 +8,7 @@
 #include "connect.h"
 
 struct fetch_object_info_results;
+struct strbuf;
 
 struct git_transport_options {
 	unsigned thin : 1;
@@ -186,6 +187,37 @@ int is_transport_allowed(const char *type, int from_user);
  * and die otherwise.
  */
 void transport_check_allowed(const char *type);
+
+/*
+ * Returns 1 if safe.host limits the hosts Git may connect to, or 0 if
+ * every host is allowed.
+ */
+int safe_hosts_restricted(void);
+
+/*
+ * Check whether the safe.host configuration permits connecting to
+ * "host" on "port" using the URL scheme "scheme" (e.g. "https" or
+ * "ssh"). A "port" of 0 means the default port for "scheme". "host"
+ * must not include any "user@" prefix; IPv6 literals may be given
+ * with or without surrounding brackets.
+ */
+int is_host_allowed(const char *scheme, const char *host, unsigned int port);
+
+/*
+ * Append to "buf" the narrowest safe.host entry that allows connecting
+ * to "host" on "port" using "scheme", with the same meaning of the
+ * arguments as for is_host_allowed(), e.g. "https://example.com" or
+ * "ssh://[::1]:2222". The port is omitted if it is the scheme's default.
+ */
+void format_safe_host_entry(struct strbuf *buf, const char *scheme,
+			    const char *host, unsigned int port);
+
+/*
+ * Like is_host_allowed(), but die() with advice on how to allow the
+ * connection if it is not allowed.
+ */
+void transport_check_host_allowed(const char *scheme, const char *host,
+				  unsigned int port);
 
 /* Transport options which apply to git:// and scp-style URLs */
 

@@ -769,6 +769,7 @@ integration_tests = [
   't5813-proto-disable-ssh.sh',
   't5814-proto-disable-ext.sh',
   't5815-submodule-protos.sh',
+  't5816-safe-host.sh',
   't5900-repo-selection.sh',
   't6000-rev-list-misc.sh',
   't6001-rev-list-graft.sh',
