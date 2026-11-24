@@ -77,14 +77,9 @@ static const char *end_of_token(const char *s, int c, size_t n)
 	return next;
 }
 
-static int match_host(const struct url_info *url_info,
-		      const struct url_info *pattern_info)
+int urlmatch_host(const char *url, size_t url_len,
+		  const char *pat, size_t pat_len)
 {
-	const char *url = url_info->url + url_info->host_off;
-	const char *pat = pattern_info->url + pattern_info->host_off;
-	int url_len = url_info->host_len;
-	int pat_len = pattern_info->host_len;
-
 	while (url_len && pat_len) {
 		const char *url_next = end_of_token(url, '.', url_len);
 		const char *pat_next = end_of_token(pat, '.', pat_len);
@@ -110,6 +105,15 @@ static int match_host(const struct url_info *url_info,
 	}
 
 	return (!url_len && !pat_len);
+}
+
+static int match_host(const struct url_info *url_info,
+		      const struct url_info *pattern_info)
+{
+	return urlmatch_host(url_info->url + url_info->host_off,
+			     url_info->host_len,
+			     pattern_info->url + pattern_info->host_off,
+			     pattern_info->host_len);
 }
 
 static char *url_normalize_1(const char *url, struct url_info *out_info, bool allow_globs)

@@ -49,6 +49,18 @@ char *url_parse(const char *, struct url_info *);
  */
 char *url_normalize_pattern(const char *url, struct url_info *out_info);
 
+/*
+ * Match the host name "url" (of length "url_len") against the host
+ * pattern "pat" (of length "pat_len"), neither of which need be NUL
+ * terminated. A dot-separated component of "pat" consisting solely of
+ * '*' matches exactly one component of "url"; all other components
+ * must match exactly (callers are expected to have normalized case).
+ *
+ * Returns 1 on a match and 0 otherwise.
+ */
+int urlmatch_host(const char *url, size_t url_len,
+		  const char *pat, size_t pat_len);
+
 struct urlmatch_item {
 	size_t hostmatch_len;
 	size_t pathmatch_len;
