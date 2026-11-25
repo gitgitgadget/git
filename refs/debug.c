@@ -8,6 +8,7 @@ static struct trace_key trace_refs = TRACE_KEY_INIT(REFS);
 struct debug_ref_store {
 	struct ref_store base;
 	struct ref_store *refs;
+	struct ref_storage_be backend;
 };
 
 extern struct ref_storage_be refs_be_debug;
@@ -15,27 +16,25 @@ extern struct ref_storage_be refs_be_debug;
 struct ref_store *maybe_debug_wrap_ref_store(const char *gitdir, struct ref_store *store)
 {
 	struct debug_ref_store *res;
-	struct ref_storage_be *be_copy;
 
 	if (!trace_want(&trace_refs)) {
 		return store;
 	}
 	res = xmalloc(sizeof(struct debug_ref_store));
-	be_copy = xmalloc(sizeof(*be_copy));
-	*be_copy = refs_be_debug;
-	/* we never deallocate backends, so safe to copy the pointer. */
-	be_copy->name = store->be->name;
+	res->backend = refs_be_debug;
+	res->backend.name = store->be->name;
 	trace_printf_key(&trace_refs, "ref_store for %s\n", gitdir);
 	res->refs = store;
 	base_ref_store_init((struct ref_store *)res, store->repo, gitdir,
-			    be_copy);
+			    &res->backend);
 	return (struct ref_store *)res;
 }
 
 static void debug_release(struct ref_store *refs)
 {
 	struct debug_ref_store *drefs = (struct debug_ref_store *)refs;
-	drefs->refs->be->release(drefs->refs);
+	ref_store_release(drefs->refs);
+	free(drefs->refs);
 	trace_printf_key(&trace_refs, "release\n");
 }
 

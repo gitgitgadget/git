@@ -6,6 +6,7 @@
 #include "environment.h"
 #include "hex.h"
 #include "object.h"
+#include "refs.h"
 #include "repository.h"
 #include "setup.h"
 #include "tree.h"
@@ -65,11 +66,27 @@ static void test_get_commit_tree_in_graph(const char *gitdir,
 	repo_clear(&r);
 }
 
+static void test_ref_store(const char *gitdir)
+{
+	struct repository r;
+	struct object_id oid;
+
+	if (repo_init(&r, gitdir, NULL))
+		die("cannot open repository %s", gitdir);
+	if (refs_read_ref(get_main_ref_store(&r), "HEAD", &oid))
+		die("cannot read HEAD");
+	repo_clear(&r);
+}
+
 int cmd__repository(int argc, const char **argv)
 {
 	if (argc < 2)
 		die("must have at least 2 arguments");
-	if (!strcmp(argv[1], "parse_commit_in_graph")) {
+	if (!strcmp(argv[1], "ref-store")) {
+		if (argc != 3)
+			die("usage: test-tool repository ref-store <gitdir>");
+		test_ref_store(argv[2]);
+	} else if (!strcmp(argv[1], "parse_commit_in_graph")) {
 		struct object_id oid;
 		if (argc < 5)
 			die("not enough arguments");
