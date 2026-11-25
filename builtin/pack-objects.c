@@ -5135,8 +5135,16 @@ static int is_not_in_promisor_pack_obj(struct object *obj, void *data UNUSED)
 		.source_infop = &source_info,
 	};
 
-	if (odb_read_object_info_extended(the_repository->objects, &obj->oid, &info, 0))
-		BUG("should_include_obj should only be called on existing objects");
+	if (odb_read_object_info_extended(the_repository->objects, &obj->oid, &info,
+					  OBJECT_INFO_SKIP_FETCH_OBJECT)) {
+		/*
+		 * This is the best-effort pass that repacks local links from an
+		 * incoming promisor pack. A missing object cannot be packed, so
+		 * skip it. If it was not promised, its data was already absent;
+		 * later access still needs a remote to provide it.
+		 */
+		return 0;
+	}
 	return source_info.source->type != ODB_SOURCE_PACKED || !source_info.u.packed.pack->pack_promisor;
 }
 
