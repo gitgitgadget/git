@@ -2935,6 +2935,7 @@ void setup_blame_bloom_data(struct blame_scoreboard *sb)
 
 void cleanup_scoreboard(struct blame_scoreboard *sb)
 {
+	clear_blame_suspects(&blame_suspects);
 	free(sb->lineno);
 	free(sb->final_buf);
 	clear_prio_queue(&sb->commits);

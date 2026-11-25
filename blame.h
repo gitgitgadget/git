@@ -180,6 +180,7 @@ void init_scoreboard(struct blame_scoreboard *sb);
 void setup_scoreboard(struct blame_scoreboard *sb,
 		      struct blame_origin **orig);
 void setup_blame_bloom_data(struct blame_scoreboard *sb);
+/* Release all entry and caller references to origins before clearing the slab. */
 void cleanup_scoreboard(struct blame_scoreboard *sb);
 
 struct blame_entry *blame_entry_prepend(struct blame_entry *head,
