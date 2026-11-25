@@ -200,7 +200,7 @@ static void debug_ref_iterator_release(struct ref_iterator *ref_iterator)
 {
 	struct debug_ref_iterator *diter =
 		(struct debug_ref_iterator *)ref_iterator;
-	diter->iter->vtable->release(diter->iter);
+	ref_iterator_free(diter->iter);
 	trace_printf_key(&trace_refs, "iterator_abort\n");
 }
 

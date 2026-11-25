@@ -55,6 +55,12 @@ test_expect_success 'for_each_ref() is sorted' '
 	test_cmp expected actual
 '
 
+test_expect_success 'for_each_ref() with tracing' '
+	$RUN for-each-ref refs/heads/ >expected &&
+	GIT_TRACE_REFS=1 $RUN for-each-ref refs/heads/ >actual &&
+	test_cmp expected actual
+'
+
 test_expect_success 'resolve_ref(new-main)' '
 	SHA1=`git rev-parse new-main` &&
 	echo "$SHA1 refs/heads/new-main 0x0" >expected &&
