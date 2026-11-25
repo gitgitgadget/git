@@ -32,6 +32,26 @@ promise_and_delete () {
 	delete_object repo "$HASH"
 }
 
+test_expect_success 'fetch --unshallow with tree filter when remote has advanced' '
+	rm -rf server server.bare client &&
+	test_create_repo server &&
+	test_commit -C server c1 &&
+	test_commit -C server c2 &&
+	test_commit -C server c3 &&
+	test_commit -C server c4 &&
+	git clone --bare server server.bare &&
+	git -C server.bare config uploadpack.allowfilter true &&
+	git -C server.bare config uploadpack.allowanysha1inwant true &&
+	git init client &&
+	git -C client remote add origin "file://$(pwd)/server.bare" &&
+	tip=$(git -C server rev-parse HEAD~1) &&
+	git -C client fetch --no-tags --depth=1 origin "+$tip:refs/remotes/origin/master" &&
+	git -C client checkout -b master refs/remotes/origin/master &&
+	git -C client fetch --no-tags --filter=tree:0 --unshallow origin \
+		+refs/heads/master:refs/remotes/origin/master &&
+	rm -rf server server.bare client
+'
+
 test_expect_success 'extensions.partialclone without filter' '
 	test_create_repo server &&
 	git clone --filter="blob:none" "file://$(pwd)/server" client &&
