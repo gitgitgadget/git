@@ -14,6 +14,13 @@ test_expect_success 'setup' '
 	test_commit one
 '
 
+for trace in 0 1
+do
+	test_expect_success "release main ref store with GIT_TRACE_REFS=$trace" '
+		GIT_TRACE_REFS=$trace test-tool repository ref-store .git
+	'
+done
+
 test_expect_success 'create_symref(FOO, refs/heads/main)' '
 	$RUN create-symref FOO refs/heads/main nothing &&
 	echo refs/heads/main >expected &&
