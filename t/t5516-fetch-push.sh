@@ -193,6 +193,49 @@ grep_wrote () {
 	grep 'write_pack_file/wrote.*"value":"'$1'"' $2
 }
 
+for push_args in \
+	"--force origin topic" \
+	"--force-with-lease origin topic" \
+	"origin +topic"
+do
+	test_expect_success "push of rebased branch with $push_args" '
+		mk_test testrepo heads/main &&
+		test_when_finished "rm -rf rebased rebased-push-event" &&
+		git clone testrepo rebased &&
+		(
+			cd rebased &&
+			git checkout -b topic &&
+			test_commit feature &&
+			git push origin topic &&
+			git checkout main &&
+			test_commit upstream path1 &&
+			git push origin main &&
+			git checkout topic &&
+			git rebase main &&
+			test_cmp_rev feature:feature.t HEAD:feature.t &&
+			GIT_TRACE2_EVENT="$D/rebased-push-event" \
+			git -c push.useBitmaps=false push $push_args
+		) &&
+		grep_wrote 2 rebased-push-event # 1 commit, 1 tree
+	'
+done
+
+test_expect_success 'forced update ignores replacement for old tip' '
+	mk_test testrepo heads/main &&
+	test_when_finished "rm -rf replaced" &&
+	git clone testrepo replaced &&
+	(
+		cd replaced &&
+		test_commit old &&
+		git push origin main &&
+		old_tip=$(git rev-parse HEAD) &&
+		git reset --hard HEAD^ &&
+		test_commit new &&
+		git replace "$old_tip" HEAD &&
+		git push --force origin main
+	)
+'
+
 test_expect_success 'push without negotiation' '
 	mk_empty testrepo &&
 	git push testrepo $the_first_commit:refs/remotes/origin/first_commit &&
