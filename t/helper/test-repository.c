@@ -1,12 +1,14 @@
 #define USE_THE_REPOSITORY_VARIABLE
 
 #include "test-tool.h"
+#include "blame.h"
 #include "commit-graph.h"
 #include "commit.h"
 #include "environment.h"
 #include "hex.h"
 #include "object.h"
 #include "repository.h"
+#include "revision.h"
 #include "setup.h"
 #include "tree.h"
 
@@ -65,11 +67,41 @@ static void test_get_commit_tree_in_graph(const char *gitdir,
 	repo_clear(&r);
 }
 
+static void test_blame_scoreboard(const char *path)
+{
+	struct repository *repo = the_repository;
+
+	setup_git_directory(repo);
+	/* A second setup exposes leaks left by the first scoreboard. */
+	for (int i = 0; i < 2; i++) {
+		const char *args[] = { "blame", "HEAD", NULL };
+		struct blame_scoreboard sb;
+		struct blame_origin *origin;
+		struct rev_info revs;
+
+		repo_init_revisions(repo, &revs, NULL);
+		setup_revisions(ARRAY_SIZE(args) - 1, args, &revs, NULL);
+		init_scoreboard(&sb);
+		sb.repo = repo;
+		sb.revs = &revs;
+		sb.path = path;
+		setup_scoreboard(&sb, &origin);
+		blame_origin_decref(origin);
+		cleanup_scoreboard(&sb);
+		release_revisions(&revs);
+	}
+	repo_clear(repo);
+}
+
 int cmd__repository(int argc, const char **argv)
 {
 	if (argc < 2)
 		die("must have at least 2 arguments");
-	if (!strcmp(argv[1], "parse_commit_in_graph")) {
+	if (!strcmp(argv[1], "blame-scoreboard")) {
+		if (argc != 3)
+			die("usage: test-tool repository blame-scoreboard <path>");
+		test_blame_scoreboard(argv[2]);
+	} else if (!strcmp(argv[1], "parse_commit_in_graph")) {
 		struct object_id oid;
 		if (argc < 5)
 			die("not enough arguments");

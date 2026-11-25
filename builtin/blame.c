@@ -1323,6 +1323,7 @@ parse_done:
 cleanup:
 	for (ent = sb.ent; ent; ) {
 		struct blame_entry *e = ent->next;
+		blame_origin_decref(ent->suspect);
 		free(ent);
 		ent = e;
 	}
