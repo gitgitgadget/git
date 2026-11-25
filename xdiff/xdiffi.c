@@ -22,10 +22,13 @@
 
 #include "xinclude.h"
 
-static size_t get_hash(xdfile_t *xdf, long index)
-{
-	return xdf->recs[xdf->reference_index[index]].minimal_perfect_hash;
-}
+/*
+ * Contiguous copies of the class indexes participating in the search.
+ * Comparisons no longer need reference_index followed by a record lookup.
+ */
+typedef struct s_xdmyers {
+	size_t const *ha1, *ha2;
+} xdmyers_t;
 
 #define XDL_MAX_COST_MIN 256
 #define XDL_HEUR_MIN_COST 256
@@ -47,8 +50,8 @@ typedef struct s_xdpsplit {
  * using this algorithm, so a little bit of heuristic is needed to cut the
  * search and to return a suboptimal point.
  */
-static long xdl_split(xdfile_t *xdf1, long off1, long lim1,
-		      xdfile_t *xdf2, long off2, long lim2,
+static long xdl_split(xdmyers_t const *mc, long off1, long lim1,
+		      long off2, long lim2,
 		      long *kvdf, long *kvdb, int need_min, xdpsplit_t *spl,
 		      xdalgoenv_t *xenv) {
 	long dmin = off1 - lim2, dmax = lim1 - off2;
@@ -92,7 +95,7 @@ static long xdl_split(xdfile_t *xdf1, long off1, long lim1,
 				i1 = kvdf[d + 1];
 			prev1 = i1;
 			i2 = i1 - d;
-			for (; i1 < lim1 && i2 < lim2 && get_hash(xdf1, i1) == get_hash(xdf2, i2); i1++, i2++);
+			for (; i1 < lim1 && i2 < lim2 && mc->ha1[i1] == mc->ha2[i2]; i1++, i2++);
 			if (i1 - prev1 > xenv->snake_cnt)
 				got_snake = 1;
 			kvdf[d] = i1;
@@ -129,7 +132,7 @@ static long xdl_split(xdfile_t *xdf1, long off1, long lim1,
 				i1 = kvdb[d + 1] - 1;
 			prev1 = i1;
 			i2 = i1 - d;
-			for (; i1 > off1 && i2 > off2 && get_hash(xdf1, i1 - 1) == get_hash(xdf2, i2 - 1); i1--, i2--);
+			for (; i1 > off1 && i2 > off2 && mc->ha1[i1 - 1] == mc->ha2[i2 - 1]; i1--, i2--);
 			if (prev1 - i1 > xenv->snake_cnt)
 				got_snake = 1;
 			kvdb[d] = i1;
@@ -164,7 +167,7 @@ static long xdl_split(xdfile_t *xdf1, long off1, long lim1,
 				if (v > XDL_K_HEUR * ec && v > best &&
 				    off1 + xenv->snake_cnt <= i1 && i1 < lim1 &&
 				    off2 + xenv->snake_cnt <= i2 && i2 < lim2) {
-					for (k = 1; get_hash(xdf1, i1 - k) == get_hash(xdf2, i2 - k); k++)
+					for (k = 1; mc->ha1[i1 - k] == mc->ha2[i2 - k]; k++)
 						if (k == xenv->snake_cnt) {
 							best = v;
 							spl->i1 = i1;
@@ -188,7 +191,7 @@ static long xdl_split(xdfile_t *xdf1, long off1, long lim1,
 				if (v > XDL_K_HEUR * ec && v > best &&
 				    off1 < i1 && i1 <= lim1 - xenv->snake_cnt &&
 				    off2 < i2 && i2 <= lim2 - xenv->snake_cnt) {
-					for (k = 0; get_hash(xdf1, i1 + k) == get_hash(xdf2, i2 + k); k++)
+					for (k = 0; mc->ha1[i1 + k] == mc->ha2[i2 + k]; k++)
 						if (k == xenv->snake_cnt - 1) {
 							best = v;
 							spl->i1 = i1;
@@ -262,52 +265,85 @@ static long xdl_split(xdfile_t *xdf1, long off1, long lim1,
  * sub-boxes by calling the box splitting function. Note that the real job
  * (marking changed lines) is done in the two boundary reaching checks.
  */
+static int xdl_recs_cmp_flat(xdmyers_t const *mc,
+			     xdfile_t *xdf1, long off1, long lim1,
+			     xdfile_t *xdf2, long off2, long lim2,
+			     long *kvdf, long *kvdb, int need_min,
+			     xdalgoenv_t *xenv) {
+	for (;;) {
+		xdpsplit_t spl;
+
+		for (; off1 < lim1 && off2 < lim2 &&
+		       mc->ha1[off1] == mc->ha2[off2]; off1++, off2++)
+			;
+		for (; off1 < lim1 && off2 < lim2 &&
+		       mc->ha1[lim1 - 1] == mc->ha2[lim2 - 1]; lim1--, lim2--)
+			;
+
+		if (off1 == lim1) {
+			for (; off2 < lim2; off2++)
+				xdf2->changed[xdf2->reference_index[off2]] = true;
+			return 0;
+		}
+		if (off2 == lim2) {
+			for (; off1 < lim1; off1++)
+				xdf1->changed[xdf1->reference_index[off1]] = true;
+			return 0;
+		}
+		spl.i1 = spl.i2 = 0;
+
+		if (xdl_split(mc, off1, lim1, off2, lim2, kvdf, kvdb,
+			      need_min, &spl, xenv) < 0)
+			return -1;
+
+		/*
+		 * Preserve the recursive traversal order, but handle the
+		 * second half by looping rather than adding a stack frame.
+		 */
+		if (xdl_recs_cmp_flat(mc, xdf1, off1, spl.i1,
+				      xdf2, off2, spl.i2,
+				      kvdf, kvdb, spl.min_lo, xenv) < 0)
+			return -1;
+		off1 = spl.i1;
+		off2 = spl.i2;
+		need_min = spl.min_hi;
+	}
+}
+
+
+static size_t *xdl_gather_hashes(xdfile_t *xdf, long off, long lim)
+{
+	size_t *ha;
+	long i;
+
+	if (!XDL_ALLOC_ARRAY(ha, lim > 0 ? lim : 1))
+		return NULL;
+	for (i = off; i < lim; i++)
+		ha[i] = xdf->recs[xdf->reference_index[i]].minimal_perfect_hash;
+	return ha;
+}
+
+
 int xdl_recs_cmp(xdfile_t *xdf1, long off1, long lim1,
 		 xdfile_t *xdf2, long off2, long lim2,
 		 long *kvdf, long *kvdb, int need_min, xdalgoenv_t *xenv) {
+	xdmyers_t mc;
+	size_t *ha1, *ha2;
+	int res;
 
-	/*
-	 * Shrink the box by walking through each diagonal snake (SW and NE).
-	 */
-	for (; off1 < lim1 && off2 < lim2 && get_hash(xdf1, off1) == get_hash(xdf2, off2); off1++, off2++);
-	for (; off1 < lim1 && off2 < lim2 && get_hash(xdf1, lim1 - 1) == get_hash(xdf2, lim2 - 1); lim1--, lim2--);
-
-	/*
-	 * If one dimension is empty, then all records on the other one must
-	 * be obviously changed.
-	 */
-	if (off1 == lim1) {
-		for (; off2 < lim2; off2++)
-			xdf2->changed[xdf2->reference_index[off2]] = true;
-	} else if (off2 == lim2) {
-		for (; off1 < lim1; off1++)
-			xdf1->changed[xdf1->reference_index[off1]] = true;
-	} else {
-		xdpsplit_t spl;
-		spl.i1 = spl.i2 = 0;
-
-		/*
-		 * Divide ...
-		 */
-		if (xdl_split(xdf1, off1, lim1, xdf2, off2, lim2, kvdf, kvdb,
-			      need_min, &spl, xenv) < 0) {
-
-			return -1;
-		}
-
-		/*
-		 * ... et Impera.
-		 */
-		if (xdl_recs_cmp(xdf1, off1, spl.i1, xdf2, off2, spl.i2,
-				 kvdf, kvdb, spl.min_lo, xenv) < 0 ||
-		    xdl_recs_cmp(xdf1, spl.i1, lim1, xdf2, spl.i2, lim2,
-				 kvdf, kvdb, spl.min_hi, xenv) < 0) {
-
-			return -1;
-		}
+	if (!(ha1 = xdl_gather_hashes(xdf1, off1, lim1)))
+		return -1;
+	if (!(ha2 = xdl_gather_hashes(xdf2, off2, lim2))) {
+		xdl_free(ha1);
+		return -1;
 	}
-
-	return 0;
+	mc.ha1 = ha1;
+	mc.ha2 = ha2;
+	res = xdl_recs_cmp_flat(&mc, xdf1, off1, lim1, xdf2, off2, lim2,
+				kvdf, kvdb, need_min, xenv);
+	xdl_free(ha2);
+	xdl_free(ha1);
+	return res;
 }
 
 
@@ -786,6 +822,92 @@ static int group_slide_up(xdfile_t *xdf, struct xdlgroup *g)
 }
 
 /*
+ * changed[] holds bool values (0 or 1), so a word is zero iff all of its
+ * lines are unchanged, and the sum of its bytes counts changed lines.
+ * Callers use these word operations only when bool occupies one byte.
+ */
+static inline uint64_t load_changed8(const bool *p)
+{
+	uint64_t w;
+
+	memcpy(&w, p, sizeof(w));
+	return w;
+}
+
+/* Return the first changed index in [from, lim), or lim. */
+static long next_changed(const bool *changed, long from, long lim)
+{
+	long i = from;
+
+	while (sizeof(bool) == 1 && lim - i >= 8 &&
+	       !load_changed8(changed + i))
+		i += 8;
+	while (i < lim && !changed[i])
+		i++;
+	return i;
+}
+
+/*
+ * Return the k-th (k >= 1) unchanged index after from. The false sentinel
+ * at changed[lim] bounds the search.
+ */
+static long kth_unchanged_after(const bool *changed, long from, long k, long lim)
+{
+	long i = from + 1;
+
+	while (i <= lim) {
+		if (sizeof(bool) == 1 && lim - i >= 8) {
+			uint64_t w = load_changed8(changed + i);
+			long zeros = 8 - (long)((w * 0x0101010101010101ULL) >> 56);
+
+			if (zeros < k) {
+				k -= zeros;
+				i += 8;
+				continue;
+			}
+		}
+		if (!changed[i] && !--k)
+			return i;
+		i++;
+	}
+	return lim;
+}
+
+/*
+ * Advance an empty group and its counterpart as repeated group_next()
+ * calls would. Stop before the next non-empty group, or at end of file.
+ */
+static void skip_empty_groups(xdfile_t *xdf, struct xdlgroup *g,
+			      xdfile_t *xdfo, struct xdlgroup *go)
+{
+	long nrec = (long)xdf->nrec, nreco = (long)xdfo->nrec;
+	long p = g->end, q, k, prev, e;
+
+	if (p >= nrec)
+		return;
+	q = next_changed(xdf->changed, p + 1, nrec);
+	if (q >= nrec)
+		q = nrec + 1; /* changed[nrec] is a false sentinel */
+	k = q - 1 - p;
+	if (k <= 0)
+		return;
+
+	/*
+	 * Each group_next() moves end to the next unchanged index, and
+	 * start to the previous end plus one.
+	 */
+	if (k > nreco - go->end)
+		return; /* let group_next() report the broken sync */
+	prev = k > 1 ?
+		kth_unchanged_after(xdfo->changed, go->end, k - 1, nreco) :
+		go->end;
+	e = kth_unchanged_after(xdfo->changed, prev, 1, nreco);
+	go->start = prev + 1;
+	go->end = e;
+	g->start = g->end = q - 1;
+}
+
+/*
  * Move back and forward change groups for a consistent and pretty diff output.
  * This also helps in finding joinable change groups and reducing the diff
  * size.
@@ -803,8 +925,10 @@ int xdl_change_compact(xdfile_t *xdf, xdfile_t *xdfo, long flags) {
 		/*
 		 * If the group is empty in the to-be-compacted file, skip it:
 		 */
-		if (g.end == g.start)
+		if (g.end == g.start) {
+			skip_empty_groups(xdf, &g, xdfo, &go);
 			goto next;
+		}
 
 		g_orig = g;
 
@@ -980,7 +1104,14 @@ int xdl_build_script(xdfenv_t *xe, xdchange_t **xscr) {
 	/*
 	 * Trivial. Collects "groups" of changes and creates an edit script.
 	 */
-	for (i1 = xe->xdf1.nrec, i2 = xe->xdf2.nrec; i1 >= 0 || i2 >= 0; i1--, i2--)
+	for (i1 = xe->xdf1.nrec, i2 = xe->xdf2.nrec; i1 >= 0 || i2 >= 0; i1--, i2--) {
+		/* Skip lines unchanged on both sides, eight at a time. */
+		while (sizeof(bool) == 1 && i1 >= 8 && i2 >= 8 &&
+		       !load_changed8(changed1 + i1 - 8) &&
+		       !load_changed8(changed2 + i2 - 8)) {
+			i1 -= 8;
+			i2 -= 8;
+		}
 		if (changed1[i1 - 1] || changed2[i2 - 1]) {
 			for (l1 = i1; changed1[i1 - 1]; i1--);
 			for (l2 = i2; changed2[i2 - 1]; i2--);
@@ -991,6 +1122,7 @@ int xdl_build_script(xdfenv_t *xe, xdchange_t **xscr) {
 			}
 			cscr = xch;
 		}
+	}
 
 	*xscr = cscr;
 
