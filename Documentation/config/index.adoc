@@ -41,7 +41,9 @@ index.skipHash::
 	This accelerates Git commands that manipulate the index, such as
 	`git add`, `git commit`, or `git status`. Instead of storing the
 	checksum, write a trailing set of bytes with value zero, indicating
-	that the computation was skipped.
+	that the computation was skipped. The shared index of a split index
+	(see `core.splitIndex`) is still hashed, as it is named after its
+	hash.
 +
 If you enable `index.skipHash`, then Git clients older than 2.13.0 will
 refuse to parse the index and Git clients older than 2.40.0 will report an

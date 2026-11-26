@@ -1691,11 +1691,6 @@ do
 		git init update-after-read &&
 		(
 			cd update-after-read &&
-			if test $skip_hash = true
-			then
-				# index.skipHash does not work with a split index.
-				sane_unset GIT_TEST_SPLIT_INDEX
-			fi &&
 			git config index.skipHash $skip_hash &&
 			test_commit base &&
 			write_script .git/fsmonitor-hook <<-\EOF &&
@@ -1769,11 +1764,6 @@ do
 	test_expect_success "status refresh does not overwrite an index update made while collecting (index.skipHash=$skip_hash)" '
 		test_when_finished "rm -rf refresh-while-collecting" &&
 		(
-			if test $skip_hash = true
-			then
-				# index.skipHash does not work with a split index.
-				sane_unset GIT_TEST_SPLIT_INDEX
-			fi &&
 			setup_index_update_during_collection refresh-while-collecting &&
 			cd refresh-while-collecting &&
 			git config index.skipHash $skip_hash &&

@@ -2878,7 +2878,8 @@ enum write_extensions {
  * rely on it.
  */
 static int do_write_index(struct index_state *istate, struct tempfile *tempfile,
-			  enum write_extensions write_extensions, unsigned flags)
+			  enum write_extensions write_extensions, unsigned flags,
+			  int skip_hash)
 {
 	uint64_t start = getnanotime();
 	struct hashfile *f;
@@ -2900,9 +2901,7 @@ static int do_write_index(struct index_state *istate, struct tempfile *tempfile,
 	int nr, nr_threads, ret;
 
 	f = hashfd(the_repository->hash_algo, tempfile->fd, tempfile->filename.buf);
-
-	prepare_repo_settings(r);
-	f->skip_hash = r->settings.index_skip_hash;
+	f->skip_hash = skip_hash;
 
 	for (i = removed = extended = 0; i < entries; i++) {
 		if (cache[i]->ce_flags & CE_REMOVE)
@@ -3224,9 +3223,11 @@ static int do_write_locked_index(struct index_state *istate,
 		return ret;
 	}
 
+	prepare_repo_settings(istate->repo);
 	trace2_region_enter_printf("index", "do_write_index", istate->repo,
 				   "%s", get_lock_file_path(lock));
-	ret = do_write_index(istate, lock->tempfile, write_extensions, flags);
+	ret = do_write_index(istate, lock->tempfile, write_extensions, flags,
+			     istate->repo->settings.index_skip_hash);
 	trace2_region_leave_printf("index", "do_write_index", istate->repo,
 				   "%s", get_lock_file_path(lock));
 
@@ -3339,9 +3340,14 @@ static int write_shared_index(struct index_state *istate,
 	move_cache_to_base_index(istate);
 	convert_to_sparse(istate, 0);
 
+	/*
+	 * The shared index is named after its trailing hash, which the
+	 * split index records to find it: compute it even with
+	 * index.skipHash.
+	 */
 	trace2_region_enter_printf("index", "shared/do_write_index",
 				   the_repository, "%s", get_tempfile_path(*temp));
-	ret = do_write_index(si->base, *temp, WRITE_NO_EXTENSION, flags);
+	ret = do_write_index(si->base, *temp, WRITE_NO_EXTENSION, flags, 0);
 	trace2_region_leave_printf("index", "shared/do_write_index",
 				   the_repository, "%s", get_tempfile_path(*temp));
 

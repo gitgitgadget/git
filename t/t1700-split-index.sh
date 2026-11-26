@@ -544,4 +544,27 @@ test_expect_success 'GIT_TEST_SPLIT_INDEX works' '
 	)
 '
 
+test_expect_success 'shared index is hashed even with index.skipHash' '
+	git init skip-hash &&
+	(
+		cd skip-hash &&
+		git config core.splitIndex true &&
+		git config index.skipHash true &&
+		test_commit one &&
+		test_commit two &&
+
+		test-tool dump-split-index .git/index >dump &&
+		echo "own $ZERO_OID" >expect &&
+		grep "^own " dump >actual &&
+		test_cmp expect actual &&
+		base=$(sed -n "s/^base //p" dump) &&
+		test "$base" != "$ZERO_OID" &&
+		test_path_is_file .git/sharedindex.$base &&
+
+		git ls-files >actual &&
+		test_write_lines one.t two.t >expect &&
+		test_cmp expect actual
+	)
+'
+
 test_done
