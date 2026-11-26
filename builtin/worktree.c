@@ -131,6 +131,7 @@ static int verbose;
 static int guess_remote;
 static int use_relative_paths;
 static timestamp_t expire;
+static struct string_list shared_files = STRING_LIST_INIT_DUP;
 
 static int git_worktree_config(const char *var, const char *value,
 			       const struct config_context *ctx, void *cb)
@@ -140,6 +141,14 @@ static int git_worktree_config(const char *var, const char *value,
 		return 0;
 	} else if (!strcmp(var, "worktree.userelativepaths")) {
 		use_relative_paths = git_config_bool(var, value);
+		return 0;
+	} else if (!strcmp(var, "worktree.sharedfile")) {
+		if (!value || is_absolute_path(value) ||
+		    strchr(value, '/') || strchr(value, '\\') ||
+		    !verify_path(value, S_IFREG))
+			return error(_("invalid value for worktree.sharedFile: %s"),
+				     value ? value : "");
+		string_list_append(&shared_files, value);
 		return 0;
 	}
 
@@ -455,6 +464,73 @@ static void setup_alternate_ref_dir(struct worktree *wt, const char *wt_git_path
 	strbuf_release(&sb);
 }
 
+static int link_shared_files(const char *path)
+{
+	struct worktree **worktrees;
+	struct string_list_item *item;
+	struct strbuf source = STRBUF_INIT;
+	struct strbuf destination = STRBUF_INIT;
+	struct strbuf primary = STRBUF_INIT;
+	struct strbuf target = STRBUF_INIT;
+	int ret = 0;
+
+	if (!shared_files.nr)
+		return 0;
+	if (!repo_has_symlinks(the_repository))
+		return error(_("worktree.sharedFile requires symbolic link support"));
+
+	worktrees = get_worktrees_without_reading_head(the_repository);
+	if (worktrees[0]->is_bare) {
+		warning(_("not linking shared files: primary worktree is bare"));
+		goto done;
+	}
+
+	strbuf_realpath(&primary, worktrees[0]->path, 1);
+	strbuf_realpath(&target, path, 1);
+
+	for_each_string_list_item(item, &shared_files) {
+		struct stat st;
+
+		strbuf_reset(&source);
+		strbuf_addf(&source, "%s/%s", primary.buf, item->string);
+		if (lstat(source.buf, &st)) {
+			warning_errno(_("not linking shared file '%s'"), source.buf);
+			continue;
+		}
+		if (!S_ISREG(st.st_mode)) {
+			warning(_("not linking shared file '%s': not a regular file"),
+				source.buf);
+			continue;
+		}
+
+		strbuf_reset(&destination);
+		strbuf_addf(&destination, "%s/%s", target.buf, item->string);
+		if (!lstat(destination.buf, &st)) {
+			warning(_("not linking shared file '%s': destination already exists"),
+				item->string);
+			continue;
+		} else if (errno != ENOENT) {
+			ret = error_errno(_("could not inspect shared file destination '%s'"),
+					  destination.buf);
+			goto done;
+		}
+
+		if (symlink(source.buf, destination.buf)) {
+			ret = error_errno(_("could not link shared file '%s'"),
+					  destination.buf);
+			goto done;
+		}
+	}
+
+done:
+	free_worktrees(worktrees);
+	strbuf_release(&source);
+	strbuf_release(&destination);
+	strbuf_release(&primary);
+	strbuf_release(&target);
+	return ret;
+}
+
 static int add_worktree(const char *path, const char *refname,
 			const struct add_opts *opts)
 {
@@ -590,6 +666,8 @@ static int add_worktree(const char *path, const char *refname,
 
 	if (opts->checkout &&
 	    (ret = checkout_worktree(opts, &child_env)))
+		goto done;
+	if ((ret = link_shared_files(path)))
 		goto done;
 
 	is_junk = 0;
