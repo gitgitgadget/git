@@ -1048,17 +1048,22 @@ static int get_delta_base_oid(struct packed_git *p,
 
 static int retry_bad_packed_offset(struct repository *r,
 				   struct packed_git *p,
-				   off_t obj_offset)
+				   off_t obj_offset,
+				   enum object_info_flags flags,
+				   struct packed_read_context *read)
 {
-	int type;
+	struct object_info oi = { .packed_read = read };
+	enum object_type type;
 	uint32_t pos;
 	struct object_id oid;
 	if (offset_to_pack_pos(p, obj_offset, &pos) < 0)
 		return OBJ_BAD;
 	nth_packed_object_id(&oid, p, pack_pos_to_index(p, pos));
-	mark_bad_packed_object(p, &oid);
-	type = odb_read_object_info(r->objects, &oid, NULL);
-	if (type <= OBJ_NONE)
+	record_packed_read_failure(read, p, &oid);
+	oi.typep = &type;
+	flags = OBJECT_INFO_LOOKUP_REPLACE | (flags & OBJECT_INFO_SKIP_FETCH_OBJECT);
+	if (odb_read_object_info_extended(r->objects, &oid, &oi, flags) < 0 ||
+	    type <= OBJ_NONE)
 		return OBJ_BAD;
 	return type;
 }
@@ -1070,7 +1075,9 @@ static enum object_type packed_to_object_type(struct repository *r,
 					      off_t obj_offset,
 					      enum object_type type,
 					      struct pack_window **w_curs,
-					      off_t curpos)
+					      off_t curpos,
+					      enum object_info_flags flags,
+					      struct packed_read_context *read)
 {
 	off_t small_poi_stack[POI_STACK_PREALLOC];
 	off_t *poi_stack = small_poi_stack;
@@ -1097,7 +1104,7 @@ static enum object_type packed_to_object_type(struct repository *r,
 		if (type <= OBJ_NONE) {
 			/* If getting the base itself fails, we first
 			 * retry the base, otherwise unwind */
-			type = retry_bad_packed_offset(r, p, base_offset);
+			type = retry_bad_packed_offset(r, p, base_offset, flags, read);
 			if (type > OBJ_NONE)
 				goto out;
 			goto unwind;
@@ -1125,7 +1132,7 @@ out:
 unwind:
 	while (poi_stack_nr) {
 		obj_offset = poi_stack[--poi_stack_nr];
-		type = retry_bad_packed_offset(r, p, obj_offset);
+		type = retry_bad_packed_offset(r, p, obj_offset, flags, read);
 		if (type > OBJ_NONE)
 			goto out;
 	}
@@ -1220,13 +1227,15 @@ static void detach_delta_base_cache_entry(struct delta_base_cache_entry *ent)
 
 static void *cache_or_unpack_entry(struct repository *r, struct packed_git *p,
 				   off_t base_offset, size_t *base_size,
-				   enum object_type *type)
+				   enum object_type *type,
+				   enum object_info_flags flags,
+				   struct packed_read_context *read)
 {
 	struct delta_base_cache_entry *ent;
 
 	ent = get_delta_base_cache_entry(p, base_offset);
 	if (!ent)
-		return unpack_entry(r, p, base_offset, type, base_size);
+		return unpack_entry(r, p, base_offset, type, base_size, flags, read);
 
 	if (type)
 		*type = ent->type;
@@ -1318,9 +1327,12 @@ static void add_delta_base_cache(struct packed_git *p, off_t base_offset,
 
 int packed_object_info_with_index_pos(struct odb_source_packed *source,
 				      struct packed_git *p, off_t obj_offset,
-				      uint32_t *maybe_index_pos, struct object_info *oi)
+				      uint32_t *maybe_index_pos, struct object_info *oi,
+				      enum object_info_flags flags)
 {
 	struct pack_window *w_curs = NULL;
+	struct packed_read_context *read =
+		flags & OBJECT_INFO_SKIP_FETCH_OBJECT ? oi->packed_read : NULL;
 	size_t size;
 	off_t curpos = obj_offset;
 	enum object_type type = OBJ_NONE;
@@ -1333,7 +1345,7 @@ int packed_object_info_with_index_pos(struct odb_source_packed *source,
 	 */
 	if (oi->contentp) {
 		*oi->contentp = cache_or_unpack_entry(p->repo, p, obj_offset,
-						      oi->sizep, &type);
+						      oi->sizep, &type, flags, read);
 		if (!*oi->contentp)
 			type = OBJ_BAD;
 	} else if (oi->sizep || oi->typep || oi->delta_base_oid) {
@@ -1392,7 +1404,7 @@ int packed_object_info_with_index_pos(struct odb_source_packed *source,
 	if (oi->typep) {
 		enum object_type ptot;
 		ptot = packed_to_object_type(p->repo, p, obj_offset,
-					     type, &w_curs, curpos);
+					     type, &w_curs, curpos, flags, read);
 		if (oi->typep)
 			*oi->typep = ptot;
 		if (ptot < 0) {
@@ -1448,7 +1460,7 @@ int packed_object_info(struct odb_source_packed *source,
 		       struct packed_git *p, off_t obj_offset,
 		       struct object_info *oi)
 {
-	return packed_object_info_with_index_pos(source, p, obj_offset, NULL, oi);
+	return packed_object_info_with_index_pos(source, p, obj_offset, NULL, oi, 0);
 }
 
 static void *unpack_compressed_entry(struct packed_git *p,
@@ -1513,7 +1525,8 @@ struct unpack_entry_stack_ent {
 };
 
 void *unpack_entry(struct repository *r, struct packed_git *p, off_t obj_offset,
-		   enum object_type *final_type, size_t *final_size)
+		   enum object_type *final_type, size_t *final_size,
+		   enum object_info_flags flags, struct packed_read_context *read)
 {
 	struct pack_window *w_curs = NULL;
 	off_t curpos = obj_offset;
@@ -1524,6 +1537,7 @@ void *unpack_entry(struct repository *r, struct packed_git *p, off_t obj_offset,
 	struct unpack_entry_stack_ent *delta_stack = small_delta_stack;
 	int delta_stack_nr = 0, delta_stack_alloc = UNPACK_ENTRY_STACK_PREALLOC;
 	int base_from_cache = 0;
+	enum object_info_flags fetch_flags = flags & OBJECT_INFO_SKIP_FETCH_OBJECT;
 
 	prepare_repo_settings(p->repo);
 
@@ -1646,7 +1660,7 @@ void *unpack_entry(struct repository *r, struct packed_git *p, off_t obj_offset,
 			uint32_t pos;
 			struct object_id base_oid;
 			if (!(offset_to_pack_pos(p, obj_offset, &pos))) {
-				struct object_info oi = OBJECT_INFO_INIT;
+				struct object_info oi = { .packed_read = read };
 
 				nth_packed_object_id(&base_oid, p,
 						     pack_pos_to_index(p, pos));
@@ -1654,13 +1668,12 @@ void *unpack_entry(struct repository *r, struct packed_git *p, off_t obj_offset,
 				      " at offset %"PRIuMAX" from %s",
 				      oid_to_hex(&base_oid), (uintmax_t)obj_offset,
 				      p->pack_name);
-				mark_bad_packed_object(p, &base_oid);
-
+				record_packed_read_failure(read, p, &base_oid);
 				oi.typep = &type;
 				oi.sizep = &base_size;
 				oi.contentp = &base;
 				if (odb_read_object_info_extended(r->objects, &base_oid,
-								  &oi, 0) < 0)
+								  &oi, fetch_flags) < 0)
 					base = NULL;
 
 				external_base = base;
@@ -1849,15 +1862,43 @@ int is_pack_valid(struct packed_git *p)
 	return !open_packed_git(p);
 }
 
+struct packed_read_failure {
+	struct packed_git *pack;
+	struct object_id oid;
+};
+
+int packed_read_failed(const struct packed_read_context *read,
+		       const struct packed_git *p, const struct object_id *oid)
+{
+	for (size_t i = 0; i < read->nr; i++)
+		if (read->failures[i].pack == p && oideq(&read->failures[i].oid, oid))
+			return 1;
+	return 0;
+}
+
+void record_packed_read_failure(struct packed_read_context *read,
+				struct packed_git *p, const struct object_id *oid)
+{
+	if (!read) {
+		mark_bad_packed_object(p, oid);
+		return;
+	}
+	if (packed_read_failed(read, p, oid))
+		return;
+	ALLOC_GROW(read->failures, read->nr + 1, read->alloc);
+	read->failures[read->nr++] = (struct packed_read_failure) { p, *oid };
+}
+
 int packfile_fill_entry(struct packed_git *p,
 			const struct object_id *oid,
 			struct pack_entry *e,
-			struct packed_git **bad_pack)
+			struct packed_git **bad_pack,
+			const struct packed_read_context *read)
 {
 	off_t offset;
 
-	if (oidset_size(&p->bad_objects) &&
-	    oidset_contains(&p->bad_objects, oid)) {
+	if ((oidset_size(&p->bad_objects) && oidset_contains(&p->bad_objects, oid)) ||
+	    (read && packed_read_failed(read, p, oid))) {
 		if (bad_pack && !*bad_pack)
 			*bad_pack = p;
 		return 0;
@@ -1955,7 +1996,7 @@ int has_object_kept_pack(struct repository *r, const struct object_id *oid,
 
 		for (; *cache; cache++) {
 			struct packed_git *p = *cache;
-			if (packfile_fill_entry(p, oid, &e, NULL))
+			if (packfile_fill_entry(p, oid, &e, NULL, NULL))
 				return 1;
 		}
 	}

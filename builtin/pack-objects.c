@@ -20,6 +20,7 @@
 #include "list-objects.h"
 #include "list-objects-filter-options.h"
 #include "pack-objects.h"
+#include "pack-cdc.h"
 #include "progress.h"
 #include "refs.h"
 #include "thread-utils.h"
@@ -233,6 +234,7 @@ static int pack_to_stdout;
 static int sparse;
 static int thin;
 static int path_walk = -1;
+static int path_walk_use_chunk_hints;
 static int num_preferred_base;
 static struct progress *progress_state;
 
@@ -987,6 +989,32 @@ static void compute_layer_order(struct object_entry **wo, unsigned int *wo_end)
 	}
 }
 
+static void rebuild_delta_children(void)
+{
+	struct object_entry *objects = to_pack.objects;
+	unsigned int i;
+
+	for (i = 0; i < to_pack.nr_objects; i++) {
+		SET_DELTA_CHILD(&objects[i], NULL);
+		SET_DELTA_SIBLING(&objects[i], NULL);
+	}
+
+	/* External bases are roots but can have children as well. */
+	for (i = 0; i < to_pack.nr_ext; i++)
+		SET_DELTA_CHILD(&to_pack.ext_bases[i], NULL);
+
+	/* Link each base's children in the original recency order. */
+	for (i = to_pack.nr_objects; i > 0;) {
+		struct object_entry *entry = &objects[--i];
+		struct object_entry *base = DELTA(entry);
+
+		if (!base)
+			continue;
+		entry->delta_sibling_idx = base->delta_child_idx;
+		SET_DELTA_CHILD(base, entry);
+	}
+}
+
 static struct object_entry **compute_write_order(void)
 {
 	uint32_t max_layers = 1;
@@ -998,23 +1026,8 @@ static struct object_entry **compute_write_order(void)
 	for (i = 0; i < to_pack.nr_objects; i++) {
 		objects[i].tagged = 0;
 		objects[i].filled = 0;
-		SET_DELTA_CHILD(&objects[i], NULL);
-		SET_DELTA_SIBLING(&objects[i], NULL);
 	}
-
-	/*
-	 * Fully connect delta_child/delta_sibling network.
-	 * Make sure delta_sibling is sorted in the original
-	 * recency order.
-	 */
-	for (i = to_pack.nr_objects; i > 0;) {
-		struct object_entry *e = &objects[--i];
-		if (!DELTA(e))
-			continue;
-		/* Mark me as the first child */
-		e->delta_sibling_idx = DELTA(e)->delta_child_idx;
-		SET_DELTA_CHILD(DELTA(e), e);
-	}
+	rebuild_delta_children();
 
 	/*
 	 * Mark objects that are at the tip of tags.
@@ -2800,6 +2813,24 @@ size_t oe_get_size_slow(struct packing_data *pack,
 	return size;
 }
 
+static int delta_reuse_precludes_pair(const struct object_entry *target,
+				     const struct object_entry *source)
+{
+	/*
+	 * We do not bother to try a delta that we discarded on an
+	 * earlier try, but only when reusing delta data.  Note that
+	 * src_entry that is marked as the preferred_base should always
+	 * be considered, as even if we produce a suboptimal delta against
+	 * it, we will still save the transfer cost, as we already know
+	 * the other side has it and we won't send src_entry at all.
+	 */
+	return reuse_delta && IN_PACK(target) &&
+		IN_PACK(target) == IN_PACK(source) &&
+		!source->preferred_base &&
+		target->in_pack_type != OBJ_REF_DELTA &&
+		target->in_pack_type != OBJ_OFS_DELTA;
+}
+
 static int try_delta(struct unpacked *trg, struct unpacked *src,
 		     unsigned max_depth, size_t *mem_usage)
 {
@@ -2815,19 +2846,7 @@ static int try_delta(struct unpacked *trg, struct unpacked *src,
 	if (oe_type(trg_entry) != oe_type(src_entry))
 		return -1;
 
-	/*
-	 * We do not bother to try a delta that we discarded on an
-	 * earlier try, but only when reusing delta data.  Note that
-	 * src_entry that is marked as the preferred_base should always
-	 * be considered, as even if we produce a suboptimal delta against
-	 * it, we will still save the transfer cost, as we already know
-	 * the other side has it and we won't send src_entry at all.
-	 */
-	if (reuse_delta && IN_PACK(trg_entry) &&
-	    IN_PACK(trg_entry) == IN_PACK(src_entry) &&
-	    !src_entry->preferred_base &&
-	    trg_entry->in_pack_type != OBJ_REF_DELTA &&
-	    trg_entry->in_pack_type != OBJ_OFS_DELTA)
+	if (delta_reuse_precludes_pair(trg_entry, src_entry))
 		return 0;
 
 	/* Let's not bust the allowed depth. */
@@ -2970,11 +2989,139 @@ static unsigned int check_delta_limit(struct object_entry *me, unsigned int n)
 	return m;
 }
 
-static size_t free_unpacked(struct unpacked *n)
+#define CDC_HISTORY_BLOBS 16
+
+struct cdc_base {
+	struct object_entry *entry;
+	struct cdc_fingerprint_set *fingerprints;
+	unsigned int depth;
+};
+
+struct cdc_history {
+	struct cdc_base bases[CDC_HISTORY_BLOBS];
+	unsigned int nr, next;
+};
+
+static void remember_cdc_base(struct cdc_history *history,
+			      const struct unpacked *old)
+{
+	struct cdc_base *base;
+	struct cdc_fingerprint_set *fingerprints;
+
+	/* Only fingerprint bytes the ordinary search has already read. */
+	if (!old->data || old->entry->preferred_base ||
+	    oe_type(old->entry) != OBJ_BLOB)
+		return;
+	fingerprints = pack_cdc_fingerprint_blob(old->data, SIZE(old->entry));
+	if (!fingerprints)
+		return;
+
+	/* The archive and one temporary set bound fingerprint memory. */
+	base = &history->bases[history->next];
+	if (!base->fingerprints)
+		history->nr++;
+	free(base->fingerprints);
+	base->entry = old->entry;
+	base->fingerprints = fingerprints;
+	base->depth = old->depth;
+	history->next = (history->next + 1) % CDC_HISTORY_BLOBS;
+}
+
+static const struct cdc_base *find_cdc_base(const struct cdc_history *history,
+					   const struct unpacked *target,
+					   unsigned int max_depth)
+{
+	const struct cdc_base *best = NULL;
+	struct cdc_fingerprint_set *target_fingerprints = NULL;
+	size_t target_size, best_score;
+
+	if (!history->nr || !target->data || oe_type(target->entry) != OBJ_BLOB)
+		return NULL;
+	target_size = SIZE(target->entry);
+	best_score = target_size / 4;
+	for (unsigned int i = 0; i < history->nr; i++) {
+		unsigned int pos = (history->next + CDC_HISTORY_BLOBS - 1 - i) %
+			CDC_HISTORY_BLOBS;
+		const struct cdc_base *base = &history->bases[pos];
+		size_t score;
+
+		if (base->depth >= max_depth ||
+		    delta_reuse_precludes_pair(target->entry, base->entry) ||
+		    !in_same_island(&target->entry->idx.oid, &base->entry->idx.oid))
+			continue;
+		if (!target_fingerprints) {
+			target_fingerprints = pack_cdc_fingerprint_blob(target->data,
+								      target_size);
+			if (!target_fingerprints)
+				return NULL;
+		}
+		score = pack_cdc_shared_bytes(target_fingerprints, base->fingerprints);
+		if (score > best_score) {
+			best = base;
+			best_score = score;
+		}
+	}
+	free(target_fingerprints);
+	return best;
+}
+
+static int try_cdc_delta(const struct cdc_history *history,
+			 struct unpacked *target, unsigned int max_depth)
+{
+	const struct cdc_base *base;
+	struct unpacked source = { 0 };
+	struct object_info info = OBJECT_INFO_INIT;
+	enum object_type type;
+	size_t size;
+	int ret, accepted = 0;
+
+	/* Do not look farther afield when the window found a small delta. */
+	if (DELTA(target->entry) &&
+	    DELTA_SIZE(target->entry) <= SIZE(target->entry) / 8)
+		return 0;
+	base = find_cdc_base(history, target, max_depth);
+	if (!base)
+		return 0;
+	source.entry = base->entry;
+	source.depth = base->depth;
+	info.typep = &type;
+	info.sizep = &size;
+	info.contentp = &source.data;
+
+	/* This object would not have been read now on the stock path. */
+	packing_data_lock(&to_pack);
+	ret = odb_read_object_info_extended(the_repository->objects,
+					    &source.entry->idx.oid, &info,
+					    OBJECT_INFO_SKIP_FETCH_OBJECT);
+	packing_data_unlock(&to_pack);
+	if (ret || !source.data || type != OBJ_BLOB || size != SIZE(source.entry))
+		goto out;
+
+	accepted = try_delta(target, &source, max_depth, &size) > 0;
+	if (accepted && trace2_is_enabled()) {
+		char target_oid[GIT_MAX_HEXSZ + 1], base_oid[GIT_MAX_HEXSZ + 1];
+		struct strbuf message = STRBUF_INIT;
+
+		strbuf_addf(&message, "%s %s",
+			    oid_to_hex_r(target_oid, &target->entry->idx.oid),
+			    oid_to_hex_r(base_oid, &source.entry->idx.oid));
+		trace2_data_string("pack-objects", the_repository,
+				   "path-walk-cdc/hint", message.buf);
+		strbuf_release(&message);
+	}
+	free_delta_index(source.index);
+out:
+	free(source.data);
+	return accepted;
+}
+
+static size_t free_unpacked(struct unpacked *n, struct cdc_history *history)
 {
 	size_t freed_mem = sizeof_delta_index(n->index);
 	free_delta_index(n->index);
 	n->index = NULL;
+	if (history)
+		remember_cdc_base(history, n);
 	if (n->data) {
 		freed_mem += SIZE(n->entry);
 		FREE_AND_NULL(n->data);
@@ -2985,13 +3132,17 @@ static size_t free_unpacked(struct unpacked *n)
 }
 
 static void find_deltas(struct object_entry **list, unsigned *list_size,
-			int window, int depth, unsigned *processed)
+			int window, int depth, unsigned *processed,
+			int use_chunk_hints)
 {
 	uint32_t i, idx = 0, count = 0;
 	struct unpacked *array;
+	struct cdc_history *history = NULL;
 	size_t mem_usage = 0;
 
 	CALLOC_ARRAY(array, window);
+	if (use_chunk_hints)
+		CALLOC_ARRAY(history, 1);
 
 	for (;;) {
 		struct object_entry *entry;
@@ -3011,14 +3162,14 @@ static void find_deltas(struct object_entry **list, unsigned *list_size,
 		}
 		progress_unlock();
 
-		mem_usage -= free_unpacked(n);
+		mem_usage -= free_unpacked(n, history);
 		n->entry = entry;
 
 		while (window_memory_limit &&
 		       mem_usage > window_memory_limit &&
 		       count > 1) {
 			const uint32_t tail = (idx + window - count) % window;
-			mem_usage -= free_unpacked(array + tail);
+			mem_usage -= free_unpacked(array + tail, NULL);
 			count--;
 		}
 
@@ -3056,6 +3207,9 @@ static void find_deltas(struct object_entry **list, unsigned *list_size,
 			else if (ret > 0)
 				best_base = other_idx;
 		}
+
+		if (history && try_cdc_delta(history, n, max_depth))
+			best_base = -1;
 
 		/*
 		 * If we decided to cache the delta data, then it is best
@@ -3099,7 +3253,7 @@ static void find_deltas(struct object_entry **list, unsigned *list_size,
 		 * currently deltified object, to keep it longer.  It will
 		 * be the first base object to be attempted next.
 		 */
-		if (DELTA(entry)) {
+		if (best_base >= 0) {
 			struct unpacked swap = array[best_base];
 			int dist = (window + idx - best_base) % window;
 			int dst = best_base;
@@ -3124,6 +3278,11 @@ static void find_deltas(struct object_entry **list, unsigned *list_size,
 		free(array[i].data);
 	}
 	free(array);
+	if (history) {
+		for (i = 0; i < CDC_HISTORY_BLOBS; i++)
+			free(history->bases[i].fingerprints);
+		free(history);
+	}
 }
 
 /*
@@ -3185,7 +3344,7 @@ static void *threaded_find_deltas(void *arg)
 		progress_unlock();
 
 		find_deltas(me->list, &me->remaining,
-			    me->window, me->depth, me->processed);
+			    me->window, me->depth, me->processed, 0);
 
 		progress_lock();
 		me->working = 0;
@@ -3222,7 +3381,7 @@ static void ll_find_deltas(struct object_entry **list, unsigned list_size,
 	init_threaded_search();
 
 	if (delta_search_threads <= 1) {
-		find_deltas(list, &list_size, window, depth, processed);
+		find_deltas(list, &list_size, window, depth, processed, 0);
 		cleanup_threaded_search();
 		return;
 	}
@@ -3433,7 +3592,14 @@ static void find_deltas_for_region(struct object_entry *list,
 	}
 
 	QSORT(delta_list, delta_list_nr, type_size_sort);
-	find_deltas(delta_list, &delta_list_nr, window, depth, processed);
+	/*
+	 * Rereading an evicted packed blob can expand an on-disk delta
+	 * chain larger than the blob itself. Do not do this extra work
+	 * when the caller limits window memory.
+	 */
+	find_deltas(delta_list, &delta_list_nr, window, depth, processed,
+		    path_walk_use_chunk_hints && !window_memory_limit &&
+		    delta_list_nr > (unsigned int)window);
 	free(delta_list);
 }
 
@@ -3648,9 +3814,15 @@ static void prepare_pack(int window, int depth)
 	if (!to_pack.nr_objects || !window || !depth)
 		return;
 
-	if (path_walk)
+	if (path_walk) {
 		ll_find_deltas_by_region(to_pack.objects, to_pack.regions,
 					 0, to_pack.nr_regions);
+		/*
+		 * The remaining search may deltify a base from the path
+		 * pass. Account for its children when limiting its depth.
+		 */
+		rebuild_delta_children();
+	}
 
 	ALLOC_ARRAY(delta_list, to_pack.nr_objects);
 	nr_deltas = n = 0;
@@ -3688,6 +3860,10 @@ static int git_pack_config(const char *k, const char *v,
 {
 	if (!strcmp(k, "pack.window")) {
 		window = git_config_int(k, v, ctx->kvi);
+		return 0;
+	}
+	if (!strcmp(k, "pack.pathwalkusechunkhints")) {
+		path_walk_use_chunk_hints = git_config_bool(k, v);
 		return 0;
 	}
 	if (!strcmp(k, "pack.windowmemory")) {

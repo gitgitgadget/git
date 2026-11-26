@@ -450,13 +450,25 @@ enum odb_read_status odb_read_object_info_extended(struct object_database *odb,
 						   enum object_info_flags flags)
 {
 	enum odb_read_status ret;
+	struct packed_read_context packed_read = { 0 };
+	struct object_info lookup;
+	int own_context;
 
 	if (oid->algo && (hash_algo_by_ptr(odb->repo->hash_algo) != oid->algo))
 		return oid_object_info_convert(odb->repo, oid, oi, flags);
 
+	own_context = (flags & OBJECT_INFO_SKIP_FETCH_OBJECT) &&
+		oi && !oi->packed_read;
+	if (own_context) {
+		lookup = *oi;
+		lookup.packed_read = &packed_read;
+		oi = &lookup;
+	}
 	obj_read_lock();
 	ret = do_oid_object_info_extended(odb, oid, oi, flags);
 	obj_read_unlock();
+	if (own_context)
+		free(packed_read.failures);
 	return ret;
 }
 

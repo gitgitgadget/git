@@ -23,7 +23,8 @@ static int find_pack_entry(struct odb_source_packed *store,
 			   const struct object_id *oid,
 			   struct pack_entry *e,
 			   enum object_info_flags flags,
-			   struct packed_git **bad_pack)
+			   struct packed_git **bad_pack,
+			   const struct packed_read_context *read)
 {
 	struct packfile_list_entry *l;
 	enum midx_fill_result midx_result = MIDX_FILL_MISS;
@@ -31,14 +32,19 @@ static int find_pack_entry(struct odb_source_packed *store,
 	odb_source_prepare(&store->base, 0);
 	if (store->midx) {
 		midx_result = midx_fill_entry(store->midx, oid, e, bad_pack);
-		if (midx_result == MIDX_FILL_HIT)
-			return 1;
+		if (midx_result == MIDX_FILL_HIT) {
+			if (!read || !packed_read_failed(read, e->p, oid))
+				return 1;
+			if (bad_pack && !*bad_pack)
+				*bad_pack = e->p;
+		}
 	}
 
 	for (l = store->packs.head; l; l = l->next) {
 		struct packed_git *p = l->pack;
 
-		if (!p->multi_pack_index && packfile_fill_entry(p, oid, e, bad_pack)) {
+		if (!p->multi_pack_index &&
+		    packfile_fill_entry(p, oid, e, bad_pack, read)) {
 			if (!store->skip_mru_updates)
 				packfile_list_prepend(&store->packs, p);
 			return 1;
@@ -66,7 +72,7 @@ static int find_pack_entry(struct odb_source_packed *store,
 			if (prepare_midx_pack(m, i))
 				continue;
 			p = nth_midxed_pack(m, i);
-			if (p && packfile_fill_entry(p, oid, e, bad_pack))
+			if (p && packfile_fill_entry(p, oid, e, bad_pack, read))
 				return 1;
 		}
 	}
@@ -82,10 +88,12 @@ static enum odb_read_status odb_source_packed_read_object_info(struct odb_source
 {
 	struct odb_source_packed *packed = odb_source_packed_downcast(source);
 	struct packed_git *bad_pack = NULL;
+	struct packed_read_context *read =
+		oi && (flags & OBJECT_INFO_SKIP_FETCH_OBJECT) ? oi->packed_read : NULL;
 	struct pack_entry e;
 	int ret;
 
-	if (!find_pack_entry(packed, oid, &e, flags, &bad_pack)) {
+	if (!find_pack_entry(packed, oid, &e, flags, &bad_pack, read)) {
 		/*
 		 * The lookup may have failed because the object is known to be
 		 * corrupt in one of the packfiles. Report the object as
@@ -109,10 +117,11 @@ static enum odb_read_status odb_source_packed_read_object_info(struct odb_source
 		goto out;
 	}
 
-	ret = packed_object_info(packed, e.p, e.offset, oi);
+	ret = packed_object_info_with_index_pos(packed, e.p, e.offset,
+					       NULL, oi, flags);
 	if (ret < 0) {
 		bad_pack = e.p;
-		mark_bad_packed_object(e.p, oid);
+		record_packed_read_failure(read, e.p, oid);
 		goto out;
 	}
 
@@ -133,7 +142,7 @@ static int odb_source_packed_read_object_stream(struct odb_stream **out,
 	struct odb_source_packed *packed = odb_source_packed_downcast(source);
 	struct pack_entry e;
 
-	if (!find_pack_entry(packed, oid, &e, 0, NULL))
+	if (!find_pack_entry(packed, oid, &e, 0, NULL, NULL))
 		return -1;
 
 	return packfile_read_object_stream(out, oid, e.p, e.offset);
@@ -158,7 +167,7 @@ static int odb_source_packed_for_each_object_wrapper(const struct object_id *oid
 		struct object_info oi = *data->request;
 
 		if (packed_object_info_with_index_pos(data->store, pack, offset,
-						      &index_pos, &oi) < 0) {
+						      &index_pos, &oi, 0) < 0) {
 			mark_bad_packed_object(pack, oid);
 			return -1;
 		}
@@ -639,7 +648,7 @@ static int odb_source_packed_freshen_object(struct odb_source *source,
 		timesp = &times;
 	}
 
-	if (!find_pack_entry(packed, oid, &e, 0, NULL))
+	if (!find_pack_entry(packed, oid, &e, 0, NULL, NULL))
 		return 0;
 	if (e.p->is_cruft)
 		return 0;

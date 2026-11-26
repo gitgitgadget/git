@@ -319,6 +319,63 @@ test_expect_success 'corrupting header to have too small output buffer fails unp
 	test_must_fail git cat-file blob $blob_3 > /dev/null
 '
 
+test_expect_success 'mktree does not fetch a replacement for a corrupt delta base' '
+	test_when_finished "rm -rf promisor" &&
+	create_new_pack &&
+	git prune-packed &&
+	git init --bare promisor &&
+	test_config -C promisor uploadpack.allowFilter true &&
+	echo replacement >replacement &&
+	replacement=$(git hash-object -w replacement) &&
+	git -C promisor hash-object -w --stdin <replacement &&
+	git -C promisor update-ref refs/tags/replacement "$replacement" &&
+	git replace "$blob_1" "$replacement" &&
+	rm ".git/objects/$(test_oid_to_path "$replacement")" &&
+	do_corrupt_object "$blob_1" 0 <zero &&
+	test_config remote.origin.url "file://$PWD/promisor" &&
+	test_config remote.origin.promisor true &&
+	printf "100644 blob %s\tdelta\n" "$blob_2" >entry &&
+
+	test_must_fail git mktree <entry 2>err &&
+	test_grep "object $blob_2 is unavailable" err &&
+	test_must_fail git --no-lazy-fetch cat-file -e "$replacement" &&
+
+	# A no-fetch failure must not prevent a retry in the same process.
+	echo blob >expect &&
+	test-tool partial-clone retry-object-info "$blob_2" >actual &&
+	test_cmp expect actual &&
+	git --no-lazy-fetch cat-file blob "$replacement" >actual &&
+	test_cmp replacement actual &&
+
+	# Once the replacement is local, mktree can use it too.
+	tree=$(git mktree <entry) &&
+	git ls-tree "$tree" >actual &&
+	test_cmp entry actual
+'
+
+test_expect_success 'mktree uses a good packed copy after a corrupt one' '
+	create_new_pack &&
+	git prune-packed &&
+	printf "%s\n" "$blob_1" >objects &&
+	git pack-objects .git/objects/pack/pack <objects >copy_name &&
+	copy=".git/objects/pack/pack-$(cat copy_name)" &&
+	do_corrupt_object "$blob_1" 0 <zero &&
+	# The corrupt copy is in the newer pack, so Git tries it first.
+	test-tool chmtime =1546362000 "$copy.pack" &&
+	test-tool chmtime =1546362001 "$pack.pack" &&
+	printf "100644 blob %s\tbase\n" "$blob_1" >entry &&
+
+	test_config core.multiPackIndex false &&
+	mv "$copy.idx" saved.idx &&
+	test_must_fail git mktree <entry 2>err &&
+	test_grep "object $blob_1 is unavailable" err &&
+	mv saved.idx "$copy.idx" &&
+
+	tree=$(git mktree <entry) &&
+	git ls-tree "$tree" >actual &&
+	test_cmp entry actual
+'
+
 # \0 - empty base
 # \1 - one byte in result
 # \1 - one literal byte (X)

@@ -14,6 +14,22 @@ pack.windowMemory::
 	suffixed with "k", "m", or "g".  When left unconfigured (or
 	set explicitly to 0), there will be no limit.
 
+pack.pathWalkUseChunkHints::
+	When packing with path-walk, use content-defined chunk fingerprints
+	to look for one additional delta base when the normal same-path
+	window finds no small delta. Git considers recently evicted
+	candidates from the same path and validates a hint with the normal
+	delta matcher.
+	This can reduce pack size when the window misses a similar version
+	of a large blob, at the cost of fingerprinting and possibly
+	rereading a base. It has no effect without path-walk or when
+	`pack.windowMemory` is nonzero. Like the ordinary search, hints
+	skip bases in the same pack as an undeltified target unless
+	delta reuse is disabled (for example, with `git repack -f`).
+	Defaults to false and does not change the pack format. See
+	link:technical/pack-chunk-hints.html[Chunk hints for path-walk packing]
+	for how Git chooses and checks a hinted base.
+
 pack.compression::
 	An integer -1..9, indicating the compression level for objects
 	in a pack file. -1 is the zlib default. 0 means no
