@@ -137,7 +137,7 @@ include::diff-context-options.adoc[]
 `<pathspec>...`::
 	Limits the paths affected by the operation.
 +
-For more details, see the 'pathspec' entry in linkgit:gitglossary[7].
+For more details, see linkgit:gitpathspecs[7].
 
 EXAMPLES
 --------

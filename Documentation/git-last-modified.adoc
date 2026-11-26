@@ -53,7 +53,7 @@ OPTIONS
 `[--] <pathspec>...`::
 	Show the commit that last modified each path matching _<pathspec>_.
 	If no _<pathspec>_ is given, all files and subdirectories are included.
-	See linkgit:gitglossary[7] for details on pathspec syntax.
+	See linkgit:gitpathspecs[7] for details on pathspec syntax.
 
 OUTPUT
 ------

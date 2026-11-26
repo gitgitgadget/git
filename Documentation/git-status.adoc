@@ -155,7 +155,7 @@ ignored, then the directory is not shown, but all contents are shown.
 	See also linkgit:git-diff[1] `--find-renames`.
 
 `<pathspec>...`::
-	See the 'pathspec' entry in linkgit:gitglossary[7].
+	See linkgit:gitpathspecs[7].
 
 OUTPUT
 ------
