@@ -294,4 +294,12 @@ test_expect_success 'default triangular behavior acts like "current"' '
 	test_push_success "" main repo2
 '
 
+test_expect_success 'simple push quotes an upstream branch name with metacharacters' '
+	test_config branch.main.remote parent1 &&
+	test_config branch.main.merge "refs/heads/upstream&name" &&
+	git checkout main &&
+	test_must_fail git -c push.default=simple push parent1 2>stderr &&
+	test_grep "git push parent1 HEAD:${SQ}upstream&name${SQ}" stderr
+'
+
 test_done
