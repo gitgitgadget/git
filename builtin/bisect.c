@@ -261,7 +261,7 @@ static int bisect_reset(const char *commit, bool quiet)
 	if (branch.len && !refs_ref_exists(get_main_ref_store(the_repository), "BISECT_HEAD")) {
 		struct child_process cmd = CHILD_PROCESS_INIT;
 
-		cmd.git_cmd = 1;
+		bisect_prepare_checkout(&cmd);
 		strvec_pushl(&cmd.args, "checkout", "--ignore-other-worktrees", NULL);
 		if (quiet)
 			strvec_push(&cmd.args, "--quiet");
@@ -930,7 +930,7 @@ static enum bisect_error bisect_start(struct bisect_terms *terms, int argc,
 		if (!no_checkout) {
 			struct child_process cmd = CHILD_PROCESS_INIT;
 
-			cmd.git_cmd = 1;
+			bisect_prepare_checkout(&cmd);
 			strvec_pushl(&cmd.args, "checkout", start_head.buf,
 				     "--", NULL);
 			if (run_command(&cmd)) {
