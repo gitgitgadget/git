@@ -481,10 +481,16 @@ static void describe_commit(struct commit *cmit, struct strbuf *dst)
 				label_width, _(prio_names[t->name->prio]),
 				t->depth, t->name->path);
 		}
-		fprintf(stderr, _("traversed %lu commits\n"), seen_commits);
+		fprintf(stderr,
+			Q_("traversed %lu commit\n",
+			   "traversed %lu commits\n",
+			   seen_commits),
+			seen_commits);
 		if (gave_up_on) {
 			fprintf(stderr,
-				_("found %i tags; gave up search at %s\n"),
+				Q_("found %i tag; gave up search at %s\n",
+				   "found %i tags; gave up search at %s\n",
+				   max_candidates),
 				max_candidates,
 				oid_to_hex(&gave_up_on->object.oid));
 		}
