@@ -307,6 +307,70 @@ test_expect_success 'check that gc computes commit-graph' '
 	test_cmp_bin commit-graph-after-gc full/$objdir/info/commit-graph
 '
 
+test_expect_success '--reachable with an existing graph handles all ref kinds' '
+	test_when_finished rm -rf refkinds &&
+	git init refkinds &&
+	(
+		cd refkinds &&
+		test_commit A &&
+		test_commit B &&
+		git commit-graph write --reachable &&
+
+		# not yet in the graph, only reachable via tags
+		C=$(git commit-tree -p B -m C B^{tree}) &&
+		D=$(git commit-tree -p $C -m D B^{tree}) &&
+		git tag -a -m "tag on C" tag-C $C &&
+		inner=$(git mktag <<-EOF
+		object $D
+		type commit
+		tag inner
+		tagger T <t@example.com> 0 +0000
+
+		inner
+		EOF
+		) &&
+		git -c advice.nestedTag=false tag -a -m "tag on tag" tag-tag-D $inner &&
+		git tag -a -m "tag on B" tag-B B &&
+		git tag -a -m "tag on tree" tag-tree B^{tree} &&
+		git tag -a -m "tag on blob" tag-blob B:B.t &&
+		git update-ref refs/misc/tree-ref B^{tree} &&
+
+		git commit-graph write --reachable &&
+		cp .git/objects/info/commit-graph graph-incremental &&
+		rm .git/objects/info/commit-graph &&
+		git commit-graph write --reachable &&
+		test_cmp_bin .git/objects/info/commit-graph graph-incremental &&
+		test-tool read-graph >out &&
+		grep "num_commits: 4" out
+	)
+'
+
+for kind in branch tag
+do
+	test_expect_success "--reachable with a $kind to a commit missing from the odb" '
+		test_when_finished rm -rf missing &&
+		git init missing &&
+		(
+			cd missing &&
+			test_commit A &&
+			X=$(git commit-tree -p A -m X A^{tree}) &&
+			if test $kind = branch
+			then
+				git update-ref refs/heads/x $X
+			else
+				git tag -a -m "on X" x $X
+			fi &&
+			git commit-graph write --reachable &&
+
+			# The graph still lists X, but the object is gone.
+			rm .git/objects/$(test_oid_to_path $X) &&
+			test_must_fail git commit-graph write --reachable 2>err &&
+			test_grep "unable to parse commit $X" err &&
+			git commit-graph write --reachable --split
+		)
+	'
+done
+
 test_expect_success 'replace-objects invalidates commit-graph' '
 	test_when_finished rm -rf replace &&
 	git clone full replace &&

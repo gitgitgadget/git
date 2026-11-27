@@ -302,6 +302,31 @@ test_expect_success 'commit-graph auto condition with merges' '
 	)
 '
 
+test_expect_success 'commit-graph auto condition ignores refs already in the graph' '
+	test_when_finished "rm -rf repo" &&
+	git init repo &&
+	(
+		cd repo &&
+		git config set maintenance.auto false &&
+		test_commit A &&
+		test_commit B &&
+		git commit-graph write --reachable &&
+
+		# Refs to commits in the graph, directly and through tags,
+		# do not count towards the limit.
+		git branch known A &&
+		git tag -a -m "on A" tag-A A &&
+		test_must_fail git -c maintenance.commit-graph.auto=1 \
+			maintenance is-needed --auto --task=commit-graph &&
+
+		# A commit outside the graph does, also behind a tag.
+		C=$(git commit-tree -p B -m C B^{tree}) &&
+		git tag -a -m "on C" tag-C $C &&
+		git -c maintenance.commit-graph.auto=1 \
+			maintenance is-needed --auto --task=commit-graph
+	)
+'
+
 test_expect_success 'run --task=bogus' '
 	test_must_fail git maintenance run --task=bogus 2>err &&
 	test_grep "is not a valid task" err
