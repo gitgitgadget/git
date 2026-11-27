@@ -186,6 +186,7 @@ git-show                                mainporcelain           info
 git-show-branch                         ancillaryinterrogators          complete
 git-show-index                          plumbinginterrogators
 git-show-ref                            plumbinginterrogators
+git-son                                 mainporcelain
 git-sparse-checkout                     mainporcelain
 git-stage                                                               complete
 git-stash                               mainporcelain
