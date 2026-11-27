@@ -529,4 +529,123 @@ test_expect_success 'status succeeds with sparse index' '
 	)
 '
 
+# Compare "git status" with the output of a run that uses neither
+# fsmonitor nor the untracked cache.
+empty_subtree_status () {
+	GIT_OPTIONAL_LOCKS=0 \
+	git -c core.fsmonitor=false -c core.untrackedCache=false \
+		status --porcelain "$@" >../expect &&
+	git status --porcelain "$@" >../actual &&
+	test_cmp ../expect ../actual
+}
+
+# The hook reports the paths listed in .git/paths and fails if
+# .git/fail exists.
+test_expect_success UNTRACKED_CACHE 'setup empty untracked-cache subtrees' '
+	test_create_repo empty-subtrees &&
+	(
+		cd empty-subtrees &&
+		mkdir -p one/deep two/deep three/deep &&
+		>one/deep/tracked &&
+		>two/deep/tracked &&
+		>three/deep/tracked &&
+		git add . &&
+		git commit -m initial &&
+		git config core.untrackedCache true &&
+		git config core.fsmonitor .git/hooks/fsmonitor-test &&
+		test_hook --setup fsmonitor-test <<-\EOF &&
+		test ! -f .git/fail || exit 1
+		test "$1" = 1 || printf "token\0"
+		cat .git/paths
+		EOF
+		>.git/paths
+	)
+'
+
+# Once the cache is populated and the hook reports nothing, only the
+# top-level directory should be visited.
+test_expect_success UNTRACKED_CACHE 'skip unchanged empty untracked-cache subtrees' '
+	(
+		cd empty-subtrees &&
+		for args in "-c core.fsmonitorHookVersion=1" \
+			"-c core.fsmonitorHookVersion=2" \
+			"-c core.fsmonitorHookVersion=2 -c status.showUntrackedFiles=all"
+		do
+			git $args status --porcelain &&
+			git $args status --porcelain &&
+			GIT_TRACE2_EVENT="$TRASH_DIRECTORY/trace" \
+				git $args status --porcelain >../actual &&
+			test_must_be_empty ../actual &&
+			test_grep "\"directories-visited\",\"value\":\"1\"" ../trace &&
+			rm ../trace || return 1
+		done
+	)
+'
+
+# In "all" mode the cache has an entry for each directory below the new
+# untracked directory.  The later runs get no events, so they must find
+# from the cache alone that these directories and their parents are not
+# empty.
+test_expect_success UNTRACKED_CACHE 'empty subtrees notice new paths and index changes' '
+	test_config -C empty-subtrees status.showUntrackedFiles all &&
+	(
+		cd empty-subtrees &&
+		git status --porcelain &&
+		>one/deep/new &&
+		mkdir -p two/deep/newdir/nested &&
+		>two/deep/newdir/nested/file &&
+		printf "one/deep/new\0two/deep/newdir/\0" >.git/paths &&
+		empty_subtree_status &&
+		>.git/paths &&
+		empty_subtree_status &&
+		git rm -q --cached three/deep/tracked &&
+		empty_subtree_status
+	)
+'
+
+# Each .gitignore is checked even when the hook does not report it, so its
+# directory and the directories above it must not be skipped.  The
+# .gitignore ignores itself so that it is not an untracked file.
+test_expect_success UNTRACKED_CACHE 'empty subtrees respect ignore changes' '
+	(
+		cd empty-subtrees &&
+		printf "new\n.gitignore\n" >one/deep/.gitignore &&
+		printf "one/deep/.gitignore\0" >.git/paths &&
+		empty_subtree_status &&
+		>.git/paths &&
+		echo "!new" >one/deep/.gitignore &&
+		empty_subtree_status &&
+		echo newdir >.git/info/exclude &&
+		empty_subtree_status
+	)
+'
+
+# Without usable fsmonitor data, every directory must be checked again.
+# Run "disabled" first, while two/ is still free of untracked files, and
+# backdate the directories so that their stat data is not racy and the
+# cache can be trusted without fsmonitor.
+for response in disabled failure trivial
+do
+	test_expect_success UNTRACKED_CACHE "empty subtrees fall back on fsmonitor $response" '
+		test_when_finished "rm -f empty-subtrees/.git/fail" &&
+		test_when_finished "git -C empty-subtrees config core.fsmonitor .git/hooks/fsmonitor-test" &&
+		(
+			cd empty-subtrees &&
+			>.git/paths &&
+			git status --porcelain &&
+			case "$response" in
+			disabled)
+				git config core.fsmonitor false &&
+				test-tool chmtime =-60 . one one/deep two two/deep ;;
+			failure) >.git/fail ;;
+			trivial) printf "/\0" >.git/paths ;;
+			esac &&
+			>one/deep/unreported-$response &&
+			empty_subtree_status &&
+			>two/deep/unreported-$response &&
+			empty_subtree_status
+		)
+	'
+done
+
 test_done

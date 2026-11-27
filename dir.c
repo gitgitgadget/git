@@ -2733,6 +2733,12 @@ static enum path_treatment read_directory_recursive(struct dir_struct *dir,
 		goto out;
 	dir->internal.visited_directories++;
 
+	if (untracked && dir->untracked->use_fsmonitor &&
+	    !cdir.fdir && !check_only && untracked->valid_empty) {
+		close_cached_dir(&cdir);
+		goto out;
+	}
+
 	if (untracked)
 		untracked->check_only = !!check_only;
 
@@ -3150,6 +3156,26 @@ static void emit_traversal_statistics(struct dir_struct *dir,
 			   "opendir", dir->untracked->dir_opened);
 }
 
+/*
+ * A valid directory only describes its immediate contents. Prove emptiness
+ * bottom-up, including the directories read_cached_dir() would visit. Local
+ * ignore files must still be checked by prep_exclude(), even without events.
+ */
+static int mark_valid_empty_subtrees(struct untracked_cache_dir *untracked)
+{
+	int empty = untracked->valid && !untracked->check_only &&
+		!untracked->untracked_nr && is_null_oid(&untracked->exclude_oid);
+
+	for (unsigned int i = 0; i < untracked->dirs_nr; i++) {
+		struct untracked_cache_dir *child = untracked->dirs[i];
+
+		if (child->recurse && !mark_valid_empty_subtrees(child))
+			empty = 0;
+	}
+	untracked->valid_empty = empty;
+	return empty;
+}
+
 int read_directory(struct dir_struct *dir, struct index_state *istate,
 		   const char *path, int len, const struct pathspec *pathspec)
 {
@@ -3165,6 +3191,14 @@ int read_directory(struct dir_struct *dir, struct index_state *istate,
 	}
 
 	untracked = validate_untracked_cache(dir, len, pathspec, istate);
+	if (untracked) {
+		refresh_fsmonitor(istate);
+		if (dir->untracked->use_fsmonitor) {
+			trace2_region_enter("dir", "mark_valid_empty", istate->repo);
+			mark_valid_empty_subtrees(untracked);
+			trace2_region_leave("dir", "mark_valid_empty", istate->repo);
+		}
+	}
 	if (!untracked)
 		/*
 		 * make sure untracked cache code path is disabled,
