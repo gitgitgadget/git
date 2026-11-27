@@ -47,6 +47,17 @@ static struct tr2_counter_metadata tr2_counter_metadata[TRACE2_NUMBER_OF_COUNTER
 		.want_per_thread_events = 0,
 	},
 
+	[TRACE2_COUNTER_ID_REFLINK_ATTEMPTS] = {
+		.category = "reflink",
+		.name = "attempts",
+		.want_per_thread_events = 0,
+	},
+	[TRACE2_COUNTER_ID_REFLINK_HITS] = {
+		.category = "reflink",
+		.name = "hits",
+		.want_per_thread_events = 0,
+	},
+
 	/* Add additional metadata before here. */
 };
 

@@ -1,6 +1,8 @@
 #define USE_THE_REPOSITORY_VARIABLE
 
 #include "git-compat-util.h"
+#include "abspath.h"
+#include "convert.h"
 #include "odb.h"
 #include "odb/streaming.h"
 #include "dir.h"
@@ -8,11 +10,16 @@
 #include "gettext.h"
 #include "hex.h"
 #include "name-hash.h"
+#include "path.h"
+#include "read-cache-ll.h"
+#include "repository.h"
 #include "sparse-index.h"
 #include "submodule.h"
 #include "symlinks.h"
 #include "progress.h"
+#include "trace2.h"
 #include "fsmonitor.h"
+#include "wrapper.h"
 #include "entry.h"
 #include "parallel-checkout.h"
 
@@ -144,6 +151,145 @@ static int streaming_write_entry(const struct cache_entry *ce, char *path,
 	if (result)
 		unlink(path);
 	return result;
+}
+
+/*
+ * Copy-on-write population of a new worktree: when "git worktree add"
+ * points us at the primary worktree via GIT_WORKTREE_REFLINK_SOURCE,
+ * try to clone (reflink) files from it instead of writing blob
+ * contents from the object database.  The donor's index tells us
+ * which of its files are known to be unmodified.
+ *
+ * Note that entries handled by parallel checkout (checkout.workers >
+ * 1) do not come through this path and are simply written normally.
+ */
+struct reflink_donor {
+	int state; /* -1 = not checked yet, 0 = disabled, 1 = active */
+	const char *root;
+	struct index_state istate;
+};
+static struct reflink_donor reflink_donor = { .state = -1 };
+
+static int reflink_donor_active(void)
+{
+	if (reflink_donor.state < 0) {
+		const char *root;
+		char *index_path;
+
+		reflink_donor.state = 0;
+		root = getenv(GIT_WORKTREE_REFLINK_SOURCE_ENVIRONMENT);
+		if (!root || !is_absolute_path(root))
+			return 0;
+
+		index_state_init(&reflink_donor.istate, the_repository);
+		index_path = repo_common_path(the_repository, "index");
+		if (read_index_from(&reflink_donor.istate, index_path,
+				    repo_get_common_dir(the_repository)) > 0) {
+			reflink_donor.root = xstrdup(root);
+			reflink_donor.state = 1;
+		}
+		free(index_path);
+	}
+	return reflink_donor.state;
+}
+
+/*
+ * The checkout-direction (smudge) CRLF conversion is the identity for
+ * these actions: crlf_to_worktree() bails out immediately unless the
+ * action's output_eol() is EOL_CRLF, which is true only for the
+ * "*_CRLF" actions.  For CRLF_BINARY and the input-style actions a
+ * blob therefore checks out byte-for-byte as its own content, so the
+ * worktree bytes of a fresh checkout equal the blob bytes.
+ */
+static int crlf_action_is_identity_smudge(enum convert_crlf_action action)
+{
+	switch (action) {
+	case CRLF_BINARY:
+	case CRLF_TEXT_INPUT:
+	case CRLF_AUTO_INPUT:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
+/*
+ * Try to create "path" as a reflink of the same file in the donor
+ * worktree.  A zero return means the file is in place; any nonzero
+ * return means the caller must write it the normal way.
+ */
+static int try_reflink_entry(const struct cache_entry *ce,
+			     const struct conv_attrs *ca,
+			     const char *path)
+{
+	const struct cache_entry *dce;
+	struct stat st;
+	struct strbuf donor_path = STRBUF_INIT;
+	size_t blob_size;
+	int ret = -1;
+
+	/*
+	 * Only blobs whose worktree representation is identical to
+	 * their content are eligible; anything that smudges is left
+	 * to the regular code path.  Input-style CRLF actions are
+	 * admitted because their smudge is the identity (see
+	 * crlf_action_is_identity_smudge()); the clean direction only
+	 * ever removes CR bytes, so a donor whose on-disk size equals
+	 * the blob size cannot have diverged from it -- the size gate
+	 * below is the backstop that makes byte-divergent donors
+	 * impossible.
+	 */
+	if (ca->drv || ca->ident || ca->working_tree_encoding ||
+	    !crlf_action_is_identity_smudge(ca->crlf_action))
+		return -1;
+
+	if (!reflink_donor_active())
+		return -1;
+
+	dce = index_file_exists(&reflink_donor.istate, ce->name,
+				strlen(ce->name), 0);
+	if (!dce || ce_skip_worktree(dce) ||
+	    dce->ce_mode != ce->ce_mode || !oideq(&dce->oid, &ce->oid))
+		return -1;
+
+	strbuf_addf(&donor_path, "%s/%s", reflink_donor.root, ce->name);
+
+	/*
+	 * The donor file must be stat-clean with respect to the
+	 * donor's index; racily clean entries are conservatively
+	 * treated as dirty.  For an eligible (conversion-free) entry
+	 * the file size must then also match the blob size, which
+	 * guards against a donor checkout that smudged the file under
+	 * attribute rules we no longer see.
+	 */
+	if (lstat(donor_path.buf, &st) || !S_ISREG(st.st_mode))
+		goto out;
+	if (ie_match_stat(&reflink_donor.istate, dce, &st,
+			  CE_MATCH_IGNORE_VALID | CE_MATCH_IGNORE_FSMONITOR |
+			  CE_MATCH_RACY_IS_DIRTY))
+		goto out;
+	if (odb_read_object_info(the_repository->objects, &ce->oid,
+				 &blob_size) < 0 ||
+	    (uintmax_t)st.st_size != (uintmax_t)blob_size)
+		goto out;
+
+	trace2_counter_add(TRACE2_COUNTER_ID_REFLINK_ATTEMPTS, 1);
+	if (reflink_file(donor_path.buf, path,
+			 (ce->ce_mode & 0100) ? 0777 : 0666)) {
+		/*
+		 * These errnos mean the filesystem cannot reflink at
+		 * all, so do not keep trying for every file.
+		 */
+		if (errno == EOPNOTSUPP || errno == ENOTTY ||
+		    errno == EXDEV || errno == ENOSYS)
+			reflink_donor.state = 0;
+		goto out;
+	}
+	trace2_counter_add(TRACE2_COUNTER_ID_REFLINK_HITS, 1);
+	ret = 0;
+out:
+	strbuf_release(&donor_path);
+	return ret;
 }
 
 void enable_delayed_checkout(struct checkout *state)
@@ -300,7 +446,12 @@ static int write_entry(struct cache_entry *ce, char *path, struct conv_attrs *ca
 	clone_checkout_metadata(&meta, &state->meta, &ce->oid);
 
 	if (ce_mode_s_ifmt == S_IFREG) {
-		struct stream_filter *filter = get_stream_filter_ca(ca, &ce->oid);
+		struct stream_filter *filter;
+
+		if (!to_tempfile && !try_reflink_entry(ce, ca, path))
+			goto finish;
+
+		filter = get_stream_filter_ca(ca, &ce->oid);
 		if (filter &&
 		    !streaming_write_entry(ce, path, filter,
 					   state, to_tempfile,
