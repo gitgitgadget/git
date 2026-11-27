@@ -102,6 +102,21 @@ static void init_gettext_charset(const char *domain)
 		setlocale(LC_CTYPE, "C");
 }
 
+static void git_setup_gettext_no_podir(void)
+{
+	setlocale(LC_TIME, "");
+}
+
+static void git_setup_gettext_podir(const char *podir)
+{
+	bindtextdomain("git", podir);
+	setlocale(LC_MESSAGES, "");
+	init_gettext_charset("git");
+	textdomain("git");
+
+	git_gettext_enabled = 1;
+}
+
 int git_gettext_enabled = 0;
 
 void git_setup_gettext(void)
@@ -112,19 +127,12 @@ void git_setup_gettext(void)
 	if (!podir)
 		podir = p = system_path(GIT_LOCALE_PATH);
 
-	if (!is_directory(podir)) {
-		free(p);
-		return;
-	}
+	if (!is_directory(podir))
+		goto done;
 
-	bindtextdomain("git", podir);
-	setlocale(LC_MESSAGES, "");
-	setlocale(LC_TIME, "");
-	init_gettext_charset("git");
-	textdomain("git");
-
-	git_gettext_enabled = 1;
-
+	git_setup_gettext_no_podir();
+	git_setup_gettext_podir(podir);
+done:
 	free(p);
 }
 
