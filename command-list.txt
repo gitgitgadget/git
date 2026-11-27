@@ -246,6 +246,7 @@ gitrevisions                            userinterfaces
 gitsecurityboundary                     guide
 gitsubmodules                           guide
 gittutorial                             guide
+gittutorial-branches                    guide
 gitweb                                  ancillaryinterrogators
 gitworkflows                            guide
 scalar                                  mainporcelain
