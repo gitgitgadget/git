@@ -174,6 +174,11 @@ unsigned long repo_settings_get_big_file_threshold(struct repository *repo)
 
 void repo_settings_set_big_file_threshold(struct repository *repo, unsigned long value)
 {
+	/*
+	 * Initialize the settings first, as doing so later would reset
+	 * the value we are about to store.
+	 */
+	prepare_repo_settings(repo);
 	repo->settings.big_file_threshold = value;
 }
 
