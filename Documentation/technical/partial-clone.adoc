@@ -99,10 +99,10 @@ or commits that reference missing trees.
 - On the client these incomplete packfiles are marked as "promisor packfiles"
   and treated differently by various commands.
 
-- On the client a repository extension is added to the local config to
-  prevent older versions of git from failing mid-operation because of
-  missing objects that they cannot handle.
-  See `extensions.partialClone` in linkgit:git-config[1].
+- On the client, `core.repositoryFormatVersion` is upgraded to 1, when
+  necessary, to support partial clone. The promisor remote and its default
+  filter are recorded in `remote.<name>.promisor` and
+  `remote.<name>.partialCloneFilter`, respectively.
 
 
 Handling Missing Objects
