@@ -65,7 +65,6 @@ static unsigned int diff_interhunk_context_default;
 static char *diff_word_regex_cfg;
 static struct external_diff external_diff_cfg;
 static char *diff_order_file_cfg;
-int diff_auto_refresh_index = 1;
 static int diff_mnemonic_prefix;
 static int diff_no_prefix;
 static char *diff_src_prefix;
@@ -400,7 +399,8 @@ int git_diff_ui_config(const char *var, const char *value,
 		return 0;
 	}
 	if (!strcmp(var, "diff.autorefreshindex")) {
-		diff_auto_refresh_index = git_config_bool(var, value);
+		struct repo_config_values *cfg = repo_config_values(the_repository);
+		cfg->diff_auto_refresh_index = git_config_bool(var, value);
 		return 0;
 	}
 	if (!strcmp(var, "diff.mnemonicprefix")) {
