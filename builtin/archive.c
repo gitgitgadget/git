@@ -97,6 +97,10 @@ int cmd_archive(int argc,
 	argc = parse_options(argc, argv, prefix, local_opts, NULL,
 			     PARSE_OPT_KEEP_ALL);
 
+	if (remote && !remote[0]) {
+		usage(N_("Option 'remote' may not be left empty"));
+	}
+
 	init_archivers();
 
 	if (output)
