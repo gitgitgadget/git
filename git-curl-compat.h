@@ -53,6 +53,13 @@
 #endif
 
 /**
+ * CURLOPT_PREREQFUNCTION was added in 7.80.0, released in November 2021.
+ */
+#if LIBCURL_VERSION_NUM >= 0x075000
+#define GIT_CURL_HAVE_CURLOPT_PREREQFUNCTION 1
+#endif
+
+/**
  * CURLOPT_PROTOCOLS_STR and CURLOPT_REDIR_PROTOCOLS_STR were added in 7.85.0,
  * released in August 2022.
  */

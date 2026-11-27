@@ -799,6 +799,28 @@ static char *host_end(char **hoststart, int removebrackets)
 #define STR_(s)	# s
 #define STR(s)	STR_(s)
 
+/*
+ * Die unless safe.host allows connecting to "userandhost" (which may
+ * carry a "user@" prefix) on "port" (NULL for the scheme's default).
+ */
+static void check_host_allowed(const char *scheme, const char *userandhost,
+			       const char *port)
+{
+	const char *host = strrchr(userandhost, '@');
+
+	/*
+	 * No host name contains a '/', but OpenSSH parses a destination
+	 * like "ssh://user@host:port" as a URI, port and all, which would
+	 * slip past the port check below.
+	 */
+	if (strchr(userandhost, '/') && safe_hosts_restricted())
+		die(_("connecting to ssh host '%s' is not allowed by safe.host"),
+		    userandhost);
+
+	transport_check_host_allowed(scheme, host ? host + 1 : userandhost,
+				     port ? strtoul(port, NULL, 10) : 0);
+}
+
 static void get_host_and_port(char **host, const char **port)
 {
 	char *colon, *end;
@@ -813,6 +835,17 @@ static void get_host_and_port(char **host, const char **port)
 			*colon = 0;
 		}
 	}
+}
+
+static void check_hostandport_allowed(const char *scheme,
+				      const char *hostandport)
+{
+	char *host = xstrdup(hostandport);
+	const char *port = NULL;
+
+	get_host_and_port(&host, &port);
+	check_host_allowed(scheme, host, port);
+	free(host);
 }
 
 static void enable_keepalive(int sockfd)
@@ -1294,6 +1327,7 @@ static struct child_process *git_connect_git(int fd[2], char *hostandport,
 		target_host = xstrdup(hostandport);
 
 	transport_check_allowed("git");
+	check_hostandport_allowed("git", hostandport);
 	if (strchr(target_host, '\n') || strchr(path, '\n'))
 		die(_("newline is forbidden in git:// hosts and repo paths"));
 
@@ -1531,6 +1565,7 @@ struct child_process *git_connect(int fd[2], const char *url,
 				strbuf_release(&cmd);
 				return NULL;
 			}
+			check_host_allowed("ssh", ssh_host, port);
 			conn->trace2_child_class = "transport/ssh";
 			fill_ssh_args(conn, ssh_host, port, version, flags);
 		} else {

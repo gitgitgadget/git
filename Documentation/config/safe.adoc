@@ -68,3 +68,64 @@ which id the original user has.
 If that is not what you would prefer and want git to only trust
 repositories that are owned by root instead, then you can remove
 the `SUDO_UID` variable from root's environment before invoking git.
+
+safe.host::
+	These config entries specify the remote hosts that Git is allowed
+	to connect to, e.g. when cloning, fetching or pushing. If
+	`safe.host` is not set, Git connects to any host. Once it is set,
+	Git refuses to connect to a host that does not match one of the
+	entries.
++
+Each entry has the form `[<scheme>://]<host>[:<port>]`:
++
+--
+* `<host>` is a host name or IP address, matched case-insensitively.
+  IPv6 addresses must be enclosed in square brackets, e.g. `[::1]`.
+  A dot-separated component consisting only of `*` matches exactly one
+  component of the host name, so `*.example.com` matches
+  `git.example.com`, but neither `example.com` nor `a.b.example.com`.
+  A `<host>` of `*` matches any host.
+* `<scheme>`, if given, limits the entry to connections made using
+  that URL scheme, e.g. `https` or `ssh`. Without it, the entry matches
+  connections made using any scheme. Remote URLs of the scp-like form
+  `[<user>@]<host>:<path>` use the `ssh` scheme.
+* `<port>`, if given, limits the entry to connections to that port.
+  Without it, the entry matches connections to any port. If the remote
+  URL does not specify a port, the default port for its scheme is
+  assumed, e.g. 443 for `https` or 22 for `ssh`.
+--
++
+For example, `example.com` allows connections to `example.com` using
+any scheme and port, `https://example.com` allows only HTTPS
+connections to it, `on-prem-tfs:8080` allows connections to
+`on-prem-tfs` on port 8080 only, and `https://*` allows HTTPS
+connections to any host. Entries with any other form, e.g. containing a
+user name or a path, are ignored with a warning.
++
+This is a multi-valued setting, i.e. you can add more than one host via
+`git config --add`. To reset the list of safe hosts (e.g. to override
+any such hosts specified in the system config), add a `safe.host`
+entry with an empty value. If no entries follow it, Git will refuse to
+connect to any remote host. Setting `safe.host` to `*` allows
+connections to all hosts, as if it had not been set at all.
++
+This config setting is only respected in protected configuration (see
+<<SCOPES>>). This prevents untrusted repositories from tampering with this
+value.
++
+Repositories on the local filesystem, including those accessed via
+`file://` URLs, are not subject to this check. Neither are remote
+helpers (see linkgit:gitremote-helpers[7]) other than Git's own helpers
+for `http`, `https`, `ftp` and `ftps`, as Git cannot know which hosts
+they connect to; use `protocol.allow` to restrict them instead. For
+`ssh`, the host checked is the one named in the remote URL, before any
+aliasing performed by the SSH client's own configuration. Proxies,
+e.g. those configured via `http.proxy` or `core.gitProxy`, are not
+checked.
++
+For HTTP(S), the host of each redirect (see `http.followRedirects`) and
+of each `http-alternates` entry is checked as well, before Git connects
+or sends any request to it. If Git was built with, or is running
+against, a libcurl older than 7.80.0, it cannot check every request
+that follows a redirect, and so does not follow redirects at all when
+`safe.host` limits the allowed hosts.

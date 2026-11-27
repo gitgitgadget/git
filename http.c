@@ -1070,6 +1070,125 @@ static void proto_list_append(struct strbuf *list, const char *proto)
 	strbuf_addstr(list, proto);
 }
 
+static int parse_url_host(const char *url, char **scheme, char **host,
+			  unsigned int *port)
+{
+	struct url_info info;
+
+	if (!url_normalize(url, &info))
+		return -1;
+
+	*scheme = xmemdupz(info.url, info.scheme_len);
+	*host = xmemdupz(info.url + info.host_off, info.host_len);
+	*port = info.port_len ? strtoul(info.url + info.port_off, NULL, 10) : 0;
+	free(info.url);
+	return 0;
+}
+
+int http_is_url_allowed(const char *url, int quiet)
+{
+	char *scheme, *host;
+	unsigned int port;
+	int ret;
+
+	if (!safe_hosts_restricted())
+		return 1;
+
+	if (parse_url_host(url, &scheme, &host, &port) < 0) {
+		if (!quiet)
+			error(_("unable to determine host for safe.host check"));
+		return 0;
+	}
+
+	ret = is_host_allowed(scheme, host, port);
+	if (!ret && !quiet) {
+		struct strbuf entry = STRBUF_INIT;
+
+		format_safe_host_entry(&entry, scheme, host, port);
+		error(_("connecting to '%s' is not allowed by safe.host"),
+		      entry.buf);
+		strbuf_release(&entry);
+	}
+
+	free(scheme);
+	free(host);
+	return ret;
+}
+
+static int check_effective_url(CURL *curl)
+{
+	static char *last_reported;
+	char *effective_url = NULL;
+	const char *url;
+
+	if (curl_easy_getinfo(curl, CURLINFO_EFFECTIVE_URL,
+			      &effective_url) != CURLE_OK)
+		effective_url = NULL;
+	url = effective_url ? effective_url : "";
+	if (http_is_url_allowed(url, 1))
+		return 1;
+
+	/* curl may try several addresses for one URL; complain only once */
+	if (!last_reported || strcmp(last_reported, url)) {
+		http_is_url_allowed(url, 0);
+		free(last_reported);
+		last_reported = xstrdup(url);
+	}
+	return 0;
+}
+
+/*
+ * curl calls this after creating each socket, but before connecting it,
+ * so that we never connect to a host that safe.host does not allow,
+ * e.g. when following a redirect.
+ */
+static int check_safe_hosts_sockopt(void *curl, curl_socket_t fd UNUSED,
+				    curlsocktype purpose UNUSED)
+{
+	return check_effective_url(curl) ? CURL_SOCKOPT_OK : CURL_SOCKOPT_ERROR;
+}
+
+#ifdef GIT_CURL_HAVE_CURLOPT_PREREQFUNCTION
+/*
+ * curl calls this before sending each request, which also covers those
+ * sent over a reused connection, e.g. to a proxy, where no new socket
+ * is created.
+ */
+static int check_safe_hosts_prereq(void *curl,
+				   char *conn_primary_ip UNUSED,
+				   char *conn_local_ip UNUSED,
+				   int conn_primary_port UNUSED,
+				   int conn_local_port UNUSED)
+{
+	return check_effective_url(curl) ?
+		CURL_PREREQFUNC_OK : CURL_PREREQFUNC_ABORT;
+}
+#endif
+
+/*
+ * Install the safe.host callbacks on "curl". Their data pointers must
+ * be set to each handle duplicated from it; see get_active_slot().
+ */
+static void init_safe_hosts_callbacks(CURL *curl)
+{
+	int vets_every_request = 0;
+
+	curl_easy_setopt(curl, CURLOPT_SOCKOPTFUNCTION,
+			 check_safe_hosts_sockopt);
+#ifdef GIT_CURL_HAVE_CURLOPT_PREREQFUNCTION
+	vets_every_request = curl_easy_setopt(curl, CURLOPT_PREREQFUNCTION,
+					      check_safe_hosts_prereq) == CURLE_OK;
+#endif
+
+	/*
+	 * Without CURLOPT_PREREQFUNCTION (at build or run time), curl
+	 * could follow a redirect to another host over a connection it
+	 * reuses, e.g. one to a proxy, without asking us. Follow none.
+	 */
+	if (!vets_every_request)
+		http_follow_config = HTTP_FOLLOW_NONE;
+}
+
 static long get_curl_allowed_protocols(int from_user, struct strbuf *list)
 {
 	long bits = 0;
@@ -1391,6 +1510,17 @@ void http_init(struct remote *remote, const char *url, int proactive_auth)
 	char *normalized_url;
 	struct urlmatch_config config = URLMATCH_CONFIG_INIT;
 
+	if (safe_hosts_restricted()) {
+		char *scheme, *host;
+		unsigned int port;
+
+		if (parse_url_host(url, &scheme, &host, &port) < 0)
+			die(_("unable to determine host for safe.host check"));
+		transport_check_host_allowed(scheme, host, port);
+		free(scheme);
+		free(host);
+	}
+
 	config.section = "http";
 	config.key = NULL;
 	config.collect_fn = http_options;
@@ -1511,6 +1641,8 @@ void http_init(struct remote *remote, const char *url, int proactive_auth)
 	set_long_from_env(&http_max_retry_time, "GIT_HTTP_MAX_RETRY_TIME");
 
 	curl_default = get_curl_handle();
+	if (safe_hosts_restricted())
+		init_safe_hosts_callbacks(curl_default);
 }
 
 void http_cleanup(void)
@@ -1610,6 +1742,15 @@ struct active_request_slot *get_active_slot(void)
 		slot->curl = curl_easy_duphandle(curl_default);
 		if (!slot->curl)
 			die("curl_easy_duphandle failed");
+		if (safe_hosts_restricted()) {
+			/* point the callbacks at this handle, not curl_default */
+			curl_easy_setopt(slot->curl, CURLOPT_SOCKOPTDATA,
+					 slot->curl);
+#ifdef GIT_CURL_HAVE_CURLOPT_PREREQFUNCTION
+			curl_easy_setopt(slot->curl, CURLOPT_PREREQDATA,
+					 slot->curl);
+#endif
+		}
 		curl_session_count++;
 	}
 

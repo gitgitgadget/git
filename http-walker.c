@@ -196,6 +196,11 @@ static int is_alternate_allowed(const char *url)
 		warning("ignoring alternate with restricted protocol: %s", url);
 		return 0;
 	}
+	if (!http_is_url_allowed(url, 1)) {
+		warning(_("ignoring alternate on host not allowed by safe.host: %s"),
+			url);
+		return 0;
+	}
 
 	return 1;
 }

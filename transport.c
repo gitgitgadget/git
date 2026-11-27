@@ -19,6 +19,8 @@
 #include "refspec.h"
 #include "branch.h"
 #include "url.h"
+#include "urlmatch.h"
+#include "quote.h"
 #include "submodule.h"
 #include "strbuf.h"
 #include "string-list.h"
@@ -1206,6 +1208,231 @@ void transport_check_allowed(const char *type)
 {
 	if (!is_transport_allowed(type, -1))
 		die(_("transport '%s' not allowed"), type);
+}
+
+struct safe_host {
+	char *scheme;	/* NULL matches any scheme */
+	char *host;	/* "*" matches any host */
+	unsigned int port; /* 0 matches any port */
+};
+
+static struct {
+	int initialized;
+	/* -1 until the first safe.host entry is seen */
+	int allow_all;
+	struct safe_host *entries;
+	size_t nr, alloc;
+} safe_hosts;
+
+static void clear_safe_hosts(void)
+{
+	for (size_t i = 0; i < safe_hosts.nr; i++) {
+		free(safe_hosts.entries[i].scheme);
+		free(safe_hosts.entries[i].host);
+	}
+	safe_hosts.nr = 0;
+}
+
+static char *xmemdupz_tolower(const char *s, size_t len)
+{
+	char *ret = xmemdupz(s, len);
+
+	for (char *p = ret; *p; p++)
+		*p = tolower(*p);
+	return ret;
+}
+
+/*
+ * Parse a safe.host entry of the form "[<scheme>://]<host>[:<port>]",
+ * where <host> may be a bracketed IPv6 literal. A single trailing '/'
+ * is tolerated so that copy-pasted URLs like "https://example.com/"
+ * work, but anything else (paths, user names, queries) is rejected.
+ */
+static int parse_safe_host(const char *value, struct safe_host *out)
+{
+	const char *scheme_end, *host, *host_end, *p;
+	unsigned long port = 0;
+
+	scheme_end = strstr(value, "://");
+	if (scheme_end) {
+		if (scheme_end == value)
+			return -1;
+		for (p = value; p < scheme_end; p++)
+			if (!is_urlschemechar(p == value, *p))
+				return -1;
+		host = scheme_end + 3;
+	} else {
+		host = value;
+	}
+
+	if (*host == '[') {
+		host_end = strchr(++host, ']');
+		if (!host_end)
+			return -1;
+		p = host_end + 1;
+	} else {
+		host_end = host + strcspn(host, ":/");
+		p = host_end;
+	}
+
+	if (host_end == host ||
+	    host + strcspn(host, "@?#[]/ \t") < host_end)
+		return -1;
+
+	if (*p == ':') {
+		char *end;
+
+		if (!isdigit(*++p))
+			return -1;
+		errno = 0;
+		port = strtoul(p, &end, 10);
+		if (errno || !port || port > 65535)
+			return -1;
+		p = end;
+	}
+
+	if (*p == '/')
+		p++;
+	if (*p)
+		return -1;
+
+	out->scheme = scheme_end ?
+		xmemdupz_tolower(value, scheme_end - value) : NULL;
+	out->host = xmemdupz_tolower(host, host_end - host);
+	out->port = port;
+	return 0;
+}
+
+static int safe_hosts_cb(const char *key, const char *value,
+			 const struct config_context *ctx UNUSED,
+			 void *data UNUSED)
+{
+	struct safe_host entry;
+
+	if (strcmp(key, "safe.host"))
+		return 0;
+
+	if (safe_hosts.allow_all < 0)
+		safe_hosts.allow_all = 0;
+
+	if (!value || !*value) {
+		clear_safe_hosts();
+		safe_hosts.allow_all = 0;
+	} else if (!strcmp(value, "*")) {
+		safe_hosts.allow_all = 1;
+	} else if (parse_safe_host(value, &entry)) {
+		warning(_("ignoring invalid safe.host entry '%s'"), value);
+	} else {
+		ALLOC_GROW(safe_hosts.entries, safe_hosts.nr + 1,
+			   safe_hosts.alloc);
+		safe_hosts.entries[safe_hosts.nr++] = entry;
+	}
+
+	return 0;
+}
+
+static void read_safe_hosts(void)
+{
+	if (safe_hosts.initialized)
+		return;
+	safe_hosts.initialized = 1;
+	safe_hosts.allow_all = -1;
+
+	git_protected_config(safe_hosts_cb, NULL);
+
+	/* No safe.host configured at all means every host is allowed. */
+	if (safe_hosts.allow_all < 0)
+		safe_hosts.allow_all = 1;
+}
+
+static unsigned int default_port(const char *scheme)
+{
+	if (!strcmp(scheme, "http"))
+		return 80;
+	if (!strcmp(scheme, "https"))
+		return 443;
+	if (!strcmp(scheme, "ftp"))
+		return 21;
+	if (!strcmp(scheme, "ftps"))
+		return 990;
+	if (!strcmp(scheme, "ssh"))
+		return 22;
+	if (!strcmp(scheme, "git"))
+		return DEFAULT_GIT_PORT;
+	return 0;
+}
+
+int safe_hosts_restricted(void)
+{
+	read_safe_hosts();
+	return !safe_hosts.allow_all;
+}
+
+int is_host_allowed(const char *scheme, const char *host, unsigned int port)
+{
+	size_t len = strlen(host);
+	char *lower;
+	int ret = 0;
+
+	if (!safe_hosts_restricted())
+		return 1;
+
+	if (len >= 2 && host[0] == '[' && host[len - 1] == ']') {
+		host++;
+		len -= 2;
+	}
+	lower = xmemdupz_tolower(host, len);
+
+	if (!port)
+		port = default_port(scheme);
+
+	for (size_t i = 0; i < safe_hosts.nr; i++) {
+		const struct safe_host *e = &safe_hosts.entries[i];
+
+		if (e->scheme && strcmp(e->scheme, scheme))
+			continue;
+		if (e->port && e->port != port)
+			continue;
+		if (strcmp(e->host, "*") &&
+		    !urlmatch_host(lower, len, e->host, strlen(e->host)))
+			continue;
+
+		ret = 1;
+		break;
+	}
+
+	free(lower);
+	return ret;
+}
+
+void format_safe_host_entry(struct strbuf *buf, const char *scheme,
+			    const char *host, unsigned int port)
+{
+	strbuf_addf(buf, "%s://", scheme);
+	if (strchr(host, ':') && *host != '[')
+		strbuf_addf(buf, "[%s]", host);
+	else
+		strbuf_addstr(buf, host);
+	if (port && port != default_port(scheme))
+		strbuf_addf(buf, ":%u", port);
+}
+
+void transport_check_host_allowed(const char *scheme, const char *host,
+				  unsigned int port)
+{
+	struct strbuf entry = STRBUF_INIT, quoted = STRBUF_INIT;
+
+	if (is_host_allowed(scheme, host, port))
+		return;
+
+	format_safe_host_entry(&entry, scheme, host, port);
+	sq_quote_buf_pretty(&quoted, entry.buf);
+
+	die(_("connecting to '%s' is not allowed by safe.host\n"
+	      "To allow such connections, call:\n"
+	      "\n"
+	      "\tgit config --global --add safe.host %s"),
+	    entry.buf, quoted.buf);
 }
 
 static struct transport_vtable bundle_vtable = {

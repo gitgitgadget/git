@@ -375,7 +375,8 @@ http.followRedirects::
 	the initial request to a remote, but not for subsequent
 	follow-up HTTP requests. Since git uses the redirected URL as
 	the base for the follow-up requests, this is generally
-	sufficient. The default is `initial`.
+	sufficient. The default is `initial`. Redirects to hosts not
+	allowed by `safe.host` are refused regardless of this setting.
 
 http.<url>.*::
 	Any of the http.* options above can be applied selectively to some URLs.
