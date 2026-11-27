@@ -22,6 +22,9 @@ Git is a fast, scalable, distributed revision control system with an
 unusually rich command set that provides both high-level operations
 and full access to internals.
 
+See linkgit:gittutorial[7] to get started with Git. See linkgit:gitdatamodel[7]
+if you want to learn about the data model and important terminology.
+
 There are two ways to get help with any Git subcommand (replace "push"
 with the command you want help with):
 
