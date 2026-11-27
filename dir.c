@@ -4094,6 +4094,12 @@ static int invalidate_stale_dirs(struct untracked_cache *uc,
 		strbuf_setlen(path, len);
 	}
 
+	if (nr_invalidated && ucd->valid &&
+	    (uc->dir_flags & DIR_SHOW_OTHER_DIRECTORIES)) {
+		invalidate_one_directory(uc, ucd);
+		nr_invalidated++;
+	}
+
 	return nr_invalidated;
 }
 
