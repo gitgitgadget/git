@@ -908,12 +908,12 @@ int add_to_index(struct index_state *istate, const char *path, struct stat *st, 
 	 * case of the file being added to the repository matches (is folded into) the existing
 	 * entry's directory case.
 	 */
-	if (repo_ignore_case(the_repository)) {
+	if (repo_ignore_case(istate->repo)) {
 		adjust_dirname_case(istate, ce->name);
 	}
 	if (!(flags & ADD_CACHE_RENORMALIZE)) {
 		alias = index_file_exists(istate, ce->name,
-					  ce_namelen(ce), repo_ignore_case(the_repository));
+					  ce_namelen(ce), repo_ignore_case(istate->repo));
 		if (alias &&
 		    !ce_stage(alias) &&
 		    !ie_match_stat(istate, alias, st, ce_option)) {
@@ -934,7 +934,7 @@ int add_to_index(struct index_state *istate, const char *path, struct stat *st, 
 	} else
 		set_object_name_for_intent_to_add_entry(ce);
 
-	if (repo_ignore_case(the_repository) && alias && different_name(ce, alias))
+	if (repo_ignore_case(istate->repo) && alias && different_name(ce, alias))
 		ce = create_alias_ce(istate, ce, alias);
 	ce->ce_flags |= CE_ADDED;
 
@@ -1537,7 +1537,7 @@ int refresh_index(struct index_state *istate, unsigned int flags,
 	int t2_sum_scan = 0;
 
 	if (flags & REFRESH_PROGRESS && isatty(2))
-		progress = start_delayed_progress(the_repository,
+		progress = start_delayed_progress(istate->repo,
 						  _("Refresh index"),
 						  istate->cache_nr);
 
@@ -3890,6 +3890,7 @@ static int read_one_entry_quick(const struct object_id *oid, struct strbuf *base
 void overlay_tree_on_index(struct index_state *istate,
 			   const char *tree_name, const char *prefix)
 {
+	struct repository *repo = istate->repo;
 	struct tree *tree;
 	struct object_id oid;
 	struct pathspec pathspec;
@@ -3898,9 +3899,9 @@ void overlay_tree_on_index(struct index_state *istate,
 	read_tree_fn_t fn = NULL;
 	int err;
 
-	if (repo_get_oid(the_repository, tree_name, &oid))
+	if (repo_get_oid(repo, tree_name, &oid))
 		die("tree-ish %s not found.", tree_name);
-	tree = repo_parse_tree_indirect(the_repository, &oid);
+	tree = repo_parse_tree_indirect(repo, &oid);
 	if (!tree)
 		die("bad tree-ish %s", tree_name);
 
@@ -3935,7 +3936,7 @@ void overlay_tree_on_index(struct index_state *istate,
 
 	if (!fn)
 		fn = read_one_entry_quick;
-	err = read_tree(the_repository, tree, &pathspec, fn, istate);
+	err = read_tree(repo, tree, &pathspec, fn, istate);
 	clear_pathspec(&pathspec);
 	if (err)
 		die("unable to read tree entries %s", tree_name);
