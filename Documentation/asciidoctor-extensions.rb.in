@@ -26,6 +26,28 @@ module Git
       end
     end
 
+    class LinkGuideProcessor < Asciidoctor::Extensions::InlineMacroProcessor
+      # Use this when linking to a concept guide or user interface guide
+      # Example: linkguide:tutorial[]
+      use_dsl
+
+      named :chrome
+
+      def process(parent, target, attrs)
+        prefix = parent.document.attr('git-relative-html-prefix')
+        if parent.document.doctype == 'book'
+          "<ulink url=\"#{prefix}git#{target}.html\">" \
+          "<userinput>git help #{target}</userinput></ulink>"
+        elsif parent.document.basebackend? 'html'
+          %(<a href="#{prefix}git#{target}.html">
+             <code>git help #{target}</code>
+           </a>)
+        elsif parent.document.basebackend? 'docbook'
+          "<userinput>git help #{target}</userinput>"
+        end
+      end
+    end
+
     class DocumentPostProcessor < Asciidoctor::Extensions::Postprocessor
       def process document, output
         if document.basebackend? 'docbook'
@@ -131,6 +153,7 @@ end
 
 Asciidoctor::Extensions.register do
   inline_macro Git::Documentation::LinkGitProcessor, :linkgit
+  inline_macro Git::Documentation::LinkGuideProcessor, :linkguide
   block Git::Documentation::SynopsisBlock
   postprocessor Git::Documentation::DocumentPostProcessor
 end
