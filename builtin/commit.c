@@ -19,6 +19,7 @@
 #include "environment.h"
 #include "diff.h"
 #include "commit.h"
+#include "hook.h"
 #include "add-interactive.h"
 #include "gettext.h"
 #include "revision.h"
@@ -1315,6 +1316,9 @@ static int parse_and_validate_options(int argc, const char *argv[],
 {
 	argc = parse_options(argc, argv, prefix, options, usage, 0);
 	finalize_deferred_config(s);
+
+	if (no_verify)
+		validate_no_verify(the_repository, "--no-verify");
 
 	if (force_author && !strchr(force_author, '>'))
 		force_author = find_author_by_nickname(force_author);
