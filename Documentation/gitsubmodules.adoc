@@ -102,8 +102,9 @@ check if the submodule has any changes not published to any remote. The
 remotes are configured in the submodule as usual in the `$GIT_DIR/config`
 file.
 
- * The configuration file `$GIT_DIR/config` in the superproject.
-   Git only recurses into active submodules
+ * The configuration files `$GIT_DIR/config` and, when the
+   `extensions.worktreeConfig` extension is enabled, `$GIT_DIR/config.worktree`
+   in the superproject. Git only recurses into active submodules
    (see <<ACTIVE_SUBMODULES,"ACTIVE SUBMODULES">> section below).
 +
 If the submodule is not yet initialized, then the configuration
@@ -122,6 +123,21 @@ located.
 If the submodule has never been initialized, this is the only place
 where submodule configuration is found. It serves as the last fallback
 to specify where to obtain the submodule from.
+
+MULTIPLE WORKTREES
+------------------
+
+When using multiple worktrees, it is recommended to enable the
+`extensions.worktreeConfig` extension. Without this extension,
+submodule configuration is shared between worktrees, which can
+cause unexpected interactions. For example, if different branches
+use different URLs for a submodule, a URL configured in one
+worktree may be used by another worktree, preventing it from
+fetching the required commits.
+
+Enabling this extension allows Git commands to store submodule
+configuration in each worktree's `config.worktree` file, keeping
+the configuration independent between worktrees.
 
 [[FORMS]]
 FORMS
@@ -150,8 +166,10 @@ The directory which is supposed to be the working directory is empty instead.
 +
 A submodule can be deinitialized by running `git submodule deinit`.
 Besides emptying the working directory, this command only modifies
-the superproject's `$GIT_DIR/config` file, so the superproject's history
-is not affected. This can be undone using `git submodule init`.
+the superproject's configuration file (`$GIT_DIR/config` or
+`$GIT_DIR/config.worktree`, depending on whether the
+`extensions.worktreeConfig` extension is enabled), so the superproject's
+history is not affected. This can be undone using `git submodule init`.
 
  * Deleted submodule: A submodule can be deleted by running
 `git rm <submodule-path> && git commit`. This can be undone
