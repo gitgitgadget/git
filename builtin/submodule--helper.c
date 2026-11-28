@@ -480,10 +480,45 @@ struct init_cb {
 };
 #define INIT_CB_INIT { 0 }
 
-static int validate_and_set_submodule_gitdir(struct strbuf *gitdir_path,
-					     const char *submodule_name)
+static bool submodule_git_dir_matches_current_worktree(const char *gitdir)
 {
-	const char *value;
+	struct strbuf tmp = STRBUF_INIT;
+	struct strbuf submodule = STRBUF_INIT;
+	char *super;
+	bool matches;
+
+	if (is_absolute_path(gitdir))
+		strbuf_addstr(&submodule, gitdir);
+	else if (!repo_worktree_path_append(the_repository, &submodule,
+					    "%s", gitdir))
+		return false;
+
+	if (strbuf_normalize_path(&submodule)) {
+		strbuf_release(&submodule);
+		return false;
+	}
+
+	super = real_pathdup(repo_get_git_dir(the_repository), 1);
+	matches = starts_with(relative_path(submodule.buf, super, &tmp),
+			      "modules/");
+
+	strbuf_release(&submodule);
+	strbuf_release(&tmp);
+	free(super);
+	return matches;
+}
+
+static const char submodule_mismatch_warning[] = N_(
+"config '%s' exists but was not copied to the worktree config because "
+"it does not point to a gitdir for the current worktree. If you want "
+"to keep using this setting, copy it to the worktree config."
+);
+
+static int validate_and_set_submodule_gitdir(struct strbuf *gitdir_path,
+					     const char *submodule_name,
+					     struct worktree *wt)
+{
+	char *value = NULL;
 	char *key;
 
 	if (validate_submodule_git_dir(gitdir_path->buf, submodule_name))
@@ -491,18 +526,64 @@ static int validate_and_set_submodule_gitdir(struct strbuf *gitdir_path,
 
 	key = xstrfmt("submodule.%s.gitdir", submodule_name);
 
-	/* Nothing to do if the config already exists. */
-	if (!repo_config_get_string_tmp(the_repository, key, &value)) {
-		free(key);
-		return 0;
+	if (the_repository->repository_format_worktree_config) {
+		struct config_set cs = { 0 };
+		const char *filename = worktree_git_path(wt, "config.worktree");
+		char *tmp;
+
+		git_configset_init(&cs);
+		git_configset_add_file(&cs, filename);
+
+		/*
+		 * Nothing to do if the config already exists in the config set
+		 * for the current worktree.
+		 */
+		if (!git_configset_get(&cs, key)) {
+			git_configset_clear(&cs);
+			free(key);
+			return 0;
+		}
+
+		git_configset_clear(&cs);
+
+		/*
+		 * If the worktree config does not have this key, check the
+		 * effective value from lower-priority config scopes and copy
+		 * it to the worktree config if it belongs to the current
+		 * worktree.
+		 */
+		if (!repo_config_get_string(the_repository, key, &tmp)) {
+			bool matches =
+			  submodule_git_dir_matches_current_worktree(tmp);
+
+			if (!matches ||
+			    validate_submodule_git_dir(tmp, submodule_name)) {
+				if (!matches)
+					warning(submodule_mismatch_warning, key);
+				free(tmp);
+			} else {
+				value = tmp;
+			}
+		}
+	} else {
+		const char *value_;
+
+		/* Nothing to do if the config already exists. */
+		if (!repo_config_get_string_tmp(the_repository, key, &value_)) {
+			free(key);
+			return 0;
+		}
 	}
 
-	if (repo_config_set_worktree_gently(the_repository, key, gitdir_path->buf)) {
+	if (repo_config_set_worktree_gently(the_repository, key,
+					    value ? value : gitdir_path->buf)) {
 		free(key);
+		free(value);
 		return -1;
 	}
 
 	free(key);
+	free(value);
 	return 0;
 }
 
@@ -526,7 +607,8 @@ static void create_default_gitdir_config(const char *submodule_name)
 	strbuf_addstr(&gitdir_path, modules_dir);
 	strbuf_addstr(&gitdir_path, submodule_name);
 	if (!validate_and_set_submodule_gitdir(&gitdir_path,
-					       submodule_name))
+					       submodule_name,
+					       wt))
 		goto cleanup;
 
 	/* Case 2.1: Try URI-safe (RFC3986) encoding first, this fixes nested gitdirs */
@@ -534,7 +616,8 @@ static void create_default_gitdir_config(const char *submodule_name)
 	strbuf_addstr(&gitdir_path, modules_dir);
 	strbuf_addstr_urlencode(&gitdir_path, submodule_name, is_rfc3986_unreserved);
 	if (!validate_and_set_submodule_gitdir(&gitdir_path,
-					       submodule_name))
+					       submodule_name,
+					       wt))
 		goto cleanup;
 
 	/* Case 2.2: Try extended uppercase URI (RFC3986) encoding, to fix case-folding */
@@ -542,7 +625,8 @@ static void create_default_gitdir_config(const char *submodule_name)
 	strbuf_addstr(&gitdir_path, modules_dir);
 	strbuf_addstr_urlencode(&gitdir_path, submodule_name, is_casefolding_rfc3986_unreserved);
 	if (!validate_and_set_submodule_gitdir(&gitdir_path,
-					       submodule_name))
+					       submodule_name,
+					       wt))
 		goto cleanup;
 
 	/* Case 2.3: Try some derived gitdir names, see if one sticks */
@@ -552,7 +636,8 @@ static void create_default_gitdir_config(const char *submodule_name)
 		strbuf_addstr_urlencode(&gitdir_path, submodule_name, is_rfc3986_unreserved);
 		strbuf_addch(&gitdir_path, c);
 		if (!validate_and_set_submodule_gitdir(&gitdir_path,
-						       submodule_name))
+						       submodule_name,
+						       wt))
 			goto cleanup;
 
 		strbuf_reset(&gitdir_path);
@@ -560,7 +645,8 @@ static void create_default_gitdir_config(const char *submodule_name)
 		strbuf_addstr_urlencode(&gitdir_path, submodule_name, is_casefolding_rfc3986_unreserved);
 		strbuf_addch(&gitdir_path, c);
 		if (!validate_and_set_submodule_gitdir(&gitdir_path,
-						       submodule_name))
+						       submodule_name,
+						       wt))
 			goto cleanup;
 	}
 
@@ -577,7 +663,8 @@ static void create_default_gitdir_config(const char *submodule_name)
 	strbuf_addstr(&gitdir_path, modules_dir);
 	strbuf_addstr(&gitdir_path, hex_name_hash);
 	if (!validate_and_set_submodule_gitdir(&gitdir_path,
-					       submodule_name))
+					       submodule_name,
+					       wt))
 		goto cleanup;
 
 	/* Case 3: nothing worked, error out */

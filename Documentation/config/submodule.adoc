@@ -68,8 +68,9 @@ submodule.<name>.gitdir::
 	has no effect. When enabled, this config becomes the single source of
 	truth for submodule gitdir paths and Git will error if it is missing.
 	When `extensions.worktreeConfig` is enabled, 'git submodule init' stores
-	this setting in each worktree's config. See linkgit:git-config[1] for
-	details.
+	this setting in each worktree's config. If this setting already exists
+	in the repository config, copy the value only if it belongs to the
+	current worktree. See linkgit:git-config[1] for details.
 
 submodule.active::
 	A repeated field which contains a pathspec used to match against a
