@@ -57,7 +57,7 @@ test_expect_success 'manual add and verify legacy submodule gitdir config' '
 '
 
 test_expect_success 'gitdir config path is relative for both absolute and relative urls' '
-	test_when_finished "rm -rf relative-cfg-path-test" &&
+	test_when_finished "rm -rf relative-cfg-path-test relative-cfg-path-test-link" &&
 	git init -b main relative-cfg-path-test &&
 	(
 		cd relative-cfg-path-test &&
@@ -74,6 +74,65 @@ test_expect_success 'gitdir config path is relative for both absolute and relati
 		git submodule add ../new-sub sub-rel &&
 		git config submodule.sub-rel.gitdir >actual &&
 		echo ".git/modules/sub-rel" >expect &&
+		test_cmp expect actual &&
+
+		# Test with GIT_DIR containing symlink
+		if test_have_prereq SYMLINKS
+		then
+			ln -s relative-cfg-path-test ../relative-cfg-path-test-link &&
+			GIT_DIR=../relative-cfg-path-test-link/.git git submodule add ../new-sub sub-sym &&
+			git config submodule.sub-sym.gitdir >actual &&
+			echo ".git/modules/sub-sym" >expect &&
+			test_cmp expect actual
+		fi
+	)
+'
+
+test_expect_success 'gitdir for the main worktree is stored in worktree config' '
+	test_when_finished "rm -rf relative-cfg-path-test-main" &&
+	git init -b main relative-cfg-path-test-main &&
+	(
+		cd relative-cfg-path-test-main &&
+		git config core.repositoryformatversion 1 &&
+		git config extensions.submodulePathConfig true &&
+		git config extensions.worktreeConfig true &&
+
+		# Test with absolute URL
+		git submodule add "$TRASH_DIRECTORY/new-sub" sub-abs &&
+		git config --worktree submodule.sub-abs.gitdir >actual &&
+		echo ".git/modules/sub-abs" >expect &&
+		test_cmp expect actual &&
+
+		# Test with relative URL
+		git submodule add ../new-sub sub-rel &&
+		git config --worktree submodule.sub-rel.gitdir >actual &&
+		echo ".git/modules/sub-rel" >expect &&
+		test_cmp expect actual
+	)
+'
+
+test_expect_success 'gitdir for a linked worktree is stored in worktree config' '
+	test_when_finished "rm -rf relative-cfg-path-test-wt" &&
+	git init -b main relative-cfg-path-test-wt &&
+	(
+		cd relative-cfg-path-test-wt &&
+		git config core.repositoryformatversion 1 &&
+		git config extensions.submodulePathConfig true &&
+		git config extensions.worktreeConfig true &&
+
+		git worktree add wt &&
+		cd wt &&
+
+		# Test with absolute URL
+		git submodule add "$TRASH_DIRECTORY/new-sub" sub-abs &&
+		git config --worktree submodule.sub-abs.gitdir >actual &&
+		echo "../.git/worktrees/wt/modules/sub-abs" >expect &&
+		test_cmp expect actual &&
+
+		# Test with relative URL
+		git submodule add ../../new-sub sub-rel &&
+		git config --worktree submodule.sub-rel.gitdir >actual &&
+		echo "../.git/worktrees/wt/modules/sub-rel" >expect &&
 		test_cmp expect actual
 	)
 '
@@ -275,6 +334,92 @@ test_expect_success '`git clone --recurse-submodules` respects init.defaultSubmo
 		test_path_is_dir .git/modules/new-sub &&
 		git config submodule.new-sub.gitdir >actual &&
 		echo ".git/modules/new-sub" >expect &&
+		test_cmp expect actual
+	)
+'
+
+test_expect_success 'git submodule init inherits related repository config for main' '
+	test_when_finished "rm -rf repo-clone-init-main" &&
+	git clone upstream repo-clone-init-main &&
+	(
+		cd repo-clone-init-main &&
+		git config core.repositoryformatversion 1 &&
+		git config extensions.submodulePathConfig true &&
+		git submodule init &&
+		git config submodule.sub1.gitdir >actual &&
+		echo ".git/modules/sub1" >expect &&
+		test_cmp expect actual &&
+		git config submodule.sub2.gitdir >actual &&
+		echo ".git/modules/sub2" >expect &&
+		test_cmp expect actual &&
+
+		# Modify values so that they can be distinguished from the default
+		git config submodule.sub1.gitdir .git/modules/sub1_custom &&
+		git config submodule.sub2.gitdir .git/modules/sub2_custom &&
+
+		git config extensions.worktreeConfig true &&
+		git submodule init 2>err &&
+		test_must_be_empty err &&
+		git config --worktree submodule.sub1.gitdir >actual &&
+		echo ".git/modules/sub1_custom" >expect &&
+		test_cmp expect actual &&
+		git config --worktree submodule.sub2.gitdir >actual &&
+		echo ".git/modules/sub2_custom" >expect &&
+		test_cmp expect actual &&
+
+		git worktree add wt &&
+		cd wt &&
+		git submodule init 2>err &&
+		test_grep "does not point to a gitdir for the current worktree" err &&
+		git config --worktree submodule.sub1.gitdir >actual &&
+		echo "../.git/worktrees/wt/modules/sub1" >expect &&
+		test_cmp expect actual &&
+		git config --worktree submodule.sub2.gitdir >actual &&
+		echo "../.git/worktrees/wt/modules/sub2" >expect &&
+		test_cmp expect actual
+	)
+'
+
+test_expect_success 'git submodule init inherits related repository config for worktree' '
+	test_when_finished "rm -rf repo-clone-init-wt" &&
+	git clone upstream repo-clone-init-wt &&
+	(
+		cd repo-clone-init-wt &&
+		git config core.repositoryformatversion 1 &&
+		git config extensions.submodulePathConfig true &&
+		git worktree add wt &&
+		cd wt &&
+		git submodule init &&
+		git config submodule.sub1.gitdir >actual &&
+		echo "../.git/worktrees/wt/modules/sub1" >expect &&
+		test_cmp expect actual &&
+		git config submodule.sub2.gitdir >actual &&
+		echo "../.git/worktrees/wt/modules/sub2" >expect &&
+		test_cmp expect actual &&
+
+		# Modify values so that they can be distinguished from the default
+		git config submodule.sub1.gitdir ../.git/worktrees/wt/modules/sub1_custom &&
+		# Use an absolute path to simulate a value written by older Git
+		git config submodule.sub2.gitdir "$(cd .. && pwd -P)/.git/worktrees/wt/modules/sub2_custom" &&
+
+		git config extensions.worktreeConfig true &&
+		git submodule init 2>err &&
+		test_must_be_empty err &&
+		git config --worktree submodule.sub1.gitdir >actual &&
+		echo "../.git/worktrees/wt/modules/sub1_custom" >expect &&
+		test_cmp expect actual &&
+		git config --worktree submodule.sub2.gitdir >actual &&
+		echo "$(cd .. && pwd -P)/.git/worktrees/wt/modules/sub2_custom" >expect &&
+		test_cmp expect actual &&
+
+		cd .. &&
+		git submodule init 2>err &&
+		test_grep "does not point to a gitdir for the current worktree" err &&
+		git config --worktree submodule.sub1.gitdir >actual &&
+		echo ".git/modules/sub1" >expect &&
+		test_cmp expect actual &&
+		git config --worktree submodule.sub2.gitdir >actual &&
+		echo ".git/modules/sub2" >expect &&
 		test_cmp expect actual
 	)
 '

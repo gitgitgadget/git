@@ -6,6 +6,9 @@ submodule.<name>.url::
 	set, the presence of this variable is used as a fallback to indicate
 	whether the submodule is of interest to git commands.
 	See linkgit:git-submodule[1] and linkgit:gitmodules[5] for details.
+	When `extensions.worktreeConfig` is enabled, 'git submodule init' and
+	'git submodule sync' store this setting in each worktree's config.
+	See linkgit:git-config[1] for details.
 
 submodule.<name>.update::
 	The method by which a submodule is updated by 'git submodule update',
@@ -16,6 +19,9 @@ submodule.<name>.update::
 	and `pull.rebase` are more specific. It is populated by
 	`git submodule init` from the linkgit:gitmodules[5] file.
 	See description of 'update' command in linkgit:git-submodule[1].
+	When `extensions.worktreeConfig` is enabled, 'git submodule init' stores
+	this setting in each worktree's config. See linkgit:git-config[1] for
+	details.
 
 submodule.<name>.branch::
 	The remote branch name for a submodule, used by `git submodule
@@ -52,13 +58,19 @@ submodule.<name>.active::
 	commands.  This config option takes precedence over the
 	submodule.active config option. See linkgit:gitsubmodules[7] for
 	details.
+	When `extensions.worktreeConfig` is enabled, 'git submodule init' stores
+	this setting in each worktree's config. See linkgit:git-config[1] for
+	details.
 
 submodule.<name>.gitdir::
 	This sets the gitdir path for submodule <name>. This configuration is
 	respected when `extensions.submodulePathConfig` is enabled, otherwise it
 	has no effect. When enabled, this config becomes the single source of
 	truth for submodule gitdir paths and Git will error if it is missing.
-	See linkgit:git-config[1] for details.
+	When `extensions.worktreeConfig` is enabled, 'git submodule init' stores
+	this setting in each worktree's config. If this setting already exists
+	in the repository config, copy the value only if it belongs to the
+	current worktree. See linkgit:git-config[1] for details.
 
 submodule.active::
 	A repeated field which contains a pathspec used to match against a

@@ -169,5 +169,14 @@ these config values on a per-worktree basis, and uses the
 worktree independently. See linkgit:git-sparse-checkout[1] for more
 details.
 +
+Submodule configuration is also affected by this extension.
+The `submodule.<name>.gitdir` variable must be worktree-specific, as
+each worktree must use a separate gitdir for the same submodule.
+Other submodule configuration variables may be shared between worktrees,
+but Git commands that update submodule configuration store these
+variables in the worktree-specific `config.worktree` file when this
+extension is enabled, so that each worktree can have its own submodule
+configuration.
++
 For historical reasons, this extension is respected regardless of the
 `core.repositoryFormatVersion` setting.
