@@ -43,6 +43,11 @@ index.skipHash::
 	checksum, write a trailing set of bytes with value zero, indicating
 	that the computation was skipped.
 +
+With a split index (see `core.splitIndex`), only the split index, which
+is written on every index update, skips the hash. The shared index is
+still hashed, as it is named after its hash, but it is rewritten only
+when too many entries are not in it (see `splitIndex.maxPercentChange`).
++
 If you enable `index.skipHash`, then Git clients older than 2.13.0 will
 refuse to parse the index and Git clients older than 2.40.0 will report an
 error during `git fsck`.
