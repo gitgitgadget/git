@@ -57,7 +57,7 @@ test_expect_success 'manual add and verify legacy submodule gitdir config' '
 '
 
 test_expect_success 'gitdir config path is relative for both absolute and relative urls' '
-	test_when_finished "rm -rf relative-cfg-path-test" &&
+	test_when_finished "rm -rf relative-cfg-path-test relative-cfg-path-test-link" &&
 	git init -b main relative-cfg-path-test &&
 	(
 		cd relative-cfg-path-test &&
@@ -74,7 +74,17 @@ test_expect_success 'gitdir config path is relative for both absolute and relati
 		git submodule add ../new-sub sub-rel &&
 		git config submodule.sub-rel.gitdir >actual &&
 		echo ".git/modules/sub-rel" >expect &&
-		test_cmp expect actual
+		test_cmp expect actual &&
+
+		# Test with GIT_DIR containing symlink
+		if test_have_prereq SYMLINKS
+		then
+			ln -s relative-cfg-path-test ../relative-cfg-path-test-link &&
+			GIT_DIR=../relative-cfg-path-test-link/.git git submodule add ../new-sub sub-sym &&
+			git config submodule.sub-sym.gitdir >actual &&
+			echo ".git/modules/sub-sym" >expect &&
+			test_cmp expect actual
+		fi
 	)
 '
 

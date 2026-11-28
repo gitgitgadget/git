@@ -509,20 +509,18 @@ static int validate_and_set_submodule_gitdir(struct strbuf *gitdir_path,
 static void create_default_gitdir_config(const char *submodule_name)
 {
 	struct worktree *wt = get_current_worktree(the_repository);
-	const char *raw_modules_dir;
+	struct strbuf raw_modules_dir = STRBUF_INIT;
 	struct strbuf tmp = STRBUF_INIT;
-	char *modules_dir;
+	const char *modules_dir;
 	struct strbuf gitdir_path = STRBUF_INIT;
 	struct git_hash_ctx ctx;
 	char hex_name_hash[GIT_MAX_HEXSZ + 1], header[128];
 	unsigned char raw_name_hash[GIT_MAX_RAWSZ];
 	int header_len;
 
-	raw_modules_dir = worktree_git_path(wt, "modules/");
-	modules_dir = xstrdup(is_absolute_path(raw_modules_dir) ?
-			      relative_path(raw_modules_dir, wt->path, &tmp) :
-			      raw_modules_dir);
-	strbuf_release(&tmp);
+	strbuf_realpath_forgiving(&raw_modules_dir, worktree_git_path(wt, "modules"), 1);
+	strbuf_addch(&raw_modules_dir, '/');
+	modules_dir = relative_path(raw_modules_dir.buf, wt->path, &tmp);
 
 	/* Case 1: try the plain module name */
 	strbuf_addstr(&gitdir_path, modules_dir);
@@ -590,7 +588,8 @@ static void create_default_gitdir_config(const char *submodule_name)
 
 cleanup:
 	strbuf_release(&gitdir_path);
-	free(modules_dir);
+	strbuf_release(&tmp);
+	strbuf_release(&raw_modules_dir);
 	free_worktree(wt);
 }
 
